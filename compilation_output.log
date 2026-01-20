@@ -1,0 +1,111 @@
+[  1%] Building C object src/CMakeFiles/GL.dir/gl/arbconverter.c.o
+[  2%] Building C object src/CMakeFiles/GL.dir/gl/arbgenerator.c.o
+[  4%] Building C object src/CMakeFiles/GL.dir/gl/arbhelper.c.o
+[  5%] Building C object src/CMakeFiles/GL.dir/gl/arbparser.c.o
+[  7%] Building C object src/CMakeFiles/GL.dir/gl/array.c.o
+[  8%] Building C object src/CMakeFiles/GL.dir/gl/blit.c.o
+[ 10%] Building C object src/CMakeFiles/GL.dir/gl/blend.c.o
+[ 11%] Building C object src/CMakeFiles/GL.dir/gl/buffers.c.o
+[ 12%] Building C object src/CMakeFiles/GL.dir/gl/build_info.c.o
+[ 14%] Building C object src/CMakeFiles/GL.dir/gl/debug.c.o
+[ 15%] Building C object src/CMakeFiles/GL.dir/gl/decompress.c.o
+[ 17%] Building C object src/CMakeFiles/GL.dir/gl/depth.c.o
+[ 18%] Building C object src/CMakeFiles/GL.dir/gl/directstate.c.o
+[ 20%] Building C object src/CMakeFiles/GL.dir/gl/drawing.c.o
+[ 21%] Building C object src/CMakeFiles/GL.dir/gl/enable.c.o
+[ 22%] Building C object src/CMakeFiles/GL.dir/gl/envvars.c.o
+[ 24%] Building C object src/CMakeFiles/GL.dir/gl/eval.c.o
+[ 25%] Building C object src/CMakeFiles/GL.dir/gl/face.c.o
+[ 27%] Building C object src/CMakeFiles/GL.dir/gl/fog.c.o
+[ 28%] Building C object src/CMakeFiles/GL.dir/gl/fpe.c.o
+[ 30%] Building C object src/CMakeFiles/GL.dir/gl/fpe_cache.c.o
+[ 31%] Building C object src/CMakeFiles/GL.dir/gl/fpe_shader.c.o
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/fpe_shader.c:913:21: warning: logical not is only applied to the left hand side of this bitwise operator [-Wlogical-not-parentheses]
+  913 |             if(t && !need->need_texs&(1<<i))
+      |                     ^               ~
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/fpe_shader.c:913:21: note: add parentheses after the '!' to evaluate the bitwise operator first
+  913 |             if(t && !need->need_texs&(1<<i))
+      |                     ^                      
+      |                      (                     )
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/fpe_shader.c:913:21: note: add parentheses around left hand side expression to silence this warning
+  913 |             if(t && !need->need_texs&(1<<i))
+      |                     ^               
+      |                     (               )
+[ 32%] Building C object src/CMakeFiles/GL.dir/gl/framebuffers.c.o
+1 warning generated.
+[ 34%] Building C object src/CMakeFiles/GL.dir/gl/gl_lookup.c.o
+[ 35%] Building C object src/CMakeFiles/GL.dir/gl/getter.c.o
+[ 37%] Building C object src/CMakeFiles/GL.dir/gl/gl4es.c.o
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/getter.c:867:45: warning: implicit conversion from 'long' to 'GLfloat' (aka 'float') changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+  867 |             params[0] = glstate->depth.Near*2147483647l;
+      |                                            ~^~~~~~~~~~~
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/getter.c:868:44: warning: implicit conversion from 'long' to 'GLfloat' (aka 'float') changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+  868 |             params[1] = glstate->depth.Far*2147483647l;
+      |                                           ~^~~~~~~~~~~
+[ 38%] Building C object src/CMakeFiles/GL.dir/gl/glstate.c.o
+2 warnings generated.
+[ 40%] Building C object src/CMakeFiles/GL.dir/gl/hint.c.o
+[ 41%] Building C object src/CMakeFiles/GL.dir/gl/init.c.o
+[ 42%] Building C object src/CMakeFiles/GL.dir/gl/light.c.o
+[ 44%] Building C object src/CMakeFiles/GL.dir/gl/line.c.o
+[ 45%] Building C object src/CMakeFiles/GL.dir/gl/list.c.o
+[ 47%] Building C object src/CMakeFiles/GL.dir/gl/listdraw.c.o
+[ 48%] Building C object src/CMakeFiles/GL.dir/gl/listrl.c.o
+[ 50%] Building C object src/CMakeFiles/GL.dir/gl/loader.c.o
+[ 51%] Building C object src/CMakeFiles/GL.dir/gl/logs.c.o
+[ 52%] Building C object src/CMakeFiles/GL.dir/gl/matrix.c.o
+[ 54%] Building C object src/CMakeFiles/GL.dir/gl/matvec.c.o
+[ 55%] Building C object src/CMakeFiles/GL.dir/gl/oldprogram.c.o
+[ 57%] Building C object src/CMakeFiles/GL.dir/gl/pixel.c.o
+[ 58%] Building C object src/CMakeFiles/GL.dir/gl/planes.c.o
+[ 60%] Building C object src/CMakeFiles/GL.dir/gl/pointsprite.c.o
+[ 61%] Building C object src/CMakeFiles/GL.dir/gl/preproc.c.o
+[ 62%] Building C object src/CMakeFiles/GL.dir/gl/program.c.o
+[ 64%] Building C object src/CMakeFiles/GL.dir/gl/queries.c.o
+[ 65%] Building C object src/CMakeFiles/GL.dir/gl/raster.c.o
+[ 67%] Building C object src/CMakeFiles/GL.dir/gl/render.c.o
+[ 68%] Building C object src/CMakeFiles/GL.dir/gl/samplers.c.o
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/render.c:24:112: warning: implicit conversion from 'int' to 'GLfloat' (aka 'float') changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+   24 |                 glstate->selectbuf.buffer[glstate->selectbuf.pos+1] = (unsigned int)(glstate->selectbuf.zmin * INT_MAX );
+      |                                                                                                              ~ ^~~~~~~
+/mnt/c/Users/adyba/ss2-wasm/sources/emsdk/upstream/lib/clang/22/include/limits.h:50:19: note: expanded from macro 'INT_MAX'
+   50 | #define INT_MAX   __INT_MAX__
+      |                   ^~~~~~~~~~~
+<built-in>:61:21: note: expanded from macro '__INT_MAX__'
+   61 | #define __INT_MAX__ 2147483647
+      |                     ^~~~~~~~~~
+/mnt/c/Users/adyba/ss2-wasm/sources/gl4es/src/gl/render.c:26:112: warning: implicit conversion from 'int' to 'GLfloat' (aka 'float') changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+   26 |                 glstate->selectbuf.buffer[glstate->selectbuf.pos+2] = (unsigned int)(glstate->selectbuf.zmax * INT_MAX );
+      |                                                                                                              ~ ^~~~~~~
+/mnt/c/Users/adyba/ss2-wasm/sources/emsdk/upstream/lib/clang/22/include/limits.h:50:19: note: expanded from macro 'INT_MAX'
+   50 | #define INT_MAX   __INT_MAX__
+      |                   ^~~~~~~~~~~
+<built-in>:61:21: note: expanded from macro '__INT_MAX__'
+   61 | #define __INT_MAX__ 2147483647
+      |                     ^~~~~~~~~~
+2 warnings generated.
+[ 70%] Building C object src/CMakeFiles/GL.dir/gl/shader.c.o
+[ 71%] Building C object src/CMakeFiles/GL.dir/gl/shaderconv.c.o
+[ 72%] Building C object src/CMakeFiles/GL.dir/gl/shader_hacks.c.o
+[ 74%] Building C object src/CMakeFiles/GL.dir/gl/stack.c.o
+[ 75%] Building C object src/CMakeFiles/GL.dir/gl/stencil.c.o
+[ 77%] Building C object src/CMakeFiles/GL.dir/gl/string_utils.c.o
+[ 78%] Building C object src/CMakeFiles/GL.dir/gl/stubs.c.o
+[ 80%] Building C object src/CMakeFiles/GL.dir/gl/texenv.c.o
+[ 81%] Building C object src/CMakeFiles/GL.dir/gl/texgen.c.o
+[ 82%] Building C object src/CMakeFiles/GL.dir/gl/texture.c.o
+[ 84%] Building C object src/CMakeFiles/GL.dir/gl/texture_compressed.c.o
+[ 85%] Building C object src/CMakeFiles/GL.dir/gl/texture_params.c.o
+[ 88%] Building C object src/CMakeFiles/GL.dir/gl/texture_3d.c.o
+[ 88%] Building C object src/CMakeFiles/GL.dir/gl/texture_read.c.o
+[ 90%] Building C object src/CMakeFiles/GL.dir/gl/uniform.c.o
+[ 91%] Building C object src/CMakeFiles/GL.dir/gl/vertexattrib.c.o
+[ 92%] Building C object src/CMakeFiles/GL.dir/gl/wrap/gl4eswraps.c.o
+[ 94%] Building C object src/CMakeFiles/GL.dir/gl/wrap/gles.c.o
+[ 95%] Building C object src/CMakeFiles/GL.dir/gl/wrap/glstub.c.o
+[ 97%] Building C object src/CMakeFiles/GL.dir/gl/math/matheval.c.o
+[ 98%] Building C object src/CMakeFiles/GL.dir/glx/hardext.c.o
+[100%] Linking C static library ../../lib/libGL.a
+[100%] Built target GL
+16.12user 7.51system 0:21.93elapsed 107%CPU (0avgtext+0avgdata 162492maxresident)k
+703600inputs+568outputs (15224major+744159minor)pagefaults 0swaps
