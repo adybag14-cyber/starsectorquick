@@ -1,93 +1,348 @@
-# starsector-2
+# Memory Mapping Utilities for CheerpJ Buffers
 
+Utilities for mapping Java ByteBuffer objects to C pointers in CheerpJ/WebAssembly environments. These utilities enable efficient data transfer between Java and C, particularly for buffer-based OpenGL functions like `glTexImage2D`, `glBufferData`, and `glBufferSubData`.
 
+## Overview
 
-## Getting started
+This module provides C functions to interact with CheerpJ ByteBuffer objects from WebAssembly code, allowing you to:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- Get the memory address of a buffer's underlying data
+- Get buffer capacity/size
+- Read data from a buffer into a C array
+- Write data from a C array into a buffer
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+These utilities are essential for high-performance graphics operations where data needs to be transferred efficiently between Java and OpenGL.
 
-## Add your files
+## Use Cases
 
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- **Texture Data**: Transfer image data from Java ByteBuffers to OpenGL via `glTexImage2D`
+- **Vertex Buffer Objects**: Upload vertex data to GPU via `glBufferData`
+- **Index Buffer Objects**: Upload index data to GPU
+- **Shader Uniforms**: Transfer uniform block data
+- **Any buffer-based OpenGL operation**: Any function requiring a data pointer
+
+## Files
+
+- `memory_mapping_utils.h` - Header file with function declarations
+- `memory_mapping_utils.c` - Implementation of buffer mapping functions
+- `test_memory_mapping.c` - Test and demonstration code
+
+## API Reference
+
+### Functions
+
+#### `void* cheerpj_get_buffer_address(jobject buffer)`
+
+Get the memory address of a CheerpJ ByteBuffer's underlying data.
+
+**Parameters:**
+- `buffer` - The CheerpJ ByteBuffer object
+
+**Returns:**
+- Pointer to the buffer's data in WebAssembly memory, or `NULL` on error
+
+**Notes:**
+- For direct buffers, returns the actual data address
+- For non-direct buffers, returns the address of the backing array's data
+- The returned pointer is only valid while the buffer is not garbage collected
+
+#### `int cheerpj_get_buffer_capacity(jobject buffer)`
+
+Get the capacity/size of a CheerpJ ByteBuffer in bytes.
+
+**Parameters:**
+- `buffer` - The CheerpJ ByteBuffer object
+
+**Returns:**
+- Buffer capacity in bytes, or `0` on error
+
+#### `void cheerpj_read_buffer(jobject buffer, void* dest, int offset, int length)`
+
+Read data from a CheerpJ ByteBuffer into a C array.
+
+**Parameters:**
+- `buffer` - The CheerpJ ByteBuffer object
+- `dest` - Pointer to destination C array
+- `offset` - Starting offset in buffer (in bytes)
+- `length` - Number of bytes to read
+
+**Notes:**
+- Performs bounds checking - will not read beyond buffer capacity
+- If `offset + length` exceeds capacity, reads up to capacity only
+
+#### `void cheerpj_write_buffer(jobject buffer, void* src, int offset, int length)`
+
+Write data from a C array into a CheerpJ ByteBuffer.
+
+**Parameters:**
+- `buffer` - The CheerpJ ByteBuffer object
+- `src` - Pointer to source C array
+- `offset` - Starting offset in buffer (in bytes)
+- `length` - Number of bytes to write
+
+**Notes:**
+- Performs bounds checking - will not write beyond buffer capacity
+- If `offset + length` exceeds capacity, writes up to capacity only
+
+## Usage Examples
+
+### Example 1: Getting Buffer Information
+
+```c
+#include "memory_mapping_utils.h"
+
+void inspect_buffer(jobject buffer) {
+    void* addr = cheerpj_get_buffer_address(buffer);
+    int capacity = cheerpj_get_buffer_capacity(buffer);
+    
+    printf("Buffer address: %p\n", addr);
+    printf("Buffer capacity: %d bytes\n", capacity);
+}
+```
+
+### Example 2: Using with OpenGL (glBufferData)
+
+```c
+#include "memory_mapping_utils.h"
+
+// Assume these are defined elsewhere
+extern void glBufferData(int target, int size, void* data, int usage);
+
+void upload_vertex_data(jobject buffer) {
+    void* data = cheerpj_get_buffer_address(buffer);
+    int size = cheerpj_get_buffer_capacity(buffer);
+    
+    if (data != NULL && size > 0) {
+        glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    }
+}
+```
+
+### Example 3: Using with OpenGL (glTexImage2D)
+
+```c
+#include "memory_mapping_utils.h"
+
+// Assume these are defined elsewhere
+extern void glTexImage2D(int target, int level, int internalformat,
+                        int width, int height, int border,
+                        int format, int type, void* pixels);
+
+void upload_texture(jobject texture_buffer, int width, int height) {
+    void* pixels = cheerpj_get_buffer_address(texture_buffer);
+    
+    if (pixels != NULL) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    }
+}
+```
+
+### Example 4: Reading/Modifying Buffer Data
+
+```c
+#include "memory_mapping_utils.h"
+#include <string.h>
+
+void invert_colors(jobject buffer) {
+    int capacity = cheerpj_get_buffer_capacity(buffer);
+    
+    // Read entire buffer
+    uint8_t* temp = (uint8_t*)malloc(capacity);
+    cheerpj_read_buffer(buffer, temp, 0, capacity);
+    
+    // Modify data (invert colors: RGBA -> (255-R, 255-G, 255-B, A))
+    for (int i = 0; i < capacity; i += 4) {
+        temp[i + 0] = 255 - temp[i + 0]; // R
+        temp[i + 1] = 255 - temp[i + 1]; // G
+        temp[i + 2] = 255 - temp[i + 2]; // B
+        // Alpha (i+3) stays the same
+    }
+    
+    // Write back
+    cheerpj_write_buffer(buffer, temp, 0, capacity);
+    
+    free(temp);
+}
+```
+
+### Example 5: Partial Buffer Operations
+
+```c
+void update_vertex_subset(jobject buffer, int offset, void* new_vertices, int size) {
+    // Update only a portion of the buffer
+    cheerpj_write_buffer(buffer, new_vertices, offset, size);
+}
+
+void read_first_row(jobject texture_buffer, int row_size, uint8_t* output) {
+    // Read only the first row of a texture
+    cheerpj_read_buffer(texture_buffer, output, 0, row_size);
+}
+```
+
+## Compilation
+
+### Emscripten Compilation
+
+To compile the utilities with Emscripten:
+
+```bash
+# Compile the utilities
+emcc -c memory_mapping_utils.c -o memory_mapping_utils.o
+
+# Compile with your project
+emcc -o output.js your_code.c memory_mapping_utils.o \
+    -s EMULATE_FUNCTION_POINTER_CASTS=1 \
+    -s EXPORTED_FUNCTIONS="[
+        '_cheerpj_get_buffer_address',
+        '_cheerpj_get_buffer_capacity',
+        '_cheerpj_read_buffer',
+        '_cheerpj_write_buffer'
+    ]"
+```
+
+### Running Tests
+
+To compile and run the test file:
+
+```bash
+# Compile test
+emcc -o test_memory_mapping.js \
+    test_memory_mapping.c \
+    memory_mapping_utils.c \
+    -s EMULATE_FUNCTION_POINTER_CASTS=1 \
+    -s EXPORTED_FUNCTIONS="[
+        '_test_buffer_operations',
+        '_test_with_simulated_buffer'
+    ]" \
+    -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']"
+
+# Run with simulated buffer (no CheerpJ required)
+node test_memory_mapping.js
+```
+
+### Integration with CheerpJ
+
+When using with CheerpJ:
+
+1. Compile the utilities to WebAssembly with Emscripten
+2. Load the compiled `.js` file in your CheerpJ application
+3. Call the exported functions from Java using JNI
+4. Pass ByteBuffer objects from Java to the native functions
+
+## CheerpJ Buffer Assumptions
+
+These utilities make certain assumptions about how CheerpJ represents ByteBuffer objects in memory:
+
+### Direct ByteBuffers
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/adybag14-group/starsector-2.git
-git branch -M main
-git push -uf origin main
+Offset | Type     | Description
+-------|----------|------------------------------------
++0     | pointer  | vtable pointer
++4     | int32    | isDirect flag (1 for direct buffers)
++8     | int32    | capacity (in bytes)
++12    | int32    | current position
++16    | int32    | current limit
++20    | pointer  | backingArray (NULL for direct)
++24    | int32    | arrayOffset
++28    | pointer  | directBufferAddress (data address)
 ```
 
-## Integrate with your tools
+### Non-Direct ByteBuffers
 
-* [Set up project integrations](https://gitlab.com/adybag14-group/starsector-2/-/settings/integrations)
+```
+Offset | Type     | Description
+-------|----------|------------------------------------
++0     | pointer  | vtable pointer
++4     | int32    | isDirect flag (0 for non-direct)
++8     | int32    | capacity (in bytes)
++12    | int32    | current position
++16    | int32    | current limit
++20    | pointer  | backingArray (Java byte[] object)
++24    | int32    | arrayOffset
+```
 
-## Collaborate with your team
+### Java Byte Arrays
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+For non-direct buffers, the backing byte array has this structure:
 
-## Test and Deploy
+```
+Offset | Type     | Description
+-------|----------|------------------------------------
++0     | int32    | array length
++4     | bytes[]  | actual array data
+```
 
-Use the built-in continuous integration in GitLab.
+### Important Notes
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+1. **Offset Values**: The offsets used in the implementation may need adjustment based on your specific CheerpJ version and configuration. If buffer access fails, check the actual object layout in your CheerpJ build.
 
-***
+2. **Direct Buffers Recommended**: For best performance with OpenGL, use direct ByteBuffers (`ByteBuffer.allocateDirect()`). Non-direct buffers require extra indirection.
 
-# Editing this README
+3. **Garbage Collection**: The returned address from `cheerpj_get_buffer_address()` is only valid while the buffer is not garbage collected. Keep a reference to the buffer from Java while using the address.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+4. **Thread Safety**: These functions are not thread-safe. Use proper synchronization if accessing buffers from multiple threads.
 
-## Suggestions for a good README
+## Error Handling
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+All functions perform basic error checking:
 
-## Name
-Choose a self-explaining name for your project.
+- `NULL` buffer objects return `NULL` or `0`
+- Invalid offsets are handled gracefully
+- Out-of-bounds operations are clamped to buffer capacity
+- NULL destination/source pointers are handled without crashes
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Performance Considerations
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+- Direct buffers are faster (single memory access)
+- Non-direct buffers require extra indirection
+- Use `cheerpj_get_buffer_address()` + direct memory access for bulk operations
+- Use `cheerpj_read_buffer()`/`cheerpj_write_buffer()` for smaller operations
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Related Issues
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+- **bd-6**: Texture functions - uses these utilities for glTexImage2D
+- **bd-7**: VBO functions - uses these utilities for glBufferData
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Part of the StarSector 2 project.
+
+## Contributing
+
+When modifying these utilities:
+
+1. Maintain backward compatibility with existing CheerpJ buffer layouts
+2. Add tests for new functionality in `test_memory_mapping.c`
+3. Update this README with new usage examples
+4. Document any changes to buffer offset assumptions
+
+## Troubleshooting
+
+### Problem: Buffer address is NULL
+
+**Possible causes:**
+- CheerpJ version has different buffer layout
+- Buffer was garbage collected
+- Buffer is not properly initialized
+
+**Solution:** Check CheerpJ object layout, verify buffer is alive, ensure proper initialization.
+
+### Problem: Reading/Writing incorrect data
+
+**Possible causes:**
+- Buffer offsets are incorrect for your CheerpJ version
+- Mix of direct/non-direct buffers
+- Endianness issues
+
+**Solution:** Verify buffer structure matches assumptions, check isDirect flag, verify data endianness.
+
+### Problem: Crashes on buffer access
+
+**Possible causes:**
+- Buffer was freed/garbage collected
+- Memory corruption
+- Incorrect buffer object passed
+
+**Solution:** Ensure buffer remains referenced from Java, verify valid buffer object, check for memory issues.
