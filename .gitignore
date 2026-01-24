@@ -1,0 +1,88 @@
+# IDE and Editor files
+.idea/
+.vs/
+.vscode/
+.ralph-state/
+.bd/
+
+# Build artifacts
+build/
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Compiled files
+*.o
+*.so
+*.a
+*.wasm
+*.js.map
+
+# Logs
+*.log
+logs/
+server.log
+server_gwt.log
+server_gwt_err.log
+gwt_compile*.log
+compilation_output.log
+
+# Test outputs
+test_output/
+test_*.png
+test_*.html
+button_check_screenshot.png
+quick_test_screenshot.png
+
+# Temporary files
+*.tmp
+*.temp
+temp_test.txt
+{console.log('Game
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Large binary files
+*.zip
+jdk11.zip
+maven.zip
+jadx.zip
+cfr.jar
+
+# Decompiled sources (optional - uncomment if you want to exclude)
+# decompiled_src/
+# jadx_src/
+
+# Emscripten (optional - uncomment if you want to exclude)
+# emsdk/
+
+# Sources (optional - uncomment if you want to exclude)
+# sources/
+
+# Tools (optional - uncomment if you want to exclude)
+# tools/
+
+# Parallel build workspace
+parallel-build-workspace/
+
+# GitLab CI (keep this)
+.gitlab-ci.yml

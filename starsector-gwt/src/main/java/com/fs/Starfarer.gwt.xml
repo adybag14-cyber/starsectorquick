@@ -1,0 +1,21 @@
+<module rename-to='starfarer'>
+  <inherits name='com.google.gwt.user.User'/>
+  <inherits name='elemental2.dom.Dom'/>
+  <inherits name='elemental2.webgl.WebGl'/>
+  <inherits name='jsinterop.base.Base'/>
+  
+  <!-- Inherit library stubs -->
+  <inherits name='org.lwjgl.LWJGL'/>
+  <inherits name='org.json.JSON'/>
+  <inherits name='org.apache.log4j.Log4j'/>
+  <inherits name='com.thoughtworks.xstream.XStream'/>
+
+  <entry-point class='com.fs.starfarer.GWTLauncher'/>
+
+  <!-- Source paths -->
+  <source path='starfarer'/>
+  
+  <!-- Polyfill source paths -->
+  <source path='java'/>
+  <source path='org'/>
+</module>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Starsector GWT + CheerpJ 4.2 + GL4ES Stack</title>
+    <style>
+        body { background: #050505; color: #00d9ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; overflow: hidden; }
+        #container { display: flex; flex-direction: column; height: 100vh; gap: 10px; }
+        #log { flex: 1; background: #0a0a1a; border: 1px solid #00d9ff; padding: 15px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 13px; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0, 217, 255, 0.1); }
+        canvas { background: #000; border: 2px solid #333; align-self: center; border-radius: 4px; box-shadow: 0 0 30px rgba(0, 217, 255, 0.3); }
+        .success { color: #00ff88; }
+        .error { color: #ff4444; }
+        .info { color: #00d9ff; }
+        .warning { color: #ffaa00; }
+        h1 { margin: 0; text-align: center; text-transform: uppercase; letter-spacing: 3px; font-weight: 300; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Starsector 2 End-to-End Stack</h1>
+        <div id="log">BOOTING SYSTEMS...<br></div>
+        <canvas id="gameCanvas" width="1024" height="768"></canvas>
+    </div>
+
+    <!-- CheerpJ 4.2 Loader -->
+    <script src="https://cjrtnc.leaningtech.com/4.2/loader.js"></script>
+    
+    <!-- GWT Generated JavaScript -->
+    <script src="starfarer/starfarer.nocache.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        window.lwjglCanvasElement = canvas; // Important for some GL bridges
+
+        function logToUI(msg, type) {
+            const l = document.getElementById('log');
+            const colorClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            l.innerHTML += `<span class="${colorClass}">[${new Date().toLocaleTimeString()}] ${msg}</span><br>`;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        console.log = (...args) => logToUI(args.join(' '), 'info');
+        console.error = (...args) => logToUI(args.join(' '), 'error');
+        console.warn = (...args) => logToUI(args.join(' '), 'warning');
+
+        async function init() {
+            logToUI("WAITING FOR GWT CORE...", "info");
+            await new Promise(r => setTimeout(r, 1500));
+
+            if (!window.gwtGL11) {
+                logToUI("❌ CRITICAL ERROR: GWT BRIDGE NOT FOUND", "error");
+                return;
+            }
+            logToUI("✅ GWT API CORE ACTIVE", "success");
+
+            const natives = {};
+            function addNative(className, methods, globalObj) {
+                methods.forEach(method => {
+                    natives[`${className}.${method}`] = (...args) => {
+                        if (window[globalObj] && window[globalObj][method]) {
+                            return window[globalObj][method](...args);
+                        }
+                        return null;
+                    };
+                });
+            }
+
+            // LWJGL Methods to Bridge
+            const gl11Methods = ["glEnable", "glDisable", "glClear", "glColor4f", "glColor4ub", "glVertex2f", "glTexCoord2f", "glMatrixMode", "glLoadIdentity", "glTranslatef", "glRotatef", "glScalef", "glPushMatrix", "glPopMatrix", "glPointSize", "glLineWidth", "glBlendFunc", "glHint", "glPolygonMode", "glGetInteger", "glGetString", "glEnableClientState", "glDisableClientState", "glTexCoordPointer", "glColorPointer", "glVertexPointer", "glDrawArrays", "glColorMask", "glScissor"];
+            addNative("org.lwjgl.opengl.GL11", gl11Methods, "gwtGL11");
+
+            const displayMethods = ["create", "update", "isCloseRequested", "destroy", "setTitle", "getWidth", "getHeight", "isActive", "setVSyncEnabled"];
+            addNative("org.lwjgl.opengl.Display", displayMethods, "gwtDisplay");
+
+            const kbMethods = ["isKeyDown", "next", "getEventKey", "getEventKeyState", "getEventCharacter"];
+            addNative("org.lwjgl.input.Keyboard", kbMethods, "gwtKeyboard");
+
+            const mouseMethods = ["isButtonDown", "getX", "getY", "getDX", "getDY", "getDWheel", "next", "setCursorPosition"];
+            addNative("org.lwjgl.input.Mouse", mouseMethods, "gwtMouse");
+
+            logToUI("INITIALIZING CHEERPJ 4.2 + GL4ES WASM...", "info");
+            try {
+                await cheerpjInit({
+                    version: 8,
+                    javaProperties: ["java.library.path=/app/libs/", "user.dir=/"],
+                    mounts: { "/": "libs/" },
+                    libraries: {
+                        "libGL.so.1": "/libs/gl4es.wasm",
+                        "libsun_misc_Unsafe.so": "/libs/unsafe.wasm"
+                    },
+                    natives: natives,
+                    enableX11: true,
+                    memoryPages: 4096 // 256MB
+                });
+                logToUI("✅ CHEERPJ RUNTIME READY", "success");
+
+                logToUI("MOUNTING FILESYSTEM...", "info");
+                // In a real scenario, we'd mount graphics/data here
+                
+                logToUI("LAUNCHING STARSECTOR CORE...", "info");
+                await cheerpjRunJar("/libs/starfarer_obf.jar");
+                logToUI("🚀 GAME PROCESS EXECUTING", "success");
+                
+                // Monitor for activity
+                const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                setInterval(() => {
+                    if (ctx) {
+                        const pixels = new Uint8Array(4);
+                        ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, pixels);
+                        if (pixels[0] !== 0 || pixels[1] !== 0 || pixels[2] !== 0) {
+                            logToUI("✨ GRAPHICS ACTIVITY DETECTED! SCREEN IS NOT BLACK.", "success");
+                        }
+                    }
+                }, 2000);
+
+            } catch (e) {
+                logToUI(`❌ STACK INITIALIZATION FAILED: ${e.message}`, "error");
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
