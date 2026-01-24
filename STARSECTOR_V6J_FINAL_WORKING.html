@@ -159,9 +159,6 @@
 
         <div class="controls">
             <button id="initButton" class="btn btn-primary" onclick="initializePipeline()">
-                🧪 INITIALIZE
-            </button>
-            <button id="launchButton" class="btn btn-primary" onclick="launchGame()" disabled>
                 🚀 LAUNCH STARSECTOR 2
             </button>
         </div>
@@ -202,7 +199,13 @@
             const logDiv = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
             const color = type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : type === 'warning' ? '#ffaa00' : '#00ffaa';
-            const entry = document.createElement("div"); entry.className = "log-entry " + type; entry.style.color = color; entry.style.margin = "5px 0"; entry.textContent = "[" + time + "] " + msg; logDiv.appendChild(entry); while (logDiv.children.length > 1000) { logDiv.removeChild(logDiv.firstChild); }
+            const entry = document.createElement("div");
+            entry.className = "log-entry " + type;
+            entry.style.color = color;
+            entry.style.margin = "5px 0";
+            entry.textContent = "[" + time + "] " + msg;
+            logDiv.appendChild(entry);
+            while (logDiv.children.length > 1000) { logDiv.removeChild(logDiv.firstChild); }
             logDiv.scrollTop = logDiv.scrollHeight;
             console.log(`[${type.toUpperCase()}]`, msg);
         }
@@ -210,7 +213,7 @@
         let cheerpjReady = false;
         
         async function initializePipeline() {
-            log('🧪 INITIALIZING V6L (cheerpjRunJar API)', 'success');
+            log('🧪 INITIALIZING V6L - STARTING GAME', 'success');
             log('📦 Setting up classpaths for game JARs...', 'info');
             
             // List all 14 JAR files for classpaths
@@ -235,7 +238,9 @@
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
             
             try {
+                log('🚀 Starting CheerpJ with mainClass...', 'info');
                 await cheerpjInit({
+                    mainClass: 'com.fs.starfarer.Starfarer',
                     version: 8,
                     javaProperties: [
                         'java.library.path=./build/final/wasm-modules'
@@ -263,7 +268,7 @@
                 });
                 
                 cheerpjReady = true;
-                log('✅ CheerpJ initialized', 'success');
+                log('✅ CheerpJ initialized and game starting!', 'success');
                 
                 updateModuleStatus('cheerpj', true);
                 updateModuleStatus('wasm', true);
@@ -278,9 +283,8 @@
                 log('📦 Polyfills: Loaded', 'success');
                 
                 document.getElementById('initButton').disabled = true;
-                document.getElementById('initButton').textContent = '✅ READY';
-                document.getElementById('launchButton').disabled = false;
-                log('💡 Now click LAUNCH STARSECTOR 2 to start!', 'success');
+                document.getElementById('initButton').textContent = '✅ RUNNING';
+                log('🎮 Game is launching - watch for output below!', 'success');
                 
             } catch (error) {
                 log(`❌ Init failed: ${error.message}`, 'error');
@@ -289,25 +293,15 @@
         }
         
         async function launchGame() {
-            if (!cheerpjReady) return;
+            log('🚀 LAUNCHING - cheerpjRunMain', 'info');
             
-            log('🚀 LAUNCHING - cheerpjRunMain with class name', 'info');
+            // Use cheerpjRunMain with main class and classpath
+            log('🎯 Calling cheerpjRunMain with classpath and main class', 'info');
             
-            // Primary approach: Use cheerpjRunMain with class name (classpaths already loaded)
-            try {
-                log('🎯 Attempt 1: cheerpjRunMain with class name', 'info');
-                log('📦 Main class: com.fs.starfarer.Starfarer', 'info');
-                
-                await cheerpjRunMain('com.fs.starfarer.Starfarer');
-                
-                log('✅ STARSECTOR 2 LAUNCHED with class name!', 'success');
-                document.getElementById('launchButton').textContent = '✅ RUNNING';
-                return; // Success - don't try other methods
-                
-            } catch (error) {
-                log(`❌ cheerpjRunMain with class name failed: ${error.message}`, 'error');
-                console.error(error);
-            }
+            await cheerpjRunMain('./jars/starfarer_obf.jar', 'com.fs.starfarer.Starfarer');
+            
+            log('✅ STARSECTOR 2 LAUNCHED!', 'success');
+            document.getElementById('launchButton').textContent = '✅ RUNNING';
             
             // Fallback: Try cheerpjRunMain with JAR name
             try {
@@ -324,22 +318,7 @@
                 log(`❌ cheerpjRunMain with JAR name failed: ${error.message}`, 'error');
                 console.error(error);
             }
-            
-            // Fallback: Try cheerpjRunJar
-            try {
-                log('🎯 Attempt 3: cheerpjRunJar with JAR file', 'info');
-                log('📦 Path: ./jars/starfarer_obf.jar', 'info');
-                
-                await cheerpjRunJar('./jars/starfarer_obf.jar');
-                
-                log('✅ STARSECTOR 2 LAUNCHED with cheerpjRunJar!', 'success');
-                document.getElementById('launchButton').textContent = '✅ RUNNING';
-                
-            } catch (error) {
-                log(`❌ All launch methods failed!`, 'error');
-                log(`Last error: ${error.message}`, 'error');
-                console.error(error);
-            }
+
         }
         
         function updateModuleStatus(moduleId, loaded) {
@@ -350,7 +329,7 @@
             }
         }
 
-        log('🎮 Starsector 2 V6J Final - Production Ready', 'info');
+        log('🎮 Starsector 2 - V6J Final - Production Ready', 'info');
         log('📦 Method: cheerpjRunMain + classpath (Correct Approach)', 'success');
         log('📦 Canvas: 1024x768 (adjustable in-game)', 'info');
         log('📦 JARs: 14 JARs in ./jars/ directory', 'info');

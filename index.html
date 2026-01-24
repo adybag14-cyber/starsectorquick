@@ -845,6 +845,7 @@
         }
         
         let cheerpjReady = false;
+        let cheerpjClassPath = [];
         
         async function initializePipeline() {
             log('🧪 INITIALIZING CHEERPJ RUNTIME', 'success');
@@ -868,6 +869,7 @@
             ];
             
             const classpaths = jarFiles.map(j => './jars/' + j);
+            cheerpjClassPath = classpaths;
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
             
             try {
@@ -920,7 +922,7 @@
             
             try {
                 log('🎯 Launching main class: com.fs.starfarer.Starfarer', 'info');
-                await cheerpjRunMain('com.fs.starfarer.Starfarer');
+                await cheerpjRunMain('com.fs.starfarer.Starfarer', cheerpjClassPath);
                 log('✅ STARSECTOR 2 LAUNCHED!', 'success');
                 document.getElementById('launchButton').textContent = '✅ RUNNING';
             } catch (error) {

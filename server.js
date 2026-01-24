@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = process.cwd();
-const port = 8080;
+const port = 8000;
 
 const server = http.createServer((req, res) => {
   // 🛡️ COEP/COOP disabled for testing - may not be needed for this game
