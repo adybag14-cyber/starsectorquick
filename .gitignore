@@ -68,18 +68,18 @@ maven.zip
 jadx.zip
 cfr.jar
 
-# Decompiled sources (optional - uncomment if you want to exclude)
-# decompiled_src/
-# jadx_src/
+# Decompiled sources
+decompiled_src/
+jadx_src/
 
-# Emscripten (optional - uncomment if you want to exclude)
-# emsdk/
+# Emscripten
+emsdk/
 
-# Sources (optional - uncomment if you want to exclude)
-# sources/
+# Sources
+sources/
 
-# Tools (optional - uncomment if you want to exclude)
-# tools/
+# Tools (contains large JDK and Maven installations)
+tools/
 
 # Parallel build workspace
 parallel-build-workspace/
