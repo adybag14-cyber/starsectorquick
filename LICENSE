@@ -1,0 +1,73 @@
+MIT License
+
+Copyright (c) 2026 StarSector 2 WebAssembly Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-Party Licenses
+
+This project incorporates third-party software with their respective licenses:
+
+### CheerpJ (Leaning Technologies)
+- **License**: Commercial License
+- **Website**: https://www.leaningtech.com/cheerpj
+- **Note**: Used for Java to WebAssembly compilation
+
+### LWJGL (Lightweight Java Game Library)
+- **License**: BSD License
+- **Website**: https://www.lwjgl.org
+- **Note**: Used for OpenGL bindings
+
+### GL4ES
+- **License**: MIT License
+- **Website**: https://github.com/ptitSeb/gl4es
+- **Note**: Used for OpenGL to WebGL translation
+
+### StarSector 2 (Fractal Softworks)
+- **License**: Original Game License
+- **Website**: https://fractalsoftworks.com/
+- **Note**: Original game being ported
+
+### Emscripten
+- **License**: MIT License
+- **Website**: https://emscripten.org/
+- **Note**: Used for C/C++ to WebAssembly compilation
+
+### Playwright
+- **License**: Apache License 2.0
+- **Website**: https://playwright.dev/
+- **Note**: Used for automated testing
+
+### WebAssembly
+- **License**: W3C Community Final Specification
+- **Website**: https://webassembly.org/
+- **Note**: Runtime environment
+
+---
+
+## Attribution
+
+This project is a fan-made port of StarSector 2 for educational purposes.
+StarSector is a trademark of Fractal Softworks. This project is not affiliated
+with or endorsed by Fractal Softworks.
+
+For information about the original StarSector game, please visit:
+https://fractalsoftworks.com/
