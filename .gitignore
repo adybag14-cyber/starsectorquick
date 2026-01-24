@@ -29,6 +29,13 @@ server_gwt_err.log
 gwt_compile*.log
 compilation_output.log
 
+# Oracle Cloud API Keys (DO NOT COMMIT - SECURITY RISK)
+*.pem
+*_public.pem
+*_private.pem
+*api-key*.pem
+*private-key*.pem
+
 # Test outputs
 test_output/
 test_*.png
