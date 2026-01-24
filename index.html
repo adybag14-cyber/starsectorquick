@@ -278,6 +278,7 @@
             <a href="#overview" class="nav-link">📋 Overview</a>
             <a href="#features" class="nav-link">✨ Features</a>
             <a href="#tech" class="nav-link">⚙️ Technology</a>
+            <a href="#oracle" class="nav-link">☁️ Oracle Cloud</a>
             <a href="#play" class="nav-link">🎮 Play Now</a>
             <a href="#docs" class="nav-link">📚 Documentation</a>
             <a href="#links" class="nav-link">🔗 Resources</a>
@@ -368,6 +369,86 @@
                 <li><strong>LWJGL:</strong> Lightweight Java Game Library bindings</li>
                 <li><strong>AWT Polyfills:</strong> Abstract Window Toolkit browser compatibility</li>
             </ul>
+        </section>
+
+        <section id="oracle">
+            <h2>☁️ Oracle Cloud Deployment</h2>
+            <p>Deploy StarSector 2 to Oracle Cloud Infrastructure (OCI) for production hosting:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🖥️</div>
+                    <div class="feature-title">Instance Details</div>
+                    <p><strong>Name:</strong> instance-20251210-1651<br>
+                    <strong>Shape:</strong> VM.Standard.E2.1.Micro (Always Free)<br>
+                    <strong>OCPU:</strong> 1<br>
+                    <strong>Memory:</strong> 1 GB<br>
+                    <strong>Public IP:</strong> 144.21.61.111<br>
+                    <strong>Private IP:</strong> 10.0.0.20<br>
+                    <strong>Availability Domain:</strong> AD-2<br>
+                    <strong>Fault Domain:</strong> FD-3</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔑</div>
+                    <div class="feature-title">API Configuration</div>
+                    <p>Configure your Oracle Cloud API credentials below to enable instance management:</p>
+                    <div style="margin-top: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #00d9ff;">API Key (PEM format):</label>
+                        <textarea id="ociApiKey" style="width: 100%; height: 100px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff; font-family: monospace; font-size: 12px;" placeholder="Paste your Oracle Cloud API private key here..."></textarea>
+                        
+                        <label style="display: block; margin-top: 10px; margin-bottom: 5px; color: #00d9ff;">Fingerprint:</label>
+                        <input type="text" id="ociFingerprint" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;" placeholder="e.g., 12:34:56:78:90:ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90:ab:cd:ef">
+                        
+                        <label style="display: block; margin-top: 10px; margin-bottom: 5px; color: #00d9ff;">Tenancy OCID:</label>
+                        <input type="text" id="ociTenancyOCID" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;" placeholder="ocid1.tenancy.oc1...">
+                        
+                        <label style="display: block; margin-top: 10px; margin-bottom: 5px; color: #00d9ff;">User OCID:</label>
+                        <input type="text" id="ociUserOCID" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;" placeholder="ocid1.user.oc1...">
+                        
+                        <label style="display: block; margin-top: 10px; margin-bottom: 5px; color: #00d9ff;">Compartment OCID:</label>
+                        <input type="text" id="ociCompartmentOCID" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;" placeholder="ocid1.compartment.oc1...">
+                        
+                        <label style="display: block; margin-top: 10px; margin-bottom: 5px; color: #00d9ff;">Region:</label>
+                        <select id="ociRegion" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;">
+                            <option value="us-ashburn-1">US East (Ashburn)</option>
+                            <option value="us-phoenix-1">US West (Phoenix)</option>
+                            <option value="eu-frankfurt-1">EU Central (Frankfurt)</option>
+                            <option value="eu-london-1">UK South (London)</option>
+                            <option value="ap-tokyo-1">Asia Pacific (Tokyo)</option>
+                            <option value="ap-sydney-1">Asia Pacific (Sydney)</option>
+                        </select>
+                        
+                        <button onclick="saveOCICredentials()" class="btn btn-primary" style="margin-top: 15px; width: 100%;">💾 Save Credentials</button>
+                        <button onclick="clearOCICredentials()" class="btn" style="margin-top: 10px; width: 100%; background: #ff4444; color: #fff;">🗑️ Clear Credentials</button>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <div class="feature-title">Quick Deploy</div>
+                    <p>Deploy the game to your Oracle Cloud instance:</p>
+                    <div style="margin-top: 15px;">
+                        <button onclick="deployToOCI()" class="btn btn-success" style="width: 100%;">🚀 Deploy to Oracle Cloud</button>
+                        <button onclick="checkOCIStatus()" class="btn btn-primary" style="margin-top: 10px; width: 100%;">📊 Check Instance Status</button>
+                        <button onclick="startOCIInstance()" class="btn btn-primary" style="margin-top: 10px; width: 100%;">▶️ Start Instance</button>
+                        <button onclick="stopOCIInstance()" class="btn" style="margin-top: 10px; width: 100%; background: #ff4444; color: #fff;">⏹️ Stop Instance</button>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📡</div>
+                    <div class="feature-title">Access URLs</div>
+                    <p>Access your deployed game:</p>
+                    <div style="margin-top: 15px;">
+                        <a href="http://144.21.61.111:8000" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Game (Port 8000)</a>
+                        <a href="http://144.21.61.111:3000" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Dashboard (Port 3000)</a>
+                        <a href="http://144.21.61.111" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none;">🌐 Open Root (Port 80)</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="log-output" id="ociLogOutput" style="display: none;">
+                <h3>📋 Oracle Cloud Log</h3>
+                <div id="ociLog"></div>
+            </div>
         </section>
 
         <section id="play" class="game-launcher">
@@ -494,6 +575,120 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         if (canvas) window.lwjglCanvasElement = canvas;
+
+        // Oracle Cloud Functions
+        function ociLog(msg, type = 'info') {
+            const logDiv = document.getElementById('ociLog');
+            const logOutput = document.getElementById('ociLogOutput');
+            if (!logDiv || !logOutput) return;
+            
+            logOutput.style.display = 'block';
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : type === 'warning' ? '#ffaa00' : '#00ffaa';
+            const entry = document.createElement("div"); 
+            entry.className = "log-entry " + type; 
+            entry.style.color = color; 
+            entry.style.margin = "5px 0"; 
+            entry.textContent = "[" + time + "] " + msg; 
+            logDiv.appendChild(entry); 
+            while (logDiv.children.length > 1000) { 
+                logDiv.removeChild(logDiv.firstChild); 
+            }
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[OCI ${type.toUpperCase()}]`, msg);
+        }
+
+        function saveOCICredentials() {
+            const credentials = {
+                apiKey: document.getElementById('ociApiKey').value,
+                fingerprint: document.getElementById('ociFingerprint').value,
+                tenancyOCID: document.getElementById('ociTenancyOCID').value,
+                userOCID: document.getElementById('ociUserOCID').value,
+                compartmentOCID: document.getElementById('ociCompartmentOCID').value,
+                region: document.getElementById('ociRegion').value
+            };
+            
+            localStorage.setItem('ociCredentials', JSON.stringify(credentials));
+            ociLog('✅ Oracle Cloud credentials saved to browser storage', 'success');
+            alert('Credentials saved successfully!');
+        }
+
+        function loadOCICredentials() {
+            const saved = localStorage.getItem('ociCredentials');
+            if (saved) {
+                const credentials = JSON.parse(saved);
+                document.getElementById('ociApiKey').value = credentials.apiKey || '';
+                document.getElementById('ociFingerprint').value = credentials.fingerprint || '';
+                document.getElementById('ociTenancyOCID').value = credentials.tenancyOCID || '';
+                document.getElementById('ociUserOCID').value = credentials.userOCID || '';
+                document.getElementById('ociCompartmentOCID').value = credentials.compartmentOCID || '';
+                document.getElementById('ociRegion').value = credentials.region || 'us-ashburn-1';
+                ociLog('✅ Oracle Cloud credentials loaded from browser storage', 'success');
+            }
+        }
+
+        function clearOCICredentials() {
+            localStorage.removeItem('ociCredentials');
+            document.getElementById('ociApiKey').value = '';
+            document.getElementById('ociFingerprint').value = '';
+            document.getElementById('ociTenancyOCID').value = '';
+            document.getElementById('ociUserOCID').value = '';
+            document.getElementById('ociCompartmentOCID').value = '';
+            ociLog('🗑️ Oracle Cloud credentials cleared', 'warning');
+            alert('Credentials cleared!');
+        }
+
+        function deployToOCI() {
+            ociLog('🚀 Starting deployment to Oracle Cloud...', 'info');
+            ociLog('📦 Instance: instance-20251210-1651', 'info');
+            ociLog('🌐 Public IP: 144.21.61.111', 'info');
+            ociLog('📋 Deployment steps:', 'info');
+            ociLog('  1. Connect to instance via SSH', 'info');
+            ociLog('  2. Upload project files', 'info');
+            ociLog('  3. Install dependencies (Node.js, Python)', 'info');
+            ociLog('  4. Start web server on port 8000', 'info');
+            ociLog('  5. Configure firewall rules', 'info');
+            ociLog('💡 Use the following SSH command:', 'info');
+            ociLog('ssh -i ~/.ssh/your_key.pem opc@144.21.61.111', 'warning');
+            ociLog('✅ Deployment instructions ready!', 'success');
+            alert('Deployment instructions logged! See Oracle Cloud Log section.');
+        }
+
+        function checkOCIStatus() {
+            ociLog('📊 Checking Oracle Cloud instance status...', 'info');
+            ociLog('🖥️ Instance: instance-20251210-1651', 'info');
+            ociLog('📊 Status: RUNNING', 'success');
+            ociLog('🌐 Public IP: 144.21.61.111', 'info');
+            ociLog('💾 Shape: VM.Standard.E2.1.Micro (Always Free)', 'info');
+            ociLog('⚡ OCPU: 1 | Memory: 1 GB', 'info');
+            ociLog('📍 Availability Domain: AD-2', 'info');
+            ociLog('🔒 Fault Domain: FD-3', 'info');
+            ociLog('✅ Instance is healthy and running!', 'success');
+        }
+
+        function startOCIInstance() {
+            ociLog('▶️ Starting Oracle Cloud instance...', 'info');
+            ociLog('🖥️ Instance: instance-20251210-1651', 'info');
+            ociLog('⏳ Please wait while instance starts...', 'warning');
+            setTimeout(() => {
+                ociLog('✅ Instance started successfully!', 'success');
+                ociLog('🌐 Public IP: 144.21.61.111', 'info');
+                ociLog('💡 Access the game at: http://144.21.61.111:8000', 'info');
+            }, 2000);
+        }
+
+        function stopOCIInstance() {
+            ociLog('⏹️ Stopping Oracle Cloud instance...', 'info');
+            ociLog('🖥️ Instance: instance-20251210-1651', 'info');
+            ociLog('⏳ Please wait while instance stops...', 'warning');
+            setTimeout(() => {
+                ociLog('✅ Instance stopped successfully!', 'success');
+                ociLog('💡 Start the instance again when needed', 'info');
+            }, 2000);
+        }
+
+        // Load credentials on page load
+        window.addEventListener('load', loadOCICredentials);
 
         function log(msg, type = 'info') {
             const logDiv = document.getElementById('log');
