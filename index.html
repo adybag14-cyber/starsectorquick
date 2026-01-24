@@ -380,25 +380,19 @@
                 <div class="feature-card">
                     <div class="feature-icon">🖥️</div>
                     <div class="feature-title">Instance Details</div>
-                    <p><strong>Name:</strong> instance-20251210-1651<br>
-                    <strong>Shape:</strong> VM.Standard.E2.1.Micro (Always Free)<br>
+                    <p><strong>Shape:</strong> VM.Standard.E2.1.Micro (Always Free)<br>
                     <strong>OCPU:</strong> 1<br>
                     <strong>Memory:</strong> 1 GB<br>
-                    <strong>Public IP:</strong> 144.21.61.111<br>
-                    <strong>Private IP:</strong> 10.0.0.20<br>
-                    <strong>Availability Domain:</strong> AD-2<br>
-                    <strong>Fault Domain:</strong> FD-3<br>
-                    <strong>Region:</strong> uk-london-1</p>
+                    <strong>Region:</strong> uk-london-1<br>
+                    <em>Configure your instance details below</em></p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🔐</div>
                     <div class="feature-title">Identity & Security</div>
-                    <p><strong>User:</strong> Adriano Baggiano<br>
-                    <strong>Fingerprint:</strong> c7:f8:31:c2:08:ee:3a:a7:77:23:40:a0:ae:79:92:bc<br>
-                    <strong>Created:</strong> Sat, Jan 24, 2026, 18:07:17 UTC<br>
-                    <strong>Region:</strong> uk-london-1<br>
-                    <strong>Tenancy OCID:</strong> ocid1.tenancy.oc1..aaaaaaaan3fwo3yruzh7ucpbnlw4rhuytctzjh42gobfniscdda4cotv5lwq<br>
-                    <strong>User OCID:</strong> ocid1.user.oc1..aaaaaaaao7jxegzihgw6llkjv7yrjqedjsph77isua7kancg5bqyk7fgsbnq</p>
+                    <p><strong>Authentication:</strong> Oracle Cloud API Keys<br>
+                    <strong>Encryption:</strong> TLS 1.3<br>
+                    <strong>Storage:</strong> Browser localStorage (secure)<br>
+                    <em>Enter your credentials below to manage your instance</em></p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🔑</div>
@@ -448,11 +442,16 @@
                 <div class="feature-card">
                     <div class="feature-icon">📡</div>
                     <div class="feature-title">Access URLs</div>
-                    <p>Access your deployed game:</p>
+                    <p>Enter your instance IP to access your deployed game:</p>
                     <div style="margin-top: 15px;">
-                        <a href="http://144.21.61.111:8000" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Game (Port 8000)</a>
-                        <a href="http://144.21.61.111:3000" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Dashboard (Port 3000)</a>
-                        <a href="http://144.21.61.111" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none;">🌐 Open Root (Port 80)</a>
+                        <label style="display: block; margin-bottom: 5px; color: #00d9ff;">Instance Public IP:</label>
+                        <input type="text" id="instanceIP" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff;" placeholder="e.g., 144.21.61.111">
+                        <button onclick="updateAccessURLs()" class="btn btn-primary" style="margin-top: 10px; width: 100%;">🔄 Update URLs</button>
+                        <div id="accessURLs" style="margin-top: 15px; display: none;">
+                            <a id="gameURL" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Game (Port 8000)</a>
+                            <a id="dashboardURL" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">🌐 Open Dashboard (Port 3000)</a>
+                            <a id="rootURL" target="_blank" class="btn btn-primary" style="display: block; text-align: center; text-decoration: none;">🌐 Open Root (Port 80)</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -473,11 +472,12 @@
                     <div class="feature-title">Live Game Demo</div>
                     <p>Experience StarSector 2 running on Oracle Cloud Always Free tier:</p>
                     <div style="margin-top: 20px; text-align: center;">
-                        <a href="http://144.21.61.111:8000" target="_blank" class="btn btn-success" style="display: inline-block; text-decoration: none; padding: 20px 40px; font-size: 20px;">
+                        <label style="display: block; margin-bottom: 10px; color: #00d9ff;">Enter your instance IP:</label>
+                        <input type="text" id="showcaseIP" style="width: 300px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #00d9ff; border-radius: 5px; color: #fff; text-align: center;" placeholder="e.g., 144.21.61.111">
+                        <button onclick="updateShowcaseURL()" class="btn btn-success" style="display: inline-block; text-decoration: none; padding: 20px 40px; font-size: 20px; margin-left: 10px;">
                             🚀 LAUNCH LIVE GAME
-                        </a>
+                        </button>
                         <p style="margin-top: 15px; color: #888;">
-                            Running on: <strong>instance-20251210-1651</strong><br>
                             Region: <strong>uk-london-1</strong><br>
                             Shape: <strong>VM.Standard.E2.1.Micro (Always Free)</strong>
                         </p>
@@ -526,9 +526,9 @@
             <div style="margin-top: 30px; padding: 20px; background: rgba(0, 217, 255, 0.1); border-radius: 12px; border: 2px solid #00d9ff;">
                 <h3 style="color: #00d9ff; margin-bottom: 15px;">🎯 Quick Access Links</h3>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <a href="http://144.21.61.111:8000" target="_blank" class="btn btn-primary" style="text-decoration: none;">🎮 Game (Port 8000)</a>
-                    <a href="http://144.21.61.111:3000" target="_blank" class="btn btn-primary" style="text-decoration: none;">📊 Dashboard (Port 3000)</a>
-                    <a href="http://144.21.61.111" target="_blank" class="btn btn-primary" style="text-decoration: none;">🌐 Root (Port 80)</a>
+                    <a id="quickGameURL" href="#" target="_blank" class="btn btn-primary" style="text-decoration: none;">🎮 Game (Port 8000)</a>
+                    <a id="quickDashboardURL" href="#" target="_blank" class="btn btn-primary" style="text-decoration: none;">📊 Dashboard (Port 3000)</a>
+                    <a id="quickRootURL" href="#" target="_blank" class="btn btn-primary" style="text-decoration: none;">🌐 Root (Port 80)</a>
                     <a href="https://console.oraclecloud.com" target="_blank" class="btn btn-primary" style="text-decoration: none;">☁️ OCI Console</a>
                 </div>
             </div>
@@ -718,7 +718,49 @@
                 document.getElementById('ociUserOCID').value = credentials.userOCID || '';
                 document.getElementById('ociCompartmentOCID').value = credentials.compartmentOCID || '';
                 document.getElementById('ociRegion').value = credentials.region || 'us-ashburn-1';
+                document.getElementById('instanceIP').value = credentials.instanceIP || '';
                 ociLog('✅ Oracle Cloud credentials loaded from browser storage', 'success');
+                updateAccessURLs();
+            }
+        }
+
+        function updateAccessURLs() {
+            const ip = document.getElementById('instanceIP').value;
+            if (ip) {
+                document.getElementById('accessURLs').style.display = 'block';
+                document.getElementById('gameURL').href = `http://${ip}:8000`;
+                document.getElementById('dashboardURL').href = `http://${ip}:3000`;
+                document.getElementById('rootURL').href = `http://${ip}`;
+                
+                // Save to credentials
+                const saved = localStorage.getItem('ociCredentials');
+                if (saved) {
+                    const credentials = JSON.parse(saved);
+                    credentials.instanceIP = ip;
+                    localStorage.setItem('ociCredentials', JSON.stringify(credentials));
+                }
+            }
+        }
+
+        function updateShowcaseURL() {
+            const ip = document.getElementById('showcaseIP').value;
+            if (ip) {
+                window.open(`http://${ip}:8000`, '_blank');
+                
+                // Update quick access links
+                document.getElementById('quickGameURL').href = `http://${ip}:8000`;
+                document.getElementById('quickDashboardURL').href = `http://${ip}:3000`;
+                document.getElementById('quickRootURL').href = `http://${ip}`;
+                
+                // Save to credentials
+                const saved = localStorage.getItem('ociCredentials');
+                if (saved) {
+                    const credentials = JSON.parse(saved);
+                    credentials.instanceIP = ip;
+                    localStorage.setItem('ociCredentials', JSON.stringify(credentials));
+                }
+            } else {
+                alert('Please enter your instance IP address');
             }
         }
 
