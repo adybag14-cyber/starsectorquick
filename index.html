@@ -51,9 +51,6 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
@@ -74,17 +71,16 @@
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
+                // Exact order from starsector.sh
                 const jarFiles = [
-                    'starfarer_obf.jar', 'starfarer.api.jar', 'fs.common_obf.jar', 
-                    'fs.sound_obf.jar', 'commons-compiler.jar', 'janino.jar', 
-                    'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
-                    'json.jar', 'log4j-1.2.9.jar', 'lwjgl.jar', 'lwjgl_util.jar',
+                    'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
+                    'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
+                    'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
+                    'lwjgl_util.jar', 'fs.sound_obf.jar', 'fs.common_obf.jar', 
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use ARRAY of virtual paths
-                const cp = jarFiles.map(j => `/app/starsectorquick/jars/${j}`);
-                cp.push(`/app/starsectorquick/starsector/starsector/`);
+                const cp = jarFiles.map(j => `/app/starsectorquick/jars/${j}`).join(':') + `:/app/starsectorquick/starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
@@ -93,7 +89,8 @@
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
-                log(`CRITICAL ERROR: ${e.message}`, '#ff4444');
+                log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
+                if (e && e.stack) log(e.stack, '#ff8888');
                 console.error(e);
                 btn.disabled = false;
                 btn.textContent = '❌ RETRY LAUNCH';
