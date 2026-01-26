@@ -51,30 +51,23 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
-                        `-Duser.dir=/files/`,
-                        `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                        '-Djava.library.path=/app/build/final/wasm-modules',
+                        '-Duser.dir=/app/starsector/starsector',
+                        '-Dcom.fs.starfarer.settings.linux=true',
+                        '-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true'
                     ],
                     libraries: {
-                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
-                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': '/app/build/final/wasm-modules/gl4es.wasm',
+                        'liblwjgl.so': '/app/build/final/wasm-modules/lwjgl.js',
+                        'liblwjgl64.so': '/app/build/final/wasm-modules/lwjgl.js',
+                        'libsun_misc_Unsafe.so': '/app/build/final/wasm-modules/unsafe.wasm'
                     }
                 });
 
-                log('Mounting Game Filesystem...', '#00d9ff');
-                // Mount the starsector/starsector directory to /files/
-                await cheerpjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
-                
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
@@ -85,7 +78,7 @@
                     'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':');
+                const cp = jarFiles.map(j => '/app/jars/' + j).join(':') + ':/app/starsector/starsector/';
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
