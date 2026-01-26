@@ -2,13 +2,12 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>CheerpJ Path Debugger (Stable Loader)</title>
-    <script src='https://cjrtnc.leaningtech.com/loader.js'></script>
+    <title>CheerpJ Path Debugger (4.2 Loader)</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js' crossorigin></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Stable Loader Mode...</div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] 4.2 Loader Mode...</div>
     <script>
-        console.log('--- SCRIPT START ---');
         function log(m) {
             const l = document.getElementById('log');
             if (l) l.textContent += m + '\n';
@@ -19,7 +18,28 @@
             try {
                 await cheerpjInit({ version: 8 });
                 log('CheerpJ initialized.');
-                log('cheerpOS status: ' + (typeof cheerpOS !== 'undefined' ? 'Defined' : 'UNDEFINED'));
+                
+                // Wait for cheerpOS to be defined (it usually is after init)
+                for (let i = 0; i < 10; i++) {
+                    if (typeof cheerpOS !== 'undefined') break;
+                    log('Waiting for cheerpOS...');
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+
+                if (typeof cheerpOS !== 'undefined') {
+                    log('cheerpOS is defined.');
+                    try {
+                        const entries = await cheerpOS.readDir('/app/');
+                        log('/app/ contents: ' + JSON.stringify(entries));
+                        
+                        const projectEntries = await cheerpOS.readDir('/app/starsectorquick/');
+                        log('/app/starsectorquick/ contents: ' + JSON.stringify(projectEntries));
+                    } catch (e) {
+                        log('Error listing dirs: ' + e.message);
+                    }
+                } else {
+                    log('cheerpOS is STILL undefined.');
+                }
             } catch (e) {
                 log('cheerpjInit failed: ' + e.message);
             }
