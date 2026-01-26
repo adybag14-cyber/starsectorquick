@@ -16,11 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v34)</h1>
+        <h1>🚀 Starsector 2 Web (v35)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR (COMBAT)</button>
         </div>
 
         <div id='game-container'></div>
@@ -71,7 +71,7 @@
                         'libsun_misc_Unsafe.so': `/files/build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: '/files/', url: baseUrl }
+                        { type: 'http', path: '/files', url: baseUrl }
                     ]
                 });
 
@@ -89,10 +89,10 @@
                 const cp = jarFiles.map(j => '/files/jars/' + j).concat(['/files/', '/files/starsector/starsector/']).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.combat.CombatMain', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
