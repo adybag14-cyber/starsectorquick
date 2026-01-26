@@ -51,27 +51,24 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
+                // Path to current directory, e.g. /starsectorquick/
+                const projectPath = window.location.pathname.replace(/[^\/]*$/, '');
+                log(`Project Path: ${projectPath}`, '#888');
 
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
-                    // Try explicit mount for /app/
-                    mounts: [
-                        { type: 'http', path: '/app/', url: baseUrl }
-                    ],
                     javaProperties: [
-                        `-Djava.library.path=/app/build/final/wasm-modules`,
-                        `-Duser.dir=/app/starsector/starsector`,
+                        `-Djava.library.path=${projectPath}build/final/wasm-modules`,
+                        `-Duser.dir=${projectPath}starsector/starsector`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `/app/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/app/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/app/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/app/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `${projectPath}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${projectPath}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${projectPath}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${projectPath}build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -86,7 +83,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `/app/jars/${j}`).join(':') + `:/app/starsector/starsector/`;
+                const cp = jarFiles.map(j => `${projectPath}jars/${j}`).join(':') + `:${projectPath}starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
