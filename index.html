@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v31)</h1>
+        <h1>🚀 Starsector 2 Web (v32)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -57,6 +57,19 @@
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
+                    javaProperties: [
+                        `-Djava.library.path=/files/build/final/wasm-modules/`,
+                        `-Duser.dir=/files/starsector/starsector/`,
+                        `-Dcom.fs.starfarer.settings.linux=true`,
+                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
+                        `-Dcom.fs.starfarer.settings.paths.logs=/files/starsector/starsector/`
+                    ],
+                    libraries: {
+                        'libGL.so.1': `/files/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/files/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/files/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/files/build/final/wasm-modules/unsafe.wasm`
+                    },
                     mounts: [
                         { type: 'http', path: '/files/', url: baseUrl }
                     ]
@@ -73,9 +86,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from /files/ virtual path
                 const cp = jarFiles.map(j => '/files/jars/' + j).concat(['/files/', '/files/starsector/starsector/']).join(':');
-                log('Final ClassPath (Files): ' + cp);
+                log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
