@@ -3,7 +3,7 @@
 <head>
     <meta charset='UTF-8'>
     <title>Starsector 2 - GitHub Pages Deployment</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js' crossorigin></script>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -20,7 +20,7 @@
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR (COMBAT)</button>
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
         </div>
 
         <div id='game-container'></div>
@@ -52,9 +52,6 @@
             
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-                
-                // Use the project name as the virtual mount point
                 const projectPath = '/starsectorquick/';
                 
                 await cheerpjInit({ 
@@ -89,19 +86,17 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from project root prefix
-                const cp = [`${projectPath}`, `${projectPath}starsector/starsector/`].concat(jarFiles.map(j => `${projectPath}jars/${j}`)).join(':');
+                const cp = [projectPath, projectPath + 'starsector/starsector/'].concat(jarFiles.map(j => projectPath + 'jars/' + j)).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.combat.CombatMain', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
                 log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
-                if (e && e.stack) log(e.stack, '#ff8888');
                 console.error(e);
                 btn.disabled = false;
                 btn.textContent = '❌ RETRY LAUNCH';
