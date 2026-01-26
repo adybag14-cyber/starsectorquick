@@ -51,23 +51,23 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // Verified: /app/ is domain root. Project is /app/starsectorquick/
-                const virtualRoot = '/app/starsectorquick';
-                
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                log(`Base URL: ${baseUrl}`, '#888');
+
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${virtualRoot}/build/final/wasm-modules`,
-                        `-Duser.dir=${virtualRoot}/starsector/starsector`,
+                        `-Djava.library.path=/app/starsectorquick/build/final/wasm-modules/`,
+                        `-Duser.dir=/app/starsectorquick/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `/app/starsectorquick/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/app/starsectorquick/build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -82,13 +82,14 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':') + `:${virtualRoot}/starsector/starsector/`;
-                log('ClassPath: ' + cp);
+                // Use ARRAY of virtual paths
+                const cp = jarFiles.map(j => `/app/starsectorquick/jars/${j}`);
+                cp.push(`/app/starsectorquick/starsector/starsector/`);
 
-                log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.Starfarer', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
