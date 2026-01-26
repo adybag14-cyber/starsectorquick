@@ -52,30 +52,28 @@
             
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                const gameAssetsUrl = `${baseUrl}starsector/starsector/`;
-                const jarsUrl = `${baseUrl}jars/`;
-                const modulesUrl = `${baseUrl}build/final/wasm-modules/`;
+                // Correctly derive domain root URL
+                const domainRootUrl = window.location.origin + '/';
+                const projectRoot = '/starsectorquick/';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=/modules/`,
-                        `-Duser.dir=/app/`,
+                        `-Djava.library.path=${projectRoot}build/final/wasm-modules/`,
+                        `-Duser.dir=${projectRoot}starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/app/`
+                        `-Dcom.fs.starfarer.settings.paths.logs=${projectRoot}starsector/starsector/`
                     ],
                     libraries: {
-                        'libGL.so.1': `/modules/gl4es.wasm`,
-                        'liblwjgl.so': `/modules/lwjgl.js`,
-                        'liblwjgl64.so': `/modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/modules/unsafe.wasm`
+                        'libGL.so.1': `${projectRoot}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${projectRoot}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${projectRoot}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${projectRoot}build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: '/app/', url: gameAssetsUrl },
-                        { type: 'http', path: '/jars/', url: jarsUrl },
-                        { type: 'http', path: '/modules/', url: modulesUrl }
+                        { type: 'http', path: '/', url: domainRootUrl }
                     ]
                 });
 
@@ -90,8 +88,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath using the new virtual paths
-                const cp = [`/app/`].concat(jarFiles.map(j => `/jars/${j}`)).join(':');
+                // Construct ClassPath starting from project root
+                const cp = [`${projectRoot}`, `${projectRoot}starsector/starsector/`].concat(jarFiles.map(j => `${projectRoot}jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
