@@ -69,11 +69,20 @@
                         'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
-                    },
-                    mounts: [
-                        { type: 'http', path: '/files/', url: `${baseUrl}starsector/starsector/` }
-                    ]
+                    }
                 });
+
+                log('Checking for cjFSMount...', '#00d9ff');
+                // Try to find the mount function
+                if (typeof cjFSMount !== 'undefined') {
+                    log('Using cjFSMount...');
+                    await cjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
+                } else if (typeof cheerpjFSMount !== 'undefined') {
+                    log('Using cheerpjFSMount...');
+                    await cheerpjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
+                } else {
+                    log('Neither cjFSMount nor cheerpjFSMount found. Hope cheerpjInit mounts worked.');
+                }
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
