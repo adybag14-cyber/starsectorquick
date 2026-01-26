@@ -51,23 +51,25 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // For GitHub Pages, we need to include the project name in the path
-                const projectName = '/starsectorquick';
-                
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                log(`Base URL: ${baseUrl}`, '#888');
+
+                // For libraries and properties, we can use absolute URLs or virtual paths
+                // We'll use absolute URLs for libraries to be safe
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${projectName}/build/final/wasm-modules`,
-                        `-Duser.dir=${projectName}/starsector/starsector`,
+                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
+                        `-Duser.dir=/app/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `${projectName}/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${projectName}/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${projectName}/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${projectName}/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -75,13 +77,15 @@
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
-                    'commons-compiler.jar', 'fs.common_obf.jar', 'fs.sound_obf.jar',
-                    'janino.jar', 'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
+                    'starfarer_obf.jar', 'starfarer.api.jar', 'fs.common_obf.jar', 
+                    'fs.sound_obf.jar', 'commons-compiler.jar', 'janino.jar', 
+                    'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
                     'json.jar', 'log4j-1.2.9.jar', 'lwjgl.jar', 'lwjgl_util.jar',
-                    'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
+                    'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `${projectName}/jars/${j}`).join(':') + `:${projectName}/starsector/starsector/`;
+                // Use absolute URLs for JARs in CP
+                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':') + `:${baseUrl}starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
