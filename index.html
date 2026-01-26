@@ -51,27 +51,23 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // Determine base URL for relative paths
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
-                        `-Duser.dir=/files/`,
-                        `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                        '-Djava.library.path=/app/build/final/wasm-modules',
+                        '-Duser.dir=/app/starsector/starsector',
+                        '-Dcom.fs.starfarer.settings.linux=true',
+                        '-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true'
                     ],
                     libraries: {
-                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
-                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': '/app/build/final/wasm-modules/gl4es.wasm',
+                        'liblwjgl.so': '/app/build/final/wasm-modules/lwjgl.js',
+                        'liblwjgl64.so': '/app/build/final/wasm-modules/lwjgl.js',
+                        'libsun_misc_Unsafe.so': '/app/build/final/wasm-modules/unsafe.wasm'
                     }
                 });
-                
+
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
@@ -82,13 +78,12 @@
                     'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
                 ];
                 
-                // GitHub Pages works best with absolute URLs for JARs in CheerpJ
-                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':');
+                const cp = jarFiles.map(j => '/app/jars/' + j).join(':') + ':/app/starsector/starsector/';
 
-                log('Starting Main Class: StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.Starfarer', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
