@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment</title>
+    <title>Starsector 2 - GitHub Pages Deployment (v59)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v58)</h1>
+        <h1>🚀 Starsector 2 Web (v59)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,27 +51,29 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
+                // HARDCODED URLs to avoid any base resolution issues
+                const projectUrl = 'https://adybag14-cyber.github.io/starsectorquick/';
+                const dataUrl = 'https://adybag14-cyber.github.io/starsectorquick/starsector/starsector/';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=/files/build/final/wasm-modules/`,
-                        `-Duser.dir=/files/starsector/starsector/`,
+                        `-Djava.library.path=/app/build/final/wasm-modules/`,
+                        `-Duser.dir=/files/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/files/starsector/starsector/`
+                        `-Dcom.fs.starfarer.settings.paths.logs=/files/`
                     ],
                     libraries: {
-                        'libGL.so.1': `/files/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/files/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/files/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/files/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `/app/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/app/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/app/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/app/build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: '/files/', url: baseUrl }
+                        { type: 'http', path: '/app/', url: projectUrl },
+                        { type: 'http', path: '/files/', url: dataUrl }
                     ]
                 });
 
@@ -87,10 +89,10 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // ClassPath relative to /files/
-                const cp = jarFiles.map(j => '/files/jars/' + j).concat([
-                    '/files/starsector/starsector/',
-                    '/files/starsector/starsector/data/config/'
+                // ClassPath: /app/jars/ for JARs, /files/ for config root
+                const cp = jarFiles.map(j => '/app/jars/' + j).concat([
+                    '/files/',
+                    '/files/data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
