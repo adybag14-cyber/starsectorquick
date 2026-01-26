@@ -53,6 +53,7 @@
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 const gameAssetsUrl = `${baseUrl}starsector/starsector/`;
+                const jarsUrl = `${baseUrl}jars/`;
                 const virtualRoot = '/app/starsectorquick';
                 
                 await cheerpjInit({ 
@@ -66,13 +67,14 @@
                         `-Dcom.fs.starfarer.settings.paths.logs=/files/`
                     ],
                     libraries: {
-                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
                         { type: 'http', path: '/files/', url: gameAssetsUrl },
+                        { type: 'http', path: '/jars/', url: jarsUrl },
                         { type: 'http', path: '/app/', url: baseUrl }
                     ]
                 });
@@ -88,8 +90,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use absolute HTTP URLs for ALL ClassPath entries
-                const cp = [`${baseUrl}starsector/starsector/`, `${baseUrl}`].concat(jarFiles.map(j => `${baseUrl}jars/${j}`)).join(':');
+                // ClassPath: root where extracted classes are, then files, then all jars
+                const cp = [`/app/`, `/files/`].concat(jarFiles.map(j => `/jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
