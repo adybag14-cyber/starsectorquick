@@ -2,11 +2,11 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>CheerpJ Path Debugger (Stable Loader)</title>
-    <script src='https://cjrtnc.leaningtech.com/loader.js'></script>
+    <title>CheerpJ Path Debugger (4.2 Loader)</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js' crossorigin></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Stable Loader Mode...</div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] 4.2 Loader Mode...</div>
     <script>
         console.log('--- SCRIPT START ---');
         function log(m) {
@@ -17,9 +17,18 @@
         async function run() {
             log('Initializing CheerpJ...');
             try {
-                await cheerpjInit({ version: 8 });
-                log('CheerpJ initialized.');
-                log('cheerpOS status: ' + (typeof cheerpOS !== 'undefined' ? 'Defined' : 'UNDEFINED'));
+                if (typeof cheerpjInit === 'undefined') {
+                    log('cheerpjInit is UNDEFINED at start.');
+                    // Try to wait a bit
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+                
+                if (typeof cheerpjInit !== 'undefined') {
+                    await cheerpjInit({ version: 8 });
+                    log('CheerpJ initialized.');
+                } else {
+                    log('cheerpjInit is STILL undefined.');
+                }
             } catch (e) {
                 log('cheerpjInit failed: ' + e.message);
             }
