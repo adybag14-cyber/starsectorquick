@@ -2,47 +2,29 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>CheerpJ Path Debugger</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <title>CheerpJ Path Debugger (Stable Loader)</title>
+    <script src='https://cjrtnc.leaningtech.com/loader.js'></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Loading...</div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Stable Loader Mode...</div>
     <script>
         console.log('--- SCRIPT START ---');
         function log(m) {
-            document.getElementById('log').textContent += m + '
-';
+            const l = document.getElementById('log');
+            if (l) l.textContent += m + '\n';
             console.log(m);
         }
-
         async function run() {
-            log('Initializing CheerpJ 4.2...');
+            log('Initializing CheerpJ...');
             try {
                 await cheerpjInit({ version: 8 });
                 log('CheerpJ initialized.');
+                log('cheerpOS status: ' + (typeof cheerpOS !== 'undefined' ? 'Defined' : 'UNDEFINED'));
             } catch (e) {
                 log('cheerpjInit failed: ' + e.message);
-                return;
-            }
-            
-            log('Testing paths...');
-            const projectName = 'starsectorquick';
-            
-            // Try to list /app/
-            try {
-                log('Attempting to list /app/ via internal API...');
-                // CheerpJ 4.2 uses cheerpOS for filesystem
-                if (typeof cheerpOS !== 'undefined') {
-                    const entries = await cheerpOS.readDir('/app/');
-                    log('/app/ contents: ' + JSON.stringify(entries));
-                } else {
-                    log('cheerpOS is not defined!');
-                }
-            } catch (e) {
-                log('Error listing /app/: ' + e.message);
             }
         }
-        run().catch(e => console.error('Run failed:', e));
+        run();
     </script>
 </body>
 </html>
