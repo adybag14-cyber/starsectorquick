@@ -51,29 +51,25 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                // Mount the project root URL to / virtual path
-                const virtualRoot = '/';
+                // /app/ is automatically mounted to the project directory on GitHub Pages
+                const appRoot = '/app/';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${virtualRoot}build/final/wasm-modules/`,
-                        `-Duser.dir=${virtualRoot}starsector/starsector/`,
+                        `-Djava.library.path=${appRoot}build/final/wasm-modules/`,
+                        `-Duser.dir=${appRoot}starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=${virtualRoot}starsector/starsector/`
+                        `-Dcom.fs.starfarer.settings.paths.logs=${appRoot}starsector/starsector/`
                     ],
                     libraries: {
-                        'libGL.so.1': `${virtualRoot}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${virtualRoot}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${virtualRoot}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${virtualRoot}build/final/wasm-modules/unsafe.wasm`
-                    },
-                    mounts: [
-                        { type: 'http', path: virtualRoot, url: baseUrl }
-                    ]
+                        'libGL.so.1': `${appRoot}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${appRoot}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${appRoot}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${appRoot}build/final/wasm-modules/unsafe.wasm`
+                    }
                 });
 
                 log('Mounting Display to Canvas...', '#00ff88');
@@ -87,8 +83,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // All paths are now relative to virtual root / which is baseUrl
-                const cp = [`${virtualRoot}`, `${virtualRoot}starsector/starsector/`].concat(jarFiles.map(j => `${virtualRoot}jars/${j}`)).join(':');
+                // Construct ClassPath using the automatic /app/ mount
+                const cp = [`${appRoot}`, `${appRoot}starsector/starsector/`].concat(jarFiles.map(j => `${appRoot}jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
