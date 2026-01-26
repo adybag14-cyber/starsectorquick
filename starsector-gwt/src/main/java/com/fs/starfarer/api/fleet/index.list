@@ -1,0 +1,13 @@
+file	CrewCompositionAPI.java	1045
+file	FleetAPI.java	236
+file	FleetGoal.java	466
+file	FleetLogisticsAPI.java	1366
+file	FleetMemberAPI.java	4288
+file	FleetMemberStatusAPI.java	2059
+file	FleetMemberType.java	274
+file	FleetMemberViewAPI.java	1188
+file	MutableFleetStatsAPI.java	1677
+file	MutableMarketStatsAPI.java	1237
+file	RepairTrackerAPI.java	2613
+file	ShipFilter.java	127
+file	ShipRolePick.java	315

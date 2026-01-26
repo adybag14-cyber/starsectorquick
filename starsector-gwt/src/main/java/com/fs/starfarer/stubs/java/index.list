@@ -1,0 +1,5 @@
+directory	awt
+directory	lang
+directory	nio
+directory	text
+directory	util

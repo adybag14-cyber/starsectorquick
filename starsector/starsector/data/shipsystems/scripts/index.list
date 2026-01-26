@@ -1,0 +1,13 @@
+directory	ai
+file	AmmoFeedStats.java	1343
+file	BurnDriveStats.java	1209
+file	DisplacerStats.java	1088
+file	DynamicStabilizerStats.java	4000
+file	FortressShieldStats.java	1530
+file	HighEnergyFocusStats.java	2237
+file	ManeuveringJetsStats.java	2463
+file	MicroBurnOmegaStats.java	2123
+file	MicroBurnStats.java	1893
+file	PhaseCloakStatsOld.java	2550
+file	SensorDroneStats.java	1590
+file	TravelDriveStats.java	1211

@@ -1,0 +1,10 @@
+directory	data
+directory	graphics
+directory	jre_linux
+directory	sounds
+file	LICENSE.txt	228698
+file	log4j.properties	221
+file	starsector.bat	719
+file	starsector.bat32	666
+file	starsector.command	788
+file	starsector.sh	743

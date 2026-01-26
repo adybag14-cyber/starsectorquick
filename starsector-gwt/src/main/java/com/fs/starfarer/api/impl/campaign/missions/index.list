@@ -1,0 +1,34 @@
+directory	academy
+directory	askonia
+directory	cb
+directory	hub
+directory	luddic
+file	AFavorForKanta.java	6721
+file	ANewHope.java	5038
+file	BaseDisruptIndustry.java	8290
+file	BlueprintIntel.java	13647
+file	CheapCommodityMission.java	10525
+file	CommodityProductionMission.java	14647
+file	CustomProductionContract.java	30288
+file	DeadDropMission.java	7042
+file	DelayedFleetEncounter.java	31829
+file	DisruptCompetitorMission.java	6640
+file	DisruptHeavyIndustry.java	2142
+file	DisruptSpaceport.java	1076
+file	ExtractionMission.java	10353
+file	FleetCreatorMission.java	10753
+file	HandMeDownFreighter.java	5580
+file	HijackingMission.java	5381
+file	JailbreakMission.java	7287
+file	LuddicPilgrimTransport.java	7588
+file	PirateSystemBounty.java	13315
+file	ProcurementMission.java	11317
+file	RaidSecretOutpostMission.java	7083
+file	RecoverAPlanetkiller.java	8988
+file	RuinsDataSwapMission.java	6479
+file	SecurityCodes.java	8110
+file	SmugglingMission.java	5102
+file	SpySatDeployment.java	5031
+file	SurplusShipHull.java	8946
+file	SwordOfEventide.java	8569
+file	TacticallyBombardColony.java	8591

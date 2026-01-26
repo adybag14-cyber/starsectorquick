@@ -1,0 +1,35 @@
+directory	campaign
+directory	characters
+directory	combat
+directory	fleet
+directory	graphics
+directory	impl
+directory	input
+directory	loading
+directory	mission
+directory	plugins
+directory	ui
+directory	util
+file	AnimationAPI.java	478
+file	BaseModPlugin.java	2101
+file	DataAPI.java	113
+file	EveryFrameScript.java	478
+file	EveryFrameScriptWithCleanup.java	243
+file	FactoryAPI.java	3056
+file	GameState.java	92
+file	Global.java	1801
+file	InteractionDialogImageVisual.java	3049
+file	ModDependencyAPI.java	200
+file	ModManagerAPI.java	320
+file	ModPlugin.java	4148
+file	ModSpecAPI.java	748
+file	MusicPlayerPlugin.java	1184
+file	MusicPlayerPluginWithVolumeControl.java	523
+file	PluginPick.java	314
+file	Script.java	359
+file	SettingsAPI.java	15671
+file	SoundAPI.java	207
+file	SoundPlayerAPI.java	3474
+file	SpriteId.java	460
+file	TextTokenAndHighlightSource.java	432
+file	VersionInfoAPI.java	310

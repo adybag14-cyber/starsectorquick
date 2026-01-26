@@ -1,0 +1,11 @@
+directory	blinker_amber
+directory	blinker_blue
+directory	blinker_green
+directory	blinker_red
+directory	blinker_white
+file	lidar.png	812
+file	nova_propulsion_laser.png	464
+file	pusher_plate_large.png	21244
+file	pusher_plate_nova.png	6555
+file	pusher_plate_small.png	17482
+file	sensor_array_dish.png	2098

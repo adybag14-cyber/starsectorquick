@@ -1,0 +1,89 @@
+directory	abilities
+directory	command
+directory	econ
+directory	enc
+directory	entities
+directory	eventide
+directory	events
+directory	fleets
+directory	ghosts
+directory	graid
+directory	ids
+directory	intel
+directory	missions
+directory	plog
+directory	population
+directory	procgen
+directory	rulecmd
+directory	shared
+directory	skills
+directory	submarkets
+directory	terrain
+directory	tutorial
+directory	velfield
+directory	world
+file	AICoreAdminPluginImpl.java	1216
+file	AICoreOfficerPluginImpl.java	5733
+file	AbandonMarketPluginImpl.java	6010
+file	AbyssalLightBonus.java	7019
+file	AbyssalLightEntityPlugin.java	17053
+file	BaseAICoreOfficerPluginImpl.java	2692
+file	BaseCampaignObjectivePlugin.java	1872
+file	BaseCustomEntityPlugin.java	1218
+file	BaseGenericPlugin.java	255
+file	BattleAutoresolverPluginImpl.java	26788
+file	CampaignObjective.java	581
+file	CargoPodsEntityPlugin.java	4363
+file	CargoPodsResponse.java	6056
+file	CommRelayEntityPlugin.java	5211
+file	CoreCampaignPluginImpl.java	28608
+file	CoreLifecyclePluginImpl.java	152619
+file	CoreReputationPlugin.java	36565
+file	CoreRuleTokenReplacementGeneratorImpl.java	13199
+file	CoreScript.java	54894
+file	CoronalTapParticleScript.java	5298
+file	CryosleeperEntityPlugin.java	522
+file	DModManager.java	13340
+file	DebugFlags.java	4310
+file	DelayedBlueprintLearnScript.java	1938
+file	DerelictShipEntityPlugin.java	14771
+file	DevMenuOptions.java	6498
+file	ExampleCustomEntityPlugin.java	1356
+file	ExampleCustomUIPanel.java	2401
+file	ExplosionEntityPlugin.java	14344
+file	FactionPersonalityPickerPluginImpl.java	2013
+file	FleetEncounterContext.java	128999
+file	FleetInteractionDialogPluginImpl.java	134832
+file	FleetStubConverterPluginImpl.java	3822
+file	FusionLampEntityPlugin.java	7901
+file	GateEntityPlugin.java	27084
+file	GateExplosionScript.java	5014
+file	GenericCampaignEntitySprite.java	4407
+file	GenericFieldItemManager.java	2422
+file	GenericFieldItemSprite.java	5839
+file	HassleNPCScript.java	6660
+file	HasslePlayerScript.java	7071
+file	HiddenCacheEntityPlugin.java	1729
+file	JumpPointInteractionDialogPluginImpl.java	22889
+file	LeashScript.java	1616
+file	MilitaryResponseScript.java	9597
+file	MonthlyReportNodeTooltipCreator.java	8103
+file	NPCHassler.java	4874
+file	NavBuoyEntityPlugin.java	3268
+file	NewGameDialogPluginImpl.java	4683
+file	OfficerLevelupPluginImpl.java	11107
+file	OrbitalStationInteractionDialogPluginImpl.java	8597
+file	PlanetInteractionDialogPluginImpl.java	16988
+file	RepairGantry.java	6775
+file	RuleBasedInteractionDialogPluginImpl.java	7928
+file	SensorArrayEntityPlugin.java	10829
+file	SmugglingFactionChangeScript.java	2387
+file	SmugglingScanScript.java	7197
+file	StabilizeMarketPluginImpl.java	1359
+file	StandardRespawnDialogPluginImpl.java	5982
+file	SupplyCacheEntityPlugin.java	1452
+file	SurveyPluginImpl.java	6755
+file	TOffAlarm.java	2774
+file	TowCable.java	9835
+file	Tuning.java	1558
+file	WarningBeaconEntityPlugin.java	7870

@@ -1,0 +1,12 @@
+file	AICoreGroundRaidObjectivePluginImpl.java	3578
+file	AbstractGoalGroundRaidObjectivePluginImpl.java	1317
+file	BaseGroundRaidObjectivePluginImpl.java	5868
+file	BlueprintGroundRaidObjectivePluginImpl.java	9366
+file	CommodityGroundRaidObjectivePluginImpl.java	8358
+file	CreditsGroundRaidObjectivePluginImpl.java	5454
+file	DisruptIndustryRaidObjectivePluginImpl.java	4996
+file	GroundRaidObjectivePlugin.java	2910
+file	ShipWeaponsGroundRaidObjectivePluginImpl.java	13635
+file	SolarArrayGroundRaidObjectivePluginImpl.java	1719
+file	SpecialItemRaidObjectivePluginImpl.java	3913
+file	StandardGroundRaidObjectivesCreator.java	4275
