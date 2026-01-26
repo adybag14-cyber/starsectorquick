@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment (v61)</title>
+    <title>Starsector 2 - GitHub Pages Deployment (v62)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v61)</h1>
+        <h1>🚀 Starsector 2 Web (v62)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -81,6 +81,7 @@
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
+                    'stubs.jar', // MUST BE FIRST
                     'resources.jar',
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
                     'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
@@ -89,7 +90,6 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // ClassPath using /app/ mount for JARs
                 const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).concat([
                     '/files/',
                     '/files/data/config/'
