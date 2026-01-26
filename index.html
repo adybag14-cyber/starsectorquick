@@ -51,20 +51,23 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
+                // For GitHub Pages, we need to include the project name in the path
+                const projectName = '/starsectorquick';
+                
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        '-Djava.library.path=/app/build/final/wasm-modules',
-                        '-Duser.dir=/app/starsector/starsector',
-                        '-Dcom.fs.starfarer.settings.linux=true',
-                        '-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true'
+                        `-Djava.library.path=${projectName}/build/final/wasm-modules`,
+                        `-Duser.dir=${projectName}/starsector/starsector`,
+                        `-Dcom.fs.starfarer.settings.linux=true`,
+                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': '/app/build/final/wasm-modules/gl4es.wasm',
-                        'liblwjgl.so': '/app/build/final/wasm-modules/lwjgl.js',
-                        'liblwjgl64.so': '/app/build/final/wasm-modules/lwjgl.js',
-                        'libsun_misc_Unsafe.so': '/app/build/final/wasm-modules/unsafe.wasm'
+                        'libGL.so.1': `${projectName}/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${projectName}/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${projectName}/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${projectName}/build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -78,7 +81,7 @@
                     'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => '/app/jars/' + j).join(':') + ':/app/starsector/starsector/';
+                const cp = jarFiles.map(j => `${projectName}/jars/${j}`).join(':') + `:${projectName}/starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
