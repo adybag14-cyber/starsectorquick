@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v45)</h1>
+        <h1>🚀 Starsector 2 Web (v47)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -52,16 +52,21 @@
             
             try {
                 const prefix = '/app/starsectorquick/';
+                const gameDir = prefix + 'starsector/starsector/';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
                         `-Djava.library.path=${prefix}build/final/wasm-modules/`,
-                        `-Duser.dir=${prefix}starsector/starsector`,
+                        `-Duser.dir=${gameDir}`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=${prefix}starsector/starsector/`
+                        `-Dcom.fs.starfarer.settings.paths.data=${gameDir}data/`,
+                        `-Dcom.fs.starfarer.settings.paths.graphics=${gameDir}graphics/`,
+                        `-Dcom.fs.starfarer.settings.paths.sounds=${gameDir}sounds/`,
+                        `-Dcom.fs.starfarer.settings.paths.logs=${gameDir}`,
+                        `-Dcom.fs.starfarer.settings.paths.settings=${gameDir}data/config/settings.json`
                     ],
                     libraries: {
                         'libGL.so.1': `${prefix}build/final/wasm-modules/gl4es.wasm`,
@@ -85,8 +90,8 @@
                 
                 const cp = jarFiles.map(j => prefix + 'jars/' + j).concat([
                     prefix,
-                    prefix + 'starsector/starsector/',
-                    prefix + 'starsector/starsector/data/config/'
+                    gameDir,
+                    gameDir + 'data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
