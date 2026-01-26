@@ -51,8 +51,8 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                // GitHub Pages project root
+                // Correctly derive domain root URL (e.g. https://adybag14-cyber.github.io/)
+                const domainRootUrl = window.location.origin + '/';
                 const projectRoot = '/starsectorquick/';
                 
                 await cheerpjInit({ 
@@ -72,7 +72,7 @@
                         'libsun_misc_Unsafe.so': `${projectRoot}build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: projectRoot, url: baseUrl }
+                        { type: 'http', path: '/', url: domainRootUrl }
                     ]
                 });
 
@@ -87,7 +87,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from project root prefix
+                // ClassPath MUST include the project prefix since root / is the domain
                 const cp = [`${projectRoot}`, `${projectRoot}starsector/starsector/`].concat(jarFiles.map(j => `${projectRoot}jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
