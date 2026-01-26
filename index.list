@@ -1,0 +1,70 @@
+directory	build
+directory	jars
+directory	node_modules
+directory	starsector
+directory	starsector-gwt
+directory	test_output
+directory	videos
+file	.env.example	1869
+file	.gitignore	1216
+file	.gitlab-ci.yml	1015
+file	COMPILATION_REPORT.md	10206
+file	COMPILE_SUMMARY.md	2611
+file	EMSDK_INSTALLATION_REPORT.md	6434
+file	FINAL_SUMMARY.md	5719
+file	FRONTEND_TEST_REPORT.md	4840
+file	GWT_POLYFILL_REPORT.md	13864
+file	LICENSE	2592
+file	PHASE_1_REPORT.md	136
+file	PROJECT_STRUCTURE_ANALYSIS.md	24986
+file	README.md	1618
+file	STARSECTOR_V6J_FINAL_WORKING.html	14960
+file	VIDEO_REVIEW.md	5107
+file	add_format_to_misc.py	1100
+file	add_quote_to_misc.py	873
+file	add_quote_to_misc_fixed.py	1139
+file	button_check.js	2165
+file	capture_gameplay.js	2609
+file	cleanup_src.py	1688
+file	click_test.js	2941
+file	compilation_output.log	7913
+file	create_framework.py	38
+file	create_server.py	846
+file	create_showcase_video.js	4583
+file	err.log	0
+file	final_test.js	5097
+file	fix_botched_clones.py	1055
+file	fix_clones_final.py	1022
+file	fix_log_function.ps1	8
+file	fix_references.py	1983
+file	fix_reserved_names.py	2240
+file	fix_reserved_v2.py	3948
+file	fix_string_format.py	2351
+file	index.html	4979
+file	install_jars.bat	1076
+file	install_jars.py	1198
+file	install_jars_v2.py	1137
+file	install_jars_v3.bat	1038
+file	install_jars_v4.py	1151
+file	install_jars_v5.py	1114
+file	install_jars_v6.py	1111
+file	install_jars_v7.py	1245
+file	libGL.a	4745472
+file	mega_fix.py	1687
+file	memory_mapping_utils.c	5994
+file	memory_mapping_utils.h	3195
+file	move_stubs.py	1457
+file	out.log	198
+file	package-lock.json	1655
+file	package.json	61
+file	patch_misc.py	769
+file	quick_test.js	4056
+file	refine_src.py	1504
+file	replace_imports.py	2668
+file	run_playwright_test.js	1831
+file	server.js	2389
+file	server_gwt.js	1512
+file	simple_test.js	1605
+file	test_frontend.js	6727
+file	test_memory_mapping.c	10193
+file	verify_no_errors.js	13053

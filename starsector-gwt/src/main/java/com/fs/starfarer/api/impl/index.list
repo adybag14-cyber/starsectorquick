@@ -1,0 +1,5 @@
+directory	campaign
+directory	combat
+directory	hullmods
+file	MusicPlayerPluginImpl.java	10327
+file	PlayerFleetPersonnelTracker.java	21680
