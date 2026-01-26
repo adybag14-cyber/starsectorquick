@@ -1,4 +1,4 @@
-directory	regex
-directory	zip
-file	GregorianCalendar.java	8013
-file	StringFormat.java	6065
+regex/	-1
+zip/	-1
+GregorianCalendar.java	8013
+StringFormat.java	6065

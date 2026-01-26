@@ -1,75 +1,75 @@
-file	beam_hit_01.ogg	20567
-file	beam_hit_02.ogg	20446
-file	beam_hit_03.ogg	20205
-file	collision_asteroid_vs_asteroid_01.ogg	9456
-file	collision_asteroid_vs_asteroid_02.ogg	7459
-file	collision_asteroid_vs_asteroid_03.ogg	14422
-file	collision_ship_vs_asteroid_01.ogg	26211
-file	collision_ship_vs_asteroid_02.ogg	18968
-file	collision_ship_vs_asteroid_03.ogg	20887
-file	collision_ship_vs_ship_01.ogg	25178
-file	collision_ship_vs_ship_02.ogg	41949
-file	collision_ship_vs_ship_03.ogg	36640
-file	cryoflamer_hull_hit_01.ogg	5907
-file	cryoflamer_hull_hit_02.ogg	5152
-file	cryoflamer_hull_hit_03.ogg	5491
-file	cryoflamer_hull_hit_04.ogg	5414
-file	cryoflamer_hull_hit_05.ogg	4807
-file	cryoflamer_hull_hit_06.ogg	4764
-file	cryoflamer_hull_hit_07.ogg	6058
-file	cryoflamer_hull_hit_08.ogg	5485
-file	cryoflamer_hull_hit_09.ogg	5708
-file	cryoflamer_hull_hit_10.ogg	5978
-file	cryoflamer_hull_hit_11.ogg	5812
-file	cryoflamer_hull_hit_12.ogg	5254
-file	cryoflamer_hull_hit_13.ogg	6396
-file	cryoflamer_hull_hit_14.ogg	6502
-file	cryoflamer_hull_hit_15.ogg	5517
-file	cryoflamer_hull_hit_16.ogg	7190
-file	cryoflamer_shield_hit_01.ogg	4694
-file	cryoflamer_shield_hit_02.ogg	4939
-file	cryoflamer_shield_hit_03.ogg	4773
-file	cryoflamer_shield_hit_04.ogg	5008
-file	cryoflamer_shield_hit_05.ogg	4803
-file	cryoflamer_shield_hit_06.ogg	4795
-file	cryoflamer_shield_hit_07.ogg	4838
-file	cryoflamer_shield_hit_08.ogg	4601
-file	cryoflamer_shield_hit_09.ogg	4691
-file	cryoflamer_shield_hit_10.ogg	4567
-file	cryoflamer_shield_hit_11.ogg	4684
-file	cryoflamer_shield_hit_12.ogg	4948
-file	energy_hit_01.ogg	28999
-file	energy_hit_02.ogg	29828
-file	energy_hit_03.ogg	29388
-file	energy_hit_04.ogg	29979
-file	explosion_01.ogg	45791
-file	explosion_02.ogg	39119
-file	explosion_03_fighter.ogg	30167
-file	explosion_04.ogg	44944
-file	explosion_campaign_01.ogg	22062
-file	explosion_missile_01.ogg	29504
-file	explosion_missile_02.ogg	12568
-file	explosion_secondary_01.ogg	26558
-file	explosion_secondary_02.ogg	18438
-file	explosion_secondary_03.ogg	24119
-file	gun_hit_glancing_01.ogg	14304
-file	gun_hit_glancing_02.ogg	15598
-file	gun_hit_glancing_03.ogg	14165
-file	gun_hit_heavy_01.ogg	26965
-file	gun_hit_heavy_02.ogg	27303
-file	gun_hit_heavy_03.ogg	28792
-file	gun_hit_light_01.ogg	20391
-file	gun_hit_light_02.ogg	18895
-file	gun_hit_light_03.ogg	17808
-file	gun_hit_solid_01.ogg	24774
-file	gun_hit_solid_02.ogg	27813
-file	gun_hit_solid_03.ogg	21471
-file	shield_hit_heavy_01.ogg	15662
-file	shield_hit_heavy_02.ogg	18291
-file	shield_hit_heavy_03.ogg	15778
-file	shield_hit_heavy_04.ogg	17427
-file	shield_hit_light_01.ogg	11028
-file	shield_hit_light_02.ogg	10616
-file	shield_hit_solid_01.ogg	10243
-file	shield_hit_solid_02.ogg	11127
-file	shield_hit_solid_03.ogg	12786
+beam_hit_01.ogg	20567
+beam_hit_02.ogg	20446
+beam_hit_03.ogg	20205
+collision_asteroid_vs_asteroid_01.ogg	9456
+collision_asteroid_vs_asteroid_02.ogg	7459
+collision_asteroid_vs_asteroid_03.ogg	14422
+collision_ship_vs_asteroid_01.ogg	26211
+collision_ship_vs_asteroid_02.ogg	18968
+collision_ship_vs_asteroid_03.ogg	20887
+collision_ship_vs_ship_01.ogg	25178
+collision_ship_vs_ship_02.ogg	41949
+collision_ship_vs_ship_03.ogg	36640
+cryoflamer_hull_hit_01.ogg	5907
+cryoflamer_hull_hit_02.ogg	5152
+cryoflamer_hull_hit_03.ogg	5491
+cryoflamer_hull_hit_04.ogg	5414
+cryoflamer_hull_hit_05.ogg	4807
+cryoflamer_hull_hit_06.ogg	4764
+cryoflamer_hull_hit_07.ogg	6058
+cryoflamer_hull_hit_08.ogg	5485
+cryoflamer_hull_hit_09.ogg	5708
+cryoflamer_hull_hit_10.ogg	5978
+cryoflamer_hull_hit_11.ogg	5812
+cryoflamer_hull_hit_12.ogg	5254
+cryoflamer_hull_hit_13.ogg	6396
+cryoflamer_hull_hit_14.ogg	6502
+cryoflamer_hull_hit_15.ogg	5517
+cryoflamer_hull_hit_16.ogg	7190
+cryoflamer_shield_hit_01.ogg	4694
+cryoflamer_shield_hit_02.ogg	4939
+cryoflamer_shield_hit_03.ogg	4773
+cryoflamer_shield_hit_04.ogg	5008
+cryoflamer_shield_hit_05.ogg	4803
+cryoflamer_shield_hit_06.ogg	4795
+cryoflamer_shield_hit_07.ogg	4838
+cryoflamer_shield_hit_08.ogg	4601
+cryoflamer_shield_hit_09.ogg	4691
+cryoflamer_shield_hit_10.ogg	4567
+cryoflamer_shield_hit_11.ogg	4684
+cryoflamer_shield_hit_12.ogg	4948
+energy_hit_01.ogg	28999
+energy_hit_02.ogg	29828
+energy_hit_03.ogg	29388
+energy_hit_04.ogg	29979
+explosion_01.ogg	45791
+explosion_02.ogg	39119
+explosion_03_fighter.ogg	30167
+explosion_04.ogg	44944
+explosion_campaign_01.ogg	22062
+explosion_missile_01.ogg	29504
+explosion_missile_02.ogg	12568
+explosion_secondary_01.ogg	26558
+explosion_secondary_02.ogg	18438
+explosion_secondary_03.ogg	24119
+gun_hit_glancing_01.ogg	14304
+gun_hit_glancing_02.ogg	15598
+gun_hit_glancing_03.ogg	14165
+gun_hit_heavy_01.ogg	26965
+gun_hit_heavy_02.ogg	27303
+gun_hit_heavy_03.ogg	28792
+gun_hit_light_01.ogg	20391
+gun_hit_light_02.ogg	18895
+gun_hit_light_03.ogg	17808
+gun_hit_solid_01.ogg	24774
+gun_hit_solid_02.ogg	27813
+gun_hit_solid_03.ogg	21471
+shield_hit_heavy_01.ogg	15662
+shield_hit_heavy_02.ogg	18291
+shield_hit_heavy_03.ogg	15778
+shield_hit_heavy_04.ogg	17427
+shield_hit_light_01.ogg	11028
+shield_hit_light_02.ogg	10616
+shield_hit_solid_01.ogg	10243
+shield_hit_solid_02.ogg	11127
+shield_hit_solid_03.ogg	12786

@@ -1,64 +1,64 @@
-directory	impl
-file	AICoreAdmin.java	1131
-file	AbandonedStation.java	207
-file	BaseHazardCondition.java	1721
-file	BaseMarketConditionPlugin.java	6969
-file	BaseMarketConditionPlugin2.java	1568
-file	Blockaded.java	1334
-file	ClosedImmigration.java	855
-file	CommRelayCondition.java	2789
-file	CommodityIconCounts.java	3308
-file	ConditionData.java	10286
-file	CottageIndustry.java	211
-file	Decivilized.java	240
-file	DecivilizedSubpop.java	1829
-file	Dissident.java	1046
-file	FoodShortage.java	2631
-file	FreeMarket.java	5475
-file	Frontier.java	198
-file	Habitable.java	1141
-file	Headquarters.java	778
-file	HighGravity.java	802
-file	Hydroponics.java	205
-file	IndustrialPolity.java	206
-file	LCAttractorHigh.java	908
-file	LCAttractorLow.java	907
-file	LCAttractorMedium.java	910
-file	LargeRefugeePopulation.java	358
-file	LowGravity.java	793
-file	LuddicMajority.java	8888
-file	MildClimate.java	1124
-file	OrbitalBurns.java	202
-file	OrganizedCrime.java	344
-file	Outpost.java	321
-file	PiracyRespite.java	2089
-file	Placeholder.java	202
-file	Pollution.java	902
-file	Population.java	239
-file	RecentUnrest.java	3414
-file	RegionalCapital.java	347
-file	ResourceDepositsCondition.java	11808
-file	RogueAICore.java	2130
-file	RuralPolity.java	201
-file	ShipbreakingCenter.java	208
-file	ShippingDisruption.java	6458
-file	Smuggling.java	658
-file	SolarArray.java	2184
-file	StealthMinefields.java	353
-file	SystemBounty.java	889
-file	TradeCenter.java	335
-file	TradeDisruption.java	1190
-file	UrbanizedPolity.java	205
-file	ViceDemand.java	202
-file	WaystationBonus.java	193
-file	WorldArid.java	225
-file	WorldBarrenMarginal.java	267
-file	WorldDesert.java	233
-file	WorldFarming.java	414
-file	WorldIce.java	221
-file	WorldJungle.java	233
-file	WorldTerran.java	233
-file	WorldTundra.java	233
-file	WorldTwilight.java	241
-file	WorldUninhabitable.java	446
-file	WorldWater.java	265
+impl/	-1
+AICoreAdmin.java	1131
+AbandonedStation.java	207
+BaseHazardCondition.java	1721
+BaseMarketConditionPlugin.java	6969
+BaseMarketConditionPlugin2.java	1568
+Blockaded.java	1334
+ClosedImmigration.java	855
+CommRelayCondition.java	2789
+CommodityIconCounts.java	3308
+ConditionData.java	10286
+CottageIndustry.java	211
+Decivilized.java	240
+DecivilizedSubpop.java	1829
+Dissident.java	1046
+FoodShortage.java	2631
+FreeMarket.java	5475
+Frontier.java	198
+Habitable.java	1141
+Headquarters.java	778
+HighGravity.java	802
+Hydroponics.java	205
+IndustrialPolity.java	206
+LCAttractorHigh.java	908
+LCAttractorLow.java	907
+LCAttractorMedium.java	910
+LargeRefugeePopulation.java	358
+LowGravity.java	793
+LuddicMajority.java	8888
+MildClimate.java	1124
+OrbitalBurns.java	202
+OrganizedCrime.java	344
+Outpost.java	321
+PiracyRespite.java	2089
+Placeholder.java	202
+Pollution.java	902
+Population.java	239
+RecentUnrest.java	3414
+RegionalCapital.java	347
+ResourceDepositsCondition.java	11808
+RogueAICore.java	2130
+RuralPolity.java	201
+ShipbreakingCenter.java	208
+ShippingDisruption.java	6458
+Smuggling.java	658
+SolarArray.java	2184
+StealthMinefields.java	353
+SystemBounty.java	889
+TradeCenter.java	335
+TradeDisruption.java	1190
+UrbanizedPolity.java	205
+ViceDemand.java	202
+WaystationBonus.java	193
+WorldArid.java	225
+WorldBarrenMarginal.java	267
+WorldDesert.java	233
+WorldFarming.java	414
+WorldIce.java	221
+WorldJungle.java	233
+WorldTerran.java	233
+WorldTundra.java	233
+WorldTwilight.java	241
+WorldUninhabitable.java	446
+WorldWater.java	265

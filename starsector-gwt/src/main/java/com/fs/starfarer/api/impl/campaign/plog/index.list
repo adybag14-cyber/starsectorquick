@@ -1,19 +1,19 @@
-file	BasePLEntry.java	775
-file	BasePLStat.java	1340
-file	OfficerSkillGainRecord.java	750
-file	PLEntry.java	195
-file	PLIntel.java	3531
-file	PLSnapshot.java	1311
-file	PLStat.java	525
-file	PLStatCargo.java	701
-file	PLStatColonies.java	814
-file	PLStatCredits.java	740
-file	PLStatCrew.java	688
-file	PLStatFleet.java	1011
-file	PLStatFuel.java	692
-file	PLStatLevel.java	716
-file	PLStatMarines.java	698
-file	PLStatSupplies.java	706
-file	PLTextEntry.java	538
-file	PlaythroughLog.java	10963
-file	SModRecord.java	1615
+BasePLEntry.java	775
+BasePLStat.java	1340
+OfficerSkillGainRecord.java	750
+PLEntry.java	195
+PLIntel.java	3531
+PLSnapshot.java	1311
+PLStat.java	525
+PLStatCargo.java	701
+PLStatColonies.java	814
+PLStatCredits.java	740
+PLStatCrew.java	688
+PLStatFleet.java	1011
+PLStatFuel.java	692
+PLStatLevel.java	716
+PLStatMarines.java	698
+PLStatSupplies.java	706
+PLTextEntry.java	538
+PlaythroughLog.java	10963
+SModRecord.java	1615

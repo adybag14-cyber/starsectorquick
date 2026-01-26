@@ -1,30 +1,30 @@
-file	AbilityPlugin.java	3385
-file	AdminData.java	640
-file	AfterShipCreationSkillEffect.java	376
-file	BaseSkillsChangeEffect.java	1331
-file	CharacterCreationData.java	1568
-file	CharacterStatsSkillEffect.java	330
-file	CustomSkillDescription.java	400
-file	DescriptionSkillEffect.java	247
-file	FleetStatsSkillEffect.java	377
-file	FleetTotalItem.java	454
-file	FleetTotalSource.java	122
-file	FullName.java	752
-file	ImportantPeopleAPI.java	2112
-file	LevelBasedEffect.java	491
-file	MarketConditionSpecAPI.java	495
-file	MarketPostPersonFilter.java	1244
-file	MarketSkillEffect.java	348
-file	MutableCharacterStatsAPI.java	4303
-file	OfficerDataAPI.java	758
-file	PersonAPI.java	2914
-file	PersonalityAPI.java	154
-file	RelationshipAPI.java	2102
-file	ShipSkillEffect.java	459
-file	SkillEffectType.java	265
-file	SkillSpecAPI.java	1479
-file	SkillsChangeEffect.java	621
-file	SkillsChangeOfficerEffect.java	13965
-file	SkillsChangeRemoveExcessOPEffect.java	5161
-file	SkillsChangeRemoveSmodsEffect.java	7819
-file	SkillsChangeRemoveVentsCapsEffect.java	4909
+AbilityPlugin.java	3385
+AdminData.java	640
+AfterShipCreationSkillEffect.java	376
+BaseSkillsChangeEffect.java	1331
+CharacterCreationData.java	1568
+CharacterStatsSkillEffect.java	330
+CustomSkillDescription.java	400
+DescriptionSkillEffect.java	247
+FleetStatsSkillEffect.java	377
+FleetTotalItem.java	454
+FleetTotalSource.java	122
+FullName.java	752
+ImportantPeopleAPI.java	2112
+LevelBasedEffect.java	491
+MarketConditionSpecAPI.java	495
+MarketPostPersonFilter.java	1244
+MarketSkillEffect.java	348
+MutableCharacterStatsAPI.java	4303
+OfficerDataAPI.java	758
+PersonAPI.java	2914
+PersonalityAPI.java	154
+RelationshipAPI.java	2102
+ShipSkillEffect.java	459
+SkillEffectType.java	265
+SkillSpecAPI.java	1479
+SkillsChangeEffect.java	621
+SkillsChangeOfficerEffect.java	13965
+SkillsChangeRemoveExcessOPEffect.java	5161
+SkillsChangeRemoveSmodsEffect.java	7819
+SkillsChangeRemoveVentsCapsEffect.java	4909

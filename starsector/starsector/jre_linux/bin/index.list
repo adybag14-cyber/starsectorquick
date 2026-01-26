@@ -1,14 +1,14 @@
-file	ControlPanel	0
-file	java	7718
-file	java_vm	19320
-file	javaws	137722
-file	jcontrol	6638
-file	keytool	7925
-file	orbd	8117
-file	pack200	7957
-file	policytool	7981
-file	rmid	7925
-file	rmiregistry	7933
-file	servertool	7949
-file	tnameserv	8149
-file	unpack200	219643
+ControlPanel	0
+java	7718
+java_vm	19320
+javaws	137722
+jcontrol	6638
+keytool	7925
+orbd	8117
+pack200	7957
+policytool	7981
+rmid	7925
+rmiregistry	7933
+servertool	7949
+tnameserv	8149
+unpack200	219643

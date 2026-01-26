@@ -1,48 +1,48 @@
-directory	custom
-file	ai_remnant.png	89374
-file	black_market.png	18525
-file	black_market2.png	10398
-file	crest_ai_remnant.png	65709
-file	crest_black_market.png	13651
-file	crest_domain.png	17626
-file	crest_domain_explorarium.png	15214
-file	crest_eridani_utopia.png	16592
-file	crest_hegemony.png	56317
-file	crest_hightech.png	74765
-file	crest_ko_combine.png	5195
-file	crest_lowtech.png	88593
-file	crest_luddic_church.png	28566
-file	crest_luddic_path.png	43848
-file	crest_mbaye-gogol.png	17313
-file	crest_mbaye-gogol1.png	3679
-file	crest_mbaye-gogol2.png	10272
-file	crest_midline.png	12695
-file	crest_neutral.png	7052
-file	crest_neutral_traders.png	26760
-file	crest_persean_league.png	11692
-file	crest_pirates.png	32189
-file	crest_player_flag.png	15532
-file	crest_sindrian_diktat.png	38219
-file	crest_tritachyon.png	22589
-file	domain.png	18393
-file	domain_explorarium.png	18350
-file	eridani_utopia.png	11489
-file	hegemony.png	35421
-file	hightech.png	109116
-file	ko_combine.png	5564
-file	lowtech.png	132635
-file	luddic_church.png	29933
-file	luddic_path.png	59340
-file	mbaye-gogol.png	20854
-file	midline.png	13579
-file	neutral.png	8378
-file	neutral_traders.png	29257
-file	persean_league.png	22059
-file	pirates.png	32587
-file	player_flag.png	16214
-file	player_flag2.png	22950
-file	player_flag3.png	30955
-file	sindrian_diktat.png	41419
-file	storage.png	4836
-file	storage2.png	3240
-file	tritachyon.png	22987
+custom/	-1
+ai_remnant.png	89374
+black_market.png	18525
+black_market2.png	10398
+crest_ai_remnant.png	65709
+crest_black_market.png	13651
+crest_domain.png	17626
+crest_domain_explorarium.png	15214
+crest_eridani_utopia.png	16592
+crest_hegemony.png	56317
+crest_hightech.png	74765
+crest_ko_combine.png	5195
+crest_lowtech.png	88593
+crest_luddic_church.png	28566
+crest_luddic_path.png	43848
+crest_mbaye-gogol.png	17313
+crest_mbaye-gogol1.png	3679
+crest_mbaye-gogol2.png	10272
+crest_midline.png	12695
+crest_neutral.png	7052
+crest_neutral_traders.png	26760
+crest_persean_league.png	11692
+crest_pirates.png	32189
+crest_player_flag.png	15532
+crest_sindrian_diktat.png	38219
+crest_tritachyon.png	22589
+domain.png	18393
+domain_explorarium.png	18350
+eridani_utopia.png	11489
+hegemony.png	35421
+hightech.png	109116
+ko_combine.png	5564
+lowtech.png	132635
+luddic_church.png	29933
+luddic_path.png	59340
+mbaye-gogol.png	20854
+midline.png	13579
+neutral.png	8378
+neutral_traders.png	29257
+persean_league.png	22059
+pirates.png	32587
+player_flag.png	16214
+player_flag2.png	22950
+player_flag3.png	30955
+sindrian_diktat.png	41419
+storage.png	4836
+storage2.png	3240
+tritachyon.png	22987

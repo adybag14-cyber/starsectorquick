@@ -1,112 +1,112 @@
-directory	ai
-directory	comm
-directory	econ
-directory	events
-directory	impl
-directory	listeners
-directory	rules
-file	AICoreAdminPlugin.java	217
-file	AICoreOfficerPlugin.java	952
-file	AsteroidAPI.java	194
-file	AutofitVariantsAPI.java	221
-file	BaseCampaignEntityPickerListener.java	2148
-file	BaseCampaignEventListener.java	2840
-file	BaseCampaignEventListenerAndScript.java	535
-file	BaseCampaignPlugin.java	4265
-file	BaseCustomDialogDelegate.java	878
-file	BaseCustomProductionPickerDelegateImpl.java	929
-file	BaseCustomUIPanelPlugin.java	582
-file	BaseOnMessageDeliveryScript.java	192
-file	BaseStoryPointActionDelegate.java	817
-file	BattleAPI.java	3976
-file	BattleAutoresolverPlugin.java	155
-file	BattleCreationPlugin.java	387
-file	BuffManagerAPI.java	1195
-file	CampaignClockAPI.java	960
-file	CampaignEngineLayers.java	410
-file	CampaignEntityPickerListener.java	963
-file	CampaignEventListener.java	3068
-file	CampaignFleetAPI.java	8453
-file	CampaignMissionPlugin.java	871
-file	CampaignPlugin.java	7688
-file	CampaignProgressIndicatorAPI.java	627
-file	CampaignTerrainAPI.java	199
-file	CampaignTerrainPlugin.java	2551
-file	CampaignUIAPI.java	4336
-file	CargoAPI.java	4284
-file	CargoPickerListener.java	346
-file	CargoStackAPI.java	2712
-file	CargoTransferHandlerAPI.java	365
-file	CharacterDataAPI.java	1139
-file	CircularOrbitWithSpinAPI.java	150
-file	CombatDamageData.java	1904
-file	CommDirectoryAPI.java	680
-file	CommDirectoryEntryAPI.java	356
-file	ControlGroupsAPI.java	312
-file	CoreInteractionListener.java	115
-file	CoreUIAPI.java	257
-file	CoreUITabId.java	154
-file	CustomCampaignEntityAPI.java	389
-file	CustomCampaignEntityPlugin.java	1598
-file	CustomDialogDelegate.java	655
-file	CustomEntitySpecAPI.java	1530
-file	CustomProductionPickerDelegate.java	445
-file	CustomUIPanelPlugin.java	1211
-file	CustomVisualDialogDelegate.java	482
-file	EngagementResultForFleetAPI.java	871
-file	FactionAPI.java	12187
-file	FactionDoctrineAPI.java	1729
-file	FactionProductionAPI.java	2136
-file	FactionSpecAPI.java	3630
-file	FleetActionTextProvider.java	139
-file	FleetAssignment.java	1282
-file	FleetDataAPI.java	3583
-file	FleetEncounterContextPlugin.java	9477
-file	FleetInflater.java	327
-file	FleetMemberPickerListener.java	265
-file	FleetOrStubAPI.java	2106
-file	FleetStubAPI.java	2066
-file	FleetStubConverterPlugin.java	311
-file	GenericPluginManagerAPI.java	2326
-file	GroundRaidTargetPickerDelegate.java	1045
-file	IndustryPickerListener.java	224
-file	IntelDataAPI.java	224
-file	InteractionDialogAPI.java	4538
-file	InteractionDialogPlugin.java	563
-file	JumpPointAPI.java	3700
-file	LocationAPI.java	9794
-file	MessageDisplayAPI.java	401
-file	MissionBoardAPI.java	997
-file	NascentGravityWellAPI.java	273
-file	OnMessageDeliveryScript.java	346
-file	OptionPanelAPI.java	3246
-file	OrbitAPI.java	492
-file	OrbitalStationAPI.java	111
-file	ParticleControllerAPI.java	809
-file	PersistentUIDataAPI.java	818
-file	PersonImportance.java	855
-file	PlanetAPI.java	1409
-file	PlanetSpecAPI.java	3989
-file	PlayerMarketTransaction.java	6965
-file	PluginPickerAPI.java	615
-file	RenderingAffectedByAbyssalDepth.java	137
-file	RepLevel.java	3387
-file	ReputationActionResponsePlugin.java	503
-file	ResourceCostPanelAPI.java	1408
-file	RingBandAPI.java	989
-file	RuleBasedDialog.java	439
-file	SectorAPI.java	11079
-file	SectorEntityToken.java	8918
-file	SectorGenProgress.java	127
-file	SectorGeneratorPlugin.java	205
-file	SectorProcGenPlugin.java	473
-file	SpawnPointPlugin.java	362
-file	SpecialItemData.java	1127
-file	SpecialItemPlugin.java	2639
-file	SpecialItemSpecAPI.java	1159
-file	StarSystemAPI.java	5675
-file	StoryPointActionDelegate.java	461
-file	SubmarketPlugin.java	3225
-file	TerrainAIFlags.java	419
-file	TextPanelAPI.java	2011
-file	VisualPanelAPI.java	3866
+ai/	-1
+comm/	-1
+econ/	-1
+events/	-1
+impl/	-1
+listeners/	-1
+rules/	-1
+AICoreAdminPlugin.java	217
+AICoreOfficerPlugin.java	952
+AsteroidAPI.java	194
+AutofitVariantsAPI.java	221
+BaseCampaignEntityPickerListener.java	2148
+BaseCampaignEventListener.java	2840
+BaseCampaignEventListenerAndScript.java	535
+BaseCampaignPlugin.java	4265
+BaseCustomDialogDelegate.java	878
+BaseCustomProductionPickerDelegateImpl.java	929
+BaseCustomUIPanelPlugin.java	582
+BaseOnMessageDeliveryScript.java	192
+BaseStoryPointActionDelegate.java	817
+BattleAPI.java	3976
+BattleAutoresolverPlugin.java	155
+BattleCreationPlugin.java	387
+BuffManagerAPI.java	1195
+CampaignClockAPI.java	960
+CampaignEngineLayers.java	410
+CampaignEntityPickerListener.java	963
+CampaignEventListener.java	3068
+CampaignFleetAPI.java	8453
+CampaignMissionPlugin.java	871
+CampaignPlugin.java	7688
+CampaignProgressIndicatorAPI.java	627
+CampaignTerrainAPI.java	199
+CampaignTerrainPlugin.java	2551
+CampaignUIAPI.java	4336
+CargoAPI.java	4284
+CargoPickerListener.java	346
+CargoStackAPI.java	2712
+CargoTransferHandlerAPI.java	365
+CharacterDataAPI.java	1139
+CircularOrbitWithSpinAPI.java	150
+CombatDamageData.java	1904
+CommDirectoryAPI.java	680
+CommDirectoryEntryAPI.java	356
+ControlGroupsAPI.java	312
+CoreInteractionListener.java	115
+CoreUIAPI.java	257
+CoreUITabId.java	154
+CustomCampaignEntityAPI.java	389
+CustomCampaignEntityPlugin.java	1598
+CustomDialogDelegate.java	655
+CustomEntitySpecAPI.java	1530
+CustomProductionPickerDelegate.java	445
+CustomUIPanelPlugin.java	1211
+CustomVisualDialogDelegate.java	482
+EngagementResultForFleetAPI.java	871
+FactionAPI.java	12187
+FactionDoctrineAPI.java	1729
+FactionProductionAPI.java	2136
+FactionSpecAPI.java	3630
+FleetActionTextProvider.java	139
+FleetAssignment.java	1282
+FleetDataAPI.java	3583
+FleetEncounterContextPlugin.java	9477
+FleetInflater.java	327
+FleetMemberPickerListener.java	265
+FleetOrStubAPI.java	2106
+FleetStubAPI.java	2066
+FleetStubConverterPlugin.java	311
+GenericPluginManagerAPI.java	2326
+GroundRaidTargetPickerDelegate.java	1045
+IndustryPickerListener.java	224
+IntelDataAPI.java	224
+InteractionDialogAPI.java	4538
+InteractionDialogPlugin.java	563
+JumpPointAPI.java	3700
+LocationAPI.java	9794
+MessageDisplayAPI.java	401
+MissionBoardAPI.java	997
+NascentGravityWellAPI.java	273
+OnMessageDeliveryScript.java	346
+OptionPanelAPI.java	3246
+OrbitAPI.java	492
+OrbitalStationAPI.java	111
+ParticleControllerAPI.java	809
+PersistentUIDataAPI.java	818
+PersonImportance.java	855
+PlanetAPI.java	1409
+PlanetSpecAPI.java	3989
+PlayerMarketTransaction.java	6965
+PluginPickerAPI.java	615
+RenderingAffectedByAbyssalDepth.java	137
+RepLevel.java	3387
+ReputationActionResponsePlugin.java	503
+ResourceCostPanelAPI.java	1408
+RingBandAPI.java	989
+RuleBasedDialog.java	439
+SectorAPI.java	11079
+SectorEntityToken.java	8918
+SectorGenProgress.java	127
+SectorGeneratorPlugin.java	205
+SectorProcGenPlugin.java	473
+SpawnPointPlugin.java	362
+SpecialItemData.java	1127
+SpecialItemPlugin.java	2639
+SpecialItemSpecAPI.java	1159
+StarSystemAPI.java	5675
+StoryPointActionDelegate.java	461
+SubmarketPlugin.java	3225
+TerrainAIFlags.java	419
+TextPanelAPI.java	2011
+VisualPanelAPI.java	3866

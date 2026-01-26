@@ -1,189 +1,189 @@
-directory	academy
-directory	missions
-directory	newgame
-directory	salvage
-file	AbortMission.java	965
-file	AbortWait.java	1243
-file	AcceptMission.java	984
-file	ActivateAbility.java	1068
-file	AddAbility.java	2981
-file	AddCommodity.java	188
-file	AddCredits.java	1711
-file	AddOption.java	1104
-file	AddPotentialContact.java	1420
-file	AddRemoveAnyItem.java	2965
-file	AddRemoveCommodity.java	15554
-file	AddSelector.java	2284
-file	AddShip.java	1622
-file	AddShipToOtherFleet.java	1281
-file	AddStoryPoints.java	798
-file	AddText.java	1160
-file	AddTextSmall.java	1316
-file	AddXP.java	704
-file	AdjustRep.java	2170
-file	AdjustRepActivePerson.java	2089
-file	AdjustRepPerson.java	2465
-file	AnyNearbyFleetsHostileAndAware.java	1652
-file	ApplyCRDamage.java	4121
-file	ArePatrolsNearby.java	1606
-file	BaseCommandPlugin.java	810
-file	BeginConversation.java	3184
-file	BeginMission.java	3647
-file	BroadcastCancelPlayerAction.java	1248
-file	BroadcastPlayerAction.java	2221
-file	BroadcastPlayerWaitAction.java	2524
-file	Call.java	139
-file	CallEvent.java	1362
-file	CaresAboutTransponder.java	1134
-file	CargoScan.java	10957
-file	CargoScanApplyResult.java	2530
-file	CheckSetting.java	665
-file	ClearActiveMission.java	743
-file	CustomsInspectionApplyRepLoss.java	2142
-file	CustomsInspectionApplyResult.java	1627
-file	CustomsInspectionGenerateResult.java	7645
-file	DeactivateAbility.java	1046
-file	DespawnEntity.java	1107
-file	DismissDialog.java	1152
-file	DoCanAffordCheck.java	2859
-file	DumpMemory.java	3765
-file	EndConversation.java	2378
-file	FireAll.java	4804
-file	FireBest.java	4124
-file	FleetDesc.java	7851
-file	GiveOtherFleetAssignment.java	1520
-file	HA_CMD.java	42771
-file	HT_CMD.java	4740
-file	HailPlayer.java	1636
-file	HasAttentionOfAuthorities.java	2154
-file	HideFirstPerson.java	527
-file	HideMapMarker.java	577
-file	HideSecondPerson.java	529
-file	HideThirdPerson.java	527
-file	HideVisual.java	558
-file	Highlight.java	118
-file	HighlightComms.java	1185
-file	ImportanceAtLeast.java	858
-file	IncreaseSmugglingSuspicion.java	1220
-file	InstallCommSniffer.java	801
-file	IsSeenByAnyFleet.java	2166
-file	IsSeenByPatrols.java	2592
-file	IsSoughtByPatrols.java	3462
-file	KantaCMD.java	22422
-file	LPTitheCalc.java	1000
-file	MakeFullySurveyed.java	677
-file	MakeHostileWhileTOff.java	2518
-file	MakeNearbyFleetsHostile.java	2560
-file	MakeNearbyFleetsNonHostile.java	1538
-file	MakeOptionOpenCore.java	1523
-file	MakeOtherFleetAggressive.java	1829
-file	MakeOtherFleetAggressiveOnce.java	1947
-file	MakeOtherFleetAllowDisengage.java	1357
-file	MakeOtherFleetAvoidContact.java	1246
-file	MakeOtherFleetDoThing.java	1614
-file	MakeOtherFleetGoAway.java	1402
-file	MakeOtherFleetHostile.java	2512
-file	MakeOtherFleetImportant.java	1706
-file	MakeOtherFleetLowRepImpact.java	2458
-file	MakeOtherFleetNoRepImpact.java	2456
-file	MakeOtherFleetNonAggressive.java	1672
-file	MakeOtherFleetNonHostile.java	3088
-file	MakeOtherFleetPreventDisengage.java	1500
-file	MakePlayerImmediatelyAttackable.java	1031
-file	MarketGainRandomRep.java	2648
-file	MarketReduceRandomRep.java	2542
-file	MovePersonToMarket.java	2060
-file	NGCAddCargo.java	1246
-file	NGCAddCharacterPoints.java	1022
-file	NGCAddCredits.java	982
-file	NGCAddDevStartingScript.java	3394
-file	NGCAddShip.java	1489
-file	NGCAddShipSilent.java	1408
-file	NGCAddStandardStartingScript.java	14092
-file	NGCCanSkipTutorial.java	610
-file	NGCDone.java	779
-file	NGCRemoveCargo.java	1117
-file	NGCRemoveShip.java	870
-file	NGCSetAptitude.java	1067
-file	NGCSetCustom.java	942
-file	NGCSetDifficulty.java	892
-file	NGCSetSkill.java	1058
-file	NGCSetStartingLocation.java	1040
-file	NGCSetWithTimePass.java	906
-file	NPCWantsComms.java	1180
-file	OpenCommDirectory.java	768
-file	OpenComms.java	606
-file	OpenCoreTab.java	1760
-file	PK_CMD.java	8734
-file	PLAddEntry.java	702
-file	PaginatedOptions.java	5584
-file	PaginatedOptionsExample.java	864
-file	PickCommsNPC.java	1426
-file	Ping.java	949
-file	PlaySound.java	698
-file	PlayerFleetHasShipWithBaseHull.java	918
-file	PlayerFleetHasShipWithId.java	890
-file	PlayerHasCargo.java	1356
-file	PrintDescription.java	1266
-file	ReinitDialog.java	723
-file	RemoveCommodity.java	2536
-file	RemoveContact.java	1363
-file	RemoveOption.java	651
-file	RemoveShip.java	1661
-file	RemoveShipWithBaseHull.java	1070
-file	RemoveShipWithId.java	1067
-file	RepGTE.java	1010
-file	RepIsAtBest.java	991
-file	RepIsAtWorst.java	994
-file	RepLTE.java	174
-file	RepairAll.java	2669
-file	RepairAvailable.java	1550
-file	RepairEnoughSupplies.java	1217
-file	RepairNeeded.java	1413
-file	ResetActivePerson.java	632
-file	RestoreSavedVisual.java	829
-file	RollProbability.java	1237
-file	SaveCurrentVisual.java	851
-file	SetActiveMission.java	1104
-file	SetColor.java	807
-file	SetEnabled.java	721
-file	SetFlagship.java	1583
-file	SetHistorianBlurbShownAfterDelay.java	1246
-file	SetLater.java	1262
-file	SetNearbyFleetsVariable.java	1747
-file	SetOptionColor.java	763
-file	SetOptionText.java	707
-file	SetOtherFleetAllowJump.java	1157
-file	SetPersonHidden.java	1564
-file	SetPersonPortrait.java	1569
-file	SetPromptText.java	758
-file	SetShortcut.java	1004
-file	SetStoryColor.java	711
-file	SetStoryOption.java	8995
-file	SetTextHighlightColors.java	944
-file	SetTextHighlights.java	1347
-file	SetTooltip.java	780
-file	SetTooltipHighlightColors.java	914
-file	SetTooltipHighlights.java	1454
-file	ShowDefaultVisual.java	3632
-file	ShowFirstPerson.java	563
-file	ShowImageVisual.java	2793
-file	ShowLargePlanet.java	972
-file	ShowMapMarker.java	1740
-file	ShowPersonVisual.java	1659
-file	ShowPic.java	769
-file	ShowRemainingCapacity.java	1974
-file	ShowResCost.java	2062
-file	ShowSecondPerson.java	979
-file	ShowThirdPerson.java	977
-file	SubCredits.java	1244
-file	TakeRepCheck.java	2076
-file	UnhidePerson.java	1362
-file	UninstallCommSniffer.java	802
-file	UniqueEncounter.java	1556
-file	UpdateMemory.java	725
-file	Wait.java	6682
-file	WasHistorianBlurbShown.java	746
-file	expire.java	698
-file	unset.java	625
-file	unsetAll.java	1135
+academy/	-1
+missions/	-1
+newgame/	-1
+salvage/	-1
+AbortMission.java	965
+AbortWait.java	1243
+AcceptMission.java	984
+ActivateAbility.java	1068
+AddAbility.java	2981
+AddCommodity.java	188
+AddCredits.java	1711
+AddOption.java	1104
+AddPotentialContact.java	1420
+AddRemoveAnyItem.java	2965
+AddRemoveCommodity.java	15554
+AddSelector.java	2284
+AddShip.java	1622
+AddShipToOtherFleet.java	1281
+AddStoryPoints.java	798
+AddText.java	1160
+AddTextSmall.java	1316
+AddXP.java	704
+AdjustRep.java	2170
+AdjustRepActivePerson.java	2089
+AdjustRepPerson.java	2465
+AnyNearbyFleetsHostileAndAware.java	1652
+ApplyCRDamage.java	4121
+ArePatrolsNearby.java	1606
+BaseCommandPlugin.java	810
+BeginConversation.java	3184
+BeginMission.java	3647
+BroadcastCancelPlayerAction.java	1248
+BroadcastPlayerAction.java	2221
+BroadcastPlayerWaitAction.java	2524
+Call.java	139
+CallEvent.java	1362
+CaresAboutTransponder.java	1134
+CargoScan.java	10957
+CargoScanApplyResult.java	2530
+CheckSetting.java	665
+ClearActiveMission.java	743
+CustomsInspectionApplyRepLoss.java	2142
+CustomsInspectionApplyResult.java	1627
+CustomsInspectionGenerateResult.java	7645
+DeactivateAbility.java	1046
+DespawnEntity.java	1107
+DismissDialog.java	1152
+DoCanAffordCheck.java	2859
+DumpMemory.java	3765
+EndConversation.java	2378
+FireAll.java	4804
+FireBest.java	4124
+FleetDesc.java	7851
+GiveOtherFleetAssignment.java	1520
+HA_CMD.java	42771
+HT_CMD.java	4740
+HailPlayer.java	1636
+HasAttentionOfAuthorities.java	2154
+HideFirstPerson.java	527
+HideMapMarker.java	577
+HideSecondPerson.java	529
+HideThirdPerson.java	527
+HideVisual.java	558
+Highlight.java	118
+HighlightComms.java	1185
+ImportanceAtLeast.java	858
+IncreaseSmugglingSuspicion.java	1220
+InstallCommSniffer.java	801
+IsSeenByAnyFleet.java	2166
+IsSeenByPatrols.java	2592
+IsSoughtByPatrols.java	3462
+KantaCMD.java	22422
+LPTitheCalc.java	1000
+MakeFullySurveyed.java	677
+MakeHostileWhileTOff.java	2518
+MakeNearbyFleetsHostile.java	2560
+MakeNearbyFleetsNonHostile.java	1538
+MakeOptionOpenCore.java	1523
+MakeOtherFleetAggressive.java	1829
+MakeOtherFleetAggressiveOnce.java	1947
+MakeOtherFleetAllowDisengage.java	1357
+MakeOtherFleetAvoidContact.java	1246
+MakeOtherFleetDoThing.java	1614
+MakeOtherFleetGoAway.java	1402
+MakeOtherFleetHostile.java	2512
+MakeOtherFleetImportant.java	1706
+MakeOtherFleetLowRepImpact.java	2458
+MakeOtherFleetNoRepImpact.java	2456
+MakeOtherFleetNonAggressive.java	1672
+MakeOtherFleetNonHostile.java	3088
+MakeOtherFleetPreventDisengage.java	1500
+MakePlayerImmediatelyAttackable.java	1031
+MarketGainRandomRep.java	2648
+MarketReduceRandomRep.java	2542
+MovePersonToMarket.java	2060
+NGCAddCargo.java	1246
+NGCAddCharacterPoints.java	1022
+NGCAddCredits.java	982
+NGCAddDevStartingScript.java	3394
+NGCAddShip.java	1489
+NGCAddShipSilent.java	1408
+NGCAddStandardStartingScript.java	14092
+NGCCanSkipTutorial.java	610
+NGCDone.java	779
+NGCRemoveCargo.java	1117
+NGCRemoveShip.java	870
+NGCSetAptitude.java	1067
+NGCSetCustom.java	942
+NGCSetDifficulty.java	892
+NGCSetSkill.java	1058
+NGCSetStartingLocation.java	1040
+NGCSetWithTimePass.java	906
+NPCWantsComms.java	1180
+OpenCommDirectory.java	768
+OpenComms.java	606
+OpenCoreTab.java	1760
+PK_CMD.java	8734
+PLAddEntry.java	702
+PaginatedOptions.java	5584
+PaginatedOptionsExample.java	864
+PickCommsNPC.java	1426
+Ping.java	949
+PlaySound.java	698
+PlayerFleetHasShipWithBaseHull.java	918
+PlayerFleetHasShipWithId.java	890
+PlayerHasCargo.java	1356
+PrintDescription.java	1266
+ReinitDialog.java	723
+RemoveCommodity.java	2536
+RemoveContact.java	1363
+RemoveOption.java	651
+RemoveShip.java	1661
+RemoveShipWithBaseHull.java	1070
+RemoveShipWithId.java	1067
+RepGTE.java	1010
+RepIsAtBest.java	991
+RepIsAtWorst.java	994
+RepLTE.java	174
+RepairAll.java	2669
+RepairAvailable.java	1550
+RepairEnoughSupplies.java	1217
+RepairNeeded.java	1413
+ResetActivePerson.java	632
+RestoreSavedVisual.java	829
+RollProbability.java	1237
+SaveCurrentVisual.java	851
+SetActiveMission.java	1104
+SetColor.java	807
+SetEnabled.java	721
+SetFlagship.java	1583
+SetHistorianBlurbShownAfterDelay.java	1246
+SetLater.java	1262
+SetNearbyFleetsVariable.java	1747
+SetOptionColor.java	763
+SetOptionText.java	707
+SetOtherFleetAllowJump.java	1157
+SetPersonHidden.java	1564
+SetPersonPortrait.java	1569
+SetPromptText.java	758
+SetShortcut.java	1004
+SetStoryColor.java	711
+SetStoryOption.java	8995
+SetTextHighlightColors.java	944
+SetTextHighlights.java	1347
+SetTooltip.java	780
+SetTooltipHighlightColors.java	914
+SetTooltipHighlights.java	1454
+ShowDefaultVisual.java	3632
+ShowFirstPerson.java	563
+ShowImageVisual.java	2793
+ShowLargePlanet.java	972
+ShowMapMarker.java	1740
+ShowPersonVisual.java	1659
+ShowPic.java	769
+ShowRemainingCapacity.java	1974
+ShowResCost.java	2062
+ShowSecondPerson.java	979
+ShowThirdPerson.java	977
+SubCredits.java	1244
+TakeRepCheck.java	2076
+UnhidePerson.java	1362
+UninstallCommSniffer.java	802
+UniqueEncounter.java	1556
+UpdateMemory.java	725
+Wait.java	6682
+WasHistorianBlurbShown.java	746
+expire.java	698
+unset.java	625
+unsetAll.java	1135

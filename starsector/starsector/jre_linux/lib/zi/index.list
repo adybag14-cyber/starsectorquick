@@ -1,24 +1,24 @@
-directory	Africa
-directory	America
-directory	Antarctica
-directory	Asia
-directory	Atlantic
-directory	Australia
-directory	Etc
-directory	Europe
-directory	Indian
-directory	Pacific
-directory	SystemV
-file	CET	1184
-file	CST6CDT	1272
-file	EET	1072
-file	EST	27
-file	EST5EDT	1272
-file	GMT	27
-file	HST	27
-file	MET	1184
-file	MST	27
-file	MST7MDT	1272
-file	PST8PDT	1272
-file	WET	1068
-file	ZoneInfoMappings	16718
+Africa/	-1
+America/	-1
+Antarctica/	-1
+Asia/	-1
+Atlantic/	-1
+Australia/	-1
+Etc/	-1
+Europe/	-1
+Indian/	-1
+Pacific/	-1
+SystemV/	-1
+CET	1184
+CST6CDT	1272
+EET	1072
+EST	27
+EST5EDT	1272
+GMT	27
+HST	27
+MET	1184
+MST	27
+MST7MDT	1272
+PST8PDT	1272
+WET	1068
+ZoneInfoMappings	16718

@@ -1,19 +1,19 @@
-file	AbyssalFrequencies.java	2343
-file	AbyssalLightEPEC.java	4400
-file	AbyssalLocationDespawner.java	3020
-file	AbyssalNoEPEC.java	399
-file	AbyssalRogueStellarObjectDireHintsEPEC.java	9203
-file	AbyssalRogueStellarObjectEPEC.java	16190
-file	BaseEPEncounterCreator.java	5944
-file	EPEncounterCreator.java	390
-file	EncounterManager.java	6542
-file	EncounterPoint.java	760
-file	EncounterPointProvider.java	250
-file	OutsideSystemNoEPEC.java	319
-file	OutsideSystemRemnantEPEC.java	4877
-file	SlipstreamLuddicPathEPEC.java	2925
-file	SlipstreamMercenaryEPEC.java	2870
-file	SlipstreamNoEPEC.java	312
-file	SlipstreamPirateEPEC.java	3760
-file	SlipstreamScavengerEPEC.java	2550
-file	StrandedGiveTJScript.java	1924
+AbyssalFrequencies.java	2343
+AbyssalLightEPEC.java	4400
+AbyssalLocationDespawner.java	3020
+AbyssalNoEPEC.java	399
+AbyssalRogueStellarObjectDireHintsEPEC.java	9203
+AbyssalRogueStellarObjectEPEC.java	16190
+BaseEPEncounterCreator.java	5944
+EPEncounterCreator.java	390
+EncounterManager.java	6542
+EncounterPoint.java	760
+EncounterPointProvider.java	250
+OutsideSystemNoEPEC.java	319
+OutsideSystemRemnantEPEC.java	4877
+SlipstreamLuddicPathEPEC.java	2925
+SlipstreamMercenaryEPEC.java	2870
+SlipstreamNoEPEC.java	312
+SlipstreamPirateEPEC.java	3760
+SlipstreamScavengerEPEC.java	2550
+StrandedGiveTJScript.java	1924

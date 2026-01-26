@@ -1,11 +1,11 @@
-file	java.1	31005
-file	javaws.1	4103
-file	keytool.1	84003
-file	orbd.1	11870
-file	pack200.1	10631
-file	policytool.1	1589
-file	rmid.1	14131
-file	rmiregistry.1	2219
-file	servertool.1	5921
-file	tnameserv.1	13062
-file	unpack200.1	3046
+java.1	31005
+javaws.1	4103
+keytool.1	84003
+orbd.1	11870
+pack200.1	10631
+policytool.1	1589
+rmid.1	14131
+rmiregistry.1	2219
+servertool.1	5921
+tnameserv.1	13062
+unpack200.1	3046

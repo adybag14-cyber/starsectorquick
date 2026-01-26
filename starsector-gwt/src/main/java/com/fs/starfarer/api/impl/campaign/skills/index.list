@@ -1,73 +1,73 @@
-file	AdvancedCountermeasures.java	3363
-file	AptitudeDesc.java	2596
-file	AutomatedShips.java	6651
-file	AuxiliarySupport.java	2494
-file	BallisticMastery.java	3251
-file	BaseSkillEffectDescription.java	33338
-file	BestOfTheBest.java	3090
-file	BulkTransport.java	9393
-file	CarrierCommand.java	3057
-file	CarrierGroup.java	3049
-file	ColonyManagement.java	4376
-file	CombatEndurance.java	12149
-file	CommRelayScript.java	4760
-file	CommandAndControl.java	3370
-file	ContainmentProcedures.java	13093
-file	CoordinatedManeuvers.java	7023
-file	CoordinatedManeuversScript.java	9687
-file	CrewTraining.java	3290
-file	CyberneticAugmentation.java	8160
-file	DamageControl.java	9681
-file	DefensiveSystems.java	4468
-file	DerelictContingent.java	4562
-file	Effects.java	83
-file	ElectronicWarfare.java	5674
-file	ElectronicWarfareScript.java	10529
-file	EnergyWeaponMastery.java	6405
-file	EvasiveAction.java	3056
-file	FieldModulation.java	4943
-file	FieldRepairs.java	10291
-file	FieldRepairsScript.java	8561
-file	FighterDoctrine.java	6241
-file	FighterUplink.java	7989
-file	FleetLogistics.java	5976
-file	FluxRegulation.java	4848
-file	ForceConcentration.java	4631
-file	GunneryImplants.java	5593
-file	Helmsmanship.java	4752
-file	HullRestoration.java	8832
-file	Hypercognition.java	3291
-file	ImpactMitigation.java	7934
-file	IndustrialPlanning.java	4919
-file	MakeshiftEquipment.java	7325
-file	MissileSpecialization.java	4584
-file	Navigation.java	9440
-file	NeuralLink.java	4207
-file	NeuralLinkScript.java	18446
-file	OfficerManagement.java	2535
-file	OfficerTraining.java	3302
-file	OmegaECM.java	1586
-file	OrdnanceExpertise.java	5607
-file	PhaseCorps.java	10231
-file	PhaseMastery.java	2693
-file	PlanetaryOperations.java	5002
-file	PointDefense.java	2825
-file	PolarizedArmor.java	6645
-file	PowerGridModulation.java	2478
-file	RangedSpecialization.java	6797
-file	RecoveryOperations.java	9613
-file	ReliabilityEngineering.java	5430
-file	Salvaging.java	7471
-file	Sensors.java	6128
-file	ShieldModulation.java	4203
-file	ShipDesign.java	2296
-file	SpaceOperations.java	1784
-file	SpecialModifications.java	4297
-file	StrikeCommander.java	4262
-file	SupportDoctrine.java	6567
-file	SystemsExpertise.java	7055
-file	TacticalDrills.java	4850
-file	TargetAnalysis.java	5767
-file	WeaponDrills.java	2362
-file	WingCommander.java	3679
-file	WolfpackTactics.java	11056
+AdvancedCountermeasures.java	3363
+AptitudeDesc.java	2596
+AutomatedShips.java	6651
+AuxiliarySupport.java	2494
+BallisticMastery.java	3251
+BaseSkillEffectDescription.java	33338
+BestOfTheBest.java	3090
+BulkTransport.java	9393
+CarrierCommand.java	3057
+CarrierGroup.java	3049
+ColonyManagement.java	4376
+CombatEndurance.java	12149
+CommRelayScript.java	4760
+CommandAndControl.java	3370
+ContainmentProcedures.java	13093
+CoordinatedManeuvers.java	7023
+CoordinatedManeuversScript.java	9687
+CrewTraining.java	3290
+CyberneticAugmentation.java	8160
+DamageControl.java	9681
+DefensiveSystems.java	4468
+DerelictContingent.java	4562
+Effects.java	83
+ElectronicWarfare.java	5674
+ElectronicWarfareScript.java	10529
+EnergyWeaponMastery.java	6405
+EvasiveAction.java	3056
+FieldModulation.java	4943
+FieldRepairs.java	10291
+FieldRepairsScript.java	8561
+FighterDoctrine.java	6241
+FighterUplink.java	7989
+FleetLogistics.java	5976
+FluxRegulation.java	4848
+ForceConcentration.java	4631
+GunneryImplants.java	5593
+Helmsmanship.java	4752
+HullRestoration.java	8832
+Hypercognition.java	3291
+ImpactMitigation.java	7934
+IndustrialPlanning.java	4919
+MakeshiftEquipment.java	7325
+MissileSpecialization.java	4584
+Navigation.java	9440
+NeuralLink.java	4207
+NeuralLinkScript.java	18446
+OfficerManagement.java	2535
+OfficerTraining.java	3302
+OmegaECM.java	1586
+OrdnanceExpertise.java	5607
+PhaseCorps.java	10231
+PhaseMastery.java	2693
+PlanetaryOperations.java	5002
+PointDefense.java	2825
+PolarizedArmor.java	6645
+PowerGridModulation.java	2478
+RangedSpecialization.java	6797
+RecoveryOperations.java	9613
+ReliabilityEngineering.java	5430
+Salvaging.java	7471
+Sensors.java	6128
+ShieldModulation.java	4203
+ShipDesign.java	2296
+SpaceOperations.java	1784
+SpecialModifications.java	4297
+StrikeCommander.java	4262
+SupportDoctrine.java	6567
+SystemsExpertise.java	7055
+TacticalDrills.java	4850
+TargetAnalysis.java	5767
+WeaponDrills.java	2362
+WingCommander.java	3679
+WolfpackTactics.java	11056

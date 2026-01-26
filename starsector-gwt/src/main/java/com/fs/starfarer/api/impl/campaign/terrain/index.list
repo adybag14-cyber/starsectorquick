@@ -1,37 +1,37 @@
-file	AsteroidBeltTerrainPlugin.java	12863
-file	AsteroidFieldTerrainPlugin.java	3913
-file	AsteroidImpact.java	7562
-file	AsteroidSource.java	525
-file	AuroraRenderer.java	9235
-file	BaseHyperspaceAbyssPlugin.java	925
-file	BaseRingTerrain.java	4300
-file	BaseTerrain.java	10171
-file	BaseTiledTerrain.java	25028
-file	CRLossPerSecondBuff.java	926
-file	CRRecoveryBuff.java	915
-file	DebrisFieldTerrainPlugin.java	12004
-file	DebrisPiece.java	11192
-file	EventHorizonPlugin.java	1839
-file	FlareManager.java	10213
-file	HyperStormBoost.java	3862
-file	HyperspaceAbyssPlugin.java	525
-file	HyperspaceAbyssPluginImpl.java	6394
-file	HyperspaceAutomaton.java	9655
-file	HyperspaceTerrainPlugin.java	62781
-file	MagneticFieldTerrainPlugin.java	16150
-file	MaxBurnBuff.java	909
-file	NebulaTerrainPlugin.java	13217
-file	PeakPerformanceBuff.java	918
-file	PulsarBeamTerrainPlugin.java	15348
-file	PulsarRenderer.java	12978
-file	RadioChatterTerrainPlugin.java	4953
-file	RangeBlockerUtil.java	5228
-file	RingRenderer.java	6167
-file	RingSystemTerrainPlugin.java	4905
-file	ShoveFleetScript.java	2178
-file	SlipstreamTerrainPlugin.java	18101
-file	SpatialAnomalyTerrainPlugin.java	5061
-file	StarCoronaAkaMainyuTerrainPlugin.java	3032
-file	StarCoronaJetTerrainPlugin.java	2950
-file	StarCoronaTerrainPlugin.java	19701
-file	WavefrontTerrainPlugin.java	22328
+AsteroidBeltTerrainPlugin.java	12863
+AsteroidFieldTerrainPlugin.java	3913
+AsteroidImpact.java	7562
+AsteroidSource.java	525
+AuroraRenderer.java	9235
+BaseHyperspaceAbyssPlugin.java	925
+BaseRingTerrain.java	4300
+BaseTerrain.java	10171
+BaseTiledTerrain.java	25028
+CRLossPerSecondBuff.java	926
+CRRecoveryBuff.java	915
+DebrisFieldTerrainPlugin.java	12004
+DebrisPiece.java	11192
+EventHorizonPlugin.java	1839
+FlareManager.java	10213
+HyperStormBoost.java	3862
+HyperspaceAbyssPlugin.java	525
+HyperspaceAbyssPluginImpl.java	6394
+HyperspaceAutomaton.java	9655
+HyperspaceTerrainPlugin.java	62781
+MagneticFieldTerrainPlugin.java	16150
+MaxBurnBuff.java	909
+NebulaTerrainPlugin.java	13217
+PeakPerformanceBuff.java	918
+PulsarBeamTerrainPlugin.java	15348
+PulsarRenderer.java	12978
+RadioChatterTerrainPlugin.java	4953
+RangeBlockerUtil.java	5228
+RingRenderer.java	6167
+RingSystemTerrainPlugin.java	4905
+ShoveFleetScript.java	2178
+SlipstreamTerrainPlugin.java	18101
+SpatialAnomalyTerrainPlugin.java	5061
+StarCoronaAkaMainyuTerrainPlugin.java	3032
+StarCoronaJetTerrainPlugin.java	2950
+StarCoronaTerrainPlugin.java	19701
+WavefrontTerrainPlugin.java	22328

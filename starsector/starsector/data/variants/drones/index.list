@@ -1,6 +1,6 @@
-file	drone_assault.variant	370
-file	drone_borer.variant	367
-file	drone_pd.variant	360
-file	drone_pd_midline.variant	376
-file	drone_sensor.variant	370
-file	drone_terminator.variant	847
+drone_assault.variant	370
+drone_borer.variant	367
+drone_pd.variant	360
+drone_pd_midline.variant	376
+drone_sensor.variant	370
+drone_terminator.variant	847

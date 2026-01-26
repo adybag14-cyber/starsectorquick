@@ -1,74 +1,74 @@
-directory	dem
-file	AcausalDisruptorStats.java	7282
-file	BaseBattleObjectiveEffect.java	2614
-file	BaseShipSystemScript.java	1291
-file	BattleCreationPluginImpl.java	29425
-file	BlinkerEffect.java	966
-file	BreachOnHitEffect.java	2612
-file	CRPluginImpl.java	24734
-file	CanisterFlakPlugin.java	1164
-file	ChiralFigmentStats.java	11868
-file	CombatEntityPluginWithParticles.java	7966
-file	CommRelayEffect.java	2120
-file	CryoblasterEffect.java	8061
-file	CryofluxTransducerEffect.java	11553
-file	CryofluxTransducerStats.java	3150
-file	DamperFieldOmegaStats.java	3524
-file	DamperFieldStats.java	3462
-file	DisintegratorEffect.java	9638
-file	DroneStrikeStats.java	11894
-file	DroneStrikeStatsAIInfoProvider.java	420
-file	EntropyAmplifierStats.java	8094
-file	EscapeRevealPlugin.java	1197
-file	GenericCombatPlugin.java	912
-file	GravitonBeamEffect.java	3377
-file	GravityPullEffect.java	6104
-file	InterdictorArrayStats.java	7883
-file	IonBeamEffect.java	2423
-file	IonCannonOnHitEffect.java	1385
-file	LidarArrayStats.java	10408
-file	LightsEffect.java	1565
-file	LowCRShipDamageSequence.java	3343
-file	MineStrikeStationStats.java	469
-file	MineStrikeStats.java	9291
-file	MineStrikeStatsAIInfoProvider.java	230
-file	MiningBlasterOnHitEffect.java	860
-file	MoteAIScript.java	13852
-file	MoteControlScript.java	18348
-file	MoteOnHitEffect.java	3135
-file	NSLanceEffectSavedCopy.java	8178
-file	NavBuoyEffect.java	4435
-file	NegativeExplosionVisual.java	11216
-file	NeuralTransferVisual.java	5673
-file	NovaBurstStats.java	2284
-file	OrionDeviceStats.java	16594
-file	PaladinEffect.java	2153
-file	PhaseCloakStats.java	19857
-file	PilumOnHitEffect.java	1741
-file	PlasmaJetsStats.java	3186
-file	RealityDisruptorChargeGlow.java	15503
-file	RealityDisruptorEffect.java	2874
-file	RecallDeviceStats.java	3338
-file	ReserveWingStats.java	3328
-file	RiftBeamEffect.java	5001
-file	RiftBeamMineExplosion.java	644
-file	RiftCascadeEffect.java	14435
-file	RiftCascadeMineExplosion.java	3557
-file	RiftLanceEffect.java	4802
-file	RiftLanceMineExplosion.java	591
-file	RiftTorpedoEffect.java	2446
-file	RiftTrailEffect.java	3604
-file	SabotOnHitEffect.java	1529
-file	SensorArrayEffect.java	4478
-file	SensorDishRotationEffect.java	1327
-file	ShipExplosionFlareVisual.java	3842
-file	ShockRepeaterOnFireEffect.java	4664
-file	ShockwaveVisual.java	8562
-file	SquallOnFireEffect.java	1444
-file	TachyonLanceEffect.java	2423
-file	TargetingFeedStats.java	4087
-file	TemporalShellStats.java	3474
-file	TestOnHitEffect.java	1289
-file	TriadShieldStats.java	4677
-file	TriadShieldStatsBackup.java	17231
-file	VPDriverEffect.java	2991
+dem/	-1
+AcausalDisruptorStats.java	7282
+BaseBattleObjectiveEffect.java	2614
+BaseShipSystemScript.java	1291
+BattleCreationPluginImpl.java	29425
+BlinkerEffect.java	966
+BreachOnHitEffect.java	2612
+CRPluginImpl.java	24734
+CanisterFlakPlugin.java	1164
+ChiralFigmentStats.java	11868
+CombatEntityPluginWithParticles.java	7966
+CommRelayEffect.java	2120
+CryoblasterEffect.java	8061
+CryofluxTransducerEffect.java	11553
+CryofluxTransducerStats.java	3150
+DamperFieldOmegaStats.java	3524
+DamperFieldStats.java	3462
+DisintegratorEffect.java	9638
+DroneStrikeStats.java	11894
+DroneStrikeStatsAIInfoProvider.java	420
+EntropyAmplifierStats.java	8094
+EscapeRevealPlugin.java	1197
+GenericCombatPlugin.java	912
+GravitonBeamEffect.java	3377
+GravityPullEffect.java	6104
+InterdictorArrayStats.java	7883
+IonBeamEffect.java	2423
+IonCannonOnHitEffect.java	1385
+LidarArrayStats.java	10408
+LightsEffect.java	1565
+LowCRShipDamageSequence.java	3343
+MineStrikeStationStats.java	469
+MineStrikeStats.java	9291
+MineStrikeStatsAIInfoProvider.java	230
+MiningBlasterOnHitEffect.java	860
+MoteAIScript.java	13852
+MoteControlScript.java	18348
+MoteOnHitEffect.java	3135
+NSLanceEffectSavedCopy.java	8178
+NavBuoyEffect.java	4435
+NegativeExplosionVisual.java	11216
+NeuralTransferVisual.java	5673
+NovaBurstStats.java	2284
+OrionDeviceStats.java	16594
+PaladinEffect.java	2153
+PhaseCloakStats.java	19857
+PilumOnHitEffect.java	1741
+PlasmaJetsStats.java	3186
+RealityDisruptorChargeGlow.java	15503
+RealityDisruptorEffect.java	2874
+RecallDeviceStats.java	3338
+ReserveWingStats.java	3328
+RiftBeamEffect.java	5001
+RiftBeamMineExplosion.java	644
+RiftCascadeEffect.java	14435
+RiftCascadeMineExplosion.java	3557
+RiftLanceEffect.java	4802
+RiftLanceMineExplosion.java	591
+RiftTorpedoEffect.java	2446
+RiftTrailEffect.java	3604
+SabotOnHitEffect.java	1529
+SensorArrayEffect.java	4478
+SensorDishRotationEffect.java	1327
+ShipExplosionFlareVisual.java	3842
+ShockRepeaterOnFireEffect.java	4664
+ShockwaveVisual.java	8562
+SquallOnFireEffect.java	1444
+TachyonLanceEffect.java	2423
+TargetingFeedStats.java	4087
+TemporalShellStats.java	3474
+TestOnHitEffect.java	1289
+TriadShieldStats.java	4677
+TriadShieldStatsBackup.java	17231
+VPDriverEffect.java	2991

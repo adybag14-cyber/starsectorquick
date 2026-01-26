@@ -1,26 +1,26 @@
-file	aspect_Attack.variant	392
-file	aspect_Missile.variant	403
-file	aspect_Shieldbreaker.variant	407
-file	aspect_Shock.variant	410
-file	facet_Armorbreaker.variant	1232
-file	facet_Attack.variant	1278
-file	facet_Attack2.variant	1123
-file	facet_Defense.variant	1063
-file	facet_Missile.variant	912
-file	facet_Shieldbreaker.variant	1104
-file	shard_left_Armorbreaker.variant	679
-file	shard_left_Attack.variant	683
-file	shard_left_Attack2.variant	670
-file	shard_left_Defense.variant	630
-file	shard_left_Missile.variant	678
-file	shard_left_Shieldbreaker.variant	686
-file	shard_right_Attack.variant	803
-file	shard_right_Missile.variant	506
-file	shard_right_Shieldbreaker.variant	708
-file	shard_right_Shock.variant	708
-file	tesseract_Attack.variant	1399
-file	tesseract_Attack2.variant	1402
-file	tesseract_Defense.variant	1129
-file	tesseract_Disruptor.variant	1416
-file	tesseract_Shieldbreaker.variant	1368
-file	tesseract_Strike.variant	1406
+aspect_Attack.variant	392
+aspect_Missile.variant	403
+aspect_Shieldbreaker.variant	407
+aspect_Shock.variant	410
+facet_Armorbreaker.variant	1232
+facet_Attack.variant	1278
+facet_Attack2.variant	1123
+facet_Defense.variant	1063
+facet_Missile.variant	912
+facet_Shieldbreaker.variant	1104
+shard_left_Armorbreaker.variant	679
+shard_left_Attack.variant	683
+shard_left_Attack2.variant	670
+shard_left_Defense.variant	630
+shard_left_Missile.variant	678
+shard_left_Shieldbreaker.variant	686
+shard_right_Attack.variant	803
+shard_right_Missile.variant	506
+shard_right_Shieldbreaker.variant	708
+shard_right_Shock.variant	708
+tesseract_Attack.variant	1399
+tesseract_Attack2.variant	1402
+tesseract_Defense.variant	1129
+tesseract_Disruptor.variant	1416
+tesseract_Shieldbreaker.variant	1368
+tesseract_Strike.variant	1406

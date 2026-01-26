@@ -1,133 +1,133 @@
-directory	aurora
-directory	brawler
-directory	buffalo
-directory	centurion
-directory	cerberus
-directory	champion
-directory	conquest
-directory	derelict
-directory	dominator
-directory	drones
-directory	eagle
-directory	enforcer
-directory	eradicator
-directory	falcon
-directory	fighters
-directory	gryphon
-directory	hammerhead
-directory	harbinger
-directory	hermes
-directory	hound
-directory	invictus
-directory	kite
-directory	lasher
-directory	legion
-directory	manticore
-directory	mercury
-directory	mora
-directory	mule
-directory	omega
-directory	onslaught
-directory	paragon
-directory	pegasus
-directory	remnant
-directory	retribution
-directory	scarab
-directory	stations
-directory	sunder
-directory	tarsus
-directory	vanguard
-directory	venture
-directory	wayfarer
-directory	wolf
-file	afflictor_Strike.variant	867
-file	afflictor_d_pirates_Strike.variant	645
-file	apogee_Balanced.variant	1419
-file	apogee_Starting.variant	1313
-file	astral_Attack.variant	1498
-file	astral_Elite.variant	1271
-file	astral_Strike.variant	1346
-file	atlas2_Standard.variant	1497
-file	atlas_Standard.variant	472
-file	bastillon_Standard.variant	719
-file	berserker_Assault.variant	799
-file	brawler_Assault.variant	742
-file	brawler_Elite.variant	801
-file	brawler_LG_Elite.variant	749
-file	brawler_Starting.variant	668
-file	brawler_Support.variant	756
-file	buffalo2_FS.variant	1174
-file	buffalo2_Fighter_Support.variant	1212
-file	colossus2_Pather.variant	1135
-file	colossus3_Pirate.variant	1053
-file	colossus_Standard.variant	536
-file	condor_Attack.variant	652
-file	condor_Strike.variant	661
-file	condor_Support.variant	674
-file	crig_Standard.variant	253
-file	defender_PD.variant	485
-file	doom_Attack.variant	1223
-file	doom_Strike.variant	1304
-file	doom_Support.variant	1301
-file	dram_Light.variant	608
-file	drover_Starting.variant	996
-file	drover_Strike.variant	828
-file	drover_Support.variant	873
-file	fury_Attack.variant	1090
-file	fury_Support.variant	998
-file	gemini_Standard.variant	774
-file	gremlin_Strike.variant	681
-file	gremlin_d_pirates_Strike.variant	686
-file	gremlin_luddic_path_Strike.variant	682
-file	grendel_Assault.variant	1514
-file	grendel_Support.variant	1331
-file	heron_Attack.variant	856
-file	heron_Attack1.variant	798
-file	heron_Attack2.variant	996
-file	heron_Strike.variant	945
-file	hyperion_Attack.variant	767
-file	hyperion_Strike.variant	683
-file	kite_hegemony_Interceptor.variant	676
-file	kite_original_Stock.variant	354
-file	medusa_Attack.variant	1137
-file	medusa_CS.variant	1236
-file	medusa_PD.variant	1045
-file	medusa_Starting.variant	1118
-file	monitor_Escort.variant	729
-file	monitor_Starting.variant	660
-file	mudskipper2_CS.variant	368
-file	mudskipper2_Hellbore.variant	373
-file	mudskipper_Standard.variant	371
-file	nebula_Standard.variant	486
-file	odyssey_Balanced.variant	1646
-file	omen_PD.variant	682
-file	ox_Standard.variant	230
-file	phaeton_Standard.variant	520
-file	phantom_Elite.variant	323
-file	picket_Assault.variant	448
-file	prometheus2_Standard.variant	1395
-file	prometheus_Super.variant	854
-file	revenant_Elite.variant	321
-file	sentry_FS.variant	602
-file	shade_Assault.variant	819
-file	shade_d_pirates_Assault.variant	620
-file	shepherd_Frontier.variant	547
-file	shepherd_Starting.variant	537
-file	shrike_Attack.variant	988
-file	shrike_Support.variant	1065
-file	shrike_p_Attack.variant	1094
-file	starliner_Standard.variant	542
-file	tempest_Attack.variant	740
-file	tempest_Starting.variant	726
-file	valkyrie_Elite.variant	763
-file	vigilance_AP.variant	572
-file	vigilance_FS.variant	608
-file	vigilance_Standard.variant	579
-file	vigilance_Starting.variant	567
-file	vigilance_Strike.variant	554
-file	vigilance_Support1.variant	585
-file	vigilance_Support2.variant	605
-file	warden_Defense.variant	523
-file	ziggurat_Experimental.variant	1371
-file	ziggurat_HF.variant	854
-file	ziggurat_Strike.variant	1296
+aurora/	-1
+brawler/	-1
+buffalo/	-1
+centurion/	-1
+cerberus/	-1
+champion/	-1
+conquest/	-1
+derelict/	-1
+dominator/	-1
+drones/	-1
+eagle/	-1
+enforcer/	-1
+eradicator/	-1
+falcon/	-1
+fighters/	-1
+gryphon/	-1
+hammerhead/	-1
+harbinger/	-1
+hermes/	-1
+hound/	-1
+invictus/	-1
+kite/	-1
+lasher/	-1
+legion/	-1
+manticore/	-1
+mercury/	-1
+mora/	-1
+mule/	-1
+omega/	-1
+onslaught/	-1
+paragon/	-1
+pegasus/	-1
+remnant/	-1
+retribution/	-1
+scarab/	-1
+stations/	-1
+sunder/	-1
+tarsus/	-1
+vanguard/	-1
+venture/	-1
+wayfarer/	-1
+wolf/	-1
+afflictor_Strike.variant	867
+afflictor_d_pirates_Strike.variant	645
+apogee_Balanced.variant	1419
+apogee_Starting.variant	1313
+astral_Attack.variant	1498
+astral_Elite.variant	1271
+astral_Strike.variant	1346
+atlas2_Standard.variant	1497
+atlas_Standard.variant	472
+bastillon_Standard.variant	719
+berserker_Assault.variant	799
+brawler_Assault.variant	742
+brawler_Elite.variant	801
+brawler_LG_Elite.variant	749
+brawler_Starting.variant	668
+brawler_Support.variant	756
+buffalo2_FS.variant	1174
+buffalo2_Fighter_Support.variant	1212
+colossus2_Pather.variant	1135
+colossus3_Pirate.variant	1053
+colossus_Standard.variant	536
+condor_Attack.variant	652
+condor_Strike.variant	661
+condor_Support.variant	674
+crig_Standard.variant	253
+defender_PD.variant	485
+doom_Attack.variant	1223
+doom_Strike.variant	1304
+doom_Support.variant	1301
+dram_Light.variant	608
+drover_Starting.variant	996
+drover_Strike.variant	828
+drover_Support.variant	873
+fury_Attack.variant	1090
+fury_Support.variant	998
+gemini_Standard.variant	774
+gremlin_Strike.variant	681
+gremlin_d_pirates_Strike.variant	686
+gremlin_luddic_path_Strike.variant	682
+grendel_Assault.variant	1514
+grendel_Support.variant	1331
+heron_Attack.variant	856
+heron_Attack1.variant	798
+heron_Attack2.variant	996
+heron_Strike.variant	945
+hyperion_Attack.variant	767
+hyperion_Strike.variant	683
+kite_hegemony_Interceptor.variant	676
+kite_original_Stock.variant	354
+medusa_Attack.variant	1137
+medusa_CS.variant	1236
+medusa_PD.variant	1045
+medusa_Starting.variant	1118
+monitor_Escort.variant	729
+monitor_Starting.variant	660
+mudskipper2_CS.variant	368
+mudskipper2_Hellbore.variant	373
+mudskipper_Standard.variant	371
+nebula_Standard.variant	486
+odyssey_Balanced.variant	1646
+omen_PD.variant	682
+ox_Standard.variant	230
+phaeton_Standard.variant	520
+phantom_Elite.variant	323
+picket_Assault.variant	448
+prometheus2_Standard.variant	1395
+prometheus_Super.variant	854
+revenant_Elite.variant	321
+sentry_FS.variant	602
+shade_Assault.variant	819
+shade_d_pirates_Assault.variant	620
+shepherd_Frontier.variant	547
+shepherd_Starting.variant	537
+shrike_Attack.variant	988
+shrike_Support.variant	1065
+shrike_p_Attack.variant	1094
+starliner_Standard.variant	542
+tempest_Attack.variant	740
+tempest_Starting.variant	726
+valkyrie_Elite.variant	763
+vigilance_AP.variant	572
+vigilance_FS.variant	608
+vigilance_Standard.variant	579
+vigilance_Starting.variant	567
+vigilance_Strike.variant	554
+vigilance_Support1.variant	585
+vigilance_Support2.variant	605
+warden_Defense.variant	523
+ziggurat_Experimental.variant	1371
+ziggurat_HF.variant	854
+ziggurat_Strike.variant	1296

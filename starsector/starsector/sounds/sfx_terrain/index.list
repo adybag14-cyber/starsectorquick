@@ -1,33 +1,33 @@
-file	campaign_location-gate_explode.ogg	41656
-file	campaign_location-gate_loop_standby.ogg	49454
-file	campaign_location-gate_loop_traveling.ogg	105828
-file	campaign_location-gate_windup.ogg	47550
-file	campaign_location-station_02_market_01.ogg	142284
-file	campaign_location-station_03_market_02.ogg	135559
-file	campaign_location-station_04_market_03.ogg	133564
-file	terrain_abyssal_hyperspace.ogg	47054
-file	terrain_abyssal_light_01.ogg	40478
-file	terrain_abyssal_light_02.ogg	47700
-file	terrain_abyssal_light_03.ogg	40613
-file	terrain_abyssal_light_04.ogg	46186
-file	terrain_abyssal_light_05.ogg	47469
-file	terrain_abyssal_light_06.ogg	44584
-file	terrain_abyssal_light_despawn_01.ogg	39029
-file	terrain_abyssal_light_windup_01.ogg	32643
-file	terrain_asteroid_field.ogg	163883
-file	terrain_corona_am_default.ogg	158911
-file	terrain_corona_am_flare.ogg	251890
-file	terrain_corona_default.ogg	102480
-file	terrain_corona_flare.ogg	192798
-file	terrain_hyperspace_deep.ogg	169166
-file	terrain_hyperspace_deep_storm.ogg	249361
-file	terrain_hyperspace_deep_storm_lightning_01.ogg	19954
-file	terrain_hyperspace_deep_storm_lightning_02.ogg	22594
-file	terrain_hyperspace_deep_storm_lightning_03.ogg	22616
-file	terrain_hyperspace_deep_storm_lightning_04.ogg	18493
-file	terrain_hyperspace_deep_storm_lightning_05.ogg	17032
-file	terrain_magfield_default.ogg	134791
-file	terrain_magfield_storm.ogg	170451
-file	terrain_nebula_default.ogg	215532
-file	terrain_slipstream_inside.ogg	332068
-file	terrain_slipstream_outside.ogg	383958
+campaign_location-gate_explode.ogg	41656
+campaign_location-gate_loop_standby.ogg	49454
+campaign_location-gate_loop_traveling.ogg	105828
+campaign_location-gate_windup.ogg	47550
+campaign_location-station_02_market_01.ogg	142284
+campaign_location-station_03_market_02.ogg	135559
+campaign_location-station_04_market_03.ogg	133564
+terrain_abyssal_hyperspace.ogg	47054
+terrain_abyssal_light_01.ogg	40478
+terrain_abyssal_light_02.ogg	47700
+terrain_abyssal_light_03.ogg	40613
+terrain_abyssal_light_04.ogg	46186
+terrain_abyssal_light_05.ogg	47469
+terrain_abyssal_light_06.ogg	44584
+terrain_abyssal_light_despawn_01.ogg	39029
+terrain_abyssal_light_windup_01.ogg	32643
+terrain_asteroid_field.ogg	163883
+terrain_corona_am_default.ogg	158911
+terrain_corona_am_flare.ogg	251890
+terrain_corona_default.ogg	102480
+terrain_corona_flare.ogg	192798
+terrain_hyperspace_deep.ogg	169166
+terrain_hyperspace_deep_storm.ogg	249361
+terrain_hyperspace_deep_storm_lightning_01.ogg	19954
+terrain_hyperspace_deep_storm_lightning_02.ogg	22594
+terrain_hyperspace_deep_storm_lightning_03.ogg	22616
+terrain_hyperspace_deep_storm_lightning_04.ogg	18493
+terrain_hyperspace_deep_storm_lightning_05.ogg	17032
+terrain_magfield_default.ogg	134791
+terrain_magfield_storm.ogg	170451
+terrain_nebula_default.ogg	215532
+terrain_slipstream_inside.ogg	332068
+terrain_slipstream_outside.ogg	383958

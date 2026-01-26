@@ -1,36 +1,36 @@
-directory	bar
-directory	bases
-directory	contacts
-directory	deciv
-directory	events
-directory	group
-directory	inspection
-directory	misc
-directory	punitive
-directory	raid
-file	AnalyzeEntityIntelCreator.java	2975
-file	AnalyzeEntityMissionIntel.java	10646
-file	BaseEventManager.java	5155
-file	BaseIntelPlugin.java	21211
-file	BaseMissionIntel.java	10492
-file	FactionCommissionIntel.java	18421
-file	FactionCommissionPlugin.java	238
-file	FactionHostilityIntel.java	11241
-file	FactionHostilityManager.java	6252
-file	GenericMissionManager.java	4719
-file	GensHannanMachinations.java	11610
-file	LuddicChurchImmigrationDeal.java	6971
-file	MessageIntel.java	3684
-file	NewMessagesIntel.java	1036
-file	PerseanLeagueMembership.java	18820
-file	PersonBountyIntel.java	34699
-file	PersonBountyManager.java	1178
-file	ProcurementMissionCreator.java	437
-file	ProcurementMissionIntel.java	30823
-file	PromoteOfficerIntel.java	8418
-file	SindrianDiktatFuelDeal.java	9874
-file	SurveyPlanetIntelCreator.java	3052
-file	SurveyPlanetMissionIntel.java	12328
-file	SystemBountyIntel.java	16432
-file	SystemBountyManager.java	5033
-file	TriTachyonDeal.java	11028
+bar/	-1
+bases/	-1
+contacts/	-1
+deciv/	-1
+events/	-1
+group/	-1
+inspection/	-1
+misc/	-1
+punitive/	-1
+raid/	-1
+AnalyzeEntityIntelCreator.java	2975
+AnalyzeEntityMissionIntel.java	10646
+BaseEventManager.java	5155
+BaseIntelPlugin.java	21211
+BaseMissionIntel.java	10492
+FactionCommissionIntel.java	18421
+FactionCommissionPlugin.java	238
+FactionHostilityIntel.java	11241
+FactionHostilityManager.java	6252
+GenericMissionManager.java	4719
+GensHannanMachinations.java	11610
+LuddicChurchImmigrationDeal.java	6971
+MessageIntel.java	3684
+NewMessagesIntel.java	1036
+PerseanLeagueMembership.java	18820
+PersonBountyIntel.java	34699
+PersonBountyManager.java	1178
+ProcurementMissionCreator.java	437
+ProcurementMissionIntel.java	30823
+PromoteOfficerIntel.java	8418
+SindrianDiktatFuelDeal.java	9874
+SurveyPlanetIntelCreator.java	3052
+SurveyPlanetMissionIntel.java	12328
+SystemBountyIntel.java	16432
+SystemBountyManager.java	5033
+TriTachyonDeal.java	11028

@@ -1,72 +1,72 @@
-directory	abilities
-directory	campaign
-directory	cargo
-directory	hullsys
-directory	industry
-directory	insignia
-directory	intel
-directory	markets
-directory	missions
-directory	ranks
-directory	reports
-directory	skills
-directory	tactical
-directory	terrain
-file	abyssal_light.png	857
-file	black_hole_well.png	3060
-file	blackhole.png	20318
-file	cache0.png	770
-file	cache1.png	567
-file	cargo_pod0.png	436
-file	cargo_pod1.png	334
-file	coronal_shunt.png	2785
-file	cryosleeper.png	1051
-file	cryosleeper2.png	347
-file	danger1.png	158
-file	danger2.png	201
-file	danger3.png	258
-file	danger4.png	345
-file	debris_field_icon.png	602
-file	derelict.png	421
-file	empty_fleet.png	585
-file	entity.png	423
-file	entity_hollow.png	482
-file	fleet0.png	3274
-file	fleet1.png	3495
-file	fleet2.png	3849
-file	fleet3.png	4127
-file	fleet_triangle.png	316
-file	gas_giant_well.png	2655
-file	gas_giant_well2.png	2234
-file	gate0.png	505
-file	gate_hauler.png	1457
-file	gate_hauler2.png	3184
-file	generic_probe_icon.png	522
-file	icon_portal.png	6108
-file	intel_border_cyan.png	410
-file	intel_border_white.png	389
-file	jump-point.png	16081
-file	jump-point2.png	16191
-file	mirror.png	812
-file	mirror2.png	1064
-file	mission_location.png	1387
-file	mission_location2.png	1214
-file	mission_marker.png	287
-file	nascent_well.png	2376
-file	nascent_well2.png	2265
-file	nav_buoy.png	970
-file	nav_buoy_makeshift.png	15823
-file	nebula_map_icon.png	5573
-file	radar_circle.png	1577
-file	raid_objective.png	1682
-file	relay.png	742
-file	relay_makeshift.png	1276
-file	sensor_array.png	1689
-file	sensor_array_makeshift.png	16678
-file	stable_location.png	443
-file	station0.png	1288
-file	station1.png	1457
-file	station2.png	1459
-file	station3.png	1459
-file	station_broken.png	16535
-file	warning_beacon.png	15130
+abilities/	-1
+campaign/	-1
+cargo/	-1
+hullsys/	-1
+industry/	-1
+insignia/	-1
+intel/	-1
+markets/	-1
+missions/	-1
+ranks/	-1
+reports/	-1
+skills/	-1
+tactical/	-1
+terrain/	-1
+abyssal_light.png	857
+black_hole_well.png	3060
+blackhole.png	20318
+cache0.png	770
+cache1.png	567
+cargo_pod0.png	436
+cargo_pod1.png	334
+coronal_shunt.png	2785
+cryosleeper.png	1051
+cryosleeper2.png	347
+danger1.png	158
+danger2.png	201
+danger3.png	258
+danger4.png	345
+debris_field_icon.png	602
+derelict.png	421
+empty_fleet.png	585
+entity.png	423
+entity_hollow.png	482
+fleet0.png	3274
+fleet1.png	3495
+fleet2.png	3849
+fleet3.png	4127
+fleet_triangle.png	316
+gas_giant_well.png	2655
+gas_giant_well2.png	2234
+gate0.png	505
+gate_hauler.png	1457
+gate_hauler2.png	3184
+generic_probe_icon.png	522
+icon_portal.png	6108
+intel_border_cyan.png	410
+intel_border_white.png	389
+jump-point.png	16081
+jump-point2.png	16191
+mirror.png	812
+mirror2.png	1064
+mission_location.png	1387
+mission_location2.png	1214
+mission_marker.png	287
+nascent_well.png	2376
+nascent_well2.png	2265
+nav_buoy.png	970
+nav_buoy_makeshift.png	15823
+nebula_map_icon.png	5573
+radar_circle.png	1577
+raid_objective.png	1682
+relay.png	742
+relay_makeshift.png	1276
+sensor_array.png	1689
+sensor_array_makeshift.png	16678
+stable_location.png	443
+station0.png	1288
+station1.png	1457
+station2.png	1459
+station3.png	1459
+station_broken.png	16535
+warning_beacon.png	15130

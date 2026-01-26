@@ -1,3 +1,3 @@
-directory	api
-directory	stubs
-file	GWTLauncher.java	959
+api/	-1
+stubs/	-1
+GWTLauncher.java	959

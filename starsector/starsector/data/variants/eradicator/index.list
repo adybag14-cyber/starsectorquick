@@ -1,9 +1,9 @@
-file	eradicator_Assault.variant	1529
-file	eradicator_Fighter_Support.variant	1743
-file	eradicator_Outdated.variant	1588
-file	eradicator_Outdated2.variant	1646
-file	eradicator_Overdriven.variant	1422
-file	eradicator_Strike.variant	1521
-file	eradicator_Support.variant	1641
-file	eradicator_pirates_Attack.variant	1563
-file	eradicator_pirates_Overdriven.variant	1438
+eradicator_Assault.variant	1529
+eradicator_Fighter_Support.variant	1743
+eradicator_Outdated.variant	1588
+eradicator_Outdated2.variant	1646
+eradicator_Overdriven.variant	1422
+eradicator_Strike.variant	1521
+eradicator_Support.variant	1641
+eradicator_pirates_Attack.variant	1563
+eradicator_pirates_Overdriven.variant	1438

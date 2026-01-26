@@ -1,35 +1,35 @@
-directory	campaign
-directory	characters
-directory	combat
-directory	fleet
-directory	graphics
-directory	impl
-directory	input
-directory	loading
-directory	mission
-directory	plugins
-directory	ui
-directory	util
-file	AnimationAPI.java	478
-file	BaseModPlugin.java	2101
-file	DataAPI.java	113
-file	EveryFrameScript.java	478
-file	EveryFrameScriptWithCleanup.java	243
-file	FactoryAPI.java	3056
-file	GameState.java	92
-file	Global.java	1801
-file	InteractionDialogImageVisual.java	3049
-file	ModDependencyAPI.java	200
-file	ModManagerAPI.java	320
-file	ModPlugin.java	4148
-file	ModSpecAPI.java	748
-file	MusicPlayerPlugin.java	1184
-file	MusicPlayerPluginWithVolumeControl.java	523
-file	PluginPick.java	314
-file	Script.java	359
-file	SettingsAPI.java	15671
-file	SoundAPI.java	207
-file	SoundPlayerAPI.java	3474
-file	SpriteId.java	460
-file	TextTokenAndHighlightSource.java	432
-file	VersionInfoAPI.java	310
+campaign/	-1
+characters/	-1
+combat/	-1
+fleet/	-1
+graphics/	-1
+impl/	-1
+input/	-1
+loading/	-1
+mission/	-1
+plugins/	-1
+ui/	-1
+util/	-1
+AnimationAPI.java	478
+BaseModPlugin.java	2101
+DataAPI.java	113
+EveryFrameScript.java	478
+EveryFrameScriptWithCleanup.java	243
+FactoryAPI.java	3056
+GameState.java	92
+Global.java	1801
+InteractionDialogImageVisual.java	3049
+ModDependencyAPI.java	200
+ModManagerAPI.java	320
+ModPlugin.java	4148
+ModSpecAPI.java	748
+MusicPlayerPlugin.java	1184
+MusicPlayerPluginWithVolumeControl.java	523
+PluginPick.java	314
+Script.java	359
+SettingsAPI.java	15671
+SoundAPI.java	207
+SoundPlayerAPI.java	3474
+SpriteId.java	460
+TextTokenAndHighlightSource.java	432
+VersionInfoAPI.java	310

@@ -1,9 +1,9 @@
-file	CommandPlugin.java	470
-file	ExpressionAPI.java	359
-file	HasMemory.java	144
-file	MemKeys.java	594
-file	MemoryAPI.java	1782
-file	Option.java	151
-file	RuleAPI.java	498
-file	RuleTokenReplacementGeneratorPlugin.java	389
-file	RulesAPI.java	913
+CommandPlugin.java	470
+ExpressionAPI.java	359
+HasMemory.java	144
+MemKeys.java	594
+MemoryAPI.java	1782
+Option.java	151
+RuleAPI.java	498
+RuleTokenReplacementGeneratorPlugin.java	389
+RulesAPI.java	913

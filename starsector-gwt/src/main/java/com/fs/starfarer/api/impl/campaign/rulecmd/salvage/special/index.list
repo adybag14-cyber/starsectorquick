@@ -1,11 +1,11 @@
-file	BaseSalvageSpecial.java	6571
-file	BlueprintSpecial.java	3027
-file	BreadcrumbSpecial.java	15271
-file	CargoManifestSpecial.java	2417
-file	CryopodOfficerGen.java	8909
-file	DomainSurveyDerelictSpecial.java	15193
-file	ShipRecoverySpecial.java	25438
-file	SleeperPodsSpecial.java	7153
-file	SurveyDataSpecial.java	13184
-file	TopographicDataSpecial.java	1665
-file	TransmitterTrapSpecial.java	9562
+BaseSalvageSpecial.java	6571
+BlueprintSpecial.java	3027
+BreadcrumbSpecial.java	15271
+CargoManifestSpecial.java	2417
+CryopodOfficerGen.java	8909
+DomainSurveyDerelictSpecial.java	15193
+ShipRecoverySpecial.java	25438
+SleeperPodsSpecial.java	7153
+SurveyDataSpecial.java	13184
+TopographicDataSpecial.java	1665
+TransmitterTrapSpecial.java	9562

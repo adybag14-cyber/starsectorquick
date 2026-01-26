@@ -1,15 +1,15 @@
-file	Actions.java	17556
-file	Actor.java	3711
-file	AnimAction.java	5216
-file	BaseDuelBackground.java	769
-file	CharAnim.java	3155
-file	CharAnimFrame.java	1272
-file	DuelBackground.java	322
-file	DuelDialogDelegate.java	2825
-file	DuelEnemyAI.java	169
-file	DuelEnemyAIImpl.java	4449
-file	DuelPanel.java	25692
-file	DuelTutorialPanel.java	5032
-file	EventideDuelBackground.java	2636
-file	HitArea.java	932
-file	QuadParticles.java	4382
+Actions.java	17556
+Actor.java	3711
+AnimAction.java	5216
+BaseDuelBackground.java	769
+CharAnim.java	3155
+CharAnimFrame.java	1272
+DuelBackground.java	322
+DuelDialogDelegate.java	2825
+DuelEnemyAI.java	169
+DuelEnemyAIImpl.java	4449
+DuelPanel.java	25692
+DuelTutorialPanel.java	5032
+EventideDuelBackground.java	2636
+HitArea.java	932
+QuadParticles.java	4382
