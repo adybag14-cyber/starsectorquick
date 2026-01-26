@@ -53,7 +53,7 @@
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 const gameAssetsUrl = `${baseUrl}starsector/starsector/`;
-                const projectRootUrl = baseUrl;
+                const projectRootUrl = `${baseUrl}`;
                 
                 await cheerpjInit({ 
                     version: 17, 
@@ -88,7 +88,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // JARs are at /app/jars/
+                // JARs are at /app/jars/ - use /app/ prefix for all!
                 const cp = [`/files/`, `/app/`].concat(jarFiles.map(j => `/app/jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
