@@ -53,6 +53,7 @@
             try {
                 const virtualRoot = '/app/starsectorquick';
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                const gameAssetsUrl = `${baseUrl}starsector/starsector/`;
                 
                 await cheerpjInit({ 
                     version: 17, 
@@ -69,20 +70,11 @@
                         'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
-                    }
+                    },
+                    mounts: [
+                        { type: 'http', path: '/files/', url: gameAssetsUrl }
+                    ]
                 });
-
-                log('Checking for cjFSMount...', '#00d9ff');
-                // Try to find the mount function
-                if (typeof cjFSMount !== 'undefined') {
-                    log('Using cjFSMount...');
-                    await cjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
-                } else if (typeof cheerpjFSMount !== 'undefined') {
-                    log('Using cheerpjFSMount...');
-                    await cheerpjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
-                } else {
-                    log('Neither cjFSMount nor cheerpjFSMount found. Hope cheerpjInit mounts worked.');
-                }
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
@@ -95,7 +87,9 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = [`/files/`].concat(jarFiles.map(j => `${virtualRoot}/jars/${j}`)).join(':');
+                // FORCE /files/ to be the FIRST entry in CP to ensure log4j.properties is found
+                const cp = `/files/` + ':' + jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':');
+                log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
