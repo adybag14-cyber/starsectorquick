@@ -51,48 +51,46 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=/app/build/final/wasm-modules/`,
-                        `-Duser.dir=/app/starsector/starsector/`,
+                        `-Djava.library.path=/app/starsectorquick/build/final/wasm-modules/`,
+                        `-Duser.dir=/app/starsectorquick/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `/app/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/app/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/app/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/app/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `/app/starsectorquick/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/app/starsectorquick/build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
+                // Exact order from starsector.sh
                 const jarFiles = [
-                    'starfarer_obf.jar', 'starfarer.api.jar', 'fs.common_obf.jar', 
-                    'fs.sound_obf.jar', 'commons-compiler.jar', 'janino.jar', 
-                    'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
-                    'json.jar', 'log4j-1.2.9.jar', 'lwjgl.jar', 'lwjgl_util.jar',
+                    'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
+                    'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
+                    'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
+                    'lwjgl_util.jar', 'fs.sound_obf.jar', 'fs.common_obf.jar', 
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `/app/jars/${j}`).join(':') + `:/app/starsector/starsector/`;
-                log(`ClassPath: ${cp}`, '#888');
+                const cp = jarFiles.map(j => `/app/starsectorquick/jars/${j}`).join(':') + `:/app/starsectorquick/starsector/starsector/`;
 
-                log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.Starfarer', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
-                log(`CRITICAL ERROR: ${e.message}`, '#ff4444');
+                log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
+                if (e && e.stack) log(e.stack, '#ff8888');
                 console.error(e);
                 btn.disabled = false;
                 btn.textContent = '❌ RETRY LAUNCH';
