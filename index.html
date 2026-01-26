@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v41)</h1>
+        <h1>🚀 Starsector 2 Web (v43)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,7 +51,7 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                // Rely on default /app mount pointing to domain root
+                // Verified prefix that works with automatic /app mount on GitHub Pages
                 const prefix = '/app/starsectorquick/';
                 
                 await cheerpjInit({ 
@@ -59,7 +59,7 @@
                     enableX11: true,
                     javaProperties: [
                         `-Djava.library.path=${prefix}build/final/wasm-modules/`,
-                        `-Duser.dir=${prefix}starsector/starsector/`,
+                        `-Duser.dir=${prefix}starsector/starsector`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
                         `-Dcom.fs.starfarer.settings.paths.logs=${prefix}starsector/starsector/`
