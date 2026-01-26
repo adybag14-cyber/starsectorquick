@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v25)</h1>
+        <h1>🚀 Starsector 2 Web (v26)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,25 +51,16 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                // Use the project name as the absolute virtual path prefix
-                const prefix = '/starsectorquick/';
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                log(`Base URL: ${baseUrl}`, '#888');
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${prefix}build/final/wasm-modules/`,
-                        `-Duser.dir=${prefix}starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=${prefix}starsector/starsector/`
-                    ],
-                    libraries: {
-                        'libGL.so.1': `${prefix}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${prefix}build/final/wasm-modules/unsafe.wasm`
-                    }
+                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                    ]
                 });
 
                 log('Mounting Display to Canvas...', '#00ff88');
@@ -83,9 +74,9 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from project root absolute virtual path
-                const cp = [`${prefix}`, `${prefix}starsector/starsector/`].concat(jarFiles.map(j => `${prefix}jars/${j}`)).join(':');
-                log('Final ClassPath: ' + cp);
+                // Use FULL HTTP URLs for JARs in CP
+                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':') + `:${baseUrl}:${baseUrl}starsector/starsector/`;
+                log('Final ClassPath (URLs): ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
