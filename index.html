@@ -52,8 +52,8 @@
             
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                // GitHub Pages project root
-                const projectRoot = '/starsectorquick/';
+                // The /app/ virtual path corresponds to the project root URL
+                const projectRoot = '/app/';
                 
                 await cheerpjInit({ 
                     version: 17, 
@@ -87,7 +87,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from project root prefix
+                // Construct ClassPath: Root (for classes), assets dir, then all jars
                 const cp = [`${projectRoot}`, `${projectRoot}starsector/starsector/`].concat(jarFiles.map(j => `${projectRoot}jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
