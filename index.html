@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v34)</h1>
+        <h1>🚀 Starsector 2 Web (v36)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -48,32 +48,33 @@
             btn.disabled = true;
             btn.textContent = '⌛ INITIALIZING...';
 
-            log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
+            log('Initializing CheerpJ 4.2 Runtime (Java 8 Mode)...', '#00d9ff');
             
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 log(`Base URL: ${baseUrl}`, '#888');
                 
-                await cheerpjInit({ 
-                    version: 17, 
-                    enableX11: true,
-                    javaProperties: [
-                        `-Djava.library.path=/files/build/final/wasm-modules/`,
-                        `-Duser.dir=/files/starsector/starsector/`,
-                        `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/files/starsector/starsector/`
-                    ],
-                    libraries: {
-                        'libGL.so.1': `/files/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/files/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/files/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/files/build/final/wasm-modules/unsafe.wasm`
-                    },
-                    mounts: [
-                        { type: 'http', path: '/files/', url: baseUrl }
-                    ]
-                });
+                await cheerpjInit({ version: 8, enableX11: true });
+                log('CheerpJ Initialized.', '#00ff88');
+
+                // Try to mount AFTER init
+                log('Attempting to mount /app/ via cheerpjFSMount...', '#888');
+                if (typeof cheerpjFSMount !== 'undefined') {
+                    await cheerpjFSMount('http', '/app', baseUrl);
+                    log('cheerpjFSMount SUCCESS', '#00ff88');
+                } else if (window.cheerpjFSMount) {
+                    await window.cheerpjFSMount('http', '/app', baseUrl);
+                    log('window.cheerpjFSMount SUCCESS', '#00ff88');
+                } else {
+                    log('cheerpjFSMount is STILL undefined. Trying legacy cjFSMount...', '#ff9f43');
+                    if (typeof cjFSMount !== 'undefined') {
+                        await cjFSMount('http', '/app', baseUrl);
+                        log('cjFSMount SUCCESS', '#00ff88');
+                    } else {
+                        log('No mount function found. Falling back to mounts property in re-init...', '#ff4444');
+                        // Some 4.2 versions require it in init
+                    }
+                }
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
@@ -86,17 +87,18 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => '/files/jars/' + j).concat(['/files/', '/files/starsector/starsector/']).join(':');
+                const cp = jarFiles.map(j => '/app/jars/' + j).concat(['/app/', '/app/starsector/starsector/']).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.combat.CombatMain', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
                 log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
+                if (e && e.stack) log(e.stack, '#ff8888');
                 console.error(e);
                 btn.disabled = false;
                 btn.textContent = '❌ RETRY LAUNCH';
