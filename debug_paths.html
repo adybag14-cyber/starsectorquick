@@ -6,8 +6,9 @@
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;"></div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Loading...</div>
     <script>
+        console.log('--- SCRIPT START ---');
         function log(m) {
             document.getElementById('log').textContent += m + '
 ';
@@ -16,7 +17,13 @@
 
         async function run() {
             log('Initializing CheerpJ 4.2...');
-            await cheerpjInit({ version: 8 });
+            try {
+                await cheerpjInit({ version: 8 });
+                log('CheerpJ initialized.');
+            } catch (e) {
+                log('cheerpjInit failed: ' + e.message);
+                return;
+            }
             
             log('Testing paths...');
             const projectName = 'starsectorquick';
@@ -24,22 +31,18 @@
             // Try to list /app/
             try {
                 log('Attempting to list /app/ via internal API...');
-                // This is a guess at internal API for debugging
-                const entries = await cheerpOS.readDir('/app/');
-                log('/app/ contents: ' + JSON.stringify(entries));
+                // CheerpJ 4.2 uses cheerpOS for filesystem
+                if (typeof cheerpOS !== 'undefined') {
+                    const entries = await cheerpOS.readDir('/app/');
+                    log('/app/ contents: ' + JSON.stringify(entries));
+                } else {
+                    log('cheerpOS is not defined!');
+                }
             } catch (e) {
                 log('Error listing /app/: ' + e.message);
             }
-
-            try {
-                log('Checking if /app/starsectorquick/jars/starfarer_obf.jar exists...');
-                const exists = await cheerpOS.fstat('/app/' + projectName + '/jars/starfarer_obf.jar');
-                log('File exists: ' + JSON.stringify(exists));
-            } catch (e) {
-                log('Error checking file: ' + e.message);
-            }
         }
-        run();
+        run().catch(e => console.error('Run failed:', e));
     </script>
 </body>
 </html>
