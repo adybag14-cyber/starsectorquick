@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>CheerpJ Mount Debugger</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+</head>
+<body>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Loading...</div>
+    <script>
+        function log(m) {
+            document.getElementById('log').textContent += m + '
+';
+            console.log(m);
+        }
+
+        async function testMount(name, path, url) {
+            log(`Testing mount ${name}: ${path} -> ${url}`);
+            try {
+                // Try cheerpjFSMount
+                if (typeof cheerpjFSMount !== 'undefined') {
+                    await cheerpjFSMount('http', path, url);
+                    log(`  cheerpjFSMount SUCCESS`);
+                } else if (typeof cjFSMount !== 'undefined') {
+                    await cjFSMount('http', path, url);
+                    log(`  cjFSMount SUCCESS`);
+                } else {
+                    log(`  No mount function found!`);
+                }
+
+                // Verify with cheerpOS if it exists
+                if (typeof cheerpOS !== 'undefined') {
+                    const entries = await cheerpOS.readDir(path);
+                    log(`  ReadDir ${path} SUCCESS: ${JSON.stringify(entries)}`);
+                }
+            } catch (e) {
+                log(`  FAILED: ${e.message}`);
+            }
+        }
+
+        async function run() {
+            log('Initializing CheerpJ 4.2...');
+            await cheerpjInit({ version: 17 });
+            log('CheerpJ initialized.');
+
+            const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+            
+            await testMount('ProjectRoot', '/app/', baseUrl);
+            await testMount('JarsDir', '/jars/', baseUrl + 'jars/');
+            
+            // Try to list /app/ by default
+            try {
+                const entries = await cheerpOS.readDir('/app/');
+                log('Default /app/ contents: ' + JSON.stringify(entries));
+            } catch (e) {
+                log('Default /app/ read failed: ' + e.message);
+            }
+        }
+        run();
+    </script>
+</body>
+</html>
