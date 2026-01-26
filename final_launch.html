@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment (FINAL)</title>
+    <title>Starsector 2 - GitHub Pages Deployment (FINAL - JAVA 8)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (FINAL BUILD)</h1>
+        <h1>🚀 Starsector 2 Web (FINAL - JAVA 8)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -48,7 +48,7 @@
             btn.disabled = true;
             btn.textContent = '⌛ INITIALIZING...';
 
-            log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
+            log('Initializing CheerpJ 4.2 Runtime (Java 8)...', '#00d9ff');
             
             try {
                 const origin = 'https://adybag14-cyber.github.io/';
@@ -56,7 +56,7 @@
                 const dataUrl = projectUrl + 'starsector/starsector/';
                 
                 await cheerpjInit({ 
-                    version: 17, 
+                    version: 8, 
                     enableX11: true,
                     javaProperties: [
                         `-Djava.library.path=/app/starsectorquick/build/final/wasm-modules/`,
