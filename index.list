@@ -1,4 +1,6 @@
+directory	META-INF
 directory	build
+directory	com
 directory	jars
 directory	node_modules
 directory	starsector
@@ -31,6 +33,7 @@ file	compilation_output.log	7913
 file	create_framework.py	38
 file	create_server.py	846
 file	create_showcase_video.js	4583
+file	debug_paths.html	1949
 file	err.log	0
 file	final_test.js	5097
 file	fix_botched_clones.py	1055
@@ -40,7 +43,7 @@ file	fix_references.py	1983
 file	fix_reserved_names.py	2240
 file	fix_reserved_v2.py	3948
 file	fix_string_format.py	2351
-file	index.html	4979
+file	index.html	5124
 file	install_jars.bat	1076
 file	install_jars.py	1198
 file	install_jars_v2.py	1137
@@ -50,6 +53,7 @@ file	install_jars_v5.py	1114
 file	install_jars_v6.py	1111
 file	install_jars_v7.py	1245
 file	libGL.a	4745472
+file	log4j.properties	974
 file	mega_fix.py	1687
 file	memory_mapping_utils.c	5994
 file	memory_mapping_utils.h	3195
