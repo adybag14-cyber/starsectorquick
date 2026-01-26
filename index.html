@@ -51,19 +51,19 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const virtualRoot = '/app/starsectorquick';
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 const gameAssetsUrl = `${baseUrl}starsector/starsector/`;
+                const virtualRoot = '/app/starsectorquick';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
                         `-Djava.library.path=${virtualRoot}/build/final/wasm-modules/`,
-                        `-Duser.dir=/`,
+                        `-Duser.dir=/app/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=.`
+                        `-Dcom.fs.starfarer.settings.paths.logs=/app/`
                     ],
                     libraries: {
                         'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
@@ -71,9 +71,9 @@
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
                     },
-                    // Map domain root to game assets to satisfy absolute path requirements
                     mounts: [
-                        { type: 'http', path: '/', url: gameAssetsUrl }
+                        { type: 'http', path: '/app/', url: gameAssetsUrl },
+                        { type: 'http', path: '/repo/', url: baseUrl }
                     ]
                 });
 
@@ -88,8 +88,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Keep JARs on absolute virtual paths from repo root
-                const cp = [`/`].concat(jarFiles.map(j => `${virtualRoot}/jars/${j}`)).join(':');
+                // Prioritize /repo/ so extracted classes are found relative to project root
+                const cp = [`/repo/`, `/app/`].concat(jarFiles.map(j => `/repo/jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
