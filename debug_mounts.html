@@ -15,23 +15,15 @@
 
         async function run() {
             log('Initializing CheerpJ 4.2...');
-            try {
-                await cheerpjInit({ version: 17 });
-                log('CheerpJ initialized.');
-            } catch (e) {
-                log('cheerpjInit FAILED: ' + e.message);
-            }
+            await cheerpjInit({ version: 17 });
+            log('CheerpJ initialized.');
 
-            log('Scanning window for cheerpj/cj functions:');
-            const apis = [];
-            for (let k in window) {
-                if (k.toLowerCase().includes('cheerpj') || k.toLowerCase().startsWith('cj')) {
-                    if (typeof window[k] === 'function') {
-                        apis.push(k);
-                    }
-                }
+            // Wait for cheerpOS
+            for (let i = 0; i < 10; i++) {
+                if (typeof cheerpOS !== 'undefined') break;
+                log('Waiting for cheerpOS...');
+                await new Promise(r => setTimeout(r, 1000));
             }
-            log('Found APIs: ' + JSON.stringify(apis));
 
             if (typeof cheerpOS !== 'undefined') {
                 log('cheerpOS is defined. Scanning cheerpOS:');
@@ -41,7 +33,9 @@
                         osApis.push(k);
                     }
                 }
-                log('cheerpOS APIs: ' + JSON.stringify(osApis));
+                log('cheerpOS APIs: ' + JSON.stringify(osApis.sort()));
+            } else {
+                log('cheerpOS is STILL undefined.');
             }
         }
         run();
