@@ -1,144 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang='en'>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Starsector 2 - V6J FINAL (GitHub Pages)</title>
+    <meta charset='UTF-8'>
+    <title>Starsector 2 - GitHub Pages Deployment</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2a 100%);
-            color: #fff;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        h1 { text-align: center; margin-bottom: 10px; color: #00d9ff; text-shadow: 0 0 10px rgba(0, 217, 255, 0.3); }
-        h2 { text-align: center; color: #ff9f43; margin-bottom: 20px; }
-        .controls { display: flex; gap: 15px; justify-content: center; margin: 30px 0; }
-        .btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
-        .btn-primary { background: #00d9ff; color: #000; box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4); }
-        .btn-primary:hover { background: #00b8e6; transform: translateY(-2px); }
-        .log-output { background: #1a1a2a; border-radius: 8px; padding: 15px; margin-top: 20px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; border-left: 4px solid #00ff88; }
-        #log { margin: 0; }
-        .log-entry { margin: 3px 0; padding: 5px; }
-        .log-entry.success { color: #00ff00; }
-        .log-entry.error { color: #ff4444; }
-        .log-entry.info { color: #00ffaa; }
-        .canvas-container { text-align: center; margin-top: 20px; }
-        #gameCanvas { background: #000; border: 2px solid #333; max-width: 100%; }
-        .showcase { margin-top: 40px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; }
-        .showcase h3 { color: #00d9ff; margin-bottom: 15px; }
-        .showcase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        #game-container { margin: 20px auto; width: 1024px; height: 768px; border: 2px solid #00d9ff; position: relative; background: #111; }
+        #log { background: #111; padding: 15px; height: 250px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
+        .btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: #00d9ff; color: #000; text-transform: uppercase; transition: 0.3s; }
+        .btn:hover { background: #00b8e6; transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 - V6J FINAL</h1>
-        <h2>✅ GitHub Pages Deployment (Working Version)</h2>
-
-        <div class="controls">
-            <button id="initButton" class="btn btn-primary" onclick="initializePipeline()">
-                🚀 LAUNCH STARSECTOR 2
-            </button>
+        <h1>🚀 Starsector 2 Web Edition</h1>
+        <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
+        
+        <div style="margin: 20px 0;">
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
         </div>
 
-        <div class="log-output">
-            <h3>📋 Execution Log</h3>
-            <div id="log"></div>
-        </div>
-
-        <div class="canvas-container">
-            <canvas id="gameCanvas" width="1024" height="768"></canvas>
-        </div>
-
-        <div class="showcase">
-            <h3>🎬 VM Live Showcase</h3>
-            <div class="showcase-grid">
-                <div>
-                    <p>Access the dedicated game VM for the best performance:</p>
-                    <div style="margin-top: 10px;">
-                        <input type="text" id="vmIP" value="144.21.61.111" style="padding: 10px; border-radius: 5px; border: 1px solid #00d9ff; background: #000; color: #fff;">
-                        <button onclick="openVM()" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;">Open Stream</button>
-                    </div>
-                </div>
-                <div>
-                    <p>Status: <span style="color: #00ff88;">ONLINE</span></p>
-                    <p>Region: uk-london-1</p>
-                </div>
-            </div>
+        <div id='game-container'></div>
+        
+        <div id='log'>
+            <div style="color: #888;">[SYSTEM] Waiting for initialization...</div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        if (canvas) window.lwjglCanvasElement = canvas;
-
-        function log(msg, type = 'info') {
-            const logDiv = document.getElementById('log');
-            const time = new Date().toLocaleTimeString();
-            const color = type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : '#00ffaa';
-            const entry = document.createElement("div");
-            entry.className = "log-entry " + type;
-            entry.style.color = color;
-            entry.textContent = "[" + time + "] " + msg;
-            logDiv.appendChild(entry);
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(`[${type.toUpperCase()}]`, msg);
-        }
-
-        async function initializePipeline() {
-            log('🧪 INITIALIZING CHEERPJ RUNTIME...', 'success');
-            
-            const jarFiles = [
-                'commons-compiler.jar', 'fs.common_obf.jar', 'fs.sound_obf.jar',
-                'janino.jar', 'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
-                'json.jar', 'log4j-1.2.9.jar', 'lwjgl.jar', 'lwjgl_util.jar',
-                'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
-            ];
-
-            const classpaths = jarFiles.map(j => './jars/' + j);
-
-            try {
-                await cheerpjInit({
-                    mainClass: 'com.fs.starfarer.Starfarer',
-                    version: 8,
-                    javaProperties: ['java.library.path=./build/final/wasm-modules'],
-                    classPaths: classpaths,
-                    libraries: {
-                        'libGL.so.1': './build/final/wasm-modules/gl4es.wasm',
-                        'liblwjgl.so': './build/final/wasm-modules/lwjgl.js',
-                        'libsun_misc_Unsafe.so': './build/final/wasm-modules/unsafe.wasm'
-                    },
-                    enableX11: true,
-                    print: function(msg) { log('[CheerpJ] ' + msg); },
-                    memoryPages: 4096
-                });
-
-                log('✅ CheerpJ initialized. Game is launching...', 'success');
-                document.getElementById('initButton').disabled = true;
-                document.getElementById('initButton').textContent = '✅ RUNNING';
-
-            } catch (error) {
-                log(`❌ Init failed: ${error.message}`, 'error');
+        function log(m, color = '#fff') {
+            const l = document.getElementById('log');
+            if (l) {
+                const entry = document.createElement('div');
+                entry.style.color = color;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+                l.appendChild(entry);
+                l.scrollTop = l.scrollHeight;
             }
+            console.log(m);
         }
 
-        function openVM() {
-            const ip = document.getElementById('vmIP').value;
-            window.open(`http://${ip}:8000`, '_blank');
-        }
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = '⌛ INITIALIZING...';
 
-        log('🎮 Welcome to Starsector 2 Web Version!', 'info');
+            log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
+            
+            try {
+                // Determine base URL for relative paths
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                log(`Base URL: ${baseUrl}`, '#888');
+
+                await cheerpjInit({ 
+                    version: 8, 
+                    enableX11: true,
+                    javaProperties: [
+                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
+                        `-Duser.dir=/files/`,
+                        `-Dcom.fs.starfarer.settings.linux=true`,
+                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                    ],
+                    libraries: {
+                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
+                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.wasm`,
+                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                    }
+                });
+                
+                log('Mounting Display to Canvas...', '#00ff88');
+                cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
+
+                const jarFiles = [
+                    'commons-compiler.jar', 'fs.common_obf.jar', 'fs.sound_obf.jar',
+                    'janino.jar', 'jinput.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar',
+                    'json.jar', 'log4j-1.2.9.jar', 'lwjgl.jar', 'lwjgl_util.jar',
+                    'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
+                ];
+                
+                // GitHub Pages works best with absolute URLs for JARs in CheerpJ
+                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':');
+
+                log('Starting Main Class: StarfarerLauncher', '#ff9f43');
+                btn.textContent = '🚀 RUNNING';
+                
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                
+                log('Execution loop started. Watch for Java output.', '#00ff88');
+            } catch (e) {
+                log(`CRITICAL ERROR: ${e.message}`, '#ff4444');
+                console.error(e);
+                btn.disabled = false;
+                btn.textContent = '❌ RETRY LAUNCH';
+            }
+        });
+
+        log('Welcome to Starsector Web Edition. System ready.');
     </script>
-    <script src="https://cjrtnc.leaningtech.com/4.2/loader.js"></script>
 </body>
 </html>
