@@ -16,11 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v38)</h1>
+        <h1>🚀 Starsector 2 Web (v41)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR (COMBAT)</button>
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
         </div>
 
         <div id='game-container'></div>
@@ -51,7 +51,7 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                // Use the project name as the virtual mount point
+                // Rely on default /app mount pointing to domain root
                 const prefix = '/app/starsectorquick/';
                 
                 await cheerpjInit({ 
@@ -76,6 +76,7 @@
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
+                    'resources.jar',
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
                     'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
                     'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
@@ -83,17 +84,16 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath including data/config/ for settings discovery
                 const cp = jarFiles.map(j => prefix + 'jars/' + j).concat([
                     prefix + 'starsector/starsector/',
                     prefix + 'starsector/starsector/data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.combat.CombatMain', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
