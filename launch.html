@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v49)</h1>
+        <h1>🚀 Starsector 2 Web (v50)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,29 +51,28 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                // Mount domain root to /
-                const domainRoot = window.location.origin + '/';
-                const projectPrefix = '/starsectorquick/';
-                const gameDir = projectPrefix + 'starsector/starsector/';
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                log(`Base URL: ${baseUrl}`, '#888');
                 
+                // Explicit mount to /game/
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${projectPrefix}build/final/wasm-modules/`,
-                        `-Duser.dir=${gameDir}`,
+                        `-Djava.library.path=/game/build/final/wasm-modules/`,
+                        `-Duser.dir=/game/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=${gameDir}`
+                        `-Dcom.fs.starfarer.settings.paths.logs=/game/starsector/starsector/`
                     ],
                     libraries: {
-                        'libGL.so.1': `${projectPrefix}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${projectPrefix}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${projectPrefix}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${projectPrefix}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `/game/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/game/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/game/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/game/build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: '/', url: domainRoot }
+                        { type: 'http', path: '/game/', url: baseUrl }
                     ]
                 });
 
@@ -89,10 +88,9 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => projectPrefix + 'jars/' + j).concat([
-                    projectPrefix,
-                    gameDir,
-                    gameDir + 'data/config/'
+                const cp = jarFiles.map(j => '/game/jars/' + j).concat([
+                    '/game/starsector/starsector/',
+                    '/game/starsector/starsector/data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
