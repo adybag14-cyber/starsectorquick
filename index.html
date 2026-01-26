@@ -82,14 +82,12 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use ARRAY of URLs for CP
-                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`);
-                cp.push(`${baseUrl}starsector/starsector/`);
+                const cp = jarFiles.map(j => `/app/jars/${j}`).join(':') + `:/app/starsector/starsector/`;
+                log(`ClassPath: ${cp}`, '#888');
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                // Use array for CP directly
                 await cheerpjRunMain('com.fs.starfarer.Starfarer', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
