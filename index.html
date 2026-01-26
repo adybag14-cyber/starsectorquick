@@ -51,6 +51,7 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 const virtualRoot = '/app/starsectorquick';
                 
                 await cheerpjInit({ 
@@ -61,7 +62,7 @@
                         `-Duser.dir=/files/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=.`
+                        `-Dcom.fs.starfarer.settings.paths.logs=/files/`
                     ],
                     libraries: {
                         'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
@@ -69,9 +70,8 @@
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
                     },
-                    // Map /files/ to the game asset directory
                     mounts: [
-                        { type: 'http', path: '/files/', url: window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '') + 'starsector/starsector/' }
+                        { type: 'http', path: '/files/', url: `${baseUrl}starsector/starsector/` }
                     ]
                 });
 
@@ -86,7 +86,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':') + `:/files/`;
+                // Put /files/ at the BEGINNING of ClassPath to override log4j.properties
+                const cp = [`/files/`].concat(jarFiles.map(j => `${virtualRoot}/jars/${j}`)).join(':');
 
                 log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';

@@ -1,14 +1,12 @@
 directory	META-INF
 directory	build
 directory	com
-directory	jars
 directory	node_modules
 directory	starsector
 directory	starsector-gwt
 directory	test_output
 directory	videos
-file	.env.example	1869
-file	.gitignore	1216
+file	.gitignore	1125
 file	.gitlab-ci.yml	1015
 file	COMPILATION_REPORT.md	10206
 file	COMPILE_SUMMARY.md	2611
@@ -43,7 +41,7 @@ file	fix_references.py	1983
 file	fix_reserved_names.py	2240
 file	fix_reserved_v2.py	3948
 file	fix_string_format.py	2351
-file	index.html	5124
+file	index.html	5020
 file	install_jars.bat	1076
 file	install_jars.py	1198
 file	install_jars_v2.py	1137
@@ -53,7 +51,6 @@ file	install_jars_v5.py	1114
 file	install_jars_v6.py	1111
 file	install_jars_v7.py	1245
 file	libGL.a	4745472
-file	log4j.properties	974
 file	mega_fix.py	1687
 file	memory_mapping_utils.c	5994
 file	memory_mapping_utils.h	3195
