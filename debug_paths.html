@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>CheerpJ Path Debugger</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+</head>
+<body>
+    <div id="log" style="font-family: monospace; white-space: pre;"></div>
+    <script>
+        function log(m) {
+            document.getElementById('log').textContent += m + '
+';
+            console.log(m);
+        }
+
+        async function run() {
+            log('Initializing CheerpJ 4.2...');
+            await cheerpjInit({ version: 8 });
+            
+            log('Testing paths...');
+            const projectName = 'starsectorquick';
+            
+            // Try to list /app/
+            try {
+                log('Attempting to list /app/ via internal API...');
+                // This is a guess at internal API for debugging
+                const entries = await cheerpOS.readDir('/app/');
+                log('/app/ contents: ' + JSON.stringify(entries));
+            } catch (e) {
+                log('Error listing /app/: ' + e.message);
+            }
+
+            try {
+                log('Checking if /app/starsectorquick/jars/starfarer_obf.jar exists...');
+                const exists = await cheerpOS.fstat('/app/' + projectName + '/jars/starfarer_obf.jar');
+                log('File exists: ' + JSON.stringify(exists));
+            } catch (e) {
+                log('Error checking file: ' + e.message);
+            }
+        }
+        run();
+    </script>
+</body>
+</html>
