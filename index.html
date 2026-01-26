@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v38)</h1>
+        <h1>🚀 Starsector 2 Web (v39)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -76,6 +76,7 @@
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
+                    'resources.jar', // Priority resources first!
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
                     'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
                     'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
@@ -83,7 +84,6 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath including data/config/ for settings discovery
                 const cp = jarFiles.map(j => prefix + 'jars/' + j).concat([
                     prefix + 'starsector/starsector/',
                     prefix + 'starsector/starsector/data/config/'
