@@ -20,7 +20,7 @@
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR (COMBAT)</button>
         </div>
 
         <div id='game-container'></div>
@@ -51,8 +51,8 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 const virtualRoot = '/app/starsectorquick';
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 
                 await cheerpjInit({ 
                     version: 17, 
@@ -69,11 +69,20 @@
                         'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
-                    },
-                    mounts: [
-                        { type: 'http', path: '/files/', url: `${baseUrl}starsector/starsector/` }
-                    ]
+                    }
                 });
+
+                log('Checking for cjFSMount...', '#00d9ff');
+                // Try to find the mount function
+                if (typeof cjFSMount !== 'undefined') {
+                    log('Using cjFSMount...');
+                    await cjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
+                } else if (typeof cheerpjFSMount !== 'undefined') {
+                    log('Using cheerpjFSMount...');
+                    await cheerpjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
+                } else {
+                    log('Neither cjFSMount nor cheerpjFSMount found. Hope cheerpjInit mounts worked.');
+                }
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
@@ -86,13 +95,12 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Put /files/ at the BEGINNING of ClassPath to override log4j.properties
                 const cp = [`/files/`].concat(jarFiles.map(j => `${virtualRoot}/jars/${j}`)).join(':');
 
-                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.combat.CombatMain', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
