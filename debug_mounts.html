@@ -2,64 +2,46 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>CheerpJ Mount Debugger</title>
-    <script src='https://cjrtnc.leaningtech.com/loader.js'></script>
+    <title>CheerpJ API Debugger</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Loading (Stable Loader)...</div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Searching for APIs...</div>
     <script>
         function log(m) {
             document.getElementById('log').textContent += m + '\n';
             console.log(m);
         }
 
-        async function testMount(name, path, url) {
-            log(`Testing mount ${name}: ${path} -> ${url}`);
-            try {
-                // Try cheerpjFSMount
-                if (typeof cheerpjFSMount !== 'undefined') {
-                    await cheerpjFSMount('http', path, url);
-                    log(`  cheerpjFSMount SUCCESS`);
-                } else if (typeof cjFSMount !== 'undefined') {
-                    await cjFSMount('http', path, url);
-                    log(`  cjFSMount SUCCESS`);
-                } else {
-                    log(`  No mount function found!`);
-                }
-
-                // Verify with cheerpOS if it exists
-                if (typeof cheerpOS !== 'undefined') {
-                    const entries = await cheerpOS.readDir(path);
-                    log(`  ReadDir ${path} SUCCESS: ${JSON.stringify(entries)}`);
-                }
-            } catch (e) {
-                log(`  FAILED: ${e.message}`);
-            }
-        }
-
         async function run() {
-            log('Initializing CheerpJ...');
+            log('Initializing CheerpJ 4.2...');
             try {
-                await cheerpjInit({ version: 8 });
+                await cheerpjInit({ version: 17 });
                 log('CheerpJ initialized.');
             } catch (e) {
                 log('cheerpjInit FAILED: ' + e.message);
-                return;
             }
 
-            const baseUrl = window.location.origin + window.location.pathname.replace('debug_mounts.html', '');
-            log('Project Base URL: ' + baseUrl);
-            
-            await testMount('ProjectRoot', '/app/', baseUrl);
-            await testMount('JarsDir', '/jars/', baseUrl + 'jars/');
-            
-            if (typeof cheerpOS !== 'undefined') {
-                try {
-                    const entries = await cheerpOS.readDir('/app/');
-                    log('Default /app/ contents: ' + JSON.stringify(entries));
-                } catch (e) {
-                    log('Default /app/ read failed: ' + e.message);
+            log('Scanning window for cheerpj/cj functions:');
+            const apis = [];
+            for (let k in window) {
+                if (k.toLowerCase().includes('cheerpj') || k.toLowerCase().startsWith('cj')) {
+                    if (typeof window[k] === 'function') {
+                        apis.push(k);
+                    }
                 }
+            }
+            log('Found APIs: ' + JSON.stringify(apis));
+
+            if (typeof cheerpOS !== 'undefined') {
+                log('cheerpOS is defined. Scanning cheerpOS:');
+                const osApis = [];
+                for (let k in cheerpOS) {
+                    if (typeof cheerpOS[k] === 'function') {
+                        osApis.push(k);
+                    }
+                }
+                log('cheerpOS APIs: ' + JSON.stringify(osApis));
             }
         }
         run();
