@@ -9,34 +9,29 @@
     <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Searching for APIs...</div>
     <script>
         function log(m) {
-            document.getElementById('log').textContent += m + '\n';
+            document.getElementById('log').textContent += m + '
+';
             console.log(m);
         }
 
         async function run() {
             log('Initializing CheerpJ 4.2...');
             await cheerpjInit({ version: 17 });
-            log('CheerpJ initialized.');
+            log('CheerpJ initialized. Waiting 5s for dynamic APIs...');
+            await new Promise(r => setTimeout(r, 5000));
 
-            // Wait for cheerpOS
-            for (let i = 0; i < 10; i++) {
-                if (typeof cheerpOS !== 'undefined') break;
-                log('Waiting for cheerpOS...');
-                await new Promise(r => setTimeout(r, 1000));
-            }
-
-            if (typeof cheerpOS !== 'undefined') {
-                log('cheerpOS is defined. Scanning cheerpOS:');
-                const osApis = [];
-                for (let k in cheerpOS) {
-                    if (typeof cheerpOS[k] === 'function') {
-                        osApis.push(k);
-                    }
+            log('Scanning window for cheerpj/cj/cj3 functions:');
+            const apis = [];
+            for (let k in window) {
+                if (k.toLowerCase().includes('cheerpj') || k.toLowerCase().startsWith('cj')) {
+                    if (typeof window[k] === 'function') apis.push(k);
                 }
-                log('cheerpOS APIs: ' + JSON.stringify(osApis.sort()));
-            } else {
-                log('cheerpOS is STILL undefined.');
             }
+            log('Found APIs: ' + JSON.stringify(apis.sort()));
+
+            // Check for cjFSMount specifically
+            if (typeof cjFSMount !== 'undefined') log('cjFSMount FOUND');
+            if (typeof cheerpjFSMount !== 'undefined') log('cheerpjFSMount FOUND');
         }
         run();
     </script>
