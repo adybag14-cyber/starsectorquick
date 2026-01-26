@@ -51,7 +51,6 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // Determine base URL for relative paths
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
                 log(`Base URL: ${baseUrl}`, '#888');
 
@@ -71,6 +70,10 @@
                         'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
                     }
                 });
+
+                log('Mounting Game Filesystem...', '#00d9ff');
+                // Mount the starsector/starsector directory to /files/
+                await cheerpjFSMount('http', '/files/', `${baseUrl}starsector/starsector/`);
                 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
@@ -82,13 +85,12 @@
                     'starfarer.api.jar', 'starfarer_obf.jar', 'xstream-1.4.10.jar'
                 ];
                 
-                // GitHub Pages works best with absolute URLs for JARs in CheerpJ
                 const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':');
 
-                log('Starting Main Class: StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('com.fs.starfarer.Starfarer', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {

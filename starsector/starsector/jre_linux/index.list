@@ -1,0 +1,11 @@
+directory	bin
+directory	lib
+directory	man
+directory	plugin
+file	COPYRIGHT	3409
+file	LICENSE	41
+file	README	47
+file	THIRDPARTYLICENSEREADME-JAVAFX.txt	111645
+file	THIRDPARTYLICENSEREADME.txt	176988
+file	Welcome.html	979
+file	release	505

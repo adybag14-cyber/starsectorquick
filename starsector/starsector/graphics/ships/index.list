@@ -1,0 +1,149 @@
+directory	aeroshuttle
+directory	afflictor
+directory	apogee
+directory	astral
+directory	atlas
+directory	aurora
+directory	brawler
+directory	buffalo
+directory	centurion
+directory	cerberus
+directory	champion
+directory	colossus
+directory	condor
+directory	conquest
+directory	deployables
+directory	derelict
+directory	dominator
+directory	drones
+directory	drover
+directory	eagle
+directory	enforcer
+directory	eradicator
+directory	falcon
+directory	fighters
+directory	fury
+directory	gemini
+directory	gryphon
+directory	hammerhead
+directory	harbinger
+directory	hermes
+directory	heron
+directory	hound
+directory	hyperion
+directory	invictus
+directory	lasher
+directory	legion
+directory	manticore
+directory	medusa
+directory	mercury
+directory	mora
+directory	mudskipper
+directory	mule
+directory	nebula
+directory	omega
+directory	omen
+directory	onslaught
+directory	ox
+directory	pegasus
+directory	phase
+directory	prometheus
+directory	remnants
+directory	retribution
+directory	scarab
+directory	shade
+directory	shrike
+directory	starliner
+directory	stations
+directory	sunder
+directory	talon
+directory	tarsus
+directory	valkyrie
+directory	vanguard
+directory	venture
+directory	wayfarer
+directory	wolf
+file	apogee_cx.png	85087
+file	astral_cv.png	146763
+file	atlas_af.png	125387
+file	aurora_ca.png	62690
+file	brawler.png	13033
+file	broadsword.png	16948
+file	broadsword_hftr.png	2247
+file	buffalo_af.png	48875
+file	buffalo_dd.png	32561
+file	buffalo_dd_old.png	40988
+file	claw.png	2361
+file	claw_old.png	2166
+file	cobra_bomber.png	2695
+file	com_relay.png	29449
+file	com_relay_makeshift.png	16070
+file	condor_dd.png	31676
+file	conquest_bc.png	138511
+file	construction_rig.png	20191
+file	dagger_trp.png	16398
+file	dominator.png	83554
+file	drone_tender.png	29924
+file	enforcer_dd.png	32826
+file	fighter_assault_midline.png	16827
+file	fighter_heavy_escort.png	19174
+file	fighter_heavy_escort_mk2.png	18643
+file	fighter_heavy_escort_strike.png	19261
+file	fighter_heavy_midline.png	17264
+file	frigate_phase_assault.png	11173
+file	frigate_phase_assault_glow.png	2253
+file	frigate_phase_strike.png	28126
+file	frigate_phase_strike_glow.png	1838
+file	hammerhead_dd.png	27675
+file	hound_ff.png	8651
+file	hyperion_ff.png	25675
+file	khopesh.png	18232
+file	lasher_ff.png	12080
+file	longbow_intg.png	17287
+file	medusa.png	52269
+file	midtech2x_cv.png	78872
+file	mining_drone.png	2212
+file	monitor_ff2.png	32468
+file	mule_dd.png	56207
+file	munitions_d1.png	56045
+file	munitions_drone.png	5324
+file	munitions_f1.png	30325
+file	munitions_load.png	5026
+file	nav_buoy.png	18499
+file	nav_buoy_makeshift.png	18907
+file	nav_buoy_old.png	4106
+file	odyssey.png	109211
+file	omen_ff.png	9546
+file	ox.png	23341
+file	paragon.png	220666
+file	perdition_bomber.png	2485
+file	piranha_bmb.png	2401
+file	repair_drone.png	1906
+file	salvage_rig.png	31400
+file	sarissa.png	3058
+file	sensor_array.png	8394
+file	sensor_array_base.png	29943
+file	sensor_array_dish.png	2098
+file	sensor_array_makeshift.png	8547
+file	sensor_array_old.png	28896
+file	sentinel_apbmb.png	2406
+file	shuttle.png	946
+file	sunder_ca.png	21975
+file	superhound.png	18877
+file	tanker_large.png	160203
+file	tanker_large_old.png	166588
+file	tanker_medium.png	55025
+file	tanker_medium_old.png	69866
+file	tanker_small.png	23827
+file	tanker_small_old.png	36351
+file	tarsus.png	29615
+file	tempest.png	10819
+file	thunder.png	17046
+file	thunder2.png	2315
+file	thunder3.png	2471
+file	trident.png	2757
+file	vigilance.png	13296
+file	vigilance_old.png	28196
+file	wasp_ftr.png	15547
+file	wolf_ff.png	8275
+file	xyphos.png	3507

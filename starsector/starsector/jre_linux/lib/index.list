@@ -1,0 +1,39 @@
+directory	amd64
+directory	cmm
+directory	deploy
+directory	desktop
+directory	ext
+directory	fonts
+directory	images
+directory	jfr
+directory	locale
+directory	management
+directory	oblique-fonts
+directory	security
+directory	zi
+file	calendars.properties	1286
+file	classlist	77991
+file	content-types.properties	6196
+file	currency.data	4074
+file	flavormap.properties	3979
+file	fontconfig.RedHat.5.bfc	4532
+file	fontconfig.RedHat.5.properties.src	8975
+file	fontconfig.RedHat.6.bfc	4250
+file	fontconfig.RedHat.6.properties.src	8869
+file	fontconfig.SuSE.10.bfc	6702
+file	fontconfig.SuSE.10.properties.src	16990
+file	fontconfig.SuSE.11.bfc	7032
+file	fontconfig.SuSE.11.properties.src	17008
+file	fontconfig.Turbo.bfc	4668
+file	fontconfig.Turbo.properties.src	9336
+file	fontconfig.bfc	1678
+file	fontconfig.properties.src	1984
+file	javafx.properties	29
+file	jexec	10373
+file	jvm.hprof.txt	4312
+file	logging.properties	2514
+file	meta-index	2134
+file	net.properties	3144
+file	psfont.properties.ja	2915
+file	psfontj2d.properties	10716
+file	sound.properties	1249
