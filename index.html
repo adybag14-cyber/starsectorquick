@@ -51,15 +51,16 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // Use virtual paths relative to /app/
-                const virtualRoot = '/app';
+                // On GitHub Pages, the origin is mounted at /
+                // So the project is at /starsectorquick/
+                const virtualRoot = '/starsectorquick';
                 
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${virtualRoot}/build/final/wasm-modules`,
-                        `-Duser.dir=${virtualRoot}/starsector/starsector`,
+                        `-Djava.library.path=${virtualRoot}/build/final/wasm-modules/`,
+                        `-Duser.dir=${virtualRoot}/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
@@ -82,7 +83,6 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use relative virtual paths from /app/
                 const cp = jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':') + `:${virtualRoot}/starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
