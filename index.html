@@ -51,25 +51,24 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                log(`Base URL: ${baseUrl}`, '#888');
-
-                // For libraries and properties, we can use absolute URLs or virtual paths
-                // We'll use absolute URLs for libraries to be safe
+                // On GitHub Pages, /app/ seems to point to the domain root.
+                // So the project root is at /app/starsectorquick/
+                const virtualRoot = '/app/starsectorquick';
+                
                 await cheerpjInit({ 
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
-                        `-Duser.dir=/app/starsector/starsector/`,
+                        `-Djava.library.path=${virtualRoot}/build/final/wasm-modules`,
+                        `-Duser.dir=${virtualRoot}/starsector/starsector`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -84,8 +83,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use absolute URLs for JARs in CP
-                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':') + `:${baseUrl}starsector/starsector/`;
+                const cp = jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':') + `:${virtualRoot}/starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
