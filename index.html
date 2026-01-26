@@ -60,10 +60,10 @@
                     enableX11: true,
                     javaProperties: [
                         `-Djava.library.path=${virtualRoot}/build/final/wasm-modules/`,
-                        `-Duser.dir=/files/`,
+                        `-Duser.dir=/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/files/`
+                        `-Dcom.fs.starfarer.settings.paths.logs=.`
                     ],
                     libraries: {
                         'libGL.so.1': `${virtualRoot}/build/final/wasm-modules/gl4es.wasm`,
@@ -71,8 +71,9 @@
                         'liblwjgl64.so': `${virtualRoot}/build/final/wasm-modules/lwjgl.js`,
                         'libsun_misc_Unsafe.so': `${virtualRoot}/build/final/wasm-modules/unsafe.wasm`
                     },
+                    // Map domain root to game assets to satisfy absolute path requirements
                     mounts: [
-                        { type: 'http', path: '/files/', url: gameAssetsUrl }
+                        { type: 'http', path: '/', url: gameAssetsUrl }
                     ]
                 });
 
@@ -87,8 +88,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // FORCE /files/ to be the FIRST entry in CP to ensure log4j.properties is found
-                const cp = `/files/` + ':' + jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':');
+                // Keep JARs on absolute virtual paths from repo root
+                const cp = [`/`].concat(jarFiles.map(j => `${virtualRoot}/jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
                 log('Starting Main Class: com.fs.starfarer.combat.CombatMain', '#ff9f43');
