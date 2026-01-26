@@ -2,10 +2,11 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>CheerpJ Path Debugger (No Loader)</title>
+    <title>CheerpJ Path Debugger (Stable Loader)</title>
+    <script src='https://cjrtnc.leaningtech.com/loader.js'></script>
 </head>
 <body>
-    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] No Loader Mode...</div>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Stable Loader Mode...</div>
     <script>
         console.log('--- SCRIPT START ---');
         function log(m) {
@@ -13,7 +14,17 @@
             if (l) l.textContent += m + '\n';
             console.log(m);
         }
-        log('Script is running without loader.');
+        async function run() {
+            log('Initializing CheerpJ...');
+            try {
+                await cheerpjInit({ version: 8 });
+                log('CheerpJ initialized.');
+                log('cheerpOS status: ' + (typeof cheerpOS !== 'undefined' ? 'Defined' : 'UNDEFINED'));
+            } catch (e) {
+                log('cheerpjInit failed: ' + e.message);
+            }
+        }
+        run();
     </script>
 </body>
 </html>
