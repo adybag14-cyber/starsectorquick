@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment (v62)</title>
+    <title>Starsector 2 - GitHub Pages Deployment (v63)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v62)</h1>
+        <h1>🚀 Starsector 2 Web (v63 - StringFile Mode)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,37 +51,48 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const origin = 'https://adybag14-cyber.github.io/';
-                const projectUrl = origin + 'starsectorquick/';
-                const dataUrl = projectUrl + 'starsector/starsector/';
+                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                const prefix = '/app/starsectorquick/';
+                const gameDir = '/files/'; // Use a clean virtual path
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=/app/starsectorquick/build/final/wasm-modules/`,
-                        `-Duser.dir=/files/`,
+                        `-Djava.library.path=${prefix}build/final/wasm-modules/`,
+                        `-Duser.dir=${gameDir}`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/files/`
+                        `-Dcom.fs.starfarer.settings.paths.logs=${gameDir}`
                     ],
                     libraries: {
-                        'libGL.so.1': `/app/starsectorquick/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/app/starsectorquick/build/final/wasm-modules/unsafe.wasm`
-                    },
-                    mounts: [
-                        { type: 'http', path: '/app/', url: origin },
-                        { type: 'http', path: '/files/', url: dataUrl }
-                    ]
+                        'libGL.so.1': `${prefix}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${prefix}build/final/wasm-modules/unsafe.wasm`
+                    }
                 });
+
+                log('Injecting critical config files...', '#ff9f43');
+                const fetchText = async (path) => {
+                    const r = await fetch(baseUrl + path);
+                    if (!r.ok) throw new Error(`Failed to fetch ${path}: ${r.status}`);
+                    return await r.text();
+                };
+
+                const settingsJson = await fetchText('starsector/starsector/data/config/settings.json');
+                const log4jProps = await fetchText('starsector/starsector/log4j.properties');
+
+                // Inject files into /files/ which is our user.dir
+                cheerpjAddStringFile(gameDir + 'data/config/settings.json', settingsJson);
+                cheerpjAddStringFile(gameDir + 'log4j.properties', log4jProps);
+                log('Config injection complete.');
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
-                    'stubs.jar', // MUST BE FIRST
+                    'stubs.jar',
                     'resources.jar',
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
                     'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
@@ -90,9 +101,10 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).concat([
-                    '/files/',
-                    '/files/data/config/'
+                const cp = jarFiles.map(j => prefix + 'jars/' + j).concat([
+                    prefix,
+                    gameDir,
+                    gameDir + 'data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
