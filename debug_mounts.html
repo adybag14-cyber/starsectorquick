@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>CheerpJ API Debugger</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+</head>
+<body>
+    <div id="log" style="font-family: monospace; white-space: pre;">[INIT] Searching for APIs...</div>
+    <script>
+        function log(m) {
+            document.getElementById('log').textContent += m + '
+';
+            console.log(m);
+        }
+
+        async function run() {
+            log('Initializing CheerpJ 4.2...');
+            await cheerpjInit({ version: 17 });
+            log('CheerpJ initialized. Waiting 5s for dynamic APIs...');
+            await new Promise(r => setTimeout(r, 5000));
+
+            log('Scanning window for cheerpj/cj/cj3 functions:');
+            const apis = [];
+            for (let k in window) {
+                if (k.toLowerCase().includes('cheerpj') || k.toLowerCase().startsWith('cj')) {
+                    if (typeof window[k] === 'function') apis.push(k);
+                }
+            }
+            log('Found APIs: ' + JSON.stringify(apis.sort()));
+
+            // Check for cjFSMount specifically
+            if (typeof cjFSMount !== 'undefined') log('cjFSMount FOUND');
+            if (typeof cheerpjFSMount !== 'undefined') log('cheerpjFSMount FOUND');
+        }
+        run();
+    </script>
+</body>
+</html>
