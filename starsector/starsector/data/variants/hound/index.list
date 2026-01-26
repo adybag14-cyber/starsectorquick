@@ -1,9 +1,9 @@
-file	hound_Standard.variant	548
-file	hound_Starting.variant	520
-file	hound_d_Standard.variant	526
-file	hound_d_pirates_Overdriven.variant	568
-file	hound_d_pirates_Shielded.variant	593
-file	hound_d_pirates_Standard.variant	542
-file	hound_hegemony_Standard.variant	584
-file	hound_luddic_church_Standard.variant	550
-file	hound_luddic_path_Attack.variant	517
+hound_Standard.variant	548
+hound_Starting.variant	520
+hound_d_Standard.variant	526
+hound_d_pirates_Overdriven.variant	568
+hound_d_pirates_Shielded.variant	593
+hound_d_pirates_Standard.variant	542
+hound_hegemony_Standard.variant	584
+hound_luddic_church_Standard.variant	550
+hound_luddic_path_Attack.variant	517

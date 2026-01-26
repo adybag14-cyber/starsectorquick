@@ -1,4 +1,4 @@
-directory	input
-directory	opengl
-directory	util
-file	LWJGL.gwt.xml	106
+input/	-1
+opengl/	-1
+util/	-1
+LWJGL.gwt.xml	106

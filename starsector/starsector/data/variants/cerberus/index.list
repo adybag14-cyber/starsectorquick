@@ -1,9 +1,9 @@
-file	cerberus_Hardened.variant	826
-file	cerberus_Overdriven.variant	792
-file	cerberus_Shielded.variant	743
-file	cerberus_Standard.variant	787
-file	cerberus_Starting.variant	693
-file	cerberus_d_Standard.variant	723
-file	cerberus_d_pirates_Shielded.variant	776
-file	cerberus_d_pirates_Standard.variant	739
-file	cerberus_luddic_path_Attack.variant	675
+cerberus_Hardened.variant	826
+cerberus_Overdriven.variant	792
+cerberus_Shielded.variant	743
+cerberus_Standard.variant	787
+cerberus_Starting.variant	693
+cerberus_d_Standard.variant	723
+cerberus_d_pirates_Shielded.variant	776
+cerberus_d_pirates_Standard.variant	739
+cerberus_luddic_path_Attack.variant	675

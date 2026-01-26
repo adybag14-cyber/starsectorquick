@@ -1,11 +1,11 @@
-directory	impl
-file	AutofitPlugin.java	3157
-file	BuildObjectiveTypePicker.java	472
-file	CreateFleetPlugin.java	365
-file	DModAdderPlugin.java	611
-file	FactionPersonalityPickerPlugin.java	389
-file	LevelupPlugin.java	277
-file	OfficerLevelupPlugin.java	375
-file	ShipSystemStatsScript.java	957
-file	ShipSystemStatsScriptAdvanced.java	450
-file	SurveyPlugin.java	901
+impl/	-1
+AutofitPlugin.java	3157
+BuildObjectiveTypePicker.java	472
+CreateFleetPlugin.java	365
+DModAdderPlugin.java	611
+FactionPersonalityPickerPlugin.java	389
+LevelupPlugin.java	277
+OfficerLevelupPlugin.java	375
+ShipSystemStatsScript.java	957
+ShipSystemStatsScriptAdvanced.java	450
+SurveyPlugin.java	901

@@ -1,119 +1,119 @@
-file	ablative_armor.png	2850
-file	accelerated_shields.png	2534
-file	advanced_optics.png	2318
-file	advanced_targeting_core.png	2736
-file	advanced_turret_gyros.png	2617
-file	armored_weapon_emplacements.png	2628
-file	assault_package.png	3710
-file	augmented_drive_field.png	2768
-file	augmented_drive_field2.png	2864
-file	augmented_engines.png	2699
-file	automated.png	17410
-file	automated_repair_unit.png	2483
-file	auxilliary_thrusters.png	2832
-file	axial_rotation.png	2345
-file	ballistic_rangefinder.png	4120
-file	ballistics_integration.png	2588
-file	bdeck.png	2767
-file	berthing.png	17197
-file	blast_doors.png	2839
-file	civilian_grade.png	16951
-file	coherer.png	2627
-file	compromised_armor.png	2915
-file	compromised_hull.png	2731
-file	compromised_storage.png	17904
-file	converted_fighter_bay.png	2911
-file	converted_hangar.png	2720
-file	damaged_flight_deck.png	2761
-file	damaged_weapon_mounts.png	3971
-file	damper_field.png	2737
-file	defective_manufactory.png	17182
-file	defensive_targeting_array.png	2676
-file	degraded_drivefield.png	2898
-file	degraded_engines.png	2763
-file	degraded_life_support.png	2660
-file	degraded_shields.png	2890
-file	delicate_machinery.png	3188
-file	destroyed_weapon_mounts.png	2619
-file	detach_always.png	2126
-file	detach_never.png	1822
-file	distributed_fire_control.png	2952
-file	distributed_fire_control2.png	2307
-file	eccm_package.png	3883
-file	ecm_package.png	2762
-file	efficiency.png	17674
-file	erratic_injector.png	3506
-file	escort_package.png	3655
-file	expanded_cargo.png	17219
-file	expanded_deck_crew.png	2874
-file	expanded_magazines.png	2905
-file	expanded_magazines2.png	3007
-file	expanded_missile_racks.png	2815
-file	extended_shields.png	3372
-file	faulty_automated_systems.png	2753
-file	faulty_power_grid.png	2788
-file	flux_coil_adjunct.png	3799
-file	flux_distributor.png	3845
-file	flux_shunt.png	2938
-file	fourteenth.png	2736
-file	fragile_subsystems.png	2855
-file	front_shield_emitter.png	2287
-file	front_shield_generator.png	2788
-file	fuel_tanks.png	2625
-file	generic_mod.png	2776
-file	glitched_sensor_array.png	2721
-file	ground_support.png	2654
-file	ground_support_adv.png	2328
-file	hardened_shields.png	2417
-file	hardened_subsystems.png	2925
-file	heavy_armor.png	2834
-file	high_maintenance.png	2807
-file	high_res_sensors.png	2764
-file	high_scatter_amp.png	2669
-file	high_volition_attractor.png	17294
-file	illadvised.png	17338
-file	increased_maintenance.png	3434
-file	insulated_engine_assembly.png	3567
-file	integrated_point_defense_ai.png	3338
-file	integrated_targeting_unit.png	2502
-file	malfunctioning_comms.png	18001
-file	militarized_hegemony_auxiliary.png	2791
-file	militarized_subsystems.png	17173
-file	missile_autofactory.png	2811
-file	missile_autoloader.png	4242
-file	monofilament_cable.png	3423
-file	nav_relay.png	2578
-file	neural_integrator.png	3003
-file	neural_interface.png	2809
-file	omni_shield_emitter.png	2417
-file	omni_shield_emitter_mod.png	2503
-file	operations_center.png	2530
-file	phase_anchor.png	3026
-file	phase_coil_instability.png	2656
-file	phase_coils_experimental.png	17649
-file	phase_field.png	2663
-file	quantum_disruptor.png	2539
-file	recovery_shuttles.png	2678
-file	reduced_explosion.png	2095
-file	reinforced_bulkheads.png	2722
-file	repair_gantry.png	3770
-file	resistant_flux_conduits.png	3779
-file	rugged_construction.png	2897
-file	safety_overrides.png	2350
-file	shared_flux_sink.png	2865
-file	shield_shunt.png	2499
-file	shielded_cargo_hold.png	17281
-file	solar_shielding.png	16974
-file	solar_shielding2.png	2682
-file	special_modifications.png	2737
-file	stabilized_shields.png	3573
-file	stealth_mines.png	2254
-file	structural_damage.png	2865
-file	surveying_equipment.png	2615
-file	targeting_core.png	2720
-file	targeting_supercomputer.png	2996
-file	temporal_shell.png	2785
-file	terminator_core.png	2558
-file	unstable_injector.png	2890
-file	vast_bulk.png	2982
-file	vast_hangar.png	2880
+ablative_armor.png	2850
+accelerated_shields.png	2534
+advanced_optics.png	2318
+advanced_targeting_core.png	2736
+advanced_turret_gyros.png	2617
+armored_weapon_emplacements.png	2628
+assault_package.png	3710
+augmented_drive_field.png	2768
+augmented_drive_field2.png	2864
+augmented_engines.png	2699
+automated.png	17410
+automated_repair_unit.png	2483
+auxilliary_thrusters.png	2832
+axial_rotation.png	2345
+ballistic_rangefinder.png	4120
+ballistics_integration.png	2588
+bdeck.png	2767
+berthing.png	17197
+blast_doors.png	2839
+civilian_grade.png	16951
+coherer.png	2627
+compromised_armor.png	2915
+compromised_hull.png	2731
+compromised_storage.png	17904
+converted_fighter_bay.png	2911
+converted_hangar.png	2720
+damaged_flight_deck.png	2761
+damaged_weapon_mounts.png	3971
+damper_field.png	2737
+defective_manufactory.png	17182
+defensive_targeting_array.png	2676
+degraded_drivefield.png	2898
+degraded_engines.png	2763
+degraded_life_support.png	2660
+degraded_shields.png	2890
+delicate_machinery.png	3188
+destroyed_weapon_mounts.png	2619
+detach_always.png	2126
+detach_never.png	1822
+distributed_fire_control.png	2952
+distributed_fire_control2.png	2307
+eccm_package.png	3883
+ecm_package.png	2762
+efficiency.png	17674
+erratic_injector.png	3506
+escort_package.png	3655
+expanded_cargo.png	17219
+expanded_deck_crew.png	2874
+expanded_magazines.png	2905
+expanded_magazines2.png	3007
+expanded_missile_racks.png	2815
+extended_shields.png	3372
+faulty_automated_systems.png	2753
+faulty_power_grid.png	2788
+flux_coil_adjunct.png	3799
+flux_distributor.png	3845
+flux_shunt.png	2938
+fourteenth.png	2736
+fragile_subsystems.png	2855
+front_shield_emitter.png	2287
+front_shield_generator.png	2788
+fuel_tanks.png	2625
+generic_mod.png	2776
+glitched_sensor_array.png	2721
+ground_support.png	2654
+ground_support_adv.png	2328
+hardened_shields.png	2417
+hardened_subsystems.png	2925
+heavy_armor.png	2834
+high_maintenance.png	2807
+high_res_sensors.png	2764
+high_scatter_amp.png	2669
+high_volition_attractor.png	17294
+illadvised.png	17338
+increased_maintenance.png	3434
+insulated_engine_assembly.png	3567
+integrated_point_defense_ai.png	3338
+integrated_targeting_unit.png	2502
+malfunctioning_comms.png	18001
+militarized_hegemony_auxiliary.png	2791
+militarized_subsystems.png	17173
+missile_autofactory.png	2811
+missile_autoloader.png	4242
+monofilament_cable.png	3423
+nav_relay.png	2578
+neural_integrator.png	3003
+neural_interface.png	2809
+omni_shield_emitter.png	2417
+omni_shield_emitter_mod.png	2503
+operations_center.png	2530
+phase_anchor.png	3026
+phase_coil_instability.png	2656
+phase_coils_experimental.png	17649
+phase_field.png	2663
+quantum_disruptor.png	2539
+recovery_shuttles.png	2678
+reduced_explosion.png	2095
+reinforced_bulkheads.png	2722
+repair_gantry.png	3770
+resistant_flux_conduits.png	3779
+rugged_construction.png	2897
+safety_overrides.png	2350
+shared_flux_sink.png	2865
+shield_shunt.png	2499
+shielded_cargo_hold.png	17281
+solar_shielding.png	16974
+solar_shielding2.png	2682
+special_modifications.png	2737
+stabilized_shields.png	3573
+stealth_mines.png	2254
+structural_damage.png	2865
+surveying_equipment.png	2615
+targeting_core.png	2720
+targeting_supercomputer.png	2996
+temporal_shell.png	2785
+terminator_core.png	2558
+unstable_injector.png	2890
+vast_bulk.png	2982
+vast_hangar.png	2880

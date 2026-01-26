@@ -1,26 +1,26 @@
-file	AbandonMarketPlugin.java	770
-file	CommodityFlowAPI.java	428
-file	CommodityMarketDataAPI.java	999
-file	CommodityOnMarketAPI.java	3643
-file	CommoditySourceType.java	141
-file	CommoditySpecAPI.java	1470
-file	EconomyAPI.java	2606
-file	ImmigrationPlugin.java	595
-file	Industry.java	5623
-file	InstallableIndustryItemPlugin.java	1416
-file	MarketAPI.java	12684
-file	MarketConditionAPI.java	1048
-file	MarketConditionPlugin.java	1276
-file	MarketConnectionAPI.java	792
-file	MarketDemandAPI.java	269
-file	MarketDemandDataAPI.java	157
-file	MarketImmigrationModifier.java	248
-file	MarketShareDataAPI.java	429
-file	MonthlyReport.java	7213
-file	MutableCommodityQuantity.java	606
-file	PriceVariability.java	373
-file	StabilizeMarketPlugin.java	716
-file	SubmarketAPI.java	865
-file	SubmarketSpecAPI.java	194
-file	TransactionDataAPI.java	272
-file	TransferTotalAPI.java	271
+AbandonMarketPlugin.java	770
+CommodityFlowAPI.java	428
+CommodityMarketDataAPI.java	999
+CommodityOnMarketAPI.java	3643
+CommoditySourceType.java	141
+CommoditySpecAPI.java	1470
+EconomyAPI.java	2606
+ImmigrationPlugin.java	595
+Industry.java	5623
+InstallableIndustryItemPlugin.java	1416
+MarketAPI.java	12684
+MarketConditionAPI.java	1048
+MarketConditionPlugin.java	1276
+MarketConnectionAPI.java	792
+MarketDemandAPI.java	269
+MarketDemandDataAPI.java	157
+MarketImmigrationModifier.java	248
+MarketShareDataAPI.java	429
+MonthlyReport.java	7213
+MutableCommodityQuantity.java	606
+PriceVariability.java	373
+StabilizeMarketPlugin.java	716
+SubmarketAPI.java	865
+SubmarketSpecAPI.java	194
+TransactionDataAPI.java	272
+TransferTotalAPI.java	271

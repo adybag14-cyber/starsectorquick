@@ -1,5 +1,5 @@
-directory	concurrent
-directory	regex
-directory	zip
-file	GregorianCalendar.java	258
-file	UUID.java	355
+concurrent/	-1
+regex/	-1
+zip/	-1
+GregorianCalendar.java	258
+UUID.java	355

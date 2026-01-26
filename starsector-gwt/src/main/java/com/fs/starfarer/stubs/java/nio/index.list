@@ -1,4 +1,4 @@
-file	Buffer.java	364
-file	ByteBuffer.java	584
-file	ByteOrder.java	273
-file	FloatBuffer.java	403
+Buffer.java	364
+ByteBuffer.java	584
+ByteOrder.java	273
+FloatBuffer.java	403

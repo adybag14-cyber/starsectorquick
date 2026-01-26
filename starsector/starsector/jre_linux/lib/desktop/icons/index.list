@@ -1,4 +1,4 @@
-directory	HighContrast
-directory	HighContrastInverse
-directory	LowContrast
-directory	hicolor
+HighContrast/	-1
+HighContrastInverse/	-1
+LowContrast/	-1
+hicolor/	-1

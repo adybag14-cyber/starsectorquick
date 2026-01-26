@@ -1,4 +1,4 @@
-file	jmxremote.access	4077
-file	jmxremote.password.template	2920
-file	management.properties	14415
-file	snmp.acl.template	3486
+jmxremote.access	4077
+jmxremote.password.template	2920
+management.properties	14415
+snmp.acl.template	3486

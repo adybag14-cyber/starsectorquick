@@ -1,17 +1,17 @@
-directory	nearby
-file	BaseEventPlugin.java	17440
-file	CivilDisorder.java	4639
-file	CoreEventProbabilityManager.java	1430
-file	FactionHostilityEvent.java	8049
-file	FleetLogEvent.java	3072
-file	FoodShortageEvent.java	26610
-file	InvestigationEvent.java	5611
-file	InvestigationEventCommSniffer.java	2048
-file	InvestigationEventGoodRepWithOther.java	11894
-file	InvestigationEventSmugglingV2.java	8532
-file	OfficerManagerEvent.java	30401
-file	PriceUpdate.java	7252
-file	RecentUnrestEvent.java	2354
-file	RepTrackerEvent.java	11844
-file	TestEvent.java	3891
-file	TradeInfoUpdateEvent.java	20883
+nearby/	-1
+BaseEventPlugin.java	17440
+CivilDisorder.java	4639
+CoreEventProbabilityManager.java	1430
+FactionHostilityEvent.java	8049
+FleetLogEvent.java	3072
+FoodShortageEvent.java	26610
+InvestigationEvent.java	5611
+InvestigationEventCommSniffer.java	2048
+InvestigationEventGoodRepWithOther.java	11894
+InvestigationEventSmugglingV2.java	8532
+OfficerManagerEvent.java	30401
+PriceUpdate.java	7252
+RecentUnrestEvent.java	2354
+RepTrackerEvent.java	11844
+TestEvent.java	3891
+TradeInfoUpdateEvent.java	20883

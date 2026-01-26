@@ -1,111 +1,111 @@
-directory	Argentina
-directory	Indiana
-directory	Kentucky
-directory	North_Dakota
-file	Adak	1224
-file	Anchorage	1224
-file	Antigua	77
-file	Araguaina	473
-file	Asuncion	1116
-file	Atikokan	93
-file	Bahia	553
-file	Bahia_Banderas	844
-file	Barbados	137
-file	Belem	297
-file	Belize	513
-file	Blanc-Sablon	93
-file	Boa_Vista	329
-file	Bogota	89
-file	Boise	1284
-file	Cambridge_Bay	1076
-file	Campo_Grande	1116
-file	Cancun	405
-file	Caracas	85
-file	Cayenne	77
-file	Cayman	65
-file	Chicago	1960
-file	Chihuahua	816
-file	Costa_Rica	137
-file	Creston	73
-file	Cuiaba	1100
-file	Curacao	77
-file	Danmarkshavn	341
-file	Dawson	1108
-file	Dawson_Creek	509
-file	Denver	1336
-file	Detroit	1200
-file	Edmonton	1316
-file	Eirunepe	329
-file	El_Salvador	105
-file	Fortaleza	377
-file	Glace_Bay	1204
-file	Godthab	1036
-file	Goose_Bay	1728
-file	Grand_Turk	669
-file	Guatemala	137
-file	Guayaquil	65
-file	Guyana	89
-file	Halifax	1908
-file	Havana	1340
-file	Hermosillo	189
-file	Inuvik	1060
-file	Iqaluit	1064
-file	Jamaica	233
-file	Juneau	1224
-file	La_Paz	81
-file	Lima	185
-file	Los_Angeles	1560
-file	Maceio	393
-file	Managua	185
-file	Manaus	313
-file	Martinique	89
-file	Matamoros	788
-file	Mazatlan	840
-file	Menominee	1216
-file	Merida	788
-file	Metlakatla	329
-file	Mexico_City	880
-file	Miquelon	928
-file	Moncton	1732
-file	Monterrey	788
-file	Montevideo	1152
-file	Montreal	1928
-file	Nassau	1284
-file	New_York	1960
-file	Nipigon	1144
-file	Nome	1228
-file	Noronha	377
-file	Ojinaga	816
-file	Panama	65
-file	Pangnirtung	1076
-file	Paramaribo	101
-file	Phoenix	141
-file	Port-au-Prince	788
-file	Port_of_Spain	65
-file	Porto_Velho	297
-file	Puerto_Rico	77
-file	Rainy_River	1144
-file	Rankin_Inlet	1052
-file	Recife	377
-file	Regina	481
-file	Resolute	1052
-file	Rio_Branco	313
-file	Santa_Isabel	1276
-file	Santarem	305
-file	Santiago	977
-file	Santo_Domingo	201
-file	Sao_Paulo	1116
-file	Scoresbysund	1040
-file	Sitka	1224
-file	St_Johns	2000
-file	Swift_Current	241
-file	Tegucigalpa	121
-file	Thule	852
-file	Thunder_Bay	1188
-file	Tijuana	1276
-file	Toronto	1928
-file	Vancouver	1592
-file	Whitehorse	1108
-file	Winnipeg	1560
-file	Yakutat	1220
-file	Yellowknife	1068
+Argentina/	-1
+Indiana/	-1
+Kentucky/	-1
+North_Dakota/	-1
+Adak	1224
+Anchorage	1224
+Antigua	77
+Araguaina	473
+Asuncion	1116
+Atikokan	93
+Bahia	553
+Bahia_Banderas	844
+Barbados	137
+Belem	297
+Belize	513
+Blanc-Sablon	93
+Boa_Vista	329
+Bogota	89
+Boise	1284
+Cambridge_Bay	1076
+Campo_Grande	1116
+Cancun	405
+Caracas	85
+Cayenne	77
+Cayman	65
+Chicago	1960
+Chihuahua	816
+Costa_Rica	137
+Creston	73
+Cuiaba	1100
+Curacao	77
+Danmarkshavn	341
+Dawson	1108
+Dawson_Creek	509
+Denver	1336
+Detroit	1200
+Edmonton	1316
+Eirunepe	329
+El_Salvador	105
+Fortaleza	377
+Glace_Bay	1204
+Godthab	1036
+Goose_Bay	1728
+Grand_Turk	669
+Guatemala	137
+Guayaquil	65
+Guyana	89
+Halifax	1908
+Havana	1340
+Hermosillo	189
+Inuvik	1060
+Iqaluit	1064
+Jamaica	233
+Juneau	1224
+La_Paz	81
+Lima	185
+Los_Angeles	1560
+Maceio	393
+Managua	185
+Manaus	313
+Martinique	89
+Matamoros	788
+Mazatlan	840
+Menominee	1216
+Merida	788
+Metlakatla	329
+Mexico_City	880
+Miquelon	928
+Moncton	1732
+Monterrey	788
+Montevideo	1152
+Montreal	1928
+Nassau	1284
+New_York	1960
+Nipigon	1144
+Nome	1228
+Noronha	377
+Ojinaga	816
+Panama	65
+Pangnirtung	1076
+Paramaribo	101
+Phoenix	141
+Port-au-Prince	788
+Port_of_Spain	65
+Porto_Velho	297
+Puerto_Rico	77
+Rainy_River	1144
+Rankin_Inlet	1052
+Recife	377
+Regina	481
+Resolute	1052
+Rio_Branco	313
+Santa_Isabel	1276
+Santarem	305
+Santiago	977
+Santo_Domingo	201
+Sao_Paulo	1116
+Scoresbysund	1040
+Sitka	1224
+St_Johns	2000
+Swift_Current	241
+Tegucigalpa	121
+Thule	852
+Thunder_Bay	1188
+Tijuana	1276
+Toronto	1928
+Vancouver	1592
+Whitehorse	1108
+Winnipeg	1560
+Yakutat	1220
+Yellowknife	1068

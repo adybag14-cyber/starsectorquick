@@ -1,47 +1,47 @@
-file	buoy00.png	2182
-file	buoy00glow.png	19323
-file	cargo_pod_special.png	2181
-file	coronal_shunt.png	27585
-file	coronal_shunt2.png	94638
-file	cryosleeper.png	54578
-file	gate.png	52960
-file	gate_glow_concentric.png	85137
-file	gate_glow_ring_active.png	51448
-file	gate_hauler.png	64235
-file	gate_rays_glow.png	70781
-file	gate_starfield.png	56120
-file	gate_whirl_glow.png	79139
-file	gate_whirl_glow2.png	85909
-file	glow_active.png	43569
-file	glow_beingUsed.png	101319
-file	glow_scanned.png	17913
-file	large_cache.png	6665
-file	ministations_sheet00.png	15427
-file	probe.png	2168
-file	station_galatia.png	40841
-file	station_hightech1.png	24784
-file	station_hightech2.png	41260
-file	station_hightech3.png	73857
-file	station_jangala.png	47012
-file	station_jangala2.png	51531
-file	station_lowtech1.png	24595
-file	station_lowtech2.png	29151
-file	station_lowtech3.png	73174
-file	station_midline1.png	39326
-file	station_midline2.png	42263
-file	station_midline3.png	75937
-file	station_mining00.png	10029
-file	station_side00.png	22259
-file	station_side01.png	7858
-file	station_side02.png	22986
-file	station_side03.png	3659
-file	station_side04.png	9300
-file	station_side05.png	6264
-file	station_side06.png	43209
-file	station_side07.png	11411
-file	station_sporeship_derelict.png	61636
-file	stellar_mirror.png	45332
-file	stellar_shade.png	38087
-file	survey_mothership.png	57069
-file	survey_probe.png	8736
-file	survey_ship.png	29511
+buoy00.png	2182
+buoy00glow.png	19323
+cargo_pod_special.png	2181
+coronal_shunt.png	27585
+coronal_shunt2.png	94638
+cryosleeper.png	54578
+gate.png	52960
+gate_glow_concentric.png	85137
+gate_glow_ring_active.png	51448
+gate_hauler.png	64235
+gate_rays_glow.png	70781
+gate_starfield.png	56120
+gate_whirl_glow.png	79139
+gate_whirl_glow2.png	85909
+glow_active.png	43569
+glow_beingUsed.png	101319
+glow_scanned.png	17913
+large_cache.png	6665
+ministations_sheet00.png	15427
+probe.png	2168
+station_galatia.png	40841
+station_hightech1.png	24784
+station_hightech2.png	41260
+station_hightech3.png	73857
+station_jangala.png	47012
+station_jangala2.png	51531
+station_lowtech1.png	24595
+station_lowtech2.png	29151
+station_lowtech3.png	73174
+station_midline1.png	39326
+station_midline2.png	42263
+station_midline3.png	75937
+station_mining00.png	10029
+station_side00.png	22259
+station_side01.png	7858
+station_side02.png	22986
+station_side03.png	3659
+station_side04.png	9300
+station_side05.png	6264
+station_side06.png	43209
+station_side07.png	11411
+station_sporeship_derelict.png	61636
+stellar_mirror.png	45332
+stellar_shade.png	38087
+survey_mothership.png	57069
+survey_probe.png	8736
+survey_ship.png	29511

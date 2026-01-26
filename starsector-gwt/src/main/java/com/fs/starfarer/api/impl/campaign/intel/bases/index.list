@@ -1,9 +1,9 @@
-file	LuddicPathBaseIntel.java	30541
-file	LuddicPathBaseManager.java	10208
-file	LuddicPathCells.java	2605
-file	LuddicPathCellsIntel.java	28732
-file	PirateActivity.java	2702
-file	PirateActivityIntel.java	7454
-file	PirateBaseIntel.java	46831
-file	PirateBaseManager.java	8098
-file	PlayerRelatedPirateBaseManager.java	10659
+LuddicPathBaseIntel.java	30541
+LuddicPathBaseManager.java	10208
+LuddicPathCells.java	2605
+LuddicPathCellsIntel.java	28732
+PirateActivity.java	2702
+PirateActivityIntel.java	7454
+PirateBaseIntel.java	46831
+PirateBaseManager.java	8098
+PlayerRelatedPirateBaseManager.java	10659

@@ -1,9 +1,9 @@
-file	age_gen_data.csv	179
-file	condition_gen_data.csv	7603
-file	drop_groups.csv	9481
-file	location_gen_data.csv	212
-file	name_gen_data.csv	40719
-file	objective_gen_data.csv	184
-file	planet_gen_data.csv	7476
-file	salvage_entity_gen_data.csv	5184
-file	star_gen_data.csv	1588
+age_gen_data.csv	179
+condition_gen_data.csv	7603
+drop_groups.csv	9481
+location_gen_data.csv	212
+name_gen_data.csv	40719
+objective_gen_data.csv	184
+planet_gen_data.csv	7476
+salvage_entity_gen_data.csv	5184
+star_gen_data.csv	1588

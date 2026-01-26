@@ -1,117 +1,117 @@
-file	beam_chunky_core.png	2836
-file	beam_chunky_fringe.png	4765
-file	beam_dark_core.png	1734
-file	beam_laser_core.png	2225
-file	beam_laser_fringe.png	5189
-file	beam_pulsar.png	92735
-file	beam_pulsar2.png	48460
-file	beam_rough2_core.png	2318
-file	beam_rough2_fringe.png	4667
-file	beam_weave_core.png	4507
-file	beam_weave_fringe.png	3780
-file	beamcore.png	1376
-file	beamcoreb.png	3580
-file	beamcorec.png	699
-file	beamfringe.png	3771
-file	beamfringeb.png	3891
-file	beamfringec.png	2716
-file	beamfringed.png	79549
-file	circle64.png	3930
-file	circle_mask_hires.png	8701
-file	cleaner_clouds00.png	109361
-file	contrail64b.png	4154
-file	dust_clouds_colorless.png	154172
-file	emp_arcs.png	86742
-file	empty.png	133
-file	engineflame32-orig.png	966
-file	engineflame32.png	1149
-file	engineflame32b.png	2271
-file	engineglow32.png	1180
-file	engineglow32b.png	2258
-file	engineglow32s.png	1114
-file	explosion0.png	9372
-file	explosion1.png	12356
-file	explosion2.png	10318
-file	explosion3.png	27105
-file	explosion4.png	19745
-file	explosion5.png	20398
-file	explosion6.png	31548
-file	explosion_ring0.png	12342
-file	fog_circle.png	4081
-file	fog_circle2.png	3469
-file	fx_clouds00.png	151294
-file	fx_clouds01.png	129365
-file	glow64.png	3989
-file	hit_glow.png	1982
-file	hit_glow_small.png	892
-file	muzzleflash32.1.png	972
-file	nebula_colorless.png	169370
-file	nebula_dark.png	353910
-file	nebula_old.png	101778
-file	neutrino_detector.png	22753
-file	noise.png	75824
-file	noise2.png	24226
-file	owner_glow.png	2048
-file	particlealpha32sq.png	678
-file	particlealpha64linear.png	1920
-file	particlealpha64sq.png	1923
-file	particlealpha_textured.png	2897
-file	particleline32ln.png	189
-file	portal_textures.png	416307
-file	portal_textures_small.png	50632
-file	projbody.png	636
-file	projtrail.png	907
-file	question_mark.png	810
-file	radial_fx.png	595364
-file	scandot22.png	127
-file	scandot3.png	130
-file	scandot4.png	133
-file	scandot44.png	140
-file	scanline11.png	133
-file	scanline1110.png	141
-file	scanline12.png	137
-file	scanline21.png	137
-file	scanline44.png	138
-file	scanline_large.png	160
-file	shield_rays.png	1151
-file	shields128c.png	19484
-file	shields128ringc.png	4098
-file	shields256.png	71691
-file	shields256ring.png	13744
-file	shields256ringb.png	13379
-file	shields256ringc.png	9989
-file	shields256ringd.png	9998
-file	shields64.png	6123
-file	shields64ring.png	2029
-file	shimmer.png	259
-file	ship_shadow_mask.png	809
-file	slipstream.png	484855
-file	slipstream0.png	336877
-file	slipstream2.png	451769
-file	slipstream3.png	498904
-file	slipstream_black.png	92698
-file	slipstream_dark.png	559420
-file	slipstream_edge1.png	122901
-file	slipstream_edge2.png	129811
-file	slipstream_edge3.png	199267
-file	slipstream_layer0.png	834851
-file	slipstream_layer1.png	851668
-file	slipstream_layer2.png	973237
-file	slipstream_map.png	20640
-file	slipstream_map2.png	1050
-file	slipstream_map3.png	5287
-file	slipstream_map4.png	14783
-file	slipstream_map_edge.png	10725
-file	slipstream_map_edge2.png	2851
-file	smoke32.png	1284
-file	soot64.png	4206
-file	star.png	420
-file	star_halo.png	53364
-file	starburst_glow1.png	64914
-file	torpedoray32.png	936
-file	wind_effect.png	2063
-file	wormhole_corona.png	202390
-file	wormhole_ring.png	9981
-file	wormhole_ring_bright.png	9337
-file	wormhole_ring_bright2.png	96121
-file	wormhole_ring_bright3.png	131128
+beam_chunky_core.png	2836
+beam_chunky_fringe.png	4765
+beam_dark_core.png	1734
+beam_laser_core.png	2225
+beam_laser_fringe.png	5189
+beam_pulsar.png	92735
+beam_pulsar2.png	48460
+beam_rough2_core.png	2318
+beam_rough2_fringe.png	4667
+beam_weave_core.png	4507
+beam_weave_fringe.png	3780
+beamcore.png	1376
+beamcoreb.png	3580
+beamcorec.png	699
+beamfringe.png	3771
+beamfringeb.png	3891
+beamfringec.png	2716
+beamfringed.png	79549
+circle64.png	3930
+circle_mask_hires.png	8701
+cleaner_clouds00.png	109361
+contrail64b.png	4154
+dust_clouds_colorless.png	154172
+emp_arcs.png	86742
+empty.png	133
+engineflame32-orig.png	966
+engineflame32.png	1149
+engineflame32b.png	2271
+engineglow32.png	1180
+engineglow32b.png	2258
+engineglow32s.png	1114
+explosion0.png	9372
+explosion1.png	12356
+explosion2.png	10318
+explosion3.png	27105
+explosion4.png	19745
+explosion5.png	20398
+explosion6.png	31548
+explosion_ring0.png	12342
+fog_circle.png	4081
+fog_circle2.png	3469
+fx_clouds00.png	151294
+fx_clouds01.png	129365
+glow64.png	3989
+hit_glow.png	1982
+hit_glow_small.png	892
+muzzleflash32.1.png	972
+nebula_colorless.png	169370
+nebula_dark.png	353910
+nebula_old.png	101778
+neutrino_detector.png	22753
+noise.png	75824
+noise2.png	24226
+owner_glow.png	2048
+particlealpha32sq.png	678
+particlealpha64linear.png	1920
+particlealpha64sq.png	1923
+particlealpha_textured.png	2897
+particleline32ln.png	189
+portal_textures.png	416307
+portal_textures_small.png	50632
+projbody.png	636
+projtrail.png	907
+question_mark.png	810
+radial_fx.png	595364
+scandot22.png	127
+scandot3.png	130
+scandot4.png	133
+scandot44.png	140
+scanline11.png	133
+scanline1110.png	141
+scanline12.png	137
+scanline21.png	137
+scanline44.png	138
+scanline_large.png	160
+shield_rays.png	1151
+shields128c.png	19484
+shields128ringc.png	4098
+shields256.png	71691
+shields256ring.png	13744
+shields256ringb.png	13379
+shields256ringc.png	9989
+shields256ringd.png	9998
+shields64.png	6123
+shields64ring.png	2029
+shimmer.png	259
+ship_shadow_mask.png	809
+slipstream.png	484855
+slipstream0.png	336877
+slipstream2.png	451769
+slipstream3.png	498904
+slipstream_black.png	92698
+slipstream_dark.png	559420
+slipstream_edge1.png	122901
+slipstream_edge2.png	129811
+slipstream_edge3.png	199267
+slipstream_layer0.png	834851
+slipstream_layer1.png	851668
+slipstream_layer2.png	973237
+slipstream_map.png	20640
+slipstream_map2.png	1050
+slipstream_map3.png	5287
+slipstream_map4.png	14783
+slipstream_map_edge.png	10725
+slipstream_map_edge2.png	2851
+smoke32.png	1284
+soot64.png	4206
+star.png	420
+star_halo.png	53364
+starburst_glow1.png	64914
+torpedoray32.png	936
+wind_effect.png	2063
+wormhole_corona.png	202390
+wormhole_ring.png	9981
+wormhole_ring_bright.png	9337
+wormhole_ring_bright2.png	96121
+wormhole_ring_bright3.png	131128

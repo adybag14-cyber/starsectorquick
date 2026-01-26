@@ -1,18 +1,18 @@
-file	BaseCustomBounty.java	19817
-file	BaseCustomBountyCreator.java	11057
-file	CBDerelict.java	4164
-file	CBDeserter.java	4983
-file	CBEnemyStation.java	8493
-file	CBMerc.java	8348
-file	CBMercUW.java	1080
-file	CBPather.java	5401
-file	CBPatrol.java	6484
-file	CBPirate.java	5346
-file	CBRemnant.java	5650
-file	CBRemnantPlus.java	6787
-file	CBRemnantStation.java	7164
-file	CBStats.java	3369
-file	CBTrader.java	5731
-file	CustomBountyCreator.java	2961
-file	MilitaryCustomBounty.java	2185
-file	UnderworldCustomBounty.java	1294
+BaseCustomBounty.java	19817
+BaseCustomBountyCreator.java	11057
+CBDerelict.java	4164
+CBDeserter.java	4983
+CBEnemyStation.java	8493
+CBMerc.java	8348
+CBMercUW.java	1080
+CBPather.java	5401
+CBPatrol.java	6484
+CBPirate.java	5346
+CBRemnant.java	5650
+CBRemnantPlus.java	6787
+CBRemnantStation.java	7164
+CBStats.java	3369
+CBTrader.java	5731
+CustomBountyCreator.java	2961
+MilitaryCustomBounty.java	2185
+UnderworldCustomBounty.java	1294

@@ -1,18 +1,18 @@
-file	MixedCodeMainDialog.ui	4661
-file	MixedCodeMainDialogJs.ui	6320
-file	cautionshield.icns	3588
-file	java-icon.ico	29926
-file	messages.properties	2917
-file	messages_de.properties	3338
-file	messages_es.properties	3632
-file	messages_fr.properties	3441
-file	messages_it.properties	3255
-file	messages_ja.properties	6381
-file	messages_ko.properties	5751
-file	messages_pt_BR.properties	3380
-file	messages_sv.properties	3441
-file	messages_zh_CN.properties	4104
-file	messages_zh_HK.properties	3784
-file	messages_zh_TW.properties	3784
-file	mixcode_s.png	3115
-file	splash.gif	13959
+MixedCodeMainDialog.ui	4661
+MixedCodeMainDialogJs.ui	6320
+cautionshield.icns	3588
+java-icon.ico	29926
+messages.properties	2917
+messages_de.properties	3338
+messages_es.properties	3632
+messages_fr.properties	3441
+messages_it.properties	3255
+messages_ja.properties	6381
+messages_ko.properties	5751
+messages_pt_BR.properties	3380
+messages_sv.properties	3441
+messages_zh_CN.properties	4104
+messages_zh_HK.properties	3784
+messages_zh_TW.properties	3784
+mixcode_s.png	3115
+splash.gif	13959

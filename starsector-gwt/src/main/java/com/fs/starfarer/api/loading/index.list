@@ -1,27 +1,27 @@
-file	AbilitySpecAPI.java	1022
-file	BarEventSpec.java	4042
-file	BeamWeaponSpecAPI.java	3236
-file	CampaignPingSpec.java	3370
-file	ContactTagSpec.java	1410
-file	DamagingExplosionSpec.java	10812
-file	Description.java	2464
-file	EventSpecAPI.java	315
-file	FighterWingSpecAPI.java	1619
-file	FormationType.java	117
-file	HullModSpecAPI.java	1771
-file	IndustrySpecAPI.java	1360
-file	MissileSpecAPI.java	3692
-file	MuzzleFlashSpec.java	2090
-file	PersonMissionSpec.java	8331
-file	ProjectileSpawnType.java	164
-file	ProjectileSpecAPI.java	3463
-file	ProjectileWeaponSpecAPI.java	1943
-file	RoleEntryAPI.java	242
-file	ShotBehaviorSpecAPI.java	568
-file	TerrainSpecAPI.java	307
-file	VariantSource.java	146
-file	WeaponGroupSpec.java	1272
-file	WeaponGroupType.java	326
-file	WeaponSlotAPI.java	1309
-file	WeaponSpecAPI.java	4834
-file	WingRole.java	152
+AbilitySpecAPI.java	1022
+BarEventSpec.java	4042
+BeamWeaponSpecAPI.java	3236
+CampaignPingSpec.java	3370
+ContactTagSpec.java	1410
+DamagingExplosionSpec.java	10812
+Description.java	2464
+EventSpecAPI.java	315
+FighterWingSpecAPI.java	1619
+FormationType.java	117
+HullModSpecAPI.java	1771
+IndustrySpecAPI.java	1360
+MissileSpecAPI.java	3692
+MuzzleFlashSpec.java	2090
+PersonMissionSpec.java	8331
+ProjectileSpawnType.java	164
+ProjectileSpecAPI.java	3463
+ProjectileWeaponSpecAPI.java	1943
+RoleEntryAPI.java	242
+ShotBehaviorSpecAPI.java	568
+TerrainSpecAPI.java	307
+VariantSource.java	146
+WeaponGroupSpec.java	1272
+WeaponGroupType.java	326
+WeaponSlotAPI.java	1309
+WeaponSpecAPI.java	4834
+WingRole.java	152

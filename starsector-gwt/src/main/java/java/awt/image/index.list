@@ -1,7 +1,7 @@
-file	BufferedImage.java	5287
-file	ColorModel.java	918
-file	DataBuffer.java	1199
-file	DirectColorModel.java	1227
-file	Raster.java	821
-file	SampleModel.java	713
-file	WritableRaster.java	1463
+BufferedImage.java	5287
+ColorModel.java	918
+DataBuffer.java	1199
+DirectColorModel.java	1227
+Raster.java	821
+SampleModel.java	713
+WritableRaster.java	1463

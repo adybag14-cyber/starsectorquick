@@ -1,39 +1,39 @@
-file	AutoReducingValue.java	1524
-file	CampaignEngineGlowIndividualEngine.java	7368
-file	CampaignEngineGlowUtil.java	5490
-file	CampaignEntityMovementUtil.java	5000
-file	CollisionGridUtil.java	4586
-file	ColorShifterAPI.java	313
-file	ColorShifterUtil.java	3951
-file	CountingMap.java	1161
-file	DelayedActionScript.java	712
-file	DynamicStatsAPI.java	1123
-file	FaderUtil.java	3755
-file	FleetLog.java	2930
-file	FlickerUtil.java	1904
-file	FlickerUtilV2.java	3010
-file	Highlights.java	1244
-file	IntervalUtil.java	2049
-file	JitterUtil.java	2746
-file	ListMap.java	709
-file	Misc.java	235080
-file	MutableValue.java	431
-file	MutatingValueUtil.java	1839
-file	MutatingVertexUtil.java	1190
-file	Noise.java	1893
-file	OutpostStats.java	1379
-file	Pair.java	1198
-file	RadialLattice.java	1789
-file	Range.java	804
-file	RollingAverageTracker.java	1225
-file	RuleException.java	220
-file	SaveableIterator.java	541
-file	SkillData.java	3493
-file	SmoothFacingUtil.java	1983
-file	SmoothMovementUtil.java	5829
-file	TimeoutTracker.java	2391
-file	TimeoutTrackerMap.java	1911
-file	ValueShifterAPI.java	403
-file	ValueShifterUtil.java	3200
-file	WarpingSpriteRendererUtil.java	7747
-file	WeightedRandomPicker.java	5453
+AutoReducingValue.java	1524
+CampaignEngineGlowIndividualEngine.java	7368
+CampaignEngineGlowUtil.java	5490
+CampaignEntityMovementUtil.java	5000
+CollisionGridUtil.java	4586
+ColorShifterAPI.java	313
+ColorShifterUtil.java	3951
+CountingMap.java	1161
+DelayedActionScript.java	712
+DynamicStatsAPI.java	1123
+FaderUtil.java	3755
+FleetLog.java	2930
+FlickerUtil.java	1904
+FlickerUtilV2.java	3010
+Highlights.java	1244
+IntervalUtil.java	2049
+JitterUtil.java	2746
+ListMap.java	709
+Misc.java	235080
+MutableValue.java	431
+MutatingValueUtil.java	1839
+MutatingVertexUtil.java	1190
+Noise.java	1893
+OutpostStats.java	1379
+Pair.java	1198
+RadialLattice.java	1789
+Range.java	804
+RollingAverageTracker.java	1225
+RuleException.java	220
+SaveableIterator.java	541
+SkillData.java	3493
+SmoothFacingUtil.java	1983
+SmoothMovementUtil.java	5829
+TimeoutTracker.java	2391
+TimeoutTrackerMap.java	1911
+ValueShifterAPI.java	403
+ValueShifterUtil.java	3200
+WarpingSpriteRendererUtil.java	7747
+WeightedRandomPicker.java	5453

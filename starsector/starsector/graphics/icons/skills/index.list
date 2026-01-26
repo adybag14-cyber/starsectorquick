@@ -1,93 +1,93 @@
-file	EW.png	23295
-file	advanced_countermeasures.png	8963
-file	advanced_tactics.png	7981
-file	applied_physics.png	8720
-file	automated_ships.png	11625
-file	auxiliary_support.png	22693
-file	best_of_the_best.png	9691
-file	bulk_transport.png	8829
-file	carrier_command.png	22461
-file	category_combat.png	17342
-file	category_industry.png	29840
-file	category_leadership.png	16134
-file	category_technology.png	17183
-file	colony_management.png	22092
-file	combat.png	26359
-file	combat_endurance.png	7873
-file	combat_endurance2.png	8784
-file	combat_endurance3.png	9199
-file	command_experience.png	9226
-file	computer_systems.png	8617
-file	construction.png	23986
-file	containment_procedures.png	8721
-file	coordinated_maneuvers.png	8533
-file	coordinated_maneuvers2.png	8862
-file	crew_training.png	24465
-file	cybernetic_augmentation.png	8864
-file	damage_control.png	24069
-file	damage_control2.png	9129
-file	defensive_systems.png	8166
-file	derelict_contingent.png	9166
-file	elite_combat.png	17187
-file	elite_combat32.png	16352
-file	elite_combat48.png	16888
-file	elite_generic.png	9499
-file	elite_industry.png	17212
-file	elite_industry32.png	16184
-file	elite_industry48.png	16986
-file	elite_leadership.png	17196
-file	elite_leadership32.png	16359
-file	elite_leadership48.png	16939
-file	elite_technology.png	17134
-file	elite_technology32.png	16297
-file	elite_technology48.png	16916
-file	energy_weapon_mastery.png	9333
-file	evasive_maneuvering.png	9210
-file	field_modulation.png	9424
-file	field_repairs.png	23522
-file	fighter_doctrine.png	8194
-file	fighter_uplink.png	9691
-file	fighter_uplink2.png	8598
-file	fleet_logistics.png	5323
-file	flux_dynamics.png	10680
-file	gunnery_implants.png	23241
-file	helmsmanship.png	22821
-file	hypercognition.png	10912
-file	impact_mitigation.png	10251
-file	industrial_planning.png	21660
-file	leadership.png	8949
-file	leadership2.png	23690
-file	loadout_design.png	8688
-file	makeshift_equipment.png	11561
-file	mechanical_engineering.png	10244
-file	missile_specialization.png	9522
-file	missile_specialization2.png	24849
-file	missile_specialization_old.png	22406
-file	navigation.png	22276
-file	neural_link.png	8864
-file	officer_management.png	26999
-file	officer_training.png	10080
-file	ordnance_expert.png	22673
-file	ordnance_expert2.png	9889
-file	phase_corps.png	9518
-file	phase_mastery.png	11070
-file	planetary_ops.png	24671
-file	polarized_armor.png	9181
-file	power_grid_manipulation.png	9927
-file	ranged_specialization.png	8862
-file	recovery_ops.png	22536
-file	reliability_engineering.png	9078
-file	safety_procedures.png	8313
-file	salvaging.png	23429
-file	sensors.png	23255
-file	space_ops.png	9912
-file	special_modifications.png	9249
-file	strike_commander.png	24214
-file	surveying.png	22110
-file	systems_expertise.png	25693
-file	target_analysis.png	10037
-file	target_analysis2.png	11044
-file	technology.png	8936
-file	weapon_drills.png	10297
-file	wing_commander.png	8566
-file	wolfpack.png	23852
+EW.png	23295
+advanced_countermeasures.png	8963
+advanced_tactics.png	7981
+applied_physics.png	8720
+automated_ships.png	11625
+auxiliary_support.png	22693
+best_of_the_best.png	9691
+bulk_transport.png	8829
+carrier_command.png	22461
+category_combat.png	17342
+category_industry.png	29840
+category_leadership.png	16134
+category_technology.png	17183
+colony_management.png	22092
+combat.png	26359
+combat_endurance.png	7873
+combat_endurance2.png	8784
+combat_endurance3.png	9199
+command_experience.png	9226
+computer_systems.png	8617
+construction.png	23986
+containment_procedures.png	8721
+coordinated_maneuvers.png	8533
+coordinated_maneuvers2.png	8862
+crew_training.png	24465
+cybernetic_augmentation.png	8864
+damage_control.png	24069
+damage_control2.png	9129
+defensive_systems.png	8166
+derelict_contingent.png	9166
+elite_combat.png	17187
+elite_combat32.png	16352
+elite_combat48.png	16888
+elite_generic.png	9499
+elite_industry.png	17212
+elite_industry32.png	16184
+elite_industry48.png	16986
+elite_leadership.png	17196
+elite_leadership32.png	16359
+elite_leadership48.png	16939
+elite_technology.png	17134
+elite_technology32.png	16297
+elite_technology48.png	16916
+energy_weapon_mastery.png	9333
+evasive_maneuvering.png	9210
+field_modulation.png	9424
+field_repairs.png	23522
+fighter_doctrine.png	8194
+fighter_uplink.png	9691
+fighter_uplink2.png	8598
+fleet_logistics.png	5323
+flux_dynamics.png	10680
+gunnery_implants.png	23241
+helmsmanship.png	22821
+hypercognition.png	10912
+impact_mitigation.png	10251
+industrial_planning.png	21660
+leadership.png	8949
+leadership2.png	23690
+loadout_design.png	8688
+makeshift_equipment.png	11561
+mechanical_engineering.png	10244
+missile_specialization.png	9522
+missile_specialization2.png	24849
+missile_specialization_old.png	22406
+navigation.png	22276
+neural_link.png	8864
+officer_management.png	26999
+officer_training.png	10080
+ordnance_expert.png	22673
+ordnance_expert2.png	9889
+phase_corps.png	9518
+phase_mastery.png	11070
+planetary_ops.png	24671
+polarized_armor.png	9181
+power_grid_manipulation.png	9927
+ranged_specialization.png	8862
+recovery_ops.png	22536
+reliability_engineering.png	9078
+safety_procedures.png	8313
+salvaging.png	23429
+sensors.png	23255
+space_ops.png	9912
+special_modifications.png	9249
+strike_commander.png	24214
+surveying.png	22110
+systems_expertise.png	25693
+target_analysis.png	10037
+target_analysis2.png	11044
+technology.png	8936
+weapon_drills.png	10297
+wing_commander.png	8566
+wolfpack.png	23852

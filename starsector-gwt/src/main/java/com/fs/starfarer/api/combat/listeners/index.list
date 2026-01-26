@@ -1,13 +1,13 @@
-file	AdvanceableListener.java	269
-file	ApplyDamageResultAPI.java	765
-file	CombatListenerManagerAPI.java	377
-file	CombatListenerUtil.java	7780
-file	DamageDealtModifier.java	1242
-file	DamageListener.java	239
-file	DamageTakenModifier.java	980
-file	FighterOPCostModifier.java	674
-file	FleetMemberDeploymentListener.java	352
-file	HullDamageAboutToBeTakenListener.java	664
-file	WeaponBaseRangeModifier.java	567
-file	WeaponOPCostModifier.java	661
-file	WeaponRangeModifier.java	551
+AdvanceableListener.java	269
+ApplyDamageResultAPI.java	765
+CombatListenerManagerAPI.java	377
+CombatListenerUtil.java	7780
+DamageDealtModifier.java	1242
+DamageListener.java	239
+DamageTakenModifier.java	980
+FighterOPCostModifier.java	674
+FleetMemberDeploymentListener.java	352
+HullDamageAboutToBeTakenListener.java	664
+WeaponBaseRangeModifier.java	567
+WeaponOPCostModifier.java	661
+WeaponRangeModifier.java	551

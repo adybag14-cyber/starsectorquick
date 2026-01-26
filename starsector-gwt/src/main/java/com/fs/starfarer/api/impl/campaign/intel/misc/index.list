@@ -1,11 +1,11 @@
-file	BreadcrumbIntel.java	5140
-file	CargoPodsIntel.java	2458
-file	CommSnifferIntel.java	8773
-file	DistressCallIntel.java	2484
-file	FleetLogIntel.java	3144
-file	GateHaulerIntel.java	24586
-file	GateIntel.java	4288
-file	LuddicShrineIntel.java	10990
-file	ProductionReportIntel.java	8539
-file	TradeFleetDepartureIntel.java	13909
-file	WarningBeaconIntel.java	5545
+BreadcrumbIntel.java	5140
+CargoPodsIntel.java	2458
+CommSnifferIntel.java	8773
+DistressCallIntel.java	2484
+FleetLogIntel.java	3144
+GateHaulerIntel.java	24586
+GateIntel.java	4288
+LuddicShrineIntel.java	10990
+ProductionReportIntel.java	8539
+TradeFleetDepartureIntel.java	13909
+WarningBeaconIntel.java	5545

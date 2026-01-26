@@ -1,149 +1,149 @@
-file	abandoned.png	4307
-file	alien_life.png	3989
-file	am_fuel_facility.png	3512
-file	aquaculture.png	6550
-file	arid_world.png	4254
-file	arid_world_wide.png	8440
-file	arms_tradeshow.png	4434
-file	atmosphere_dense.png	3807
-file	atmosphere_none.png	2286
-file	atmosphere_thin.png	3121
-file	atmosphere_toxic.png	3568
-file	autofactory.png	6356
-file	barren_desert_wide.png	7587
-file	blockade.png	3705
-file	bounty.png	2073
-file	capital.png	3929
-file	climate_mild.png	3162
-file	cold.png	3152
-file	cold_extreme.png	2720
-file	cottage_industry.png	4440
-file	cryo_world_wide.png	22672
-file	cryosanctum.png	6915
-file	darkness.png	1793
-file	death.png	4240
-file	decivilized.png	18633
-file	desert_world.png	3986
-file	desert_world_wide.png	7854
-file	dissidents.png	18431
-file	drought.png	4944
-file	dust_storm.png	4050
-file	exceptional_harvest.png	4408
-file	farmland_adequate.png	4374
-file	farmland_bountiful.png	4579
-file	farmland_poor.png	4503
-file	farmland_rich.png	4598
-file	food_shortage.png	17725
-file	free_port.png	3054
-file	frontier.png	6541
-file	gravity_high.png	3315
-file	gravity_low.png	3427
-file	habitable.png	3169
-file	headquarters.png	4124
-file	hostile_activity.png	3697
-file	hot.png	3716
-file	hot_extreme.png	2960
-file	hydroponics.png	18364
-file	hyperspace_topography.png	4502
-file	ice_world.png	4345
-file	ice_world_wide.png	8293
-file	inimical_biosphere.png	4071
-file	irradiated.png	4190
-file	jungle_world.png	4198
-file	jungle_world_wide.png	9499
-file	lava_world_wide.png	21152
-file	light_industrial.png	18993
-file	lobster_pens.png	3988
-file	luddic_majority.png	6414
-file	luddic_majority_unhappy.png	3941
-file	luddic_site.png	3715
-file	mercenaries.png	18430
-file	meteor_impacts.png	3202
-file	meteor_strike.png	3823
-file	military_base.png	4197
-file	neutral_traders_summit.png	3974
-file	orbital_burns.png	18273
-file	orbital_station.png	19114
-file	ore_abundant.png	4396
-file	ore_mining.png	3753
-file	ore_moderate.png	4433
-file	ore_refining_complex.png	4236
-file	ore_rich.png	4539
-file	ore_sparse.png	4258
-file	ore_ultrarich.png	4510
-file	organics_abundant.png	3943
-file	organics_common.png	4072
-file	organics_mining.png	18336
-file	organics_plentiful.png	3926
-file	organics_trace.png	3761
-file	organized_crime.png	18118
-file	outpost.png	4040
-file	pather_base.png	4000
-file	pather_cells.png	4403
-file	pirate_activity.png	3461
-file	pirate_base.png	18097
-file	pirate_moot.png	4538
-file	pirates.png	4018
-file	plundered.png	17998
-file	pollution.png	3175
-file	poor_light.png	2784
-file	population00.png	1492
-file	population01.png	1273
-file	population02.png	1521
-file	population03.png	1633
-file	population04.png	1559
-file	population05.png	1510
-file	population06.png	1671
-file	population07.png	1450
-file	population08.png	1761
-file	population09.png	1806
-file	population10.png	16477
-file	radiated_wide.png	21971
-file	rareore_abundant.png	18571
-file	rareore_moderate.png	18658
-file	rareore_rich.png	18774
-file	rareore_sparse.png	18433
-file	rareore_ultrarich.png	18487
-file	recent_unrest.png	4243
-file	refugee_population.png	7190
-file	respite40.png	5115
-file	rogue_ai.png	4429
-file	ruins_extensive.png	4401
-file	ruins_scattered.png	3822
-file	ruins_vast.png	4611
-file	ruins_widespread.png	4043
-file	rural_polity.png	6315
-file	shipbreaking.png	4162
-file	sleeper_cells.png	3075
-file	smuggling.png	2646
-file	solar_array.png	4048
-file	solar_mirror.png	3208
-file	solar_shade.png	2625
-file	spaceport.png	18611
-file	stealth_mines.png	3324
-file	stellar_flare.png	4088
-file	tectonic.png	4073
-file	tectonic_extreme.png	4176
-file	terran_world.png	4495
-file	terran_world_wide.png	8124
-file	trade_center.png	4005
-file	trade_disruption.png	3534
-file	tritachyon_event.png	3281
-file	tundra_terran_wide.png	8312
-file	twilight_terran_world.png	6941
-file	underground_arcology.png	4607
-file	uninhabitable.png	6365
-file	uninhabitable_wide.png	6513
-file	urbanized_polity.png	6141
-file	vice_demand.png	6410
-file	volatiles_abundant.png	3326
-file	volatiles_depot.png	3730
-file	volatiles_diffuse.png	2800
-file	volatiles_mining.png	4052
-file	volatiles_plentiful.png	3704
-file	volatiles_trace.png	2130
-file	water_covered.png	3569
-file	water_world.png	3917
-file	water_world_wide.png	21634
-file	weather_extreme.png	4014
-file	xenoplague.png	4953
+abandoned.png	4307
+alien_life.png	3989
+am_fuel_facility.png	3512
+aquaculture.png	6550
+arid_world.png	4254
+arid_world_wide.png	8440
+arms_tradeshow.png	4434
+atmosphere_dense.png	3807
+atmosphere_none.png	2286
+atmosphere_thin.png	3121
+atmosphere_toxic.png	3568
+autofactory.png	6356
+barren_desert_wide.png	7587
+blockade.png	3705
+bounty.png	2073
+capital.png	3929
+climate_mild.png	3162
+cold.png	3152
+cold_extreme.png	2720
+cottage_industry.png	4440
+cryo_world_wide.png	22672
+cryosanctum.png	6915
+darkness.png	1793
+death.png	4240
+decivilized.png	18633
+desert_world.png	3986
+desert_world_wide.png	7854
+dissidents.png	18431
+drought.png	4944
+dust_storm.png	4050
+exceptional_harvest.png	4408
+farmland_adequate.png	4374
+farmland_bountiful.png	4579
+farmland_poor.png	4503
+farmland_rich.png	4598
+food_shortage.png	17725
+free_port.png	3054
+frontier.png	6541
+gravity_high.png	3315
+gravity_low.png	3427
+habitable.png	3169
+headquarters.png	4124
+hostile_activity.png	3697
+hot.png	3716
+hot_extreme.png	2960
+hydroponics.png	18364
+hyperspace_topography.png	4502
+ice_world.png	4345
+ice_world_wide.png	8293
+inimical_biosphere.png	4071
+irradiated.png	4190
+jungle_world.png	4198
+jungle_world_wide.png	9499
+lava_world_wide.png	21152
+light_industrial.png	18993
+lobster_pens.png	3988
+luddic_majority.png	6414
+luddic_majority_unhappy.png	3941
+luddic_site.png	3715
+mercenaries.png	18430
+meteor_impacts.png	3202
+meteor_strike.png	3823
+military_base.png	4197
+neutral_traders_summit.png	3974
+orbital_burns.png	18273
+orbital_station.png	19114
+ore_abundant.png	4396
+ore_mining.png	3753
+ore_moderate.png	4433
+ore_refining_complex.png	4236
+ore_rich.png	4539
+ore_sparse.png	4258
+ore_ultrarich.png	4510
+organics_abundant.png	3943
+organics_common.png	4072
+organics_mining.png	18336
+organics_plentiful.png	3926
+organics_trace.png	3761
+organized_crime.png	18118
+outpost.png	4040
+pather_base.png	4000
+pather_cells.png	4403
+pirate_activity.png	3461
+pirate_base.png	18097
+pirate_moot.png	4538
+pirates.png	4018
+plundered.png	17998
+pollution.png	3175
+poor_light.png	2784
+population00.png	1492
+population01.png	1273
+population02.png	1521
+population03.png	1633
+population04.png	1559
+population05.png	1510
+population06.png	1671
+population07.png	1450
+population08.png	1761
+population09.png	1806
+population10.png	16477
+radiated_wide.png	21971
+rareore_abundant.png	18571
+rareore_moderate.png	18658
+rareore_rich.png	18774
+rareore_sparse.png	18433
+rareore_ultrarich.png	18487
+recent_unrest.png	4243
+refugee_population.png	7190
+respite40.png	5115
+rogue_ai.png	4429
+ruins_extensive.png	4401
+ruins_scattered.png	3822
+ruins_vast.png	4611
+ruins_widespread.png	4043
+rural_polity.png	6315
+shipbreaking.png	4162
+sleeper_cells.png	3075
+smuggling.png	2646
+solar_array.png	4048
+solar_mirror.png	3208
+solar_shade.png	2625
+spaceport.png	18611
+stealth_mines.png	3324
+stellar_flare.png	4088
+tectonic.png	4073
+tectonic_extreme.png	4176
+terran_world.png	4495
+terran_world_wide.png	8124
+trade_center.png	4005
+trade_disruption.png	3534
+tritachyon_event.png	3281
+tundra_terran_wide.png	8312
+twilight_terran_world.png	6941
+underground_arcology.png	4607
+uninhabitable.png	6365
+uninhabitable_wide.png	6513
+urbanized_polity.png	6141
+vice_demand.png	6410
+volatiles_abundant.png	3326
+volatiles_depot.png	3730
+volatiles_diffuse.png	2800
+volatiles_mining.png	4052
+volatiles_plentiful.png	3704
+volatiles_trace.png	2130
+water_covered.png	3569
+water_world.png	3917
+water_world_wide.png	21634
+weather_extreme.png	4014
+xenoplague.png	4953

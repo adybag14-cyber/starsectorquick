@@ -1,12 +1,12 @@
-file	BaseSpecialItemPlugin.java	9958
-file	BlueprintProviderItem.java	276
-file	FighterBlueprintItemPlugin.java	7975
-file	GenericSpecialItemPlugin.java	4473
-file	IndustryBlueprintItemPlugin.java	6665
-file	JanusDevicePlugin.java	2437
-file	ModSpecItemPlugin.java	9816
-file	MultiBlueprintItemPlugin.java	11885
-file	ShipBlueprintItemPlugin.java	8590
-file	WeaponBlueprintItemPlugin.java	8223
-file	WormholeAnchorPlugin.java	1745
-file	WormholeScannerPlugin.java	2567
+BaseSpecialItemPlugin.java	9958
+BlueprintProviderItem.java	276
+FighterBlueprintItemPlugin.java	7975
+GenericSpecialItemPlugin.java	4473
+IndustryBlueprintItemPlugin.java	6665
+JanusDevicePlugin.java	2437
+ModSpecItemPlugin.java	9816
+MultiBlueprintItemPlugin.java	11885
+ShipBlueprintItemPlugin.java	8590
+WeaponBlueprintItemPlugin.java	8223
+WormholeAnchorPlugin.java	1745
+WormholeScannerPlugin.java	2567

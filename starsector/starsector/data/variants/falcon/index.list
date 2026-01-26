@@ -1,9 +1,9 @@
-file	falcon_Attack.variant	1208
-file	falcon_CS.variant	1178
-file	falcon_Escort.variant	1206
-file	falcon_LG_Attack.variant	1214
-file	falcon_LG_CS.variant	1188
-file	falcon_d_CS.variant	1200
-file	falcon_p_Strike.variant	1204
-file	falcon_xiv_Elite.variant	1201
-file	falcon_xiv_Escort.variant	1222
+falcon_Attack.variant	1208
+falcon_CS.variant	1178
+falcon_Escort.variant	1206
+falcon_LG_Attack.variant	1214
+falcon_LG_CS.variant	1188
+falcon_d_CS.variant	1200
+falcon_p_Strike.variant	1204
+falcon_xiv_Elite.variant	1201
+falcon_xiv_Escort.variant	1222

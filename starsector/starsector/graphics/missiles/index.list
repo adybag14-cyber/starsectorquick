@@ -1,80 +1,80 @@
-file	am_srm.png	785
-file	bomb_HE.png	3372
-file	bomblet0.png	328
-file	bomblet1.png	373
-file	bomblet2.png	332
-file	bomblet3.png	383
-file	breach_srm.png	3956
-file	canister_flak.png	354
-file	canister_flak2.png	478
-file	dragonfire.png	5026
-file	flechette_med.png	250
-file	flechette_sml.png	182
-file	heavy_mine.png	2770
-file	heavy_mine0.png	3018
-file	heavy_mine0_glow.png	8523
-file	heavy_mine1.png	6646
-file	heavy_mine2.png	18423
-file	heavy_mine2_glow.png	9601
-file	heavy_mine3.png	4532
-file	heavy_mine3_glow.png	5346
-file	heavy_mine4.png	5308
-file	heavy_mine4_glow.png	1758
-file	heavy_mine_glow.png	3307
-file	low_tech_torpedo.png	718
-file	missile_LRM.png	749
-file	missile_MIRV.png	1434
-file	missile_MIRV_empty.png	945
-file	missile_MIRV_warhead.png	397
-file	missile_SRM.png	439
-file	missile_annihilator.png	3378
-file	missile_gazer.png	1765
-file	missile_gorgon_dem.png	2041
-file	missile_harpoon.png	769
-file	missile_hydra_mdem.png	5018
-file	missile_hydra_mdem_warhead.png	4323
-file	missile_locust.png	327
-file	missile_sabot.png	536
-file	missile_sabot_empty.png	395
-file	missile_sabot_warhead.png	347
-file	missile_salamander.png	667
-file	missile_squall.png	407
-file	missile_torpedo.png	1114
-file	missile_torpedo_compact.png	807
-file	missile_vlrm.png	1140
-file	missile_vlrm_stage1.png	345
-file	missile_vlrm_stage2+1.png	773
-file	missile_vlrm_stage2.png	504
-file	missile_vlrm_stage3.png	562
-file	mortar_round.png	329
-file	phase_charge_base.png	662
-file	phase_charge_glow.png	14882
-file	pilum_stage2.png	486
-file	resonator_mrm.png	3938
-file	rift_torpedo.png	1838
-file	shell_gauss_cannon.png	485
-file	shell_hellbore.png	3168
-file	shell_hephag.png	479
-file	shell_large.png	3014
-file	shell_large_blue.png	3059
-file	shell_large_devastator.png	436
-file	shell_large_green.png	3046
-file	shell_large_yellow.png	470
-file	shell_medium.png	2945
-file	shell_medium_green.png	2988
-file	shell_medium_red.png	2994
-file	shell_round_large.png	404
-file	shell_round_large2.png	25751
-file	shell_round_lrg.png	14780
-file	shell_round_sml.png	273
-file	shell_small.png	2906
-file	shell_small_green.png	2922
-file	shell_small_yellow.png	2924
-file	stealth_mine.png	1810
-file	stealth_mine2.png	1689
-file	stealth_mine2_glow.png	2472
-file	stealth_mine3.png	2716
-file	stealth_mine3_glow.png	4470
-file	stealth_mine_glow.png	3955
-file	torpedo_guided.png	643
-file	torpedo_guided2.png	639
+am_srm.png	785
+bomb_HE.png	3372
+bomblet0.png	328
+bomblet1.png	373
+bomblet2.png	332
+bomblet3.png	383
+breach_srm.png	3956
+canister_flak.png	354
+canister_flak2.png	478
+dragonfire.png	5026
+flechette_med.png	250
+flechette_sml.png	182
+heavy_mine.png	2770
+heavy_mine0.png	3018
+heavy_mine0_glow.png	8523
+heavy_mine1.png	6646
+heavy_mine2.png	18423
+heavy_mine2_glow.png	9601
+heavy_mine3.png	4532
+heavy_mine3_glow.png	5346
+heavy_mine4.png	5308
+heavy_mine4_glow.png	1758
+heavy_mine_glow.png	3307
+low_tech_torpedo.png	718
+missile_LRM.png	749
+missile_MIRV.png	1434
+missile_MIRV_empty.png	945
+missile_MIRV_warhead.png	397
+missile_SRM.png	439
+missile_annihilator.png	3378
+missile_gazer.png	1765
+missile_gorgon_dem.png	2041
+missile_harpoon.png	769
+missile_hydra_mdem.png	5018
+missile_hydra_mdem_warhead.png	4323
+missile_locust.png	327
+missile_sabot.png	536
+missile_sabot_empty.png	395
+missile_sabot_warhead.png	347
+missile_salamander.png	667
+missile_squall.png	407
+missile_torpedo.png	1114
+missile_torpedo_compact.png	807
+missile_vlrm.png	1140
+missile_vlrm_stage1.png	345
+missile_vlrm_stage2+1.png	773
+missile_vlrm_stage2.png	504
+missile_vlrm_stage3.png	562
+mortar_round.png	329
+phase_charge_base.png	662
+phase_charge_glow.png	14882
+pilum_stage2.png	486
+resonator_mrm.png	3938
+rift_torpedo.png	1838
+shell_gauss_cannon.png	485
+shell_hellbore.png	3168
+shell_hephag.png	479
+shell_large.png	3014
+shell_large_blue.png	3059
+shell_large_devastator.png	436
+shell_large_green.png	3046
+shell_large_yellow.png	470
+shell_medium.png	2945
+shell_medium_green.png	2988
+shell_medium_red.png	2994
+shell_round_large.png	404
+shell_round_large2.png	25751
+shell_round_lrg.png	14780
+shell_round_sml.png	273
+shell_small.png	2906
+shell_small_green.png	2922
+shell_small_yellow.png	2924
+stealth_mine.png	1810
+stealth_mine2.png	1689
+stealth_mine2_glow.png	2472
+stealth_mine3.png	2716
+stealth_mine3_glow.png	4470
+stealth_mine_glow.png	3955
+torpedo_guided.png	643
+torpedo_guided2.png	639

@@ -1,30 +1,30 @@
-file	damage_burns48_0_base.png	6241
-file	damage_burns48_0_glow.png	2361
-file	damage_burns48_1_base.png	6349
-file	damage_burns48_1_glow.png	2301
-file	damage_cracks48_0_base.png	6631
-file	damage_cracks48_0_glow.png	2218
-file	damage_cracks48_1_base.png	6803
-file	damage_cracks48_1_glow.png	2412
-file	damage_decal_sheet_base.png	35228
-file	damage_decal_sheet_glow.png	15021
-file	damage_holes48_0_base.png	5452
-file	damage_holes48_0_glow.png	2288
-file	damage_holes48_1_base.png	5418
-file	damage_holes48_1_glow.png	2313
-file	dmod_overlay_hightech_heavy.png	215567
-file	dmod_overlay_hightech_light.png	131308
-file	dmod_overlay_hightech_medium.png	215565
-file	dmod_overlay_lowtech_heavy.png	219496
-file	dmod_overlay_lowtech_light.png	130470
-file	dmod_overlay_lowtech_medium.png	215397
-file	dmod_overlay_midline_heavy.png	222713
-file	dmod_overlay_midline_light.png	131509
-file	dmod_overlay_midline_medium.png	215780
-file	ship_damage_over0.png	125349
-file	ship_damage_over1.png	64490
-file	ship_damage_over3.png	137074
-file	ship_damage_over4.png	149248
-file	ship_damage_over5.png	119520
-file	ship_damage_over5_hightech.png	101174
-file	ship_damage_over5_midline.png	99988
+damage_burns48_0_base.png	6241
+damage_burns48_0_glow.png	2361
+damage_burns48_1_base.png	6349
+damage_burns48_1_glow.png	2301
+damage_cracks48_0_base.png	6631
+damage_cracks48_0_glow.png	2218
+damage_cracks48_1_base.png	6803
+damage_cracks48_1_glow.png	2412
+damage_decal_sheet_base.png	35228
+damage_decal_sheet_glow.png	15021
+damage_holes48_0_base.png	5452
+damage_holes48_0_glow.png	2288
+damage_holes48_1_base.png	5418
+damage_holes48_1_glow.png	2313
+dmod_overlay_hightech_heavy.png	215567
+dmod_overlay_hightech_light.png	131308
+dmod_overlay_hightech_medium.png	215565
+dmod_overlay_lowtech_heavy.png	219496
+dmod_overlay_lowtech_light.png	130470
+dmod_overlay_lowtech_medium.png	215397
+dmod_overlay_midline_heavy.png	222713
+dmod_overlay_midline_light.png	131509
+dmod_overlay_midline_medium.png	215780
+ship_damage_over0.png	125349
+ship_damage_over1.png	64490
+ship_damage_over3.png	137074
+ship_damage_over4.png	149248
+ship_damage_over5.png	119520
+ship_damage_over5_hightech.png	101174
+ship_damage_over5_midline.png	99988

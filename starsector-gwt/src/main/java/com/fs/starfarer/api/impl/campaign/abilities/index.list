@@ -1,22 +1,22 @@
-directory	ai
-file	BaseAbilityPlugin.java	8079
-file	BaseDurationAbility.java	8908
-file	BaseToggleAbility.java	7682
-file	DistressCallAbility.java	15118
-file	DistressCallResponseAssignmentAI.java	2321
-file	DistressCallResponsePirateAssignmentAI.java	1985
-file	DurationAbilityWithCost2.java	9030
-file	EmergencyBurnAbility.java	14212
-file	FractureJumpAbility.java	15002
-file	GenerateSlipsurgeAbility.java	22429
-file	GoDarkAbility.java	4959
-file	GraviticScanAbility.java	13582
-file	GraviticScanData.java	14976
-file	InterdictionPulseAbility.java	16005
-file	RemoteSurveyAbility.java	7116
-file	ReversePolarityToggle.java	6294
-file	ScavengeAbility.java	9282
-file	SensorBurstAbility.java	5489
-file	SustainedBurnAbility.java	8821
-file	ToggleAbilityWithCost.java	9292
-file	TransponderAbility.java	12155
+ai/	-1
+BaseAbilityPlugin.java	8079
+BaseDurationAbility.java	8908
+BaseToggleAbility.java	7682
+DistressCallAbility.java	15118
+DistressCallResponseAssignmentAI.java	2321
+DistressCallResponsePirateAssignmentAI.java	1985
+DurationAbilityWithCost2.java	9030
+EmergencyBurnAbility.java	14212
+FractureJumpAbility.java	15002
+GenerateSlipsurgeAbility.java	22429
+GoDarkAbility.java	4959
+GraviticScanAbility.java	13582
+GraviticScanData.java	14976
+InterdictionPulseAbility.java	16005
+RemoteSurveyAbility.java	7116
+ReversePolarityToggle.java	6294
+ScavengeAbility.java	9282
+SensorBurstAbility.java	5489
+SustainedBurnAbility.java	8821
+ToggleAbilityWithCost.java	9292
+TransponderAbility.java	12155

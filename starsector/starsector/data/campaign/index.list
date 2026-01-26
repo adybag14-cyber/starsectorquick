@@ -1,20 +1,20 @@
-directory	econ
-directory	procgen
-directory	terrain
-file	abilities.csv	4874
-file	bar_events.csv	2310
-file	channels.json	4006
-file	commodities.csv	5792
-file	events.json	3920
-file	industries.csv	14981
-file	market_conditions.csv	31461
-file	person_missions.csv	7649
-file	pings.json	3091
-file	reports.csv	43809
-file	rules.csv	2953798
-file	sim_opponents.csv	1176
-file	sim_opponents_dev.csv	3575
-file	special_items.csv	17292
-file	starmap.json	1139
-file	submarkets.csv	1782
-file	terrain.json	4012
+econ/	-1
+procgen/	-1
+terrain/	-1
+abilities.csv	4874
+bar_events.csv	2310
+channels.json	4006
+commodities.csv	5792
+events.json	3920
+industries.csv	14981
+market_conditions.csv	31461
+person_missions.csv	7649
+pings.json	3091
+reports.csv	43809
+rules.csv	2953798
+sim_opponents.csv	1176
+sim_opponents_dev.csv	3575
+special_items.csv	17292
+starmap.json	1139
+submarkets.csv	1782
+terrain.json	4012

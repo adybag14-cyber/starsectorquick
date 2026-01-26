@@ -1,24 +1,24 @@
-file	Alignment.java	140
-file	BaseTooltipCreator.java	428
-file	ButtonAPI.java	1669
-file	ButtonDelegate.java	146
-file	CustomPanelAPI.java	521
-file	CutStyle.java	137
-file	EventProgressBarAPI.java	153
-file	Fonts.java	1102
-file	HintPanelAPI.java	826
-file	IconGroupAPI.java	160
-file	IconRenderMode.java	185
-file	IntelUIAPI.java	857
-file	LabelAPI.java	1106
-file	MapFilterData.java	620
-file	MapParams.java	5465
-file	MarkerData.java	1907
-file	PositionAPI.java	1580
-file	ScrollPanelAPI.java	209
-file	SectorMapAPI.java	387
-file	TextFieldAPI.java	1118
-file	TooltipMakerAPI.java	14897
-file	UIComponentAPI.java	294
-file	UIPanelAPI.java	242
-file	ValueDisplayMode.java	146
+Alignment.java	140
+BaseTooltipCreator.java	428
+ButtonAPI.java	1669
+ButtonDelegate.java	146
+CustomPanelAPI.java	521
+CutStyle.java	137
+EventProgressBarAPI.java	153
+Fonts.java	1102
+HintPanelAPI.java	826
+IconGroupAPI.java	160
+IconRenderMode.java	185
+IntelUIAPI.java	857
+LabelAPI.java	1106
+MapFilterData.java	620
+MapParams.java	5465
+MarkerData.java	1907
+PositionAPI.java	1580
+ScrollPanelAPI.java	209
+SectorMapAPI.java	387
+TextFieldAPI.java	1118
+TooltipMakerAPI.java	14897
+UIComponentAPI.java	294
+UIPanelAPI.java	242
+ValueDisplayMode.java	146

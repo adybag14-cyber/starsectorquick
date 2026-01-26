@@ -1,11 +1,11 @@
-file	ActionStage.java	492
-file	AssembleStage.java	7678
-file	BaseRaidStage.java	6794
-file	OrganizeStage.java	2739
-file	PirateRaidActionStage.java	13287
-file	PirateRaidAssembleStage.java	554
-file	PirateRaidAssembleStage2.java	429
-file	RaidAssignmentAI.java	3090
-file	RaidIntel.java	26481
-file	ReturnStage.java	1183
-file	TravelStage.java	2860
+ActionStage.java	492
+AssembleStage.java	7678
+BaseRaidStage.java	6794
+OrganizeStage.java	2739
+PirateRaidActionStage.java	13287
+PirateRaidAssembleStage.java	554
+PirateRaidAssembleStage2.java	429
+RaidAssignmentAI.java	3090
+RaidIntel.java	26481
+ReturnStage.java	1183
+TravelStage.java	2860

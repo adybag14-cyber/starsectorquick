@@ -1,9 +1,9 @@
-file	hammerhead_Balanced.variant	1167
-file	hammerhead_DEM.variant	970
-file	hammerhead_Elite.variant	958
-file	hammerhead_LG_Balanced.variant	1102
-file	hammerhead_LG_Elite.variant	985
-file	hammerhead_Overdriven.variant	995
-file	hammerhead_Support.variant	1113
-file	hammerhead_Tutorial.variant	987
-file	hammerhead_d_CS.variant	996
+hammerhead_Balanced.variant	1167
+hammerhead_DEM.variant	970
+hammerhead_Elite.variant	958
+hammerhead_LG_Balanced.variant	1102
+hammerhead_LG_Elite.variant	985
+hammerhead_Overdriven.variant	995
+hammerhead_Support.variant	1113
+hammerhead_Tutorial.variant	987
+hammerhead_d_CS.variant	996

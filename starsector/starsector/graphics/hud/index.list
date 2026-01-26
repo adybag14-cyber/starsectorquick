@@ -1,28 +1,28 @@
-file	attention_required_16x.png	379
-file	bar_armor.png	357
-file	bar_energy.png	185
-file	bar_white.png	189
-file	cursor.png	377
-file	generic_icon.png	591
-file	grid_small.png	244
-file	holo_grid.png	1310
-file	holo_status.png	7561
-file	holo_target.png	6033
-file	leader_insignia.png	313
-file	line32x32.png	182
-file	line4x4.png	165
-file	line8x8.png	159
-file	minimap_bg2.png	639
-file	player_insignia.png	425
-file	player_status_bg2.png	1602
-file	point4x4.png	177
-file	selected_status_bg2.png	4107
-file	spotlight.png	4089
-file	spotlight_small.png	2169
-file	target_status_bg2.png	1422
-file	weapon_status_bg.png	2989
-file	weapons_bar_center.png	209
-file	weapons_bar_cooldown.png	744
-file	weapons_bar_end_left.png	250
-file	weapons_bar_end_right.png	264
-file	weapons_bar_single.png	292
+attention_required_16x.png	379
+bar_armor.png	357
+bar_energy.png	185
+bar_white.png	189
+cursor.png	377
+generic_icon.png	591
+grid_small.png	244
+holo_grid.png	1310
+holo_status.png	7561
+holo_target.png	6033
+leader_insignia.png	313
+line32x32.png	182
+line4x4.png	165
+line8x8.png	159
+minimap_bg2.png	639
+player_insignia.png	425
+player_status_bg2.png	1602
+point4x4.png	177
+selected_status_bg2.png	4107
+spotlight.png	4089
+spotlight_small.png	2169
+target_status_bg2.png	1422
+weapon_status_bg.png	2989
+weapons_bar_center.png	209
+weapons_bar_cooldown.png	744
+weapons_bar_end_left.png	250
+weapons_bar_end_right.png	264
+weapons_bar_single.png	292

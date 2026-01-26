@@ -1,18 +1,18 @@
-file	BaseHistorianOffer.java	2791
-file	BaseHistorianOfferCreator.java	4884
-file	BaseHistorianOfferWithLocation.java	6646
-file	BlueprintOfferCreator.java	2713
-file	DonationOffer.java	3859
-file	DonationOfferCreator.java	641
-file	FighterBlueprintOffer.java	1894
-file	FighterBlueprintOfferCreator.java	2139
-file	HistorianBackstory.java	15765
-file	HistorianBarEvent.java	11888
-file	HistorianBarEventCreator.java	781
-file	HistorianData.java	8444
-file	ShipBlueprintOffer.java	1842
-file	ShipBlueprintOfferCreator.java	2101
-file	SpecialItemOffer.java	1715
-file	SpecialItemOfferCreator.java	2612
-file	WeaponBlueprintOffer.java	1771
-file	WeaponBlueprintOfferCreator.java	2111
+BaseHistorianOffer.java	2791
+BaseHistorianOfferCreator.java	4884
+BaseHistorianOfferWithLocation.java	6646
+BlueprintOfferCreator.java	2713
+DonationOffer.java	3859
+DonationOfferCreator.java	641
+FighterBlueprintOffer.java	1894
+FighterBlueprintOfferCreator.java	2139
+HistorianBackstory.java	15765
+HistorianBarEvent.java	11888
+HistorianBarEventCreator.java	781
+HistorianData.java	8444
+ShipBlueprintOffer.java	1842
+ShipBlueprintOfferCreator.java	2101
+SpecialItemOffer.java	1715
+SpecialItemOfferCreator.java	2612
+WeaponBlueprintOffer.java	1771
+WeaponBlueprintOfferCreator.java	2111

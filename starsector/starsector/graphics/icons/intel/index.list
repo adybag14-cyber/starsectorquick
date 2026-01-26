@@ -1,62 +1,62 @@
-file	all.png	168
-file	analyze_entity.png	4036
-file	beacon_high.png	3502
-file	beacon_low.png	16759
-file	beacon_med.png	17080
-file	bounties.png	2444
-file	bounties2.png	18754
-file	cancel20.png	15779
-file	channels.png	758
-file	comm_sniffer.png	4008
-file	commodities.png	1469
-file	comms.png	1242
-file	comms64.png	2325
-file	comms_local64.png	3579
-file	comms_secure64.png	1682
-file	damage.png	4446
-file	damage2.png	18574
-file	discovered_entity.png	16333
-file	distress_call.png	3638
-file	events.png	938
-file	faction_conflict.png	1017
-file	faction_peace.png	673
-file	fleet_log.png	1295
-file	fleet_log2.png	1247
-file	fleet_log3.png	2735
-file	gain_credits.png	1208
-file	gate_active.png	6158
-file	gate_hauler.png	4474
-file	gate_inactive.png	3959
-file	hegemony_inspection.png	4454
-file	important.png	17821
-file	important20.png	1124
-file	important_accepted_mission20.png	1163
-file	income_report.png	2512
-file	investigation.png	16140
-file	luddic_shrine32.png	2897
-file	luddic_shrine64.png	10696
-file	missions.png	874
-file	multiple_new.png	17327
-file	new_planet_info.png	17631
-file	news.png	938
-file	news64.png	719
-file	peace.png	17749
-file	player.png	3266
-file	player_comm_sniffer.png	8617
-file	price_update.png	15794
-file	production_report.png	3324
-file	red_planet.png	3597
-file	repairs_finished.png	18808
-file	reputation.png	1295
-file	secure_comms.png	15414
-file	smuggling.png	17743
-file	stabilized_pods.png	3972
-file	star.png	1643
-file	stars.png	1805
-file	survey_planet.png	4273
-file	tradefleet_large.png	17974
-file	tradefleet_other.png	1760
-file	tradefleet_valuable.png	16902
-file	tradefleet_valuable_large.png	17357
-file	tutorial_mission.png	4023
-file	war.png	2208
+all.png	168
+analyze_entity.png	4036
+beacon_high.png	3502
+beacon_low.png	16759
+beacon_med.png	17080
+bounties.png	2444
+bounties2.png	18754
+cancel20.png	15779
+channels.png	758
+comm_sniffer.png	4008
+commodities.png	1469
+comms.png	1242
+comms64.png	2325
+comms_local64.png	3579
+comms_secure64.png	1682
+damage.png	4446
+damage2.png	18574
+discovered_entity.png	16333
+distress_call.png	3638
+events.png	938
+faction_conflict.png	1017
+faction_peace.png	673
+fleet_log.png	1295
+fleet_log2.png	1247
+fleet_log3.png	2735
+gain_credits.png	1208
+gate_active.png	6158
+gate_hauler.png	4474
+gate_inactive.png	3959
+hegemony_inspection.png	4454
+important.png	17821
+important20.png	1124
+important_accepted_mission20.png	1163
+income_report.png	2512
+investigation.png	16140
+luddic_shrine32.png	2897
+luddic_shrine64.png	10696
+missions.png	874
+multiple_new.png	17327
+new_planet_info.png	17631
+news.png	938
+news64.png	719
+peace.png	17749
+player.png	3266
+player_comm_sniffer.png	8617
+price_update.png	15794
+production_report.png	3324
+red_planet.png	3597
+repairs_finished.png	18808
+reputation.png	1295
+secure_comms.png	15414
+smuggling.png	17743
+stabilized_pods.png	3972
+star.png	1643
+stars.png	1805
+survey_planet.png	4273
+tradefleet_large.png	17974
+tradefleet_other.png	1760
+tradefleet_valuable.png	16902
+tradefleet_valuable_large.png	17357
+tutorial_mission.png	4023
+war.png	2208

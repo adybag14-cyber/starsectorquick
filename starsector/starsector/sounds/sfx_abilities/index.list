@@ -1,67 +1,67 @@
-file	ability-emergency_burn_01_start.ogg	84419
-file	ability-emergency_burn_02_loop.ogg	221644
-file	ability-emergency_burn_03_end.ogg	215342
-file	ability-go_dark_01_enabled.ogg	62338
-file	ability-go_dark_02_disabled.ogg	57254
-file	ability-interdiction_pulse_activate.ogg	71559
-file	ability-interdiction_pulse_charge.ogg	109644
-file	ability-interdiction_pulse_detected.ogg	20988
-file	ability-interdiction_pulse_hit.ogg	31268
-file	ability-neutrino_detector_disabled.ogg	29685
-file	ability-neutrino_detector_enabled.ogg	31533
-file	ability-neutrino_detector_ping_01.ogg	12346
-file	ability-neutrino_detector_ping_02.ogg	13155
-file	ability-neutrino_detector_ping_03.ogg	10972
-file	ability-neutrino_detector_ping_04.ogg	9104
-file	ability-neutrino_detector_ping_05.ogg	11696
-file	ability-neutrino_detector_ping_06.ogg	9602
-file	ability-neutrino_detector_ping_07.ogg	9470
-file	ability-neutrino_detector_ping_08.ogg	11784
-file	ability-neutrino_detector_ping_09.ogg	14913
-file	ability-neutrino_detector_ping_10.ogg	10331
-file	ability-sensor_burst_01.ogg	242627
-file	ability-sensor_burst_02.ogg	237609
-file	ability-sensor_burst_03.ogg	226789
-file	ability-sensor_burst_04.ogg	236099
-file	ability-sensor_burst_05.ogg	231249
-file	ability-sensor_burst_06.ogg	229428
-file	ability-sensor_burst_07.ogg	220352
-file	ability-sensor_burst_08.ogg	223436
-file	ability-slipstream_polarity_activate.ogg	23102
-file	ability-slipstream_polarity_deactivate.ogg	21270
-file	ability-slipstream_polarity_loop.ogg	44601
-file	ability-slipstream_surge_activate.ogg	63663
-file	ability-slipstream_surge_deactivate.ogg	30988
-file	ability-slipstream_surge_flight_loop.ogg	164401
-file	ability-sustained_burn_01.ogg	31667
-file	ability-sustained_burn_02.ogg	25271
-file	ability-sustained_burn_loop.ogg	170002
-file	ability-transponder_01_enabled.ogg	54048
-file	ability-transponder_02_disabled.ogg	27749
-file	ability-world-interdiction_pulse_activate.ogg	57241
-file	ability-world-interdiction_pulse_charge.ogg	64121
-file	ability_emergency_signal_01.ogg	99636
-file	ability_remote_survey_01.ogg	71366
-file	ability_scavenge_01.ogg	180691
-file	ability_world-emergency_burn_01_start.ogg	41343
-file	ability_world-emergency_burn_02_loop.ogg	389114
-file	ability_world-emergency_burn_03_end.ogg	164732
-file	ability_world-emergency_burn_activate.ogg	63590
-file	ability_world-go_dark_01.ogg	56321
-file	ability_world-go_dark_02.ogg	56365
-file	ability_world-go_dark_03.ogg	59795
-file	ability_world-go_dark_04.ogg	60223
-file	ability_world-go_dark_off_01.ogg	46806
-file	ability_world-go_dark_off_02.ogg	43184
-file	ability_world-go_dark_off_03.ogg	48148
-file	ability_world-go_dark_off_04.ogg	47905
-file	ability_world-sensor_burst_01.ogg	94495
-file	ability_world-sensor_burst_02.ogg	92513
-file	ability_world-sensor_burst_03.ogg	97749
-file	ability_world-sensor_burst_04.ogg	92087
-file	ability_world-sensor_burst_05.ogg	94984
-file	ability_world-sensor_burst_06.ogg	92204
-file	ability_world-sensor_burst_07.ogg	93932
-file	ability_world-sensor_burst_08.ogg	92439
-file	ability_world-sustained_burn_activate.ogg	12582
-file	ability_world-sustained_burn_deactivate.ogg	15401
+ability-emergency_burn_01_start.ogg	84419
+ability-emergency_burn_02_loop.ogg	221644
+ability-emergency_burn_03_end.ogg	215342
+ability-go_dark_01_enabled.ogg	62338
+ability-go_dark_02_disabled.ogg	57254
+ability-interdiction_pulse_activate.ogg	71559
+ability-interdiction_pulse_charge.ogg	109644
+ability-interdiction_pulse_detected.ogg	20988
+ability-interdiction_pulse_hit.ogg	31268
+ability-neutrino_detector_disabled.ogg	29685
+ability-neutrino_detector_enabled.ogg	31533
+ability-neutrino_detector_ping_01.ogg	12346
+ability-neutrino_detector_ping_02.ogg	13155
+ability-neutrino_detector_ping_03.ogg	10972
+ability-neutrino_detector_ping_04.ogg	9104
+ability-neutrino_detector_ping_05.ogg	11696
+ability-neutrino_detector_ping_06.ogg	9602
+ability-neutrino_detector_ping_07.ogg	9470
+ability-neutrino_detector_ping_08.ogg	11784
+ability-neutrino_detector_ping_09.ogg	14913
+ability-neutrino_detector_ping_10.ogg	10331
+ability-sensor_burst_01.ogg	242627
+ability-sensor_burst_02.ogg	237609
+ability-sensor_burst_03.ogg	226789
+ability-sensor_burst_04.ogg	236099
+ability-sensor_burst_05.ogg	231249
+ability-sensor_burst_06.ogg	229428
+ability-sensor_burst_07.ogg	220352
+ability-sensor_burst_08.ogg	223436
+ability-slipstream_polarity_activate.ogg	23102
+ability-slipstream_polarity_deactivate.ogg	21270
+ability-slipstream_polarity_loop.ogg	44601
+ability-slipstream_surge_activate.ogg	63663
+ability-slipstream_surge_deactivate.ogg	30988
+ability-slipstream_surge_flight_loop.ogg	164401
+ability-sustained_burn_01.ogg	31667
+ability-sustained_burn_02.ogg	25271
+ability-sustained_burn_loop.ogg	170002
+ability-transponder_01_enabled.ogg	54048
+ability-transponder_02_disabled.ogg	27749
+ability-world-interdiction_pulse_activate.ogg	57241
+ability-world-interdiction_pulse_charge.ogg	64121
+ability_emergency_signal_01.ogg	99636
+ability_remote_survey_01.ogg	71366
+ability_scavenge_01.ogg	180691
+ability_world-emergency_burn_01_start.ogg	41343
+ability_world-emergency_burn_02_loop.ogg	389114
+ability_world-emergency_burn_03_end.ogg	164732
+ability_world-emergency_burn_activate.ogg	63590
+ability_world-go_dark_01.ogg	56321
+ability_world-go_dark_02.ogg	56365
+ability_world-go_dark_03.ogg	59795
+ability_world-go_dark_04.ogg	60223
+ability_world-go_dark_off_01.ogg	46806
+ability_world-go_dark_off_02.ogg	43184
+ability_world-go_dark_off_03.ogg	48148
+ability_world-go_dark_off_04.ogg	47905
+ability_world-sensor_burst_01.ogg	94495
+ability_world-sensor_burst_02.ogg	92513
+ability_world-sensor_burst_03.ogg	97749
+ability_world-sensor_burst_04.ogg	92087
+ability_world-sensor_burst_05.ogg	94984
+ability_world-sensor_burst_06.ogg	92204
+ability_world-sensor_burst_07.ogg	93932
+ability_world-sensor_burst_08.ogg	92439
+ability_world-sustained_burn_activate.ogg	12582
+ability_world-sustained_burn_deactivate.ogg	15401

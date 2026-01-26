@@ -1,77 +1,77 @@
-directory	listeners
-file	AdmiralAIConfig.java	120
-file	AdmiralAIPlugin.java	133
-file	AmmoTrackerAPI.java	477
-file	ArmorGridAPI.java	2091
-file	AssignmentTargetAPI.java	267
-file	AutofireAIPlugin.java	1260
-file	BaseCombatLayeredRenderingPlugin.java	2096
-file	BaseEveryFrameCombatPlugin.java	552
-file	BaseHullMod.java	11114
-file	BattleCreationContext.java	4387
-file	BattleObjectiveAPI.java	657
-file	BattleObjectiveEffect.java	1391
-file	BeamAPI.java	1015
-file	BeamEffectPlugin.java	148
-file	BeamEffectPluginWithReset.java	130
-file	BoundsAPI.java	1162
-file	CollisionClass.java	418
-file	CollisionGridAPI.java	1668
-file	CombatAssignmentType.java	390
-file	CombatAsteroidAPI.java	184
-file	CombatEngineAPI.java	15429
-file	CombatEngineLayers.java	632
-file	CombatEnginePlugin.java	498
-file	CombatEntityAPI.java	1918
-file	CombatFleetManagerAPI.java	4960
-file	CombatLayeredRenderingPlugin.java	420
-file	CombatNebulaAPI.java	1094
-file	CombatReadinessPlugin.java	2746
-file	CombatTaskManagerAPI.java	1975
-file	CombatUIAPI.java	1328
-file	DamageAPI.java	1302
-file	DamageType.java	1665
-file	DamagingProjectileAPI.java	2533
-file	DeployedFleetMemberAPI.java	712
-file	DroneLauncherShipSystemAPI.java	591
-file	EmpArcEntityAPI.java	366
-file	EngagementResultAPI.java	774
-file	EngineSlotAPI.java	1538
-file	EveryFrameCombatPlugin.java	459
-file	EveryFrameWeaponEffectPlugin.java	318
-file	EveryFrameWeaponEffectPluginWithAdvanceAfter.java	372
-file	FighterLaunchBayAPI.java	1300
-file	FighterWingAPI.java	1329
-file	FluxTrackerAPI.java	1475
-file	FogOfWarAPI.java	453
-file	GuidedMissileAI.java	326
-file	HullModEffect.java	4394
-file	HullModFleetEffect.java	1295
-file	MissileAIPlugin.java	960
-file	MissileAPI.java	6233
-file	MissileRenderDataAPI.java	422
-file	MutableShipStatsAPI.java	10483
-file	MutableStat.java	9544
-file	MutableStatWithTempMods.java	3008
-file	OnFireEffectPlugin.java	175
-file	OnHitEffectPlugin.java	359
-file	PhaseCloakSystemAPI.java	170
-file	ProximityExplosionEffect.java	183
-file	ProximityFuseAIAPI.java	105
-file	ShieldAPI.java	2139
-file	ShipAIConfig.java	373
-file	ShipAIPlugin.java	888
-file	ShipAPI.java	17505
-file	ShipCommand.java	394
-file	ShipEngineControllerAPI.java	2476
-file	ShipHullSpecAPI.java	5863
-file	ShipSystemAIScript.java	338
-file	ShipSystemAPI.java	1363
-file	ShipSystemSpecAPI.java	5723
-file	ShipVariantAPI.java	4797
-file	ShipwideAIFlags.java	5117
-file	StatBonus.java	10064
-file	ViewportAPI.java	1519
-file	WeaponAPI.java	6978
-file	WeaponEffectPluginWithInit.java	124
-file	WeaponGroupAPI.java	609
+listeners/	-1
+AdmiralAIConfig.java	120
+AdmiralAIPlugin.java	133
+AmmoTrackerAPI.java	477
+ArmorGridAPI.java	2091
+AssignmentTargetAPI.java	267
+AutofireAIPlugin.java	1260
+BaseCombatLayeredRenderingPlugin.java	2096
+BaseEveryFrameCombatPlugin.java	552
+BaseHullMod.java	11114
+BattleCreationContext.java	4387
+BattleObjectiveAPI.java	657
+BattleObjectiveEffect.java	1391
+BeamAPI.java	1015
+BeamEffectPlugin.java	148
+BeamEffectPluginWithReset.java	130
+BoundsAPI.java	1162
+CollisionClass.java	418
+CollisionGridAPI.java	1668
+CombatAssignmentType.java	390
+CombatAsteroidAPI.java	184
+CombatEngineAPI.java	15429
+CombatEngineLayers.java	632
+CombatEnginePlugin.java	498
+CombatEntityAPI.java	1918
+CombatFleetManagerAPI.java	4960
+CombatLayeredRenderingPlugin.java	420
+CombatNebulaAPI.java	1094
+CombatReadinessPlugin.java	2746
+CombatTaskManagerAPI.java	1975
+CombatUIAPI.java	1328
+DamageAPI.java	1302
+DamageType.java	1665
+DamagingProjectileAPI.java	2533
+DeployedFleetMemberAPI.java	712
+DroneLauncherShipSystemAPI.java	591
+EmpArcEntityAPI.java	366
+EngagementResultAPI.java	774
+EngineSlotAPI.java	1538
+EveryFrameCombatPlugin.java	459
+EveryFrameWeaponEffectPlugin.java	318
+EveryFrameWeaponEffectPluginWithAdvanceAfter.java	372
+FighterLaunchBayAPI.java	1300
+FighterWingAPI.java	1329
+FluxTrackerAPI.java	1475
+FogOfWarAPI.java	453
+GuidedMissileAI.java	326
+HullModEffect.java	4394
+HullModFleetEffect.java	1295
+MissileAIPlugin.java	960
+MissileAPI.java	6233
+MissileRenderDataAPI.java	422
+MutableShipStatsAPI.java	10483
+MutableStat.java	9544
+MutableStatWithTempMods.java	3008
+OnFireEffectPlugin.java	175
+OnHitEffectPlugin.java	359
+PhaseCloakSystemAPI.java	170
+ProximityExplosionEffect.java	183
+ProximityFuseAIAPI.java	105
+ShieldAPI.java	2139
+ShipAIConfig.java	373
+ShipAIPlugin.java	888
+ShipAPI.java	17505
+ShipCommand.java	394
+ShipEngineControllerAPI.java	2476
+ShipHullSpecAPI.java	5863
+ShipSystemAIScript.java	338
+ShipSystemAPI.java	1363
+ShipSystemSpecAPI.java	5723
+ShipVariantAPI.java	4797
+ShipwideAIFlags.java	5117
+StatBonus.java	10064
+ViewportAPI.java	1519
+WeaponAPI.java	6978
+WeaponEffectPluginWithInit.java	124
+WeaponGroupAPI.java	609
