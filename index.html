@@ -3,7 +3,7 @@
 <head>
     <meta charset='UTF-8'>
     <title>Starsector 2 - GitHub Pages Deployment</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js' crossorigin></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -51,9 +51,8 @@
             log('Initializing CheerpJ 4.2 Runtime...', '#00d9ff');
             
             try {
-                // On GitHub Pages, /app/ seems to point to the domain root.
-                // So the project root is at /app/starsectorquick/
-                const virtualRoot = '/app/starsectorquick';
+                // Use virtual paths relative to /app/
+                const virtualRoot = '/app';
                 
                 await cheerpjInit({ 
                     version: 8, 
@@ -83,6 +82,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
+                // Use relative virtual paths from /app/
                 const cp = jarFiles.map(j => `${virtualRoot}/jars/${j}`).join(':') + `:${virtualRoot}/starsector/starsector/`;
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
