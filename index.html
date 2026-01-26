@@ -58,16 +58,16 @@
                     version: 8, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${baseUrl}build/final/wasm-modules/`,
+                        `-Djava.library.path=/app/build/final/wasm-modules/`,
                         `-Duser.dir=/app/starsector/starsector/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                     ],
                     libraries: {
-                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `/app/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/app/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/app/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/app/build/final/wasm-modules/unsafe.wasm`
                     }
                 });
 
@@ -82,8 +82,8 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Use FULL HTTP URLs for JARs
-                const cp = jarFiles.map(j => `${baseUrl}jars/${j}`).join(':') + `:${baseUrl}starsector/starsector/`;
+                const cp = jarFiles.map(j => `/app/jars/${j}`).join(':') + `:/app/starsector/starsector/`;
+                log(`ClassPath: ${cp}`, '#888');
 
                 log('Starting Main Class: com.fs.starfarer.Starfarer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
