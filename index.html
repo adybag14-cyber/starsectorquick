@@ -52,8 +52,7 @@
             
             try {
                 const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
-                // Correctly derive domain root URL
-                const domainRootUrl = window.location.origin + '/';
+                // GitHub Pages project root
                 const projectRoot = '/starsectorquick/';
                 
                 await cheerpjInit({ 
@@ -73,7 +72,7 @@
                         'libsun_misc_Unsafe.so': `${projectRoot}build/final/wasm-modules/unsafe.wasm`
                     },
                     mounts: [
-                        { type: 'http', path: '/', url: domainRootUrl }
+                        { type: 'http', path: projectRoot, url: baseUrl }
                     ]
                 });
 
@@ -88,7 +87,7 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                // Construct ClassPath starting from project root
+                // Construct ClassPath starting from project root prefix
                 const cp = [`${projectRoot}`, `${projectRoot}starsector/starsector/`].concat(jarFiles.map(j => `${projectRoot}jars/${j}`)).join(':');
                 log('Final ClassPath: ' + cp);
 
