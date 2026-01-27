@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v85 - JS PATCH)</h1>
+        <h1>🚀 Starsector 2 Web (v85 - JS PATCH FIXED)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -53,7 +53,7 @@
             try {
                 const origin = 'https://adybag14-cyber.github.io/';
                 const projectUrl = origin + 'starsectorquick/';
-                const baseUrl = window.location.href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+                const baseUrl = window.location.origin + projectUrl.replace(origin, '/');
                 
                 await cheerpjInit({ 
                     version: 17, 
@@ -78,7 +78,7 @@
 
                 log('Fetching and patching settings.json...', '#ff9f43');
                 const fetchText = async (path) => {
-                    const r = await fetch(baseUrl + path);
+                    const r = await fetch(projectUrl + path);
                     if (!r.ok) throw new Error(`Failed to fetch ${path}: ${r.status}`);
                     return await r.text();
                 };
@@ -86,7 +86,6 @@
                 let settingsText = await fetchText('starsector/starsector/data/config/settings.json');
                 const log4jProps = await fetchText('starsector/starsector/log4j.properties');
 
-                // JS Patching Logic: Append missing keys before the last closing brace
                 const missingKeys = [
                     '"autosaveEnabledByDefault": true,',
                     '"autosaveFeatureEnabled": true,',
@@ -99,20 +98,14 @@
                     '"windowLocationY": 0,'
                 ];
                 
-                // Find last brace and insert
                 const lastBrace = settingsText.lastIndexOf('}');
                 if (lastBrace !== -1) {
                     settingsText = settingsText.substring(0, lastBrace) + 
-                                   "
-    // --- WEB PATCH START ---
-    " + 
-                                   missingKeys.join("
-    ") + 
-                                   "
-    // --- WEB PATCH END ---
-" + 
+                                   "\n    // --- WEB PATCH START ---\n    " + 
+                                   missingKeys.join("\n    ") + 
+                                   "\n    // --- WEB PATCH END ---\n" + 
                                    settingsText.substring(lastBrace);
-                    log('Settings patched via JS string manipulation.');
+                    log('Settings patched via JS.');
                 }
 
                 log('Mounting Display to Canvas...', '#00ff88');
