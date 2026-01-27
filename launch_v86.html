@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v86 - JS PATCH FIX)</h1>
+        <h1>🚀 Starsector 2 Web (v86 - FLAT STRING PATCH)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -97,20 +97,12 @@
                     '"windowLocationY": 0'
                 ];
                 
-                // Robust injection: find the last '}' and replace it
                 text = text.trim();
                 if (text.endsWith('}')) {
                     text = text.substring(0, text.length - 1);
-                    // Add a comma if needed (relaxed JSON might not have it)
                     if (!text.trim().endsWith(',')) text += ',';
-                    text += '
-    // --- WEB PATCH ---
-    ' + keys.join(',
-    ') + '
-}';
+                    text += '\n    // --- WEB PATCH ---\n    ' + keys.join(',\n    ') + '\n}';
                     log('Settings patched successfully.');
-                } else {
-                    log('Warning: settings.json does not end with }', '#ff9f43');
                 }
 
                 log('Mounting Display to Canvas...', '#00ff88');
