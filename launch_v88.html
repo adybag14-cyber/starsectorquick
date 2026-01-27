@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v88 - SMART PATCH)</h1>
+        <h1>🚀 Starsector 2 Web (v88 - SMART PATCH FIXED)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -100,20 +100,16 @@
                     let additions = [];
                     for (const p of patchKeys) {
                         if (text.indexOf('"' + p.key + '"') === -1) {
-                            additions.push(`"${p.key}": ${p.val}`);
-                            log(`Patching missing key: ${p.key}`);
+                            additions.push('"' + p.key + '": ' + p.val);
+                            log('Patching missing key: ' + p.key);
                         }
                     }
                     
                     if (additions.length > 0) {
-                        patchedText = pre + '
-    // --- WEB PATCH ---
-    ' + additions.join(',
-    ') + '
-}';
+                        patchedText = pre + '\n    // --- WEB PATCH ---\n    ' + additions.join(',\n    ') + '\n}';
                         log('Settings patched successfully.');
                     } else {
-                        log('No patching needed, all keys found.');
+                        log('No patching needed.');
                     }
                 }
 
