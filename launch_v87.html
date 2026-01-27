@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v87 - MINIMAL PATCH)</h1>
+        <h1>🚀 Starsector 2 Web (v87 - MINIMAL PATCH FIXED)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -85,17 +85,12 @@
                 let text = await fetchText('starsector/starsector/data/config/settings.json');
                 const log4jProps = await fetchText('starsector/starsector/log4j.properties');
 
-                // Minimal reliable patch
                 text = text.trim();
                 const lastBrace = text.lastIndexOf('}');
                 if (lastBrace !== -1) {
                     let pre = text.substring(0, lastBrace).trim();
                     if (!pre.endsWith(',')) pre += ',';
-                    text = pre + '
-  "autosaveEnabledByDefault": true,
-  "autosaveFeatureEnabled": true,
-  "devMode": true
-}';
+                    text = pre + '\n  "autosaveEnabledByDefault": true,\n  "autosaveFeatureEnabled": true,\n  "devMode": true\n}';
                     log('Settings patched (Minimal).');
                 }
 
