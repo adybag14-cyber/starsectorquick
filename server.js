@@ -21,7 +21,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
   
   let url = req.url.split('?')[0];
-  let filePath = path.join(root, url === '/' ? 'STARSECTOR_V6J_FINAL_WORKING.html' : url);
+  let filePath = path.join(root, url === '/' ? 'launch.html' : url);
   
   const ext = path.extname(filePath);
   let ctx = 'text/html';
@@ -30,21 +30,57 @@ const server = http.createServer((req, res) => {
   if(ext === '.wasm') ctx = 'application/wasm';
   if(ext === '.jar') ctx = 'application/java-archive';
   if(ext === '.json') ctx = 'application/json';
+  if(ext === '.png') ctx = 'image/png';
+  if(ext === '.jpg') ctx = 'image/jpeg';
+  if(ext === '.svg') ctx = 'image/svg+xml';
   
-  fs.readFile(filePath, (err, content) => {
+  fs.stat(filePath, (err, stats) => {
     if(err) {
-      // Ignore favicon.ico 404s to keep console clean
       if (req.url === '/favicon.ico') {
-        res.writeHead(204); // No content
+        res.writeHead(204);
         res.end();
         return;
       }
       console.log('404:', req.url, '->', filePath);
       res.writeHead(404, {'Content-Type': 'text/html'});
       res.end('<h1>404 Not Found</h1><p>' + filePath + '</p>');
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      console.log('DIR:', req.url, '->', filePath);
+      res.writeHead(404, {'Content-Type': 'text/html'});
+      res.end('<h1>404 Not Found (Directory)</h1>');
+      return;
+    }
+
+    // Range Support
+    const range = req.headers.range;
+    const fileSize = stats.size;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      const file = fs.createReadStream(filePath, {start, end});
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': ctx,
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+      // console.log('206:', req.url); // Too spammy for large files
     } else {
-      res.writeHead(200, {'Content-Type': ctx});
-      res.end(content);
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': ctx,
+        'Accept-Ranges': 'bytes', // Advertise support
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
       console.log('200:', req.url, '(', ctx, ')');
     }
   });

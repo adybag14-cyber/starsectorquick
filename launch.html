@@ -51,25 +51,38 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 8)...', '#00d9ff');
             
             try {
-                const origin = 'https://adybag14-cyber.github.io/';
-                const projectUrl = origin + 'starsectorquick/';
-                const dataUrl = projectUrl + 'starsector/starsector/';
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
+                // If local, we are at root. If GitHub, we are in /starsectorquick/
+                const projectPath = isLocal ? '' : 'starsectorquick/'; 
+                const fullAppPath = `/app/${projectPath}`;
+                
+                // Log for debugging
+                log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
+                log(`Origin: ${origin}`, '#888');
+                log(`App Path: ${fullAppPath}`, '#888');
+
+                const dataUrl = origin + projectPath + 'starsector/starsector/';
                 
                 await cheerpjInit({ 
-                    version: 8, 
+                    version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=/app/starsectorquick/build/final/wasm-modules/`,
+                        `-Dlog4j.configuration=file:/files/log4j.properties`,
+                        `-Djava.library.path=${fullAppPath}build/final/wasm-modules/`,
                         `-Duser.dir=/files/`,
                         `-Dcom.fs.starfarer.settings.linux=true`,
                         `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
                         `-Dcom.fs.starfarer.settings.paths.logs=/files/`
                     ],
                     libraries: {
-                        'libGL.so.1': `/app/starsectorquick/build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `/app/starsectorquick/build/final/wasm-modules/unsafe.wasm`
+                        'libGL.so.1': `${fullAppPath}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${fullAppPath}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${fullAppPath}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${fullAppPath}build/final/wasm-modules/unsafe.wasm`,
+                        'libnpefix.so': `${fullAppPath}build/final/wasm-modules/npe_fix.js`,
+                        'libnpefix': `${fullAppPath}build/final/wasm-modules/npe_fix.js`,
+                        'npefix': `${fullAppPath}build/final/wasm-modules/npe_fix.js`
                     },
                     mounts: [
                         { type: 'http', path: '/app/', url: origin },
@@ -81,6 +94,7 @@
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
+                    'fixer.jar',
                     'stubs.jar',
                     'resources.jar',
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
@@ -90,16 +104,16 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).concat([
-                    '/files/',
+                const cp = [`/files/`].concat(jarFiles.map(j => `${fullAppPath}jars/${j}`)).concat([
+                    `${fullAppPath}jars/`,
                     '/files/data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
+                log('Starting Main Class: Fixer', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('Fixer', cp, '-nosound');
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {
