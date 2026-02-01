@@ -1,9 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
 
 async function simpleTest() {
   console.log('\n=== SIMPLE PLAYWRIGHT TEST ===');
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const pageUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const outputDir = path.join(__dirname, 'test_output');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   let allMessages = [];
   page.on('console', msg => {
@@ -24,7 +30,7 @@ async function simpleTest() {
 
   try {
     console.log('\nLoading page...');
-    await page.goto('http://localhost:8080/STARSECTOR_V6J_FINAL_WORKING.html', { waitUntil: 'domcontentloaded', timeout: 10000 });
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
     console.log('Page loaded!\n');
 
     await page.waitForTimeout(2000);
@@ -43,6 +49,7 @@ async function simpleTest() {
     console.error('ERROR:', e.message);
   }
 
+  await page.screenshot({ path: path.join(outputDir, 'simple_test_screenshot.png'), fullPage: true });
   await browser.close();
   console.log('\n=== TEST DONE ===');
 }

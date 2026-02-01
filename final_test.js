@@ -1,5 +1,6 @@
-const { chromium } = require('playwright');
 const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
 
 async function finalTest() {
   console.log('\n' + '='.repeat(80));
@@ -7,7 +8,11 @@ async function finalTest() {
   console.log('='.repeat(80));
 
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const pageUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const outputDir = path.join(__dirname, 'test_output');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   let allLogs = [];
   let allErrors = [];
@@ -30,7 +35,7 @@ async function finalTest() {
 
   try {
     console.log('\n📄 Step 1: Loading page...');
-    await page.goto('http://localhost:8080/STARSECTOR_V6J_FINAL_WORKING.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
     console.log('✅ Page loaded successfully!\n');
 
     await page.waitForTimeout(2000);
@@ -95,8 +100,9 @@ async function finalTest() {
         console.log('--- END FINAL LOGS ---\n');
 
         // Screenshot
-        await page.screenshot({ path: 'starsector_final_screenshot.png', fullPage: true });
-        console.log('📸 Screenshot saved: starsector_final_screenshot.png\n');
+        const screenshotPath = path.join(outputDir, 'starsector_final_screenshot.png');
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        console.log(`📸 Screenshot saved: ${screenshotPath}\n`);
       } else {
         console.log('❌ Cannot launch - button is still disabled');
       }
@@ -124,7 +130,7 @@ async function finalTest() {
 
   // Save logs to file
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const logFile = `starsector_test_${timestamp}.log`;
+  const logFile = path.join(outputDir, `starsector_test_${timestamp}.log`);
   fs.writeFileSync(logFile, JSON.stringify({
     allLogs,
     allErrors,
