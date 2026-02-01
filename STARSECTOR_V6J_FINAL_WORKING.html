@@ -233,8 +233,13 @@
             ];
             
             const baseUrl = `${window.location.origin}/`;
+            const urlParams = new URLSearchParams(window.location.search);
+            const javaVersionParam = urlParams.get('java');
+            const javaVersion = javaVersionParam ? Number.parseInt(javaVersionParam, 10) : 8;
+            log(`☕ Using Java runtime v${Number.isNaN(javaVersion) ? '8' : javaVersion}`, 'info');
             const jarBaseCandidates = [
                 `${baseUrl}jars/`,
+                `${baseUrl}`,
                 `${baseUrl}starsector/starsector/`
             ];
             let jarBaseUrl = jarBaseCandidates[0];
