@@ -32,6 +32,16 @@ Use `javap` to list `native` methods in the Starsector jars. This helps when wir
 
 The output is stored in `test_output/native_methods.txt` by default.
 
+## Generate JNI export names for Emscripten
+
+If you need to drive Emscripten exports during native builds, generate JNI export names from the same jar:
+
+```
+./scripts/generate_jni_exports.sh /path/to/starfarer_obf.jar
+```
+
+The output is stored in `test_output/jni_exports.txt` by default and can be fed into `-sEXPORTED_FUNCTIONS=@jni_exports.txt` during Emscripten link steps.
+
 ## Integration notes
 
 - The launcher mounts `/app` as an overlay filesystem and expects `native/linux` and `native` folders to exist for LWJGL native lookups.
