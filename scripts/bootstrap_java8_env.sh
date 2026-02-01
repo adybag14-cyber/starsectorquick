@@ -12,8 +12,9 @@ GAME_ZIP_URL=${GAME_ZIP_URL:-"https://f005.backblazeb2.com/file/fractalsoftworks
 GL4ES_REPO=${GL4ES_REPO:-"https://github.com/ptitSeb/gl4es.git"}
 EMSDK_REPO=${EMSDK_REPO:-"https://github.com/emscripten-core/emsdk.git"}
 CFR_URL=${CFR_URL:-"https://www.benf.org/other/cfr/cfr-${CFR_VERSION}.jar"}
-JAVA8_JDK_URL=${JAVA8_JDK_URL:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jdk.el.x86_64.tar.xz"}
-JAVA8_JRE_URL=${JAVA8_JRE_URL:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jre.el.x86_64.tar.xz"}
+JAVA8_JDK_URLS=${JAVA8_JDK_URLS:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jdk.el.x86_64.tar.xz https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk"}
+JAVA8_JRE_URLS=${JAVA8_JRE_URLS:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jre.el.x86_64.tar.xz https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/jre/hotspot/normal/eclipse?project=jre"}
+JAVA8_SOURCES_URLS=${JAVA8_SOURCES_URLS:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-1.8.0.482.b08-1.src.zip https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/sources/hotspot/normal/eclipse?project=jdk"}
 ALLOW_MISSING=${ALLOW_MISSING:-0}
 
 mkdir -p "$TOOLS_DIR" "$GAME_DIR"
@@ -57,7 +58,7 @@ fi
 
 fetch "$CFR_URL" "$TOOLS_DIR/cfr.jar"
 
-if ! fetch_any "$TOOLS_DIR/java8-jdk.tar.xz" "$JAVA8_JDK_URL"; then
+if ! fetch_any "$TOOLS_DIR/java8-jdk.tar.xz" $JAVA8_JDK_URLS; then
   echo "Warning: failed to download Java 8 JDK from configured URL." >&2
   if [[ "$ALLOW_MISSING" != "1" ]]; then
     echo "Set ALLOW_MISSING=1 to continue without the Java 8 JDK." >&2
@@ -65,8 +66,12 @@ if ! fetch_any "$TOOLS_DIR/java8-jdk.tar.xz" "$JAVA8_JDK_URL"; then
   fi
 fi
 
-if ! fetch_any "$TOOLS_DIR/java8-jre.tar.xz" "$JAVA8_JRE_URL"; then
+if ! fetch_any "$TOOLS_DIR/java8-jre.tar.xz" $JAVA8_JRE_URLS; then
   echo "Warning: failed to download Java 8 JRE from configured URL." >&2
+fi
+
+if ! fetch_any "$TOOLS_DIR/java8-sources.zip" $JAVA8_SOURCES_URLS; then
+  echo "Warning: failed to download Java 8 sources from configured URL." >&2
 fi
 
 if [[ ! -d "$GAME_DIR/starsector" ]]; then
