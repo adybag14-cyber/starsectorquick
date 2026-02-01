@@ -1,32 +1,19 @@
-const fs = require('fs');
-const path = require('path');
 const { chromium } = require('playwright');
 
 async function runGameCheck() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
-  const consoleLines = [];
 
   page.on('console', msg => {
-    const line = `[CONSOLE ${msg.type()}] ${msg.text()}`;
-    consoleLines.push(line);
-    console.log(line);
+    console.log(`[CONSOLE ${msg.type()}] ${msg.text()}`);
   });
   page.on('pageerror', error => {
-    const line = `[PAGE ERROR] ${error.message}`;
-    consoleLines.push(line);
-    console.error(line);
+    console.error(`[PAGE ERROR] ${error.message}`);
   });
 
-  const baseUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
-  const javaVersion = process.env.GAME_JAVA_VERSION;
-  const url = javaVersion
-    ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}java=${javaVersion}`
-    : baseUrl;
+  const url = process.env.GAME_URL || 'http://localhost:8000/STARSECTOR_V6J_FINAL_WORKING.html';
   const maxAttempts = Number.parseInt(process.env.PW_ATTEMPTS || '3', 10);
-  const outputDir = path.join(process.cwd(), 'test_output');
-  fs.mkdirSync(outputDir, { recursive: true });
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     console.log(`Loading ${url} (attempt ${attempt}/${maxAttempts})...`);
@@ -58,16 +45,9 @@ async function runGameCheck() {
     console.log('\n--- LOG OUTPUT ---');
     console.log(logText);
 
-    const screenshotPath = path.join(outputDir, `playwright_game_attempt_${attempt}.png`);
+    const screenshotPath = `test_output/playwright_game_attempt_${attempt}.png`;
     await page.screenshot({ path: screenshotPath, fullPage: true });
     console.log(`Screenshot saved to ${screenshotPath}`);
-
-    const logPath = path.join(outputDir, `playwright_game_attempt_${attempt}.log`);
-    fs.writeFileSync(
-      logPath,
-      `${consoleLines.join('\n')}\n\n--- PAGE LOG ---\n${logText}\n`,
-    );
-    console.log(`Log saved to ${logPath}`);
 
     if (
       !logText.includes('Missing') &&

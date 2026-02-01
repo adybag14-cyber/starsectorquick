@@ -290,13 +290,12 @@
                 return;
             }
 
-            const classpaths = jarFiles.map(j => `/app/${j}`);
-            const jarUrls = jarFiles.map(j => `${jarBaseUrl}${j}`);
+            const classpaths = jarFiles.map(j => `${jarBaseUrl}${j}`);
             classPathString = classpaths.join(':');
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
 
             const missingJars = [];
-            await Promise.all(jarUrls.map(async (jarUrl) => {
+            await Promise.all(classpaths.map(async (jarUrl) => {
                 try {
                     const response = await fetch(jarUrl, { method: 'HEAD' });
                     if (!response.ok) missingJars.push(jarUrl);
@@ -321,7 +320,7 @@
             
             try {
                 await cheerpjInit({
-                    version: Number.isNaN(javaVersion) ? 8 : javaVersion,
+                    version: 17,
                     fileSystem: {
                         mountPoint: '/app',
                         type: 'overlay',
@@ -329,23 +328,7 @@
                         upper: { type: 'indexedDB', name: 'starsector_v6j' }
                     },
                     javaProperties: [
-                        'java.library.path=/app/native/linux:/app/native',
-                        'org.lwjgl.librarypath=/app/native/linux:/app/native',
-                        'user.dir=/app',
-                        'user.home=/app',
-                        'java.io.tmpdir=/tmp',
-                        'fs.game.dir=/app',
-                        'legacyLauncher=true',
-                        'log4j.debug=true',
-                        '-Dlog4j.configuration=/app/console_log4j.properties',
-                        '-Dcom.fs.starfarer.settings.linux=true',
-                        '-Dcom.fs.starfarer.settings.paths.logs=.',
-                        '-Dcom.fs.starfarer.settings.paths.saves=./saves',
-                        '-Dcom.fs.starfarer.settings.paths.screenshots=./screenshots',
-                        '-Dcom.fs.starfarer.settings.paths.mods=./mods'
-                    ],
-                    arguments: [
-                        '-XX:-ShowCodeDetailsInExceptionMessages'
+                        `java.library.path=${baseUrl}build/final/wasm-modules`
                     ],
                     classPaths: classpaths,
                     libraries: {
