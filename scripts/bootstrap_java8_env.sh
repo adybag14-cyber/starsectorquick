@@ -13,6 +13,8 @@ GL4ES_REPO=${GL4ES_REPO:-"https://github.com/ptitSeb/gl4es.git"}
 EMSDK_REPO=${EMSDK_REPO:-"https://github.com/emscripten-core/emsdk.git"}
 CFR_URL=${CFR_URL:-"https://www.benf.org/other/cfr/cfr-${CFR_VERSION}.jar"}
 JAVA8_JDK_URL=${JAVA8_JDK_URL:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jdk.el.x86_64.tar.xz"}
+JAVA8_JRE_URL=${JAVA8_JRE_URL:-"https://developers.redhat.com/content-gateway/file/openjdk/1.8.0.482/java-1.8.0-openjdk-portable-1.8.0.482.b08-1.portable.jre.el.x86_64.tar.xz"}
+ALLOW_MISSING=${ALLOW_MISSING:-0}
 
 mkdir -p "$TOOLS_DIR" "$GAME_DIR"
 
@@ -24,7 +26,19 @@ fetch() {
     return 0
   fi
   echo "Downloading $url -> $out"
-  curl -L --fail "$url" -o "$out"
+  curl -L --fail -A "Mozilla/5.0" "$url" -o "$out"
+}
+
+fetch_any() {
+  local out="$1"
+  shift
+  local url
+  for url in "$@"; do
+    if fetch "$url" "$out"; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 if [[ ! -d "$GL4ES_DIR/.git" ]]; then
@@ -43,7 +57,17 @@ fi
 
 fetch "$CFR_URL" "$TOOLS_DIR/cfr.jar"
 
-fetch "$JAVA8_JDK_URL" "$TOOLS_DIR/java8-jdk.tar.xz"
+if ! fetch_any "$TOOLS_DIR/java8-jdk.tar.xz" "$JAVA8_JDK_URL"; then
+  echo "Warning: failed to download Java 8 JDK from configured URL." >&2
+  if [[ "$ALLOW_MISSING" != "1" ]]; then
+    echo "Set ALLOW_MISSING=1 to continue without the Java 8 JDK." >&2
+    exit 1
+  fi
+fi
+
+if ! fetch_any "$TOOLS_DIR/java8-jre.tar.xz" "$JAVA8_JRE_URL"; then
+  echo "Warning: failed to download Java 8 JRE from configured URL." >&2
+fi
 
 if [[ ! -d "$GAME_DIR/starsector" ]]; then
   fetch "$GAME_ZIP_URL" "$TOOLS_DIR/starsector_java8.zip"
