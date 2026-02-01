@@ -235,7 +235,6 @@
             const baseUrl = `${window.location.origin}/`;
             const jarBaseCandidates = [
                 `${baseUrl}jars/`,
-                `${baseUrl}`,
                 `${baseUrl}starsector/starsector/`
             ];
             let jarBaseUrl = jarBaseCandidates[0];
@@ -286,13 +285,12 @@
                 return;
             }
 
-            const classpaths = jarFiles.map(j => `/app/${j}`);
-            const jarUrls = jarFiles.map(j => `${jarBaseUrl}${j}`);
+            const classpaths = jarFiles.map(j => `${jarBaseUrl}${j}`);
             classPathString = classpaths.join(':');
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
 
             const missingJars = [];
-            await Promise.all(jarUrls.map(async (jarUrl) => {
+            await Promise.all(classpaths.map(async (jarUrl) => {
                 try {
                     const response = await fetch(jarUrl, { method: 'HEAD' });
                     if (!response.ok) missingJars.push(jarUrl);
@@ -325,19 +323,7 @@
                         upper: { type: 'indexedDB', name: 'starsector_v6j' }
                     },
                     javaProperties: [
-                        `java.library.path=${baseUrl}build/final/wasm-modules`,
-                        'user.dir=/app',
-                        'user.home=/app',
-                        'java.io.tmpdir=/tmp',
-                        '-Dlog4j.configuration=/app/console_log4j.properties',
-                        '-Dcom.fs.starfarer.settings.linux=true',
-                        '-Dcom.fs.starfarer.settings.paths.logs=/app/logs',
-                        '-Dcom.fs.starfarer.settings.paths.saves=/app/saves',
-                        '-Dcom.fs.starfarer.settings.paths.screenshots=/app/screenshots',
-                        '-Dcom.fs.starfarer.settings.paths.mods=/app/mods'
-                    ],
-                    arguments: [
-                        '-XX:-ShowCodeDetailsInExceptionMessages'
+                        `java.library.path=${baseUrl}build/final/wasm-modules`
                     ],
                     classPaths: classpaths,
                     libraries: {

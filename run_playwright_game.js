@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { chromium } = require('playwright');
 
 async function runGameCheck() {
@@ -14,10 +12,8 @@ async function runGameCheck() {
     console.error(`[PAGE ERROR] ${error.message}`);
   });
 
-  const url = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const url = process.env.GAME_URL || 'http://localhost:8000/STARSECTOR_V6J_FINAL_WORKING.html';
   const maxAttempts = Number.parseInt(process.env.PW_ATTEMPTS || '3', 10);
-  const outputDir = path.join(process.cwd(), 'test_output');
-  fs.mkdirSync(outputDir, { recursive: true });
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     console.log(`Loading ${url} (attempt ${attempt}/${maxAttempts})...`);
@@ -49,7 +45,7 @@ async function runGameCheck() {
     console.log('\n--- LOG OUTPUT ---');
     console.log(logText);
 
-    const screenshotPath = path.join(outputDir, `playwright_game_attempt_${attempt}.png`);
+    const screenshotPath = `test_output/playwright_game_attempt_${attempt}.png`;
     await page.screenshot({ path: screenshotPath, fullPage: true });
     console.log(`Screenshot saved to ${screenshotPath}`);
 
