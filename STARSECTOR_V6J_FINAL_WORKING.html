@@ -315,7 +315,13 @@
             
             try {
                 await cheerpjInit({
-                    version: 8,
+                    version: 17,
+                    fileSystem: {
+                        mountPoint: '/app',
+                        type: 'overlay',
+                        lower: { type: 'http', url: baseUrl },
+                        upper: { type: 'indexedDB', name: 'starsector_v6j' }
+                    },
                     javaProperties: [
                         `java.library.path=${baseUrl}build/final/wasm-modules`
                     ],
@@ -329,16 +335,7 @@
                     print: function(msg) {
                         log('[CheerpJ] ' + msg, 'info');
                     },
-                    memoryPages: 4096,
-                    preloadResources: {
-                        '/lt/8/jre/lib/cheerpj-awt.jar': [0, 131072],
-                        '/lt/8/jre/lib/rt.jar': [0, 131072, 1310720, 1572864, 4456448, 4849664],
-                        '/lt/8/jre/lib/jsse.jar': [0, 131072, 786432, 917504],
-                        '/lt/8/jre/lib/jce.jar': [0, 131072],
-                        '/lt/8/jre/lib/charsets.jar': [0, 131072, 1703936, 1835008],
-                        '/lt/8/jre/lib/resources.jar': [0, 131072, 917504, 1179648],
-                        '/lt/8/jre/lib/javaws.jar': [0, 131072, 1441792, 1703936]
-                    }
+                    memoryPages: 4096
                 });
                 
                 cheerpjReady = true;

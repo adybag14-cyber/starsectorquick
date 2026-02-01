@@ -1,9 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
 
 async function quickTest() {
   console.log('\n=== QUICK ERROR CHECK ===');
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const pageUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const outputDir = path.join(__dirname, 'test_output');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   let hasErrors = false;
   let errorCount = 0;
@@ -32,7 +38,7 @@ async function quickTest() {
 
   try {
     console.log('\n1. Loading page...');
-    await page.goto('http://localhost:8080/STARSECTOR_V6J_FINAL_WORKING.html', { waitUntil: 'domcontentloaded', timeout: 10000 });
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
     console.log('   ✅ Loaded\n');
 
     await page.waitForTimeout(2000);
@@ -99,7 +105,7 @@ async function quickTest() {
     allErrors.push({ type: 'fatal', text: e.message, time: new Date().toISOString() });
   }
 
-  await page.screenshot({ path: 'quick_test_screenshot.png' });
+  await page.screenshot({ path: path.join(outputDir, 'quick_test_screenshot.png'), fullPage: true });
   await browser.close();
 
   console.log('\n' + '='.repeat(60));
