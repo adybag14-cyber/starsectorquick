@@ -34,10 +34,15 @@ emmake make -j"$(nproc)"
 
 mkdir -p "$OUTPUT_DIR"
 
-if [[ -f "libGL.a" ]]; then
-  cp -v "libGL.a" "$OUTPUT_DIR/gl4es.a"
+build_archive="$BUILD_DIR/libGL.a"
+lib_archive="$GL4ES_DIR/lib/libGL.a"
+
+if [[ -f "$build_archive" ]]; then
+  cp -v "$build_archive" "$OUTPUT_DIR/gl4es.a"
+elif [[ -f "$lib_archive" ]]; then
+  cp -v "$lib_archive" "$OUTPUT_DIR/gl4es.a"
 else
-  echo "Expected libGL.a in $BUILD_DIR" >&2
+  echo "Expected libGL.a in $BUILD_DIR or $GL4ES_DIR/lib" >&2
   exit 1
 fi
 
