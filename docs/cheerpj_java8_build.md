@@ -22,6 +22,15 @@ Output:
 
 You can then link the static archive into a runtime module during CheerpJ native integration.
 
+If you need to tune flags for JNI/GL4ES integration, pass extra CMake/emmake flags:
+
+```
+EXTRA_CMAKE_FLAGS="-DNOGLX=ON" \
+EXTRA_EMCMAKE_FLAGS="-sUSE_PTHREADS=0" \
+EXTRA_EMMAKE_FLAGS="VERBOSE=1" \
+./scripts/build_gl4es_wasm.sh
+```
+
 ## Extract JNI native method signatures
 
 Use `javap` to list `native` methods in the Starsector jars. This helps when wiring JNI stubs for Emscripten/GL4ES:
@@ -41,6 +50,20 @@ If you need to drive Emscripten exports during native builds, generate JNI expor
 ```
 
 The output is stored in `test_output/jni_exports.txt` by default and can be fed into `-sEXPORTED_FUNCTIONS=@jni_exports.txt` during Emscripten link steps.
+
+## Run Playwright launch matrix
+
+To probe multiple launch URLs and Java versions with the Node server:
+
+```
+JAR_ROOT=/path/to/starsector \
+ASSET_ROOT=/path/to/starsector \
+GAME_URLS="http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html,http://localhost:8888/launch.html" \
+GAME_JAVA_VERSIONS="8" \
+./scripts/run_playwright_matrix.sh
+```
+
+Logs and screenshots are written to `test_output/`.
 
 ## Integration notes
 

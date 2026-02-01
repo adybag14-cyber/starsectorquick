@@ -6,12 +6,17 @@ async function runGameCheck() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
+  const consoleLines = [];
 
   page.on('console', msg => {
-    console.log(`[CONSOLE ${msg.type()}] ${msg.text()}`);
+    const line = `[CONSOLE ${msg.type()}] ${msg.text()}`;
+    consoleLines.push(line);
+    console.log(line);
   });
   page.on('pageerror', error => {
-    console.error(`[PAGE ERROR] ${error.message}`);
+    const line = `[PAGE ERROR] ${error.message}`;
+    consoleLines.push(line);
+    console.error(line);
   });
 
   const baseUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
@@ -56,6 +61,13 @@ async function runGameCheck() {
     const screenshotPath = path.join(outputDir, `playwright_game_attempt_${attempt}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
     console.log(`Screenshot saved to ${screenshotPath}`);
+
+    const logPath = path.join(outputDir, `playwright_game_attempt_${attempt}.log`);
+    fs.writeFileSync(
+      logPath,
+      `${consoleLines.join('\n')}\n\n--- PAGE LOG ---\n${logText}\n`,
+    );
+    console.log(`Log saved to ${logPath}`);
 
     if (
       !logText.includes('Missing') &&
