@@ -4,6 +4,8 @@ const path = require('path');
 
 const root = process.cwd();
 const port = 8888;
+const jarRoot = process.env.JAR_ROOT ? path.resolve(process.env.JAR_ROOT) : null;
+const assetRoot = process.env.ASSET_ROOT ? path.resolve(process.env.ASSET_ROOT) : null;
 
 const server = http.createServer((req, res) => {
   // 🛡️ COEP/COOP disabled for testing - may not be needed for this game
@@ -18,10 +20,15 @@ const server = http.createServer((req, res) => {
   
   // 🛡️ Additional security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   
   let url = req.url.split('?')[0];
+  const isJarRequest = jarRoot && (url === '/jars' || url.startsWith('/jars/'));
   let filePath = path.join(root, url === '/' ? 'STARSECTOR_V6J_FINAL_WORKING.html' : url);
+  if (isJarRequest) {
+    const jarPath = url.replace(/^\/jars\/?/, '');
+    filePath = path.join(jarRoot, jarPath);
+  }
   
   const ext = path.extname(filePath);
   let ctx = 'text/html';
@@ -31,22 +38,77 @@ const server = http.createServer((req, res) => {
   if(ext === '.jar') ctx = 'application/java-archive';
   if(ext === '.json') ctx = 'application/json';
   
-  fs.readFile(filePath, (err, content) => {
-    if(err) {
-      // Ignore favicon.ico 404s to keep console clean
-      if (req.url === '/favicon.ico') {
-        res.writeHead(204); // No content
+  const serveFile = (resolvedPath, stats) => {
+    res.setHeader('Accept-Ranges', 'bytes');
+    const range = req.headers.range;
+    if (range) {
+      const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+      const start = Number.parseInt(startStr, 10);
+      let end = endStr ? Number.parseInt(endStr, 10) : stats.size - 1;
+      if (Number.isNaN(start) || Number.isNaN(end)) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${stats.size}`
+        });
         res.end();
+        console.log('416:', req.url, 'invalid range', range);
+        return;
+      }
+      if (end >= stats.size) {
+        end = stats.size - 1;
+      }
+      if (start > end || start >= stats.size) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${stats.size}`
+        });
+        res.end();
+        console.log('416:', req.url, 'invalid range', range);
+        return;
+      }
+      const chunkSize = (end - start) + 1;
+      res.writeHead(206, {
+        'Content-Type': ctx,
+        'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+        'Content-Length': chunkSize
+      });
+      fs.createReadStream(resolvedPath, { start, end }).pipe(res);
+      console.log('206:', req.url, '(', ctx, ')', `${start}-${end}`);
+    } else {
+      res.writeHead(200, {
+        'Content-Type': ctx,
+        'Content-Length': stats.size
+      });
+      fs.createReadStream(resolvedPath).pipe(res);
+      console.log('200:', req.url, '(', ctx, ')');
+    }
+  };
+
+  fs.stat(filePath, (err, stats) => {
+    if (err || !stats.isFile()) {
+      if (req.url === '/favicon.ico') {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+      if (assetRoot && !isJarRequest && url !== '/') {
+        const assetPath = path.join(assetRoot, url.replace(/^\/+/, ''));
+        fs.stat(assetPath, (assetErr, assetStats) => {
+          if (assetErr || !assetStats.isFile()) {
+            console.log('404:', req.url, '->', filePath);
+            res.writeHead(404, {'Content-Type': 'text/html'});
+            res.end('<h1>404 Not Found</h1><p>' + filePath + '</p>');
+            return;
+          }
+          serveFile(assetPath, assetStats);
+        });
         return;
       }
       console.log('404:', req.url, '->', filePath);
       res.writeHead(404, {'Content-Type': 'text/html'});
       res.end('<h1>404 Not Found</h1><p>' + filePath + '</p>');
-    } else {
-      res.writeHead(200, {'Content-Type': ctx});
-      res.end(content);
-      console.log('200:', req.url, '(', ctx, ')');
+      return;
     }
+
+    serveFile(filePath, stats);
   });
 });
 
