@@ -21,6 +21,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
+mkdir -p test_output
+
 if [[ "$START_SERVER" == "1" ]]; then
   echo "Starting node server on port ${SERVER_PORT}..."
   if [[ -n "$JAR_ROOT" ]]; then

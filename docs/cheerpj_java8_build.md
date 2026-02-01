@@ -8,6 +8,17 @@ This guide documents the current best-known steps to rebuild GL4ES for the Java 
 - GL4ES source checked out (e.g. `https://github.com/ptitSeb/gl4es.git`).
 - Java 8 Starsector assets available locally (see `starsector_linux-0.97a-RC11.zip`).
 
+To bootstrap dependencies (game assets, GL4ES, Emscripten SDK, CFR, Java 8 JDK), you can run:
+
+```
+ROOT_DIR=/workspace \
+TOOLS_DIR=/workspace/tools \
+GAME_DIR=/workspace/starsector_java8 \
+GL4ES_DIR=/workspace/gl4es \
+EMSDK_DIR=/workspace/emsdk \
+./scripts/bootstrap_java8_env.sh
+```
+
 ## Build GL4ES (Emscripten)
 
 ```
