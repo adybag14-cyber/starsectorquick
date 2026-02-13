@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Starsector 2 - Method Scanner (v70)</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        #log { background: #111; padding: 15px; height: 600px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Starsector 2 - Method Scanner (FULL CP)</h1>
+        <button id='startBtn' style="padding: 15px 30px; font-size: 18px;">🔍 SCAN METHODS</button>
+        <div id='log'></div>
+    </div>
+
+    <script>
+        function log(m, color = '#fff') {
+            const l = document.getElementById('log');
+            if (l) {
+                const entry = document.createElement('div');
+                entry.style.color = color;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+                l.appendChild(entry);
+                l.scrollTop = l.scrollHeight;
+            }
+            console.log(m);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            log('Initializing CheerpJ for FULL scanning...', '#00d9ff');
+            try {
+                await cheerpjInit({ 
+                    version: 17,
+                    mounts: [{ type: 'http', path: '/app/', url: 'https://adybag14-cyber.github.io/' }]
+                });
+
+                const jarFiles = [
+                    'stubs.jar', 'resources.jar', 'janino.jar', 'commons-compiler.jar', 
+                    'starfarer.api.jar', 'starfarer_obf.jar', 'jogg-0.0.7.jar', 
+                    'jorbis-0.0.15.jar', 'json.jar', 'lwjgl.jar', 'jinput.jar', 
+                    'log4j-1.2.9.jar', 'lwjgl_util.jar', 'fs.sound_obf.jar', 
+                    'fs.common_obf.jar', 'xstream-1.4.10.jar'
+                ];
+                const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).join(':');
+                log('Full ClassPath: ' + cp);
+
+                log('Starting MethodScanner...', '#ff9f43');
+                await cheerpjRunMain('MethodScanner', cp);
+                log('Scan complete. Check logs.');
+            } catch (e) {
+                log(`ERROR: ${e.message}`, '#ff4444');
+            }
+        });
+    </script>
+</body>
+</html>

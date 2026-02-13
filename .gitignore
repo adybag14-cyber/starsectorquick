@@ -36,6 +36,11 @@ compilation_output.log
 *api-key*.pem
 *private-key*.pem
 
+# Environment variables (DO NOT COMMIT - SECURITY RISK)
+.env
+.env.local
+.env.*.local
+
 # Test outputs
 test_output/
 test_*.png

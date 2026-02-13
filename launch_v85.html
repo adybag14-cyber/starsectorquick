@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Starsector 2 - Definitive WebLauncher (v85)</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        #game-container { margin: 20px auto; width: 1024px; height: 768px; border: 2px solid #00d9ff; position: relative; background: #111; }
+        #log { background: #111; padding: 15px; height: 300px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
+        .btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: #00d9ff; color: #000; text-transform: uppercase; transition: 0.3s; }
+        .btn:hover { background: #00b8e6; transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Starsector 2 Web (v85 - JS PATCH FIXED)</h1>
+        <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
+        
+        <div style="margin: 20px 0;">
+            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
+        </div>
+
+        <div id='game-container'></div>
+        
+        <div id='log'>
+            <div style="color: #888;">[SYSTEM] Waiting for initialization...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(m, color = '#fff') {
+            const l = document.getElementById('log');
+            if (l) {
+                const entry = document.createElement('div');
+                entry.style.color = color;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+                l.appendChild(entry);
+                l.scrollTop = l.scrollHeight;
+            }
+            console.log(m);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = '⌛ INITIALIZING...';
+
+            log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
+            
+            try {
+                const origin = 'https://adybag14-cyber.github.io/';
+                const projectUrl = origin + 'starsectorquick/';
+                const baseUrl = window.location.origin + projectUrl.replace(origin, '/');
+                
+                await cheerpjInit({ 
+                    version: 17, 
+                    enableX11: true,
+                    javaProperties: [
+                        `java.library.path=/app/starsectorquick/build/final/wasm-modules/`,
+                        `user.dir=/files/`,
+                        `com.fs.starfarer.settings.linux=true`,
+                        `org.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
+                        `com.fs.starfarer.settings.paths.logs=/files/`
+                    ],
+                    libraries: {
+                        'libGL.so.1': `/app/starsectorquick/build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `/app/starsectorquick/build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `/app/starsectorquick/build/final/wasm-modules/unsafe.wasm`
+                    },
+                    mounts: [
+                        { type: 'http', path: '/app/', url: origin }
+                    ]
+                });
+
+                log('Fetching and patching settings.json...', '#ff9f43');
+                const fetchText = async (path) => {
+                    const r = await fetch(projectUrl + path);
+                    if (!r.ok) throw new Error(`Failed to fetch ${path}: ${r.status}`);
+                    return await r.text();
+                };
+
+                let settingsText = await fetchText('starsector/starsector/data/config/settings.json');
+                const log4jProps = await fetchText('starsector/starsector/log4j.properties');
+
+                const missingKeys = [
+                    '"autosaveEnabledByDefault": true,',
+                    '"autosaveFeatureEnabled": true,',
+                    '"devMode": true,',
+                    '"vsync": true,',
+                    '"fps": 60,',
+                    '"allowJVMRestartFromLauncher": true,',
+                    '"requireTypingDeleteToDeleteSave": true,',
+                    '"windowLocationX": 0,',
+                    '"windowLocationY": 0,'
+                ];
+                
+                const lastBrace = settingsText.lastIndexOf('}');
+                if (lastBrace !== -1) {
+                    settingsText = settingsText.substring(0, lastBrace) + 
+                                   "\n    // --- WEB PATCH START ---\n    " + 
+                                   missingKeys.join("\n    ") + 
+                                   "\n    // --- WEB PATCH END ---\n" + 
+                                   settingsText.substring(lastBrace);
+                    log('Settings patched via JS.');
+                }
+
+                log('Mounting Display to Canvas...', '#00ff88');
+                cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
+
+                const jarFiles = [
+                    'stubs.jar',
+                    'resources.jar',
+                    'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
+                    'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
+                    'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
+                    'lwjgl_util.jar', 'fs.sound_obf.jar', 'fs.common_obf.jar', 
+                    'xstream-1.4.10.jar'
+                ];
+                
+                const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).concat(['/files/']).join(':');
+                log('Final ClassPath: ' + cp);
+
+                log('Starting Reflected Main with JS-Patched String...', '#ff9f43');
+                btn.textContent = '🚀 RUNNING';
+                
+                await cheerpjRunMain('WebLauncher', cp, '/files', settingsText, log4jProps);
+                
+                log('Execution loop started. Watch for Java output.', '#00ff88');
+            } catch (e) {
+                log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
+                console.error(e);
+                btn.disabled = false;
+                btn.textContent = '❌ RETRY LAUNCH';
+            }
+        });
+
+        log('Welcome to Starsector Web Edition. System ready.');
+    </script>
+</body>
+</html>
