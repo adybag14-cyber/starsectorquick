@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "drone_terminator",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Codex fallback",
+  "variantId": "drone_terminator_Hull",
+  "permaMods": []
+}

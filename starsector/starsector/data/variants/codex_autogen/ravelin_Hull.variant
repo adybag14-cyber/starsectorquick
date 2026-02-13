@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "ravelin",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Drone",
+  "variantId": "ravelin_Hull",
+  "permaMods": []
+}

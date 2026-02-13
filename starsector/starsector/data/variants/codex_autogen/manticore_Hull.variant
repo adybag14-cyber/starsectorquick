@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "manticore",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Destroyer",
+  "variantId": "manticore_Hull",
+  "permaMods": []
+}

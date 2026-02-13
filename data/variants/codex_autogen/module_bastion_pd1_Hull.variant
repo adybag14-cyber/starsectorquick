@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_bastion_pd1",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "PD Bastion 1",
+  "variantId": "module_bastion_pd1_Hull",
+  "permaMods": []
+}

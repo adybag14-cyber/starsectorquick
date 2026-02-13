@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "mudskipper",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Civilian Transport",
+  "variantId": "mudskipper_Hull",
+  "permaMods": []
+}

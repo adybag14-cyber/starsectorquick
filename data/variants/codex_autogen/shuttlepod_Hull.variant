@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "shuttlepod",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Pod",
+  "variantId": "shuttlepod_Hull",
+  "permaMods": []
+}

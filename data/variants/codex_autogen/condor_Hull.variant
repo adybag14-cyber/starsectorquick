@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "condor",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Light Carrier",
+  "variantId": "condor_Hull",
+  "permaMods": []
+}

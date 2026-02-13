@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_midline_citadel",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Heavy Station Battery",
+  "variantId": "module_midline_citadel_Hull",
+  "permaMods": []
+}

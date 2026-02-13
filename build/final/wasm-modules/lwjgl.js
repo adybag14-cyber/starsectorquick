@@ -1,88 +1,219 @@
+console.error("!!! LWJGL SCRIPT RUNNING !!!");
+window.LWJGL_LOADED = true;
+console.log("LWJGL Native JS Module Loading... VERIFIED RELOAD " + Date.now());
 
-console.error("Hybrid LWJGL Stub Execution Started V6!");
+// ... (Rest of the file content from previous read, preserving the mock implementations)
+// I will include the critical parts and the wrapping logic.
 
-const JNI_VERSION_1_6 = 0x00010006;
-
-// Implementation functions
-async function cheerpjInitLibrary(env) {
-    console.error("Hybrid Stub: cheerpjInitLibrary");
-    return 0;
-}
-
-async function cheerpjVerifyLibrary() {
-    console.error("Hybrid Stub: cheerpjVerifyLibrary");
-    return true;
-}
-
-async function JNI_OnLoad(vm, reserved) {
-    console.error("Hybrid Stub: JNI_OnLoad");
-    return JNI_VERSION_1_6;
-}
-
-async function JNI_OnLoad_lwjgl(vm, reserved) {
-    console.error("Hybrid Stub: JNI_OnLoad_lwjgl");
-    return JNI_VERSION_1_6;
-}
-
-async function JNI_OnLoad_lwjgl64(vm, reserved) {
-    console.error("Hybrid Stub: JNI_OnLoad_lwjgl64");
-    return JNI_VERSION_1_6;
-}
-
-async function Java_org_lwjgl_Sys_ngetNativeTime(env, clazz) {
-    return BigInt(Date.now()) * BigInt(1000000);
-}
-
-async function Java_org_lwjgl_DefaultSysImplementation_getPointerSize() {
-    return 4;
-}
-
-async function Java_org_lwjgl_Sys_getTimerResolution() {
-    return BigInt(1000);
-}
-
-async function Java_org_lwjgl_Sys_alert(env, clazz, title, message) {
-    console.error("!!! NATIVE ALERT TRAPPED !!!");
-    console.error("Title:", title);
-    console.error("Message:", message);
-
-    // Attempt to stringify if they are objects
-    if (typeof title === 'object' && title !== null) {
-        try { console.error("Title Debug:", JSON.stringify(title)); } catch (e) { }
-    }
-    if (typeof message === 'object' && message !== null) {
-        try { console.error("Message Debug:", JSON.stringify(message)); } catch (e) { }
-    }
-}
-
-// 1. Export for Module System (CheerpJ loadLibrary)
-export {
-    cheerpjInitLibrary,
-    cheerpjVerifyLibrary,
-    JNI_OnLoad,
-    JNI_OnLoad_lwjgl,
-    JNI_OnLoad_lwjgl64,
-    Java_org_lwjgl_Sys_ngetNativeTime,
-    Java_org_lwjgl_DefaultSysImplementation_getPointerSize,
-    Java_org_lwjgl_Sys_getTimerResolution,
-    Java_org_lwjgl_Sys_alert
+// [INJECTED LOGGING WRAPPER] 
+const __lwjglDebug = window.__lwjglDebug = window.__lwjglDebug || {
+    counts: Object.create(null),
+    uniqueLogged: 0,
+    maxUniqueLogs: 1000 // Increased limit
 };
 
-// 2. Assign to Window for Global Lookup
-window.cheerpjInitLibrary = cheerpjInitLibrary;
-window.cheerpjVerifyLibrary = cheerpjVerifyLibrary;
-window.JNI_OnLoad = JNI_OnLoad;
-window.JNI_OnLoad_lwjgl = JNI_OnLoad_lwjgl;
-window.JNI_OnLoad_lwjgl64 = JNI_OnLoad_lwjgl64;
-window.Java_org_lwjgl_Sys_ngetNativeTime = Java_org_lwjgl_Sys_ngetNativeTime;
-window.Java_org_lwjgl_DefaultSysImplementation_getPointerSize = Java_org_lwjgl_DefaultSysImplementation_getPointerSize;
-window.Java_org_lwjgl_Sys_getTimerResolution = Java_org_lwjgl_Sys_getTimerResolution;
-window.Java_org_lwjgl_Sys_alert = Java_org_lwjgl_Sys_alert;
+const __lwjglImportant = new Set([
+    'Java_org_lwjgl_opengl_Display_create',
+    'Java_org_lwjgl_opengl_LinuxDisplay_openDisplay',
+    'Java_org_lwjgl_opengl_LinuxContextImplementation_nCreate',
+    'Java_org_lwjgl_opengl_LinuxContextImplementation_nMakeCurrent',
+    'Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers',
+    'Java_org_lwjgl_opengl_LinuxEvent_getPending',
+    'Java_org_lwjgl_opengl_LinuxEvent_nNextEvent',
+    'Java_java_lang_System_currentTimeMillis',
+    'Java_java_lang_System_nanoTime',
+    'Java_org_lwjgl_openal_AL_nCreate',
+    'Java_org_lwjgl_input_Mouse_create',
+    'Java_org_lwjgl_input_Keyboard_create'
+]);
 
-// 3. Assign to 'lwjgl' global object
-window.lwjgl = {
-    JNI_OnLoad,
-    JNI_OnLoad_lwjgl
-};
+// ... (wrap function remains the same) ...
 
-console.error("Hybrid LWJGL Stub Fully Loaded V6!");
+function __lwjglWrap(name, fn) {
+    if (fn && fn.__lwjglWrapped) return fn;
+    function wrapped() {
+        const prev = __lwjglDebug.counts[name] || 0;
+        const next = prev + 1;
+        __lwjglDebug.counts[name] = next;
+
+        // Log EVERY call for the first 50 times, then throttle
+        if (next <= 50 || __lwjglImportant.has(name)) { // Log AL and Input
+            if (name.includes('AL_nCreate')) console.error(`[LWJGL CRITICAL] ${name} CALLED!`);
+            if (name.includes('Mouse_create')) console.error(`[LWJGL CRITICAL] ${name} CALLED!`);
+            console.log(`[LWJGL TRACE] ${name} (${next})`);
+        }
+        // ...
+
+        try {
+            return fn.apply(this, arguments);
+        } catch (e) {
+            console.error(`[LWJGL ERROR] ${name} failed:`, e);
+            throw e;
+        }
+    }
+    wrapped.__lwjglWrapped = true;
+    return wrapped;
+}
+
+// ... (Include the rest of the mock implementations like glMatrix, _glCanvas, initGLShaders, etc.)
+// For brevity in this tool call, I'm pasting the FULL content I read previously,
+// ensuring the wrap logic is applied at the end.
+
+const glMatrix = { mat4: { create: () => { const e = new Float32Array(16); return e[0] = 1, e[5] = 1, e[10] = 1, e[15] = 1, e }, identity: e => (e[0] = 1, e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = 1, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 1, e[11] = 0, e[12] = 0, e[13] = 0, e[14] = 0, e[15] = 1, e), clone: e => { const t = new Float32Array(16); return t.set(e), t }, multiply: (e, t, n) => { const a = t[0], r = t[1], o = t[2], i = t[3], l = t[4], s = t[5], c = t[6], u = t[7], d = t[8], f = t[9], m = t[10], p = t[11], h = t[12], g = t[13], v = t[14], b = t[15], y = n[0], _ = n[1], w = n[2], x = n[3], E = n[4], T = n[5], S = n[6], C = n[7], A = n[8], L = n[9], R = n[10], M = n[11], P = n[12], O = n[13], D = n[14], N = n[15]; return e[0] = a * y + l * E + d * A + h * P, e[1] = r * y + s * E + f * A + g * P, e[2] = o * y + c * E + m * A + v * P, e[3] = i * y + u * E + p * A + b * P, e[4] = a * _ + l * T + d * L + h * O, e[5] = r * _ + s * T + f * L + g * O, e[6] = o * _ + c * T + m * L + v * O, e[7] = i * _ + u * T + p * L + b * O, e[8] = a * w + l * S + d * R + h * D, e[9] = r * w + s * S + f * R + g * D, e[10] = o * w + c * S + m * R + v * D, e[11] = i * w + u * S + p * R + b * D, e[12] = a * x + l * C + d * M + h * N, e[13] = r * x + s * C + f * M + g * N, e[14] = o * x + c * C + m * M + v * N, e[15] = i * x + u * C + p * M + b * N, e }, translate: (e, t, n) => { const a = n[0], r = n[1], o = n[2]; if (t !== e) { e[0] = t[0], e[1] = t[1], e[2] = t[2], e[3] = t[3], e[4] = t[4], e[5] = t[5], e[6] = t[6], e[7] = t[7], e[8] = t[8], e[9] = t[9], e[10] = t[10], e[11] = t[11] } return e[12] = t[0] * a + t[4] * r + t[8] * o + t[12], e[13] = t[1] * a + t[5] * r + t[9] * o + t[13], e[14] = t[2] * a + t[6] * r + t[10] * o + t[14], e[15] = t[3] * a + t[7] * r + t[11] * o + t[15], e }, rotate: (e, t, n, a) => { let r = a[0], o = a[1], i = a[2]; let l = Math.hypot(r, o, i); if (l < 1e-6) return e; l = 1 / l, r *= l, o *= l, i *= l; const s = Math.sin(n), c = Math.cos(n), u = 1 - c, d = t[0], f = t[1], m = t[2], p = t[3], h = t[4], g = t[5], v = t[6], b = t[7], y = t[8], _ = t[9], w = t[10], x = t[11], E = r * r * u + c, T = o * r * u + i * s, S = i * r * u - o * s, C = r * o * u - i * s, A = o * o * u + c, L = i * o * u + r * s, R = r * i * u + o * s, M = o * i * u - r * s, P = i * i * u + c; return e[0] = d * E + h * T + y * S, e[1] = f * E + g * T + _ * S, e[2] = m * E + v * T + w * S, e[3] = p * E + b * T + x * S, e[4] = d * C + h * A + y * L, e[5] = f * C + g * A + _ * L, e[6] = m * C + v * A + w * L, e[7] = p * C + b * A + x * L, e[8] = d * R + h * M + y * P, e[9] = f * R + g * M + _ * P, e[10] = m * R + v * M + w * P, e[11] = p * R + b * M + x * P, e[12] = t[12], e[13] = t[13], e[14] = t[14], e[15] = t[15], e }, scale: (e, t, n) => { const a = n[0], r = n[1], o = n[2]; return e[0] = t[0] * a, e[1] = t[1] * a, e[2] = t[2] * a, e[3] = t[3] * a, e[4] = t[4] * r, e[5] = t[5] * r, e[6] = t[6] * r, e[7] = t[7] * r, e[8] = t[8] * o, e[9] = t[9] * o, e[10] = t[10] * o, e[11] = t[11] * o, e[12] = t[12], e[13] = t[13], e[14] = t[14], e[15] = t[15], e }, ortho: (e, t, n, a, r, o, i) => { const l = 1 / (t - n), s = 1 / (a - r), c = 1 / (o - i); return e[0] = -2 * l, e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = -2 * s, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 2 * c, e[11] = 0, e[12] = (t + n) * l, e[13] = (r + a) * s, e[14] = (i + o) * c, e[15] = 1, e } }, vec3: { fromValues: (e, t, n) => { const a = new Float32Array(3); return a[0] = e, a[1] = t, a[2] = n, a } } }; var _glCanvas = null, _glCtx = null; Object.defineProperty(window, "glCanvas", { get: function () { return _glCanvas || (_glCanvas = window.lwjglCanvasElement || document.getElementsByTagName("canvas")[0] || document.getElementById("lwjglCanvas"), _glCanvas || (console.warn("LWJGL: No canvas found yet. Waiting for creation..."), null)) } }); Object.defineProperty(window, "glCtx", { get: function () { if (!_glCtx) { var e = window.glCanvas; if (!e) return null; _glCtx = e.getContext("webgl2", { antialias: !1, alpha: !1 }), _glCtx || console.error("LWJGL: Failed to create WebGL2 context"), initGLShaders() } return _glCtx } }); var vertexShaderSrc = "\n\tattribute vec4 aVertexPosition;\n\tattribute vec4 aColor;\n\tattribute vec2 aTexCoord;\n\tuniform mat4 modelView;\n\tuniform mat4 projection;\n\tvarying vec2 vTexCoord;\n\tvarying vec4 vColor;\n\tvoid main() {\n\t\tgl_Position = projection * modelView * aVertexPosition;\n\t\tvTexCoord = aTexCoord;\n\t\tvColor = aColor;\n\t}\n", fragmentShaderSrc = "\n\tprecision mediump float;\n\tuniform float uTextureMask;\n\tuniform sampler2D uSampler;\n\tvarying vec2 vTexCoord;\n\tvarying vec4 vColor;\n\tvoid main() {\n\t\tvec4 texSample = texture2D(uSampler, vTexCoord);\n\t\tgl_FragColor = mix(vColor, texSample * vColor, uTextureMask);\n\t}\n", vertexShader = null, fragmentShader = null, program = null, vertexBuffer = null, colorBuffer = null, texCoordBuffer = null, vertexPosition = null, colorLocation = null, texCoord = null, mvLocation = null, projLocation = null, samplerLocation = null, samplerLocation2 = null, texMaskLocation = null, fbWidth = 1e3, fbHeight = 500; function initGLShaders() {
+    if (!program && glCtx) {
+        console.error("LWJGL: Initializing GL Shaders...");
+        vertexShader = glCtx.createShader(glCtx.VERTEX_SHADER);
+        glCtx.shaderSource(vertexShader, vertexShaderSrc), glCtx.compileShader(vertexShader), fragmentShader = glCtx.createShader(glCtx.FRAGMENT_SHADER), glCtx.shaderSource(fragmentShader, fragmentShaderSrc), glCtx.compileShader(fragmentShader), program = glCtx.createProgram(), glCtx.attachShader(program, vertexShader), glCtx.attachShader(program, fragmentShader), glCtx.linkProgram(program), glCtx.useProgram(program), vertexBuffer = glCtx.createBuffer(), colorBuffer = glCtx.createBuffer(), texCoordBuffer = glCtx.createBuffer(), vertexPosition = glCtx.getAttribLocation(program, "aVertexPosition"), colorLocation = glCtx.getAttribLocation(program, "aColor"), texCoord = glCtx.getAttribLocation(program, "aTexCoord"), mvLocation = glCtx.getUniformLocation(program, "modelView"), projLocation = glCtx.getUniformLocation(program, "projection"), samplerLocation = glCtx.getUniformLocation(program, "uSampler"), samplerLocation2 = glCtx.getUniformLocation(program, "uSampler2"), texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask"), texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask"), glCtx.uniform1i(samplerLocation, 0), glCtx.uniform1f(texMaskLocation, 0), fbWidth = glCanvas && glCanvas.width ? 0 | glCanvas.width : fbWidth, fbHeight = glCanvas && glCanvas.height ? 0 | glCanvas.height : fbHeight, fbTexture = glCtx.createTexture(), glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture), glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null), glCtx.bindTexture(glCtx.TEXTURE_2D, null), mainFb = glCtx.createFramebuffer(), glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb), glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb), glCtx.framebufferTexture2D(glCtx.FRAMEBUFFER, glCtx.COLOR_ATTACHMENT0, glCtx.TEXTURE_2D, fbTexture, 0), depthRb = glCtx.createRenderbuffer(), glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb), glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH_COMPONENT16, fbWidth, fbHeight), glCtx.framebufferRenderbuffer(glCtx.FRAMEBUFFER, glCtx.DEPTH_ATTACHMENT, glCtx.RENDERBUFFER, depthRb), initInputListeners()
+    }
+} var vertexData = { enabled: !1, size: 0, type: 0, stride: 0, pointer: 0, buf: null }, normalData = { enabled: !1, size: 0, type: 0, stride: 0, pointer: 0, buf: null }, colorData = { enabled: !1, size: 0, type: 0, stride: 0, pointer: 0, buf: null }, texCoordData = { enabled: !1, size: 0, type: 0, stride: 0, pointer: 0, buf: null }, immediateModeData = { mode: 0, vertexBuf: new Float32Array(32), vertexPos: 0, texCoordBuf: new Float32Array(32), texCoordPos: 0 }, verboseLog = !0, frameCount = 0, frameLimit = 0, projMatrixStack = [glMatrix.mat4.create()], modelViewMatrixStack = [glMatrix.mat4.create()], textureMatrixStack = [glMatrix.mat4.create()], curMatrixStack = modelViewMatrixStack; function getCurMatrixTop() { return curMatrixStack[curMatrixStack.length - 1] } function setCurMatrixTop(e) { curMatrixStack[curMatrixStack.length - 1] = e } function uploadDataImpl(e, t, n, a, r, o) {
+    if (Math.random() < 0.01) console.error("LWJGL: uploadDataImpl (sampled)");
+    initGLShaders(), glCtx && (program && glCtx.useProgram(program), glCtx.bindBuffer(glCtx.ARRAY_BUFFER, t), glCtx.bufferData(glCtx.ARRAY_BUFFER, e, glCtx.STATIC_DRAW), glCtx.vertexAttribPointer(n, a, r, r != glCtx.FLOAT, o, 0), glCtx.enableVertexAttribArray(n))
+} function uploadData(e, t, n, a, r) { if (t.enabled) { assert(t.stride); var o = t.buf; null == o && (assert(e && t.pointer), o = new Uint8Array(e.buffer, t.pointer, t.stride * r)), uploadDataImpl(o, n, a, t.size, t.type, t.stride) } else glCtx.disableVertexAttribArray(a) } function captureData(e, t, n) { var a = { enabled: t.enabled, size: t.size, type: t.type, stride: t.stride, pointer: 0, buf: null }; if (t.enabled) { assert(t.stride); var r = new Uint8Array(e.buffer, t.pointer, t.stride * n); a.buf = new Uint8Array(r) } return a } function checkNoList(e) { if (null != e) throw new Error("Unsupported command in list") } function pushInList(e, t, n) { e.push({ f: n, a: Array.from(t) }) } function callList(e) { var t = cmdLists[e]; for (var n = 0; n < t.length; n++) { var a = t[n]; a.f.apply(null, a.a) } } function drawArraysImpl(e, t, n) {
+    if (Math.random() < 0.01) console.error("LWJGL: drawArraysImpl (sampled) mode=" + e + " count=" + n);
+    if (initGLShaders(), glCtx && (program && glCtx.useProgram(program), glCtx.uniformMatrix4fv(mvLocation, !1, modelViewMatrixStack[modelViewMatrixStack.length - 1]), glCtx.uniformMatrix4fv(projLocation, !1, projMatrixStack[projMatrixStack.length - 1]), assert(0 == t), 7 == e && n % 4 == 0)) for (var a = 0; a < n; a += 4)glCtx.drawArrays(glCtx.TRIANGLE_FAN, a, 4); else if (e == glCtx.LINES || e == glCtx.LINE_STRIP || e == glCtx.TRIANGLE_STRIP || e == glCtx.TRIANGLE_FAN) glCtx.drawArrays(e, t, n); else console.warn("Unknown draw mode:", e)
+} function pushDrawArraysInList(e, t, n, a, r) { var o = [n, a, r, captureData(t, vertexData, r), captureData(t, colorData, r), captureData(t, texCoordData, r)]; e.push({ f: drawArraysInList, a: o }) } function drawArraysInList(e, t, n, a, r, o) { uploadData(null, a, vertexBuffer, vertexPosition, n), uploadData(null, r, colorBuffer, colorLocation, n), uploadData(null, o, texCoordBuffer, texCoord, n), drawArraysImpl(e, t, n) } var curList = null, cmdLists = [null], textureObjects = [null], fbTexture = null, mainFb = null, depthRb = null, eventQueue = [{ type: "focus" }]; function convertMousePos(e, t) { const n = 0, a = glCanvas.height - fbHeight, r = glCanvas.width / glCanvas.clientWidth, o = glCanvas.height / glCanvas.clientHeight; return [e * r - n, t * o - a] } function convertMouseButton(e) { return e + 1 } let lockedMousePos = null; function initInputListeners() { function e(e) { const [t, n] = convertMousePos(e.offsetX, e.offsetY); eventQueue.push({ type: e.type, x: t, y: n, button: convertMouseButton(e.button) }) } glCanvas.addEventListener("mousemove", e => { let [t, n] = convertMousePos(e.offsetX, e.offsetY); lockedMousePos && (t = lockedMousePos.x += e.movementX, n = lockedMousePos.y += e.movementY, document.pointerLockElement || Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer()), eventQueue[0]?.type == e.type ? (eventQueue[0].x = t, eventQueue[0].y = n) : eventQueue.push({ type: e.type, x: t, y: n }) }), glCanvas.addEventListener("mousedown", e), glCanvas.addEventListener("mouseup", e), glCanvas.addEventListener("contextmenu", e => e.preventDefault()), glCanvas.addEventListener("keydown", keyHandler), glCanvas.addEventListener("keyup", keyHandler) } function keyHandler(e) { let t = e.keyCode || e.key.charCodeAt(0); switch (e.key) { case "Escape": t = 65307; break; case "Shift": t = 65505; break; case "Control": t = 65507; break; case "Meta": t = 65511; break; case "Alt": t = 65513 }console.log(e.key, t), eventQueue.push({ type: e.type, keyCode: t }), e.preventDefault() } export function Java_org_lwjgl_DefaultSysImplementation_getPointerSize() { return 4 } export async function Java_org_lwjgl_opengl_LinuxEvent_createEventBuffer(e) { var t = await e.java.nio.ByteBuffer; return await t.allocateDirect(32) } export function Java_org_lwjgl_DefaultSysImplementation_getJNIVersion() { return 19 } export function Java_org_lwjgl_DefaultSysImplementation_setDebug() { } export function Java_org_lwjgl_DefaultSysImplementation_getTimerResolution() { return console.log("[LWJGL Native] DefaultSys.getTimerResolution: 1000 (Force ms)"), 1e3 } var _lwjgl_lastTime = 0n; export function Java_org_lwjgl_DefaultSysImplementation_getTime() { var e = BigInt(Math.floor(performance.now())); return e <= _lwjgl_lastTime && (e = _lwjgl_lastTime + 1n), _lwjgl_lastTime = e, e } export function Java_org_lwjgl_LinuxSysImplementation_nGetTime() { var e = BigInt(Math.floor(performance.now())); return e <= _lwjgl_lastTime && (e = _lwjgl_lastTime + 1n), _lwjgl_lastTime = e, e } export function Java_org_lwjgl_LinuxSysImplementation_getTimerResolution() { return 1e6 } export function Java_org_lwjgl_opengl_LinuxSysImplementation_nGetTime() {
+    return 1e3 * performance.now();
+}
+
+export function Java_java_lang_System_currentTimeMillis() {
+    return BigInt(Date.now());
+}
+
+export function Java_java_lang_System_nanoTime() {
+    return BigInt(Math.floor(performance.now() * 1000000));
+} export function Java_org_lwjgl_opengl_LinuxDisplay_nLockAWT() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nUnlockAWT() { } export function Java_org_lwjgl_opengl_LinuxDisplay_setErrorHandler() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nSetClassHint() { } export function Java_org_lwjgl_opengl_LinuxDisplay_openDisplay(e) { } export function Java_org_lwjgl_opengl_LinuxDisplay_nInternAtom() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nIsXrandrSupported() { return 0 } export function Java_org_lwjgl_opengl_LinuxDisplay_nIsXF86VidModeSupported() { return 1 } export function Java_org_lwjgl_opengl_LinuxDisplay_nGetDefaultScreen() { return 0 } export async function Java_org_lwjgl_opengl_LinuxDisplay_nGetAvailableDisplayModes(e) {
+    console.error("[LWJGL Native] nGetAvailableDisplayModes MOCK called");
+    try {
+        var t = await e.org.lwjgl.opengl.DisplayMode;
+        var n = await new t(1280, 768);
+        console.error("[LWJGL Native] Created DisplayMode(1280, 768)");
+
+        var a = await n.getClass();
+
+        var r = await a.getDeclaredField("freq");
+        await r.setAccessible(!0);
+        await r.setInt(n, 60);
+        console.error("[LWJGL Native] Set freq=60");
+
+        var o = await a.getDeclaredField("bpp");
+        await o.setAccessible(!0);
+        await o.setInt(n, 32);
+        console.error("[LWJGL Native] Set bpp=32");
+
+        // Validation (Read it back if possible, or just dump)
+        var fVal = await r.getInt(n);
+        console.error("[LWJGL Native] Verified freq=" + fVal);
+
+        return [n];
+    } catch (n) {
+        console.error("DisplayMode fix failed: " + n);
+        var t = await e.org.lwjgl.opengl.DisplayMode;
+        return [await new t(1280, 768)];
+    }
+} export async function Java_org_lwjgl_opengl_Display_getAvailableDisplayModes(e) { return Java_org_lwjgl_opengl_LinuxDisplay_nGetAvailableDisplayModes(e) } export function Java_org_lwjgl_opengl_Display_update() { Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers() } export function Java_org_lwjgl_opengl_Display_getWidth() { var e = window.lwjglCanvasElement || document.getElementsByTagName("canvas")[0] || document.getElementById("lwjglCanvas"); return e ? 0 | e.width : 1280 } export function Java_org_lwjgl_opengl_Display_getHeight() { var e = window.lwjglCanvasElement || document.getElementsByTagName("canvas")[0] || document.getElementById("lwjglCanvas"); return e ? 0 | e.height : 768 } export function Java_org_lwjgl_opengl_LinuxDisplay_nGetCurrentGammaRamp() { } export function Java_org_lwjgl_opengl_LinuxPeerInfo_createHandle() { } export function Java_org_lwjgl_opengl_GLContext_nLoadOpenGLLibrary() { } export function Java_org_lwjgl_opengl_LinuxDisplayPeerInfo_initDefaultPeerInfo() { } export function Java_org_lwjgl_opengl_LinuxDisplayPeerInfo_initDrawable() { } export function Java_org_lwjgl_opengl_AWTSurfaceLock_createHandle() { } export function Java_org_lwjgl_opengl_AWTSurfaceLock_lockAndInitHandle() { return 1 } export function Java_org_lwjgl_opengl_LinuxAWTGLCanvasPeerInfo_getScreenFromSurfaceInfo() { } export function Java_org_lwjgl_opengl_LinuxAWTGLCanvasPeerInfo_nInitHandle() { } export function Java_org_lwjgl_opengl_AWTSurfaceLock_nUnlock() { } export function Java_org_lwjgl_opengl_LinuxPeerInfo_nGetDrawable() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nCreateWindow() {
+    console.error("[LWJGL MANUAL] Java_org_lwjgl_opengl_LinuxDisplay_nCreateWindow CALLED!");
+    initGLShaders();
+}
+export function Java_org_lwjgl_opengl_LinuxDisplay_mapRaised() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nCreateBlankCursor() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nSetTitle() { } export function Java_org_lwjgl_opengl_LinuxMouse_nGetButtonCount() { return 3 } export function Java_org_lwjgl_opengl_LinuxMouse_nQueryPointer() { } export function Java_org_lwjgl_opengl_LinuxMouse_nGetWindowHeight() { return 768 } export function Java_org_lwjgl_opengl_LinuxKeyboard_getModifierMapping() { } export function Java_org_lwjgl_opengl_LinuxKeyboard_nSetDetectableKeyRepeat() { } export function Java_org_lwjgl_opengl_LinuxKeyboard_openIM() { } export function Java_org_lwjgl_opengl_LinuxKeyboard_allocateComposeStatus() { } export function Java_org_lwjgl_opengl_LinuxContextImplementation_nCreate() {
+    console.error("[LWJGL MANUAL] nCreate Context CALLED!");
+}
+export function Java_org_lwjgl_opengl_LinuxContextImplementation_nMakeCurrent() { } export function Java_org_lwjgl_opengl_LinuxContextImplementation_nIsCurrent() { return !0 } export function Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress(e, t) { return 1 } export function Java_org_lwjgl_opengl_GL11_nglGetString(e, t, n) { return checkNoList(curList), 7939 == t ? "" : glCtx.getParameter(t) } export function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(e, t, n, a) { checkNoList(curList); var r = e.getJNIDataView(), o = new Int32Array(r.buffer, Number(n), 4); 2978 == t ? (o[0] = 0, o[1] = 0, o[2] = fbWidth, o[3] = fbHeight) : verboseLog && console.log("glGetInteger", t) } export function Java_org_lwjgl_opengl_GL11_nglGetError() { return checkNoList(curList), 0 } export function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval() { } export function Java_org_lwjgl_opengl_GL11_nglClearColor(e, t, n, a, r, o) { return checkNoList(curList), glCtx.clearColor(t, n, a, r) } export function Java_org_lwjgl_opengl_GL11_nglClear(e, t, n) { checkNoList(curList), glCtx.clear(t) } export function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers() { for (var e = performance.now(); performance.now() - e < 4;); !Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers._logged && (Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers._logged = !0, console.log("[LWJGL] SwapBuffers first call fb = " + fbWidth + "x" + fbHeight + " ")), glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null), glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST), glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb), frameCount++; const t = frameCount; if (frameCount == frameLimit) return console.warn("Stopping"), new Promise(function () { }); t <= 5 && console.log("[LWJGL] SwapBuffers schedule frame = " + t + " "); return new Promise(function (e, n) { let a = !1; function r(n) { a || (a = !0, t <= 5 && console.log("[LWJGL] SwapBuffers resume frame = " + t + " via = " + n + " "), e()) } try { requestAnimationFrame(function () { r("raf") }) } catch (e) { console.warn("[LWJGL] SwapBuffers rAF failed frame = " + t + ": " + String(e) + " "), r("raf-error"); return } t <= 5 && setTimeout(function () { a || console.warn("[LWJGL] SwapBuffers still waiting frame = " + t + " after 1000ms") }, 1e3) }) } export function Java_org_lwjgl_opengl_LinuxEvent_getPending() { return eventQueue.length } export function Java_org_lwjgl_opengl_GL11_nglMatrixMode(e, t, n) { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglMatrixMode); 5888 == t ? curMatrixStack = modelViewMatrixStack : 5889 == t ? curMatrixStack = projMatrixStack : 5890 == t ? curMatrixStack = textureMatrixStack : console.warn("Unknown matrix mode:", t) } export function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(e, t) { checkNoList(curList), glMatrix.mat4.identity(getCurMatrixTop()) } export function Java_org_lwjgl_opengl_GL11_nglOrtho(e, t, n, a, r, o, i, l) { checkNoList(curList); var s = getCurMatrixTop(), c = glMatrix.mat4.create(); glMatrix.mat4.ortho(c, t, n, a, r, o, i); var u = glMatrix.mat4.create(); setCurMatrixTop(glMatrix.mat4.multiply(u, s, c)) } export function Java_org_lwjgl_opengl_GL11_nglTranslatef(e, t, n, a, r) { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTranslatef); var o = getCurMatrixTop(), i = glMatrix.mat4.create(); setCurMatrixTop(glMatrix.mat4.translate(i, o, glMatrix.vec3.fromValues(t, n, a))) } export function Java_org_lwjgl_opengl_GL11_nglViewport(env, clazz, x, y, w, h, addr) { checkNoList(curList), glCtx.viewport(t, n, a, r) } export function Java_org_lwjgl_opengl_GL11_nglDisable(env, clazz, cap, addr) { checkNoList(curList), t == glCtx.BLEND || t == glCtx.CULL_FACE || t == glCtx.DEPTH_TEST || t == glCtx.SCISSOR_TEST || t == glCtx.STENCIL_TEST ? glCtx.disable(t) : t == glCtx.TEXTURE_2D || 3553 == t || 32879 == t ? glCtx.uniform1f(texMaskLocation, 0) : verboseLog && console.log("glDisable " + t.toString(16)) } export function Java_org_lwjgl_opengl_GL11_nglEnable(env, clazz, cap, addr) { checkNoList(curList), t == glCtx.BLEND || t == glCtx.CULL_FACE || t == glCtx.DEPTH_TEST || t == glCtx.SCISSOR_TEST || t == glCtx.STENCIL_TEST ? glCtx.enable(t) : t == glCtx.TEXTURE_2D || 3553 == t || 32879 == t ? glCtx.uniform1f(texMaskLocation, 1) : verboseLog && console.log("glEnable " + t.toString(16)) } export function Java_org_lwjgl_opengl_GL11_nglGenTextures(e, t, n, a) { checkNoList(curList); var r = e.getJNIDataView(), o = new Int32Array(r.buffer, Number(n), t); for (var i = 0; i < t; i++) { var l = textureObjects.length; o[i] = l, textureObjects[l] = glCtx.createTexture() } } export function Java_org_lwjgl_opengl_GL11_nglBindTexture(e, t, n, a) { checkNoList(curList), assert(t == glCtx.TEXTURE_2D), glCtx.bindTexture(t, textureObjects[n]) } export function Java_org_lwjgl_opengl_GL11_nglTexParameteri(e, t, n, a, r) { if (checkNoList(curList), 33169 != n && 32870 != n) { 10496 == n && (console.warn("WebGL: patching GL_CLAMP to GL_CLAMP_TO_EDGE"), a = 33071), console.log("texParameteri: target = " + t + " pname = " + n + " param = " + a + " "); try { glCtx.texParameteri(t, n, a) } catch (e) { console.warn("WebGL: texParameter failed: pname = " + n + " param = " + a + " error = " + e + " ") } } } export function Java_org_lwjgl_opengl_GL11_nglTexImage2D(e, t, n, a, r, o, i, l, s, c, u) { checkNoList(curList); var d = a, f = 6408 == a || 4 == a || 6407 == a || 3 == a; f && (6408 == l ? a = 32856 : 6407 == l ? a = 32849 : 6409 == l && (a = 32832)), 6408 == a && (a = 32856), 4 == a && (a = 32856), 32856 == a && 6407 == l && (console.warn("WebGL: patching mismatched internalFormat GL_RGBA8 -> GL_RGB8 because data is GL_RGB"), a = 32849), a != d && console.log("Patched internalFormat: " + d + " -> " + a + " (format = " + l + ")"), console.log("texImage2D: ifmt = " + a + " (" + r + "x" + o + ") fmt = " + l + " type = " + s + " "); var m = e.getJNIDataView(), p = new Uint8Array(m.buffer, Number(c)); try { glCtx.texImage2D(t, n, a, r, o, i, l, s, p) } catch (e) { console.warn("texImage2D failed: ifmt = " + a + " width = " + r + " height = " + o + " format = " + l + " type = " + s + " error = " + e + " ") } } export function Java_org_lwjgl_opengl_GL11_nglTexCoordPointer(e, t, n, a, r, o) { texCoordData.size = t, texCoordData.type = n, texCoordData.stride = a, texCoordData.pointer = Number(r) } export function Java_org_lwjgl_opengl_GL11_nglEnableClientState(e, t, n) { 32884 == t ? vertexData.enabled = !0 : 32885 == t ? normalData.enabled = !0 : 32886 == t ? colorData.enabled = !0 : 32888 == t ? texCoordData.enabled = !0 : verboseLog && console.log("glEnableClientState") } export function Java_org_lwjgl_opengl_GL11_nglColorPointer(e, t, n, a, r, o) { colorData.size = t, colorData.type = n, colorData.stride = a, colorData.pointer = Number(r) } export function Java_org_lwjgl_opengl_GL11_nglVertexPointer(e, t, n, a, r, o) { vertexData.size = t, vertexData.type = n, vertexData.stride = a, vertexData.pointer = Number(r) } export function Java_org_lwjgl_opengl_GL11_nglDrawArrays(e, t, n, a, r) { var o = e.getJNIDataView(); if (curList) return pushDrawArraysInList(curList, o, t, n, a); uploadData(o, vertexData, vertexBuffer, vertexPosition, a), uploadData(o, colorData, colorBuffer, colorLocation, a), uploadData(o, texCoordData, texCoordBuffer, texCoord, a), drawArraysImpl(t, n, a) } export function Java_org_lwjgl_opengl_GL11_nglDisableClientState(e, t, n) { 32884 == t ? vertexData.enabled = !1 : 32885 == t ? normalData.enabled = !1 : 32886 == t ? colorData.enabled = !1 : 32888 == t ? texCoordData.enabled = !1 : verboseLog && console.log("glDisableClientState") } export function Java_org_lwjgl_opengl_GL11_nglColor4f(e, t, n, a, r, o) { checkNoList(curList), glCtx.vertexAttrib4f(colorLocation, t, n, a, r) } export function Java_org_lwjgl_opengl_GL11_nglColor4ub(e, t, n, a, r, o) { checkNoList(curList); const i = (255 & t) / 255, l = (255 & n) / 255, s = (255 & a) / 255, c = (255 & r) / 255; glCtx.vertexAttrib4f(colorLocation, i, l, s, c) } export function Java_org_lwjgl_opengl_GL11_nglAlphaFunc() { checkNoList(curList), verboseLog && console.log("glAlphaFunc") } export function Java_org_lwjgl_opengl_GL11_nglGenLists(e, t, n, a) { checkNoList(curList); var r = cmdLists.length; for (var o = 0; o < t; o++)cmdLists.push([]); return r } export function Java_org_lwjgl_opengl_GL11_nglNewList(e, t, n, a) { checkNoList(curList), assert(4864 == n), curList = cmdLists[t], curList.length = 0 } export function Java_org_lwjgl_opengl_GL11_nglEndList(e, t) { curList = null } export function Java_org_lwjgl_opengl_GL11_nglColor3f() { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor3f); verboseLog && console.log("glColor3f") } export function Java_org_lwjgl_opengl_LinuxDisplay_nGetNativeCursorCapabilities() { } export function Java_org_lwjgl_opengl_GL11_nglShadeModel() { checkNoList(curList), verboseLog && console.log("glShaderModel") } export function Java_org_lwjgl_opengl_GL11_nglClearDepth(e, t, n) { checkNoList(curList), glCtx.clearDepth(t) } export function Java_org_lwjgl_opengl_GL11_nglDepthFunc(e, t, n) { checkNoList(curList), glCtx.depthFunc(t) } export function Java_org_lwjgl_opengl_GL11_nglCullFace(e, t, n) { checkNoList(curList), glCtx.cullFace(t) } export function Java_org_lwjgl_opengl_GL11_nglPushAttrib(e, t, n) { checkNoList(curList), verboseLog && console.log("glPushAttrib") } export function Java_org_lwjgl_opengl_GL11_nglPopAttrib(e, t) { checkNoList(curList), verboseLog && console.log("glPopAttrib") } export function Java_org_lwjgl_opengl_GL11_nglPushMatrix(e, t) { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix); curMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1])) } export function Java_org_lwjgl_opengl_GL11_nglPopMatrix(e, t) { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix); curMatrixStack.length > 1 ? curMatrixStack.pop() : console.error("LWJGL: Stack underflow in glPopMatrix") } export function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(e, t, n) { checkNoList(curList); var a = getCurMatrixTop(), r = e.getJNIDataView(), o = new Float32Array(r.buffer, Number(t), 16), i = glMatrix.mat4.create(); setCurMatrixTop(glMatrix.mat4.multiply(i, a, o)) } export function Java_org_lwjgl_opengl_GL11_nglRotatef(e, t, n, a, r, o) { checkNoList(curList); var i = getCurMatrixTop(), l = glMatrix.mat4.create(); setCurMatrixTop(glMatrix.mat4.rotate(l, i, t * Math.PI / 180, glMatrix.vec3.fromValues(n, a, r))) } export function Java_org_lwjgl_opengl_GL11_nglDepthMask(e, t, n) { checkNoList(curList), glCtx.depthMask(t) } export function Java_org_lwjgl_opengl_GL11_nglBlendFunc(e, t, n) { checkNoList(curList), glCtx.blendFunc(t, n) } export function Java_org_lwjgl_opengl_GL11_nglColorMask(e, t, n, a, r, o) { checkNoList(curList), glCtx.colorMask(t, n, a, r) } export function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(e, t, n, a, r, o, i, l, s, c) { checkNoList(curList), glCtx.copyTexSubImage2D(t, n, a, r, o, i, l, s) } export function Java_org_lwjgl_opengl_GL11_nglScalef(e, t, n, a, r) { if (curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScalef); var o = getCurMatrixTop(), i = glMatrix.mat4.create(); setCurMatrixTop(glMatrix.mat4.scale(i, o, glMatrix.vec3.fromValues(t, n, a))) } export function Java_org_lwjgl_opengl_GL11_nglCallLists(e, t, n, a, r) { checkNoList(curList), assert(n == glCtx.UNSIGNED_INT); var o = e.getJNIDataView(), i = new Int32Array(o.buffer, Number(a), t); for (var l = 0; l < t; l++)callList(i[l]) } export function Java_org_lwjgl_opengl_GL11_nglFlush() { checkNoList(curList), glCtx.flush() } export function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(e, t, n, a, r, o, i, l, s, c, u) { checkNoList(curList), assert(t == glCtx.TEXTURE_2D); var d = e.getJNIDataView(), f = new Uint8Array(d.buffer, Number(c)); glCtx.texSubImage2D(t, n, a, r, o, i, l, s, f) } export function Java_org_lwjgl_opengl_GL11_nglGetFloatv(e, t, n, a) { checkNoList(curList); var r = e.getJNIDataView(), o = new Float32Array(r.buffer, Number(n), 16); if (2982 == t) { var i = modelViewMatrixStack[modelViewMatrixStack.length - 1]; for (var l = 0; l < 16; l++)o[l] = i[l] } else if (2983 == t) { var i = projMatrixStack[projMatrixStack.length - 1]; for (var l = 0; l < 16; l++)o[l] = i[l] } else verboseLog && console.log("glGetFloat " + t) } export function Java_org_lwjgl_opengl_GL11_nglFogfv() { checkNoList(curList), verboseLog && console.log("glFog") } export function Java_org_lwjgl_opengl_GL11_nglNormal3f() { checkNoList(curList), verboseLog && console.log("glNormal3f") } export function Java_org_lwjgl_opengl_GL11_nglFogi() { checkNoList(curList), verboseLog && console.log("glFogi") } export function Java_org_lwjgl_opengl_GL11_nglFogf() { checkNoList(curList), verboseLog && console.log("glFogf") } export function Java_org_lwjgl_opengl_GL11_nglColorMaterial() { checkNoList(curList), verboseLog && console.log("glColorMaterial") } export function Java_org_lwjgl_opengl_GL11_nglCallList(e, t, n) { checkNoList(curList), callList(t) } export function Java_org_lwjgl_opengl_GL13_nglActiveTexture() { checkNoList(curList), verboseLog && console.log("glActiveTexture") } export function Java_org_lwjgl_opengl_GL11_nglLightfv() { checkNoList(curList), verboseLog && console.log("glLightfv") } export function Java_org_lwjgl_opengl_GL11_nglLightModelfv() { checkNoList(curList), verboseLog && console.log("glLightModelfv") } export function Java_org_lwjgl_opengl_GL11_nglNormalPointer(e, t, n, a, r) { normalData.size = 3, normalData.type = t, normalData.stride = n, normalData.pointer = Number(a) } export function Java_org_lwjgl_opengl_GL13_nglMultiTexCoord2f() { checkNoList(curList), verboseLog && console.log("glMultiTexCoord2f") } export function Java_org_lwjgl_opengl_GL13_nglClientActiveTexture() { verboseLog && console.log("glClientActiveTexture") } export function Java_org_lwjgl_opengl_GL11_nglLineWidth() { checkNoList(curList), verboseLog && console.log("glLineWidth") } export function Java_org_lwjgl_opengl_GL11_nglPolygonOffset() { checkNoList(curList), verboseLog && console.log("glPolygonOffset") } export function Java_org_lwjgl_opengl_GL11_nglBegin(e, t, n) { checkNoList(curList), immediateModeData.mode = t, immediateModeData.vertexPos = 0, immediateModeData.texCoordPos = 0 } export function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(e, t, n, a) { checkNoList(curList); var r = immediateModeData.texCoordPos; if (r > immediateModeData.texCoordBuf.length) { console.log("glTexCoord2f overflow"); return } immediateModeData.texCoordBuf[r] = t, immediateModeData.texCoordBuf[r + 1] = n, immediateModeData.texCoordPos = r + 2 } export function Java_org_lwjgl_opengl_GL11_nglVertex2f(e, t, n, a) { checkNoList(curList); var r = immediateModeData.vertexPos; if (r > immediateModeData.vertexBuf.length) { console.log("glVertex2f overflow"); return } immediateModeData.vertexBuf[r] = t, immediateModeData.vertexBuf[r + 1] = n, immediateModeData.vertexBuf[r + 2] = 0, immediateModeData.vertexPos = r + 3 } export function Java_org_lwjgl_opengl_GL11_nglVertex3f(e, t, n, a, r) { checkNoList(curList); var o = immediateModeData.vertexPos; if (o > immediateModeData.vertexBuf.length) { console.log("glVertex3f overflow"); return } immediateModeData.vertexBuf[o] = t, immediateModeData.vertexBuf[o + 1] = n, immediateModeData.vertexBuf[o + 2] = a, immediateModeData.vertexPos = o + 3 } export function Java_org_lwjgl_opengl_GL11_nglEnd(e, t) { checkNoList(curList), uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 12), uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, immediateModeData.texCoordPos), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 8), drawArraysImpl(immediateModeData.mode, 0, immediateModeData.vertexPos / 3) } export function Java_org_lwjgl_openal_AL_nCreate() { } export function Java_org_lwjgl_openal_AL10_initNativeStubs() { } export function Java_org_lwjgl_openal_ALC10_initNativeStubs() { } export function Java_org_lwjgl_openal_ALC10_nalcOpenDevice() { } export function Java_org_lwjgl_openal_AL_resetNativeStubs() { } export function Java_org_lwjgl_openal_AL_nDestroy() { } export async function Java_org_lwjgl_opengl_LinuxEvent_nNextEvent(e, t, n) { var a = Number(await n.address()), r = e.getJNIDataView(), o = eventQueue.shift(); if (!o) return void r.setInt32(a + 0, 0, !0); switch (o.type) { case "focus": r.setInt32(a + 0, 9, !0); break; case "mousedown": r.setInt32(a + 0, 4, !0), r.setInt32(a + 4, o.x, !0), r.setInt32(a + 8, o.y, !0), r.setInt32(a + 12, o.button, !0); break; case "mouseup": r.setInt32(a + 0, 5, !0), r.setInt32(a + 4, o.x, !0), r.setInt32(a + 8, o.y, !0), r.setInt32(a + 12, o.button, !0); break; case "mousemove": r.setInt32(a + 0, 6, !0), r.setInt32(a + 4, o.x, !0), r.setInt32(a + 8, o.y, !0); break; case "keydown": r.setInt32(a + 0, 2, !0), r.setInt32(a + 4, o.keyCode, !0); break; case "keyup": r.setInt32(a + 0, 3, !0), r.setInt32(a + 4, o.keyCode, !0); break; default: break } } export function Java_org_lwjgl_opengl_LinuxEvent_nGetWindow() { return 0 } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetType(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 0, !0) } export async function Java_org_lwjgl_Sys_alert(e, t, n) { t && t.toString && (t = t.toString()), n && n.toString && (n = n.toString()), console.warn("[LWJGL SYS ALERT] " + t + ": " + n), "undefined" != typeof window && window.alert && window.alert(t + "\n" + n) } export function Java_org_lwjgl_opengl_LinuxEvent_nFilterEvent() { } export function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonTime() { } export function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonRoot() { } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonXRoot(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 4, !0) } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonYRoot(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 8, !0) } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonX(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 4, !0) } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonY(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 8, !0) } export function Java_org_lwjgl_opengl_LinuxEvent_nGetFocusDetail() { } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonType(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 0, !0) } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonButton(e, t) { var n = Number(await t.address()); return e.getJNIDataView().getInt32(n + 12, !0) } export function Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer() { glCanvas.requestPointerLock(), lockedMousePos = { x: 0, y: 0 } } export function Java_org_lwjgl_opengl_LinuxDisplay_nUngrabPointer() { document.exitPointerLock(), lockedMousePos = null } export function Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor() { } export function Java_org_lwjgl_opengl_LinuxDisplay_getRootWindow() { } export function Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowIcon() { } export function Java_org_lwjgl_opengl_LinuxMouse_nGetWindowWidth() { return 1280 } export function Java_org_lwjgl_opengl_LinuxMouse_nSendWarpEvent() { } export function Java_org_lwjgl_opengl_LinuxMouse_nWarpCursor() { } export function Java_org_lwjgl_opengl_LinuxEvent_nSetWindow() { } export function Java_org_lwjgl_opengl_LinuxEvent_nSendEvent() { } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyAddress(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 4, !0) } export function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyTime() { } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyType(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 0, !0) } export async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyKeyCode(e, t) { var n = Number(await t.address()), a = e.getJNIDataView(); return a.getInt32(n + 4, !0) } export function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyState() { } export function Java_org_lwjgl_opengl_LinuxKeyboard_lookupKeysym(e, t, n) { return Number(t) } export async function Java_org_lwjgl_opengl_LinuxKeyboard_lookupString(e, t, n) { var a = Number(await n.address()), r = e.getJNIDataView(); return r.setInt8(a, Number(t)), 1 } export function Java_org_lwjgl_opengl_Display_create(e, t, n) { console.log("[Mock] Java_org_lwjgl_opengl_Display_create called"), initGLShaders() }// Registration with Wrapped Functions
+if (typeof window !== "undefined") {
+    window.CheerpJ_LWJGL_Natives = window.CheerpJ_LWJGL_Natives || {};
+    let registeredCount = 0;
+    // Iterate over global scope to find natives
+    for (const key of Object.getOwnPropertyNames(window)) {
+        if (
+            key.startsWith('Java_org_lwjgl_') ||
+            key.startsWith('Java_java_lang_') ||
+            key.startsWith('JNI_OnLoad_') ||
+            key.startsWith('JVM_') ||
+            key.startsWith('_JVM_')
+        ) {
+            const fn = window[key];
+            if (typeof fn === 'function') {
+                // Apply wrapper
+                const wrapped = __lwjglWrap(key, fn);
+                window.CheerpJ_LWJGL_Natives[key] = wrapped;
+                try { window[key] = wrapped; } catch (e) { }
+                registeredCount++;
+            }
+        }
+    }
+    console.log(`[LWJGL] Registered natives count = ${registeredCount}`);
+}
+
+// Patched methods for Sys
+export function Java_org_lwjgl_Sys_getTimerResolution() { return BigInt(1000); }
+export function Java_org_lwjgl_Sys_getTime() { return BigInt(Math.floor(performance.now())); }
+export function Java_org_lwjgl_Sys_alert__dup2(title, message) { console.error('LWJGL ALERT: ' + title + ' - ' + message); }
+export function Java_org_lwjgl_Sys_getClipboard() { return null; }
+export function Java_org_lwjgl_Sys_ngetNativeCursorCapabilities() { return 0; }
+
+
+// Patched methods for Sys (LinuxSysImplementation)
+export function Java_org_lwjgl_LinuxSysImplementation_nGetJNIVersion() { return 24; }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetPointerSize() { return 8; }
+export function Java_org_lwjgl_LinuxSysImplementation_nAlert(title, message) { console.error(title + ": " + message); }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetClipboard() { return ""; }
+
+
+// Comprehensive Sys Patches
+export function Java_org_lwjgl_LinuxSysImplementation_nGetJNIVersion__dup2() { return 24; }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetPointerSize__dup2() { return 8; }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetTime__dup2() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_LinuxSysImplementation_nAlert__dup2() { console.error(arguments[1]); }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetClipboard__dup2() { return ""; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetJNIVersion() { return 24; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetPointerSize() { return 8; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetTime() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_J2SESysImplementation_nAlert() { console.error(arguments[1]); }
+export function Java_org_lwjgl_J2SESysImplementation_nGetClipboard() { return ""; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetJNIVersion() { return 24; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetPointerSize() { return 8; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetTime() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_DefaultSysImplementation_nAlert() { console.error(arguments[1]); }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetClipboard() { return ""; }
+export function Java_org_lwjgl_SysImplementation_nGetJNIVersion() { return 24; }
+export function Java_org_lwjgl_SysImplementation_nGetPointerSize() { return 8; }
+export function Java_org_lwjgl_SysImplementation_nGetTime() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_SysImplementation_nAlert() { console.error(arguments[1]); }
+export function Java_org_lwjgl_SysImplementation_nGetClipboard() { return ""; }
+
+
+export function JNI_OnLoad(lib, vm, reserved) {
+    console.log("LWJGL JNI_OnLoad called");
+    return 0x00010002;
+}
+\n\n// LinuxDisplay Stubs\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nLockAWT() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUnlockAWT() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nInternAtom() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nReshape() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIconifyWindow() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGrabKeyboard() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUngrabKeyboard() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUngrabPointer() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetViewPort() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowIcon() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetTitle() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetClassHint() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetInputFocus() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSync() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetX() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetY() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetWidth() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetHeight() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetPbufferCapabilities() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsXrandrSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsXF86VidModeSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsNetWMFullscreenSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetCurrentGammaRamp() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetGammaRamp() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nDestroyCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateBlankCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetMinCursorSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetMaxCursorSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetNativeCursorCapabilities() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetDefaultScreen() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetAvailableDisplayModes() { return null; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetCurrentXRandrMode() { return null; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateWindow() { return 1; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_openDisplay() { return 1; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_closeDisplay() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_setErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_resetErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_callErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_getErrorText() { return ''; }\n
+
+// Comprehensive Sys Patches
+export function Java_org_lwjgl_LinuxSysImplementation_nGetJNIVersion__dup3() { return 24; }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetPointerSize__dup3() { return 8; }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetTime__dup3() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_LinuxSysImplementation_nAlert__dup3() { console.error(arguments[1]); }
+export function Java_org_lwjgl_LinuxSysImplementation_nGetClipboard__dup3() { return ""; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetJNIVersion__dup2() { return 24; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetPointerSize__dup2() { return 8; }
+export function Java_org_lwjgl_J2SESysImplementation_nGetTime__dup2() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_J2SESysImplementation_nAlert__dup2() { console.error(arguments[1]); }
+export function Java_org_lwjgl_J2SESysImplementation_nGetClipboard__dup2() { return ""; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetJNIVersion__dup2() { return 24; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetPointerSize__dup2() { return 8; }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetTime__dup2() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_DefaultSysImplementation_nAlert__dup2() { console.error(arguments[1]); }
+export function Java_org_lwjgl_DefaultSysImplementation_nGetClipboard__dup2() { return ""; }
+export function Java_org_lwjgl_SysImplementation_nGetJNIVersion__dup2() { return 24; }
+export function Java_org_lwjgl_SysImplementation_nGetPointerSize__dup2() { return 8; }
+export function Java_org_lwjgl_SysImplementation_nGetTime__dup2() { return BigInt(Math.floor(performance.now() * 1000)); }
+export function Java_org_lwjgl_SysImplementation_nAlert__dup2() { console.error(arguments[1]); }
+export function Java_org_lwjgl_SysImplementation_nGetClipboard__dup2() { return ""; }
+\n\n// LinuxDisplay Stubs\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nLockAWT() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUnlockAWT() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nInternAtom() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nReshape() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIconifyWindow() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGrabKeyboard() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUngrabKeyboard() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nUngrabPointer() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetViewPort() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowIcon() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetTitle() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetClassHint() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetInputFocus() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSync() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetX() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetY() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetWidth() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetHeight() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetPbufferCapabilities() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsXrandrSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsXF86VidModeSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nIsNetWMFullscreenSupported() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetCurrentGammaRamp() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nSetGammaRamp() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nDestroyCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateBlankCursor() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetMinCursorSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetMaxCursorSize() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetNativeCursorCapabilities() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetDefaultScreen() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetAvailableDisplayModes() { return null; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nGetCurrentXRandrMode() { return null; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_nCreateWindow() { return 1; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_openDisplay() { return 1; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_closeDisplay() {}\nfunction Java_org_lwjgl_opengl_LinuxDisplay_setErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_resetErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_callErrorHandler() { return 0; }\nfunction Java_org_lwjgl_opengl_LinuxDisplay_getErrorText() { return ''; }\n
+
+// GLContext Stubs
+export function Java_org_lwjgl_opengl_GLContext_nLoadOpenGLLibrary__dup2() {}
+export function Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress__dup2() { return 1; }
+
+export function Java_Fixer_nTestLoad(env, clazz) {
+    console.error("LWJGL JS: nTestLoad CALLED!");
+}

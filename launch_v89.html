@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v89 - ROBUST PATCH)</h1>
+        <h1>🚀 Starsector 2 Web (v89 - FLAT PATCH FIXED)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -95,7 +95,6 @@
                 const lastBrace = patchedText.lastIndexOf('}');
                 if (lastBrace !== -1) {
                     let pre = patchedText.substring(0, lastBrace).trim();
-                    
                     let additions = [];
                     for (const p of patchKeys) {
                         if (text.indexOf('"' + p.key + '"') === -1) {
@@ -103,17 +102,14 @@
                             log('Patching missing key: ' + p.key);
                         }
                     }
-                    
                     if (additions.length > 0) {
-                        // Check if we need a comma
                         if (!pre.endsWith(',')) pre += ',';
                         patchedText = pre + '
+    // --- WEB PATCH ---
     ' + additions.join(',
     ') + '
 }';
                         log('Settings patched successfully.');
-                    } else {
-                        log('No patching needed.');
                     }
                 }
 

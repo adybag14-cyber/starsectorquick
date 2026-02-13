@@ -1,14 +1,1 @@
-commons-compiler.jar	30595
-fs.common_obf.jar	311803
-fs.sound_obf.jar	35387
-janino.jar	613299
-jinput.jar	214859
-jogg-0.0.7.jar	6839
-jorbis-0.0.15.jar	58917
-json.jar	44055
-log4j-1.2.9.jar	352291
-lwjgl.jar	1053471
-lwjgl_util.jar	173911
-starfarer.api.jar	7182557
-starfarer_obf.jar	6016541
-xstream-1.4.10.jar	589803
+resources.jar	23814

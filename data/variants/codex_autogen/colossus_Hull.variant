@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "colossus",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Heavy Freighter",
+  "variantId": "colossus_Hull",
+  "permaMods": []
+}

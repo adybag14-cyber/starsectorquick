@@ -3,7 +3,7 @@
 <head>
     <meta charset='UTF-8'>
     <title>Starsector 2 - GitHub Pages Deployment</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <script src='https://cjrtnc.leaningtech.com/20260129_2897/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -51,7 +51,7 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const prefix = '/app/starsectorquick/';
+                const prefix = `${window.location.origin}/`;
                 
                 await cheerpjInit({ 
                     version: 17, 

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "pegasus",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Battleship",
+  "variantId": "pegasus_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_armour1",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Station Armour",
+  "variantId": "module_armour1_Hull",
+  "permaMods": []
+}

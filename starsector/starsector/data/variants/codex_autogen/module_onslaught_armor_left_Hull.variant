@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_onslaught_armor_left",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Vambrace Module",
+  "variantId": "module_onslaught_armor_left_Hull",
+  "permaMods": []
+}

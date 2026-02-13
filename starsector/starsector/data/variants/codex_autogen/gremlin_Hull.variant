@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "gremlin",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Phase Frigate",
+  "variantId": "gremlin_Hull",
+  "permaMods": []
+}

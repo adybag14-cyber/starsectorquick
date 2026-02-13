@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_hightech_shield",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Shield Module",
+  "variantId": "module_hightech_shield_Hull",
+  "permaMods": []
+}

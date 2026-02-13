@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - Definitive WebLauncher (v74)</title>
+    <title>Starsector 2 - Definitive WebLauncher (v75)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v74 - DEFINITIVE)</h1>
+        <h1>🚀 Starsector 2 Web (v75 - RESOURCE MAPPED)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -72,7 +72,8 @@
                     },
                     mounts: [
                         { type: 'http', path: '/app/', url: origin },
-                        { type: 'http', path: '/files/', url: projectUrl + 'data.jar' }
+                        // Mount data.jar to the path expected by the engine relative to user.dir
+                        { type: 'http', path: '/starfarer.res/res/', url: projectUrl + 'data.jar' }
                     ]
                 });
 
@@ -90,8 +91,8 @@
                 ];
                 
                 const cp = jarFiles.map(j => '/app/starsectorquick/jars/' + j).concat([
-                    '/files/',
-                    '/files/data/config/'
+                    '/starfarer.res/res/',
+                    '/starfarer.res/res/data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 

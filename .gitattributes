@@ -1,0 +1,2 @@
+everything.jar filter=lfs diff=lfs merge=lfs -text
+jars/resources.jar filter=lfs diff=lfs merge=lfs -text

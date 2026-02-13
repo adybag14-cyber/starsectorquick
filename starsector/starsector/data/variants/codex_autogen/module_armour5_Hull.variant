@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_armour5",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Station Structural Spur",
+  "variantId": "module_armour5_Hull",
+  "permaMods": []
+}

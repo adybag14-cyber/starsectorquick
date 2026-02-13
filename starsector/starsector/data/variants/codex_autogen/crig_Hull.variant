@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "crig",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Salvage Rig",
+  "variantId": "crig_Hull",
+  "permaMods": []
+}

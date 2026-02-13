@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "derelict_mothership_pod_s_right",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Gun Pod, Small",
+  "variantId": "derelict_mothership_pod_s_right_Hull",
+  "permaMods": []
+}

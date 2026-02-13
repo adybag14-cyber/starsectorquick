@@ -1,4 +1,3 @@
 Manifest-Version: 1.0
-Ant-Version: Apache Ant 1.10.12
-Created-By: 17.0.10+7-LTS (Azul Systems, Inc.)
+Created-By: 25.0.1 (Eclipse Adoptium)
 

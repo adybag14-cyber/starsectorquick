@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "prometheus",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Tanker",
+  "variantId": "prometheus_Hull",
+  "permaMods": []
+}

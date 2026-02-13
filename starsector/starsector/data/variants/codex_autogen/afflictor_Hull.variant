@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "afflictor",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Phase Frigate",
+  "variantId": "afflictor_Hull",
+  "permaMods": []
+}

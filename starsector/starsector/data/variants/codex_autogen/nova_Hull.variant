@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "nova",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Drone Battlecruiser",
+  "variantId": "nova_Hull",
+  "permaMods": []
+}
