@@ -1,0 +1,47 @@
+{
+    "bounds": [
+        113,
+        24,
+        -13,
+        -36,
+        -23,
+        -23,
+        -96,
+        -31,
+        -134,
+        5,
+        -122,
+        12,
+        -96,
+        -17,
+        -29,
+        3,
+        -16,
+        -16,
+        64,
+        26
+    ],
+    "builtInMods": [
+        "reduced_explosion",
+        "always_detaches"
+    ],
+    "center": [
+        37,
+        138
+    ],
+    "collisionRadius": 170,
+    "coversColor": "",
+    "height": 254,
+    "hullId": "module_onslaught_armor_right",
+    "hullName": "Armor Module",
+    "hullSize": "FRIGATE",
+    "shieldCenter": [
+        0,
+        0
+    ],
+    "shieldRadius": 170,
+    "spriteName": "graphics/ships/onslaught/onslaught1_armor_right.png",
+    "style": "LOW_TECH",
+    "viewOffset": 0,
+    "width": 74
+}

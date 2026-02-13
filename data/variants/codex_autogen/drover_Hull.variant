@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "drover",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Light Carrier",
+  "variantId": "drover_Hull",
+  "permaMods": []
+}

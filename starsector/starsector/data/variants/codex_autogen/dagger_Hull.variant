@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "dagger",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Codex fallback",
+  "variantId": "dagger_Hull",
+  "permaMods": []
+}

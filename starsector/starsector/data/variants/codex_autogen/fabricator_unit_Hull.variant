@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "fabricator_unit",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Fabricator Unit",
+  "variantId": "fabricator_unit_Hull",
+  "permaMods": []
+}

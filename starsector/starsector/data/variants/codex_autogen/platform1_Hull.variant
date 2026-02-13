@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "platform1",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Weapons Platform",
+  "variantId": "platform1_Hull",
+  "permaMods": []
+}

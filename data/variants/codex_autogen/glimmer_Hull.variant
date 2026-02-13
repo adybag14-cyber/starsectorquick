@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "glimmer",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Droneship",
+  "variantId": "glimmer_Hull",
+  "permaMods": []
+}

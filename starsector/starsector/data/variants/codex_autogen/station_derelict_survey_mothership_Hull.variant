@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "station_derelict_survey_mothership",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Domain-era Survey Mothership",
+  "variantId": "station_derelict_survey_mothership_Hull",
+  "permaMods": []
+}

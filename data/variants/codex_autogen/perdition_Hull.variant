@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "perdition",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Codex fallback",
+  "variantId": "perdition_Hull",
+  "permaMods": []
+}

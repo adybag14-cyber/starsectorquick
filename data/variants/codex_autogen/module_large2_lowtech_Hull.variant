@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_large2_lowtech",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Heavy Support Module",
+  "variantId": "module_large2_lowtech_Hull",
+  "permaMods": []
+}

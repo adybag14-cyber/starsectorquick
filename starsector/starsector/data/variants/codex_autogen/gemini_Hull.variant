@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "gemini",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Combat Freighter",
+  "variantId": "gemini_Hull",
+  "permaMods": []
+}

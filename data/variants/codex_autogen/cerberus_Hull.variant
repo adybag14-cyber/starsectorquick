@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "cerberus",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Combat Freighter",
+  "variantId": "cerberus_Hull",
+  "permaMods": []
+}

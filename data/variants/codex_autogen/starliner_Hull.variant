@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "starliner",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Civilian Transport",
+  "variantId": "starliner_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "mora",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Carrier",
+  "variantId": "mora_Hull",
+  "permaMods": []
+}

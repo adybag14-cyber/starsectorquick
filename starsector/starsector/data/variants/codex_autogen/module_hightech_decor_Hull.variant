@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_hightech_decor",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Station Extension",
+  "variantId": "module_hightech_decor_Hull",
+  "permaMods": []
+}

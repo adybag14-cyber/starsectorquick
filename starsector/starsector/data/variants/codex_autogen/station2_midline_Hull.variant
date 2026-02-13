@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "station2_midline",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Battlestation",
+  "variantId": "station2_midline_Hull",
+  "permaMods": []
+}

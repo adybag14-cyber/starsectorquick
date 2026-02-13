@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "flare",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Codex fallback",
+  "variantId": "flare_Hull",
+  "permaMods": []
+}

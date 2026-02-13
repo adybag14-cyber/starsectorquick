@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "overseer_unit",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Overseer Unit",
+  "variantId": "overseer_unit_Hull",
+  "permaMods": []
+}

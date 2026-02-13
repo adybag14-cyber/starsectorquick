@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "atlas",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Superfreighter",
+  "variantId": "atlas_Hull",
+  "permaMods": []
+}

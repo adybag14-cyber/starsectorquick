@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "sentry",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Drone",
+  "variantId": "sentry_Hull",
+  "permaMods": []
+}

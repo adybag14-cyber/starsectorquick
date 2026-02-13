@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "skirmish_unit",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Skirmish Unit",
+  "variantId": "skirmish_unit_Hull",
+  "permaMods": []
+}

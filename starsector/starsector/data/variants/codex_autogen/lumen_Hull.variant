@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "lumen",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Droneship",
+  "variantId": "lumen_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "hound",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Combat Freighter",
+  "variantId": "hound_Hull",
+  "permaMods": []
+}

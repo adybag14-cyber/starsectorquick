@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "nebula",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Civilian Transport",
+  "variantId": "nebula_Hull",
+  "permaMods": []
+}
