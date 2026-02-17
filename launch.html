@@ -923,6 +923,8 @@
                     },
                     javaProperties,
                     mounts: [
+                        // Legacy Fixer paths resolve via /app/starsector/...
+                        { type: 'http', path: '/app/starsector/', url: `${origin}${projectPath}` },
                         { type: 'http', path: '/app/', url: origin },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
