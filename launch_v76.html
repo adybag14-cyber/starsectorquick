@@ -2,13 +2,13 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment</title>
-    <script src='https://cjrtnc.leaningtech.com/20260129_2897/loader.js'></script>
+    <title>Starsector 2 - Root Mount (v76)</title>
+    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         #game-container { margin: 20px auto; width: 1024px; height: 768px; border: 2px solid #00d9ff; position: relative; background: #111; }
-        #log { background: #111; padding: 15px; height: 250px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
+        #log { background: #111; padding: 15px; height: 300px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
         .btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: #00d9ff; color: #000; text-transform: uppercase; transition: 0.3s; }
         .btn:hover { background: #00b8e6; transform: translateY(-2px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (v45)</h1>
+        <h1>🚀 Starsector 2 Web (v76 - ROOT MOUNT)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
         
         <div style="margin: 20px 0;">
@@ -51,30 +51,36 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const prefix = `${window.location.origin}/`;
+                const origin = 'https://adybag14-cyber.github.io/';
+                const projectPrefix = '/starsectorquick/';
+                const gameDir = projectPrefix + 'starsector/starsector/';
                 
                 await cheerpjInit({ 
                     version: 17, 
                     enableX11: true,
                     javaProperties: [
-                        `-Djava.library.path=${prefix}build/final/wasm-modules/`,
-                        `-Duser.dir=${prefix}starsector/starsector`,
-                        `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=${prefix}starsector/starsector/`
+                        `java.library.path=${projectPrefix}build/final/wasm-modules/`,
+                        `user.dir=${gameDir}`,
+                        `com.fs.starfarer.settings.linux=true`,
+                        `org.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
+                        `com.fs.starfarer.settings.paths.logs=${gameDir}`
                     ],
                     libraries: {
-                        'libGL.so.1': `${prefix}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${prefix}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${prefix}build/final/wasm-modules/unsafe.wasm`
-                    }
+                        'libGL.so.1': `${projectPrefix}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${projectPrefix}build/final/wasm-modules/lwjgl.js`,
+                        'liblwjgl64.so': `${projectPrefix}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${projectPrefix}build/final/wasm-modules/unsafe.wasm`
+                    },
+                    mounts: [
+                        { type: 'http', path: '/', url: origin }
+                    ]
                 });
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
 
                 const jarFiles = [
+                    'stubs.jar',
                     'resources.jar',
                     'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
                     'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
@@ -83,17 +89,16 @@
                     'xstream-1.4.10.jar'
                 ];
                 
-                const cp = jarFiles.map(j => prefix + 'jars/' + j).concat([
-                    prefix,
-                    prefix + 'starsector/starsector/',
-                    prefix + 'starsector/starsector/data/config/'
+                const cp = jarFiles.map(j => projectPrefix + 'jars/' + j).concat([
+                    gameDir,
+                    gameDir + 'data/config/'
                 ]).join(':');
                 log('Final ClassPath: ' + cp);
 
-                log('Starting Main Class: com.fs.starfarer.StarfarerLauncher', '#ff9f43');
+                log('Starting Definitive Main: WebLauncher', '#ff9f43');
                 btn.textContent = '🚀 RUNNING';
                 
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', cp, '-nosound');
+                await cheerpjRunMain('WebLauncher', cp);
                 
                 log('Execution loop started. Watch for Java output.', '#00ff88');
             } catch (e) {

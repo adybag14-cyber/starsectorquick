@@ -1,5 +1,6 @@
-const { chromium } = require('playwright');
+const fs = require('fs');
 const path = require('path');
+const { chromium } = require('playwright');
 
 async function testFrontend() {
     console.log('🧪 Starting Playwright test for index.html...');
@@ -15,6 +16,8 @@ async function testFrontend() {
     });
     
     const page = await context.newPage();
+    const outputDir = path.join(__dirname, 'test_output');
+    fs.mkdirSync(outputDir, { recursive: true });
     
     try {
         // Load the HTML file
@@ -155,7 +158,7 @@ async function testFrontend() {
         }
         
         // Test 11: Take screenshot
-        const screenshotPath = path.join(__dirname, 'test_output', 'frontend_test.png');
+        const screenshotPath = path.join(outputDir, 'frontend_test.png');
         await page.screenshot({ path: screenshotPath, fullPage: true });
         console.log(`📸 Screenshot saved to: ${screenshotPath}`);
         

@@ -1,16 +1,21 @@
-const { chromium } = require('playwright');
 const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
 
 async function runTest() {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const pageUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const outputDir = path.join(__dirname, 'test_output');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   // Capture console
   page.on('console', msg =>console.log(`[CONSOLE ${msg.type()}] ${msg.text()}`));
   page.on('pageerror', error => console.error(`[PAGE ERROR] ${error.message}`));
 
-  console.log('Loading http://localhost:8080/test_fixed.html...');
-  await page.goto('http://localhost:8080/test_fixed.html', {waitUntil: 'domcontentloaded'});
+  console.log(`Loading ${pageUrl}...`);
+  await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
 
   await page.waitForTimeout(3000);
 
@@ -42,8 +47,9 @@ async function runTest() {
     console.log('\nLaunch button is disabled!');
   }
 
-  await page.screenshot({ path: 'test_screenshot.png' });
-  console.log('\nScreenshot saved to test_screenshot.png');
+  const screenshotPath = path.join(outputDir, 'test_screenshot.png');
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  console.log(`\nScreenshot saved to ${screenshotPath}`);
   
   await browser.close();
   console.log('\n=== TEST COMPLETE ===\n');

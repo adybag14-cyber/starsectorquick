@@ -1,9 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
 
 async function clickTest() {
   console.log('\n=== CLICK TEST ===');
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const pageUrl = process.env.GAME_URL || 'http://localhost:8888/STARSECTOR_V6J_FINAL_WORKING.html';
+  const outputDir = path.join(__dirname, 'test_output');
+  fs.mkdirSync(outputDir, { recursive: true });
 
   let allMessages = [];
   let allErrors = [];
@@ -21,7 +27,7 @@ async function clickTest() {
 
   try {
     console.log('\n1. Loading page...');
-    await page.goto('http://localhost:8080/STARSECTOR_V6J_FINAL_WORKING.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
     console.log('   ✅ Page loaded');
 
     await page.waitForTimeout(1000);
@@ -62,8 +68,9 @@ async function clickTest() {
       console.log('\n   Launch button not enabled, cannot launch');
     }
 
-    await page.screenshot({ path: 'click_test_screenshot.png', fullPage: true });
-    console.log('\n   📸 Screenshot saved to click_test_screenshot.png');
+    const screenshotPath = path.join(outputDir, 'click_test_screenshot.png');
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    console.log(`\n   📸 Screenshot saved to ${screenshotPath}`);
 
   } catch (e) {
     console.error('\n   ❌ ERROR:', e.message);

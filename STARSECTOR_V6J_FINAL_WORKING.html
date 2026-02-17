@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starsector 2 - V6J FINAL (cheerpjRunJar API - WORKING)</title>
+    <script src="https://cjrtnc.leaningtech.com/20260129_2897/loader.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -127,7 +128,6 @@
             max-width: 100%;
         }
     </style>
-    <script src="build/final/polyfills/HashtableEntrySet.js"></script>
 </head>
 <body>
     <div class="container">
@@ -208,13 +208,14 @@
         }
         
         let cheerpjReady = false;
+        let classPathString = '';
         
         async function initializePipeline() {
             log('🧪 INITIALIZING V6L (cheerpjRunJar API)', 'success');
             log('📦 Setting up classpaths for game JARs...', 'info');
             
-            // List all 14 JAR files for classpaths
-            const jarFiles = [
+            // Expected JAR files for a full launch
+            const expectedJarFiles = [
                 'commons-compiler.jar',
                 'fs.common_obf.jar',
                 'fs.sound_obf.jar',
@@ -231,35 +232,115 @@
                 'xstream-1.4.10.jar'
             ];
             
-            const classpaths = jarFiles.map(j => './jars/' + j);
+            const baseUrl = `${window.location.origin}/`;
+            const urlParams = new URLSearchParams(window.location.search);
+            const javaVersionParam = urlParams.get('java');
+            const javaVersion = javaVersionParam ? Number.parseInt(javaVersionParam, 10) : 8;
+            log(`☕ Using Java runtime v${Number.isNaN(javaVersion) ? '8' : javaVersion}`, 'info');
+            const jarBaseCandidates = [
+                `${baseUrl}jars/`,
+                `${baseUrl}`,
+                `${baseUrl}starsector/starsector/`
+            ];
+            let jarBaseUrl = jarBaseCandidates[0];
+            let availableJars = [];
+            try {
+                const response = await fetch(`${jarBaseUrl}index.list`);
+                if (response.ok) {
+                    const contents = await response.text();
+                    availableJars = contents
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(Boolean)
+                        .map(line => line.split(/\s+/)[0])
+                        .filter(Boolean);
+                    if (availableJars.length > 0) {
+                        log(`📦 Found ${availableJars.length} JAR(s) in ${jarBaseUrl}index.list`, 'info');
+                    }
+                } else {
+                    log(`⚠️ Unable to read ${jarBaseUrl}index.list to confirm available JARs.`, 'warning');
+                }
+            } catch (error) {
+                log(`⚠️ Unable to read ${jarBaseUrl}index.list to confirm available JARs.`, 'warning');
+            }
+
+            if (availableJars.length === 0) {
+                for (const candidate of jarBaseCandidates.slice(1)) {
+                    try {
+                        const response = await fetch(`${candidate}${expectedJarFiles[0]}`, { method: 'HEAD' });
+                        if (response.ok) {
+                            jarBaseUrl = candidate;
+                            log(`📦 Detected JAR base at ${jarBaseUrl}`, 'info');
+                            break;
+                        }
+                    } catch (error) {
+                        // Ignore and continue probing.
+                    }
+                }
+            }
+
+            const jarFiles = availableJars.length > 0 ? availableJars : expectedJarFiles;
+            if (availableJars.length > 0 && availableJars.length < expectedJarFiles.length) {
+                const missingExpected = expectedJarFiles.filter(jar => !availableJars.includes(jar));
+                log(`⚠️ Using ${availableJars.length} JAR(s) from jars/index.list; full game requires ${expectedJarFiles.length}.`, 'warning');
+                log(`❌ Missing ${missingExpected.length} required JAR(s) for launch.`, 'error');
+                missingExpected.slice(0, 5).forEach(jar => log(`Missing: ${jar}`, 'error'));
+                document.getElementById('launchButton').disabled = true;
+                document.getElementById('launchButton').textContent = '❌ MISSING JARS';
+                return;
+            }
+
+            const classpaths = jarFiles.map(j => `${jarBaseUrl}${j}`);
+            classPathString = classpaths.join(':');
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
+
+            const missingJars = [];
+            await Promise.all(classpaths.map(async (jarUrl) => {
+                try {
+                    const response = await fetch(jarUrl, { method: 'HEAD' });
+                    if (!response.ok) missingJars.push(jarUrl);
+                } catch (error) {
+                    missingJars.push(jarUrl);
+                }
+            }));
+
+            if (missingJars.length > 0) {
+                log(`❌ Missing ${missingJars.length} JAR(s). Upload them to /jars before launching.`, 'error');
+                missingJars.slice(0, 5).forEach(jarUrl => log(`Missing: ${jarUrl}`, 'error'));
+                const jarSet = new Set(availableJars.length > 0 ? availableJars : expectedJarFiles);
+                const unexpected = expectedJarFiles.filter(jar => !jarSet.has(jar));
+                if (unexpected.length > 0) {
+                    log(`ℹ️ jars/index.list is missing ${unexpected.length} expected JAR(s).`, 'warning');
+                    unexpected.slice(0, 5).forEach(jar => log(`Expected: ${jar}`, 'warning'));
+                }
+                document.getElementById('launchButton').disabled = true;
+                document.getElementById('launchButton').textContent = '❌ MISSING JARS';
+                return;
+            }
             
             try {
                 await cheerpjInit({
-                    version: 8,
+                    version: 17,
+                    fileSystem: {
+                        mountPoint: '/app',
+                        type: 'overlay',
+                        lower: { type: 'http', url: baseUrl },
+                        upper: { type: 'indexedDB', name: 'starsector_v6j' }
+                    },
                     javaProperties: [
-                        'java.library.path=./build/final/wasm-modules'
+                        `java.library.path=${baseUrl}build/final/wasm-modules`
                     ],
                     classPaths: classpaths,
                     libraries: {
-                        'libGL.so.1': './build/final/wasm-modules/gl4es.wasm',
-                        'liblwjgl.so': './build/final/wasm-modules/lwjgl.js',
-                        'libsun_misc_Unsafe.so': './build/final/wasm-modules/unsafe.wasm'
+                        'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
+                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
+                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
                     },
                     enableX11: true,
                     print: function(msg) {
                         log('[CheerpJ] ' + msg, 'info');
                     },
-                    memoryPages: 4096,
-                    preloadResources: {
-                        '/lt/8/jre/lib/cheerpj-awt.jar': [0, 131072],
-                        '/lt/8/jre/lib/rt.jar': [0, 131072, 1310720, 1572864, 4456448, 4849664],
-                        '/lt/8/jre/lib/jsse.jar': [0, 131072, 786432, 917504],
-                        '/lt/8/jre/lib/jce.jar': [0, 131072],
-                        '/lt/8/jre/lib/charsets.jar': [0, 131072, 1703936, 1835008],
-                        '/lt/8/jre/lib/resources.jar': [0, 131072, 917504, 1179648],
-                        '/lt/8/jre/lib/javaws.jar': [0, 131072, 1441792, 1703936]
-                    }
+                    memoryPages: 4096
                 });
                 
                 cheerpjReady = true;
@@ -296,9 +377,9 @@
             // Primary approach: Use cheerpjRunMain with class name (classpaths already loaded)
             try {
                 log('🎯 Attempt 1: cheerpjRunMain with class name', 'info');
-                log('📦 Main class: com.fs.starfarer.Starfarer', 'info');
+                log('📦 Main class: com.fs.starfarer.StarfarerLauncher', 'info');
                 
-                await cheerpjRunMain('com.fs.starfarer.Starfarer');
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', classPathString);
                 
                 log('✅ STARSECTOR 2 LAUNCHED with class name!', 'success');
                 document.getElementById('launchButton').textContent = '✅ RUNNING';
@@ -309,31 +390,17 @@
                 console.error(error);
             }
             
-            // Fallback: Try cheerpjRunMain with JAR name
+            // Fallback: Try cheerpjRunJar with explicit JAR URL
             try {
-                log('🎯 Attempt 2: cheerpjRunMain with JAR filename', 'info');
-                log('📦 Main: starfarer_obf.jar', 'info');
-                
-                await cheerpjRunMain('starfarer_obf.jar');
-                
-                log('✅ STARSECTOR 2 LAUNCHED with JAR name!', 'success');
-                document.getElementById('launchButton').textContent = '✅ RUNNING';
-                return;
-                
-            } catch (error) {
-                log(`❌ cheerpjRunMain with JAR name failed: ${error.message}`, 'error');
-                console.error(error);
-            }
-            
-            // Fallback: Try cheerpjRunJar
-            try {
-                log('🎯 Attempt 3: cheerpjRunJar with JAR file', 'info');
+                log('🎯 Attempt 2: cheerpjRunJar with JAR file', 'info');
                 log('📦 Path: ./jars/starfarer_obf.jar', 'info');
                 
-                await cheerpjRunJar('./jars/starfarer_obf.jar');
+                const jarUrl = `${window.location.origin}/jars/starfarer_obf.jar`;
+                await cheerpjRunJar(jarUrl);
                 
                 log('✅ STARSECTOR 2 LAUNCHED with cheerpjRunJar!', 'success');
                 document.getElementById('launchButton').textContent = '✅ RUNNING';
+                return;
                 
             } catch (error) {
                 log(`❌ All launch methods failed!`, 'error');
@@ -354,11 +421,10 @@
         log('📦 Method: cheerpjRunMain + classpath (Correct Approach)', 'success');
         log('📦 Canvas: 1024x768 (adjustable in-game)', 'info');
         log('📦 JARs: 14 JARs in ./jars/ directory', 'info');
-        log('📦 Main Class: com.fs.starfarer.Starfarer', 'info');
+        log('📦 Main Class: com.fs.starfarer.StarfarerLauncher', 'info');
         log('💡 Tip: Click INITIALIZE first, then LAUNCH to play!', 'info');
         log('✅ Using same API as working V6L-cheerpjRunJar', 'success');
     </script>
     
-    <script src="https://cjrtnc.leaningtech.com/4.2/loader.js"></script>
 </body>
 </html>
