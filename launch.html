@@ -1106,10 +1106,7 @@
                 }
                 jarFiles.push('sectorgen_bootstrap.jar');
 
-                // Bust jar URL caches per-launch to avoid stale If-Range ETag mismatches
-                // on GitHub Pages that can cause CheerpJ range-loading failures.
-                const classPathCacheKey = String(window.__STARSECTOR_CP_BUST__ || Date.now());
-                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}?v=${classPathCacheKey}`);
+                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
                 // Include unpacked game content root so launcher texture/resource loads
                 // (e.g. graphics/ui/s_icon16.png) resolve through CLASSPATH.
                 if (window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ !== false) {
@@ -1120,6 +1117,21 @@
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
                 classPathEntries.push(`${contentRoot}data/config/`);
+
+                // Warm a fresh range/etag entry for the largest JAR to reduce stale If-Range
+                // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
+                try {
+                    const rangePrimeUrl = `${fullAppPath}jars/starfarer_obf.jar`;
+                    const rangePrimeResp = await fetch(rangePrimeUrl, {
+                        method: 'GET',
+                        headers: { Range: 'bytes=0-0' },
+                        cache: 'reload'
+                    });
+                    log(`Range prime ${rangePrimeResp.status}: starfarer_obf.jar`, '#888');
+                } catch (e) {
+                    log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
+                }
+
                 const finalClassPath = classPathEntries.join(':');
                 
                 log('Final ClassPath: ' + finalClassPath, '#888');
