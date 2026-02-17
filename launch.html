@@ -418,10 +418,28 @@
                 const dataUrl = origin + projectPath + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
-                const lwjglModuleName = window.__LWJGL_MODULE__ || 'lwjgl_clean.js';
-                const lwjglModuleUrl = `${origin}${projectPath}build/final/wasm-modules/${lwjglModuleName}?ts=${Date.now()}`;
+                const lwjglModuleCandidates = [];
+                if (window.__LWJGL_MODULE__) lwjglModuleCandidates.push(window.__LWJGL_MODULE__);
+                lwjglModuleCandidates.push('lwjgl_clean.js', 'lwjgl.js');
+                const uniqueModuleCandidates = [...new Set(lwjglModuleCandidates)];
+                let lwjglModule = null;
+                let lwjglModuleName = null;
+                let lastLwjglImportError = null;
+                for (const candidate of uniqueModuleCandidates) {
+                    const candidateUrl = `${origin}${projectPath}build/final/wasm-modules/${candidate}?ts=${Date.now()}`;
+                    try {
+                        lwjglModule = await import(candidateUrl);
+                        lwjglModuleName = candidate;
+                        break;
+                    } catch (importErr) {
+                        lastLwjglImportError = importErr;
+                        log(`LWJGL module load failed: ${candidate}`, '#ffaa00');
+                    }
+                }
+                if (!lwjglModule) {
+                    throw lastLwjglImportError || new Error('Unable to load any LWJGL module candidate');
+                }
                 log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
-                const lwjglModule = await import(lwjglModuleUrl);
                 const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
                 log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
                 const lwjglNatives = {};
