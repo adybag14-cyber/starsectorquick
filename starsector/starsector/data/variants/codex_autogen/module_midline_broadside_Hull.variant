@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_midline_broadside",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Heavy Broadside Module",
+  "variantId": "module_midline_broadside_Hull",
+  "permaMods": []
+}

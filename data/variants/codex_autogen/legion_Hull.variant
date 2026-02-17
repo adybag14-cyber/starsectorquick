@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "legion",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Battlecarrier",
+  "variantId": "legion_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_midline_bastion",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Light Support Module",
+  "variantId": "module_midline_bastion_Hull",
+  "permaMods": []
+}

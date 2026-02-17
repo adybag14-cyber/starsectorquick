@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "radiant",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Drone Battleship",
+  "variantId": "radiant_Hull",
+  "permaMods": []
+}

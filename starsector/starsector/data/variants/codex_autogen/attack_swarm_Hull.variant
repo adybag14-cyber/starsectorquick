@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "attack_swarm",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Swarm",
+  "variantId": "attack_swarm_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "vigilance",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Frigate",
+  "variantId": "vigilance_Hull",
+  "permaMods": []
+}

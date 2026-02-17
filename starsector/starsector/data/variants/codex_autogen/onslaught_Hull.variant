@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "onslaught",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Battleship",
+  "variantId": "onslaught_Hull",
+  "permaMods": []
+}

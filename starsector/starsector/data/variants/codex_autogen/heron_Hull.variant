@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "heron",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Fast Carrier",
+  "variantId": "heron_Hull",
+  "permaMods": []
+}

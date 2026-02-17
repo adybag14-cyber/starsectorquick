@@ -1,9 +1,10 @@
 data/	-1
 graphics/	-1
 jre_linux/	-1
+mods/	-1
 sounds/	-1
 LICENSE.txt	228698
-log4j.properties	226
+log4j.properties	225
 starsector.bat	719
 starsector.bat32	666
 starsector.command	788

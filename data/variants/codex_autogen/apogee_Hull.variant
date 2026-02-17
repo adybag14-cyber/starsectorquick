@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "apogee",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Cruiser",
+  "variantId": "apogee_Hull",
+  "permaMods": []
+}

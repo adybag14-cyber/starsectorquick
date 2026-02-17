@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_hightech_hangar",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Hangar Module",
+  "variantId": "module_hightech_hangar_Hull",
+  "permaMods": []
+}

@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_bastion1_lowtech",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "PD Bastion",
+  "variantId": "module_bastion1_lowtech_Hull",
+  "permaMods": []
+}

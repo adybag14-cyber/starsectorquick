@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_blocker2b",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Station Structural Spur",
+  "variantId": "module_blocker2b_Hull",
+  "permaMods": []
+}

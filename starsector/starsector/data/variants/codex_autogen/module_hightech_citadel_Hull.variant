@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "module_hightech_citadel",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Heavy Citadel",
+  "variantId": "module_hightech_citadel_Hull",
+  "permaMods": []
+}

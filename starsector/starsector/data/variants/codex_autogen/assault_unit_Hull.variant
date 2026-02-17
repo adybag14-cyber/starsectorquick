@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "assault_unit",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Assault Unit",
+  "variantId": "assault_unit_Hull",
+  "permaMods": []
+}

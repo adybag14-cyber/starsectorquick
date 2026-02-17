@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "station1",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Orbital Station",
+  "variantId": "station1_Hull",
+  "permaMods": []
+}

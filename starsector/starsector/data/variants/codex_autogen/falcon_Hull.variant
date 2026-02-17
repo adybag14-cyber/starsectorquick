@@ -1,0 +1,12 @@
+{
+  "sMods": [],
+  "fluxCapacitors": 0,
+  "hullMods": [],
+  "fluxVents": 0,
+  "hullId": "falcon",
+  "weaponGroups": [],
+  "goalVariant": false,
+  "displayName": "Light Cruiser",
+  "variantId": "falcon_Hull",
+  "permaMods": []
+}
