@@ -813,6 +813,8 @@
                     `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
                     `-Dstarsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
                     `-Dstarsector.forceBasicLog4j=false`,
+                    `starsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
+                    `starsector.forceBasicLog4j=false`,
                     `-Djava.library.path=${fullAppPath}build/final/wasm-modules/`,
                     `-Duser.dir=${runtimeUserDir}`,
                     `-Dstarsector.userDir=${runtimeUserDir}`,
@@ -1067,11 +1069,10 @@
 
                 // Use loading_patch by default for obfuscated launcher class compatibility.
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ !== false;
-                const jarFiles = ['fixer.jar', 'input_patch.jar', 'jaxb_compat.jar'];
-                if (useLoadingPatch) {
-                    jarFiles.push('loading_patch.jar');
-                }
-                jarFiles.push(
+                const jarFiles = [
+                    'fixer.jar',
+                    'input_patch.jar',
+                    'jaxb_compat.jar',
                     'lwjgl_bridge.jar',
                     'resources.jar',
                     'janino.jar',
@@ -1087,9 +1088,14 @@
                     'lwjgl_util.jar',
                     'fs.sound_obf.jar',
                     'fs.common_obf.jar',
-                    'xstream-1.4.10.jar',
-                    'sectorgen_bootstrap.jar'
-                );
+                    'xstream-1.4.10.jar'
+                ];
+                // Keep loading_patch available for missing launcher classes (e.g. GLContext),
+                // but place it after primary LWJGL jars so it does not shadow DisplayMode.
+                if (useLoadingPatch) {
+                    jarFiles.push('loading_patch.jar');
+                }
+                jarFiles.push('sectorgen_bootstrap.jar');
 
                 const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
                 // Optional precompiled script classes used by no-markets bootstrap fallback.
