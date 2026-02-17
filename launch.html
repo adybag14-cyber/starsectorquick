@@ -1106,7 +1106,10 @@
                 }
                 jarFiles.push('sectorgen_bootstrap.jar');
 
-                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
+                // Bust jar URL caches per-launch to avoid stale If-Range ETag mismatches
+                // on GitHub Pages that can cause CheerpJ range-loading failures.
+                const classPathCacheKey = String(window.__STARSECTOR_CP_BUST__ || Date.now());
+                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}?v=${classPathCacheKey}`);
                 // Optional precompiled script classes used by no-markets bootstrap fallback.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ !== false) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
