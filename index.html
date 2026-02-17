@@ -15,6 +15,13 @@
     </style>
 </head>
 <body>
+    <script>
+        // Keep the GH Pages root URL on the maintained launcher implementation.
+        window.location.replace(new URL('./launch.html', window.location.href).toString());
+    </script>
+    <noscript>
+        <p>JavaScript is required. Open <a href="./launch.html">launch.html</a>.</p>
+    </noscript>
     <div class="container">
         <h1>🚀 Starsector 2 Web (v45)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
@@ -51,7 +58,8 @@
             log('Initializing CheerpJ 4.2 Runtime (Java 17)...', '#00d9ff');
             
             try {
-                const prefix = `${window.location.origin}/`;
+                // Use repo-relative base so GitHub Pages subpath deployments resolve correctly.
+                const prefix = new URL('./', window.location.href).href;
                 
                 await cheerpjInit({ 
                     version: 17, 
