@@ -692,11 +692,20 @@
                         };
                     }
                 }
+                const inlineLwjglNatives = createInlineLwjglNatives(log);
                 const unsafeFallbackNatives = createUnsafeFallbackNatives(log);
-                const mergedNatives = { ...unsafeFallbackNatives, ...lwjglNatives };
+                const mergedNatives = {
+                    ...unsafeFallbackNatives,
+                    ...inlineLwjglNatives,
+                    ...lwjglNatives
+                };
                 const unsafeFallbackAdded = Object.keys(unsafeFallbackNatives).filter((k) => typeof lwjglNatives[k] !== 'function').length;
+                const inlineFallbackAdded = Object.keys(inlineLwjglNatives).filter((k) => typeof lwjglNatives[k] !== 'function').length;
                 if (unsafeFallbackAdded > 0) {
                     log(`Unsafe JNI fallback bridges enabled: ${unsafeFallbackAdded}`, '#ffaa00');
+                }
+                if (inlineFallbackAdded > 0) {
+                    log(`Inline LWJGL fallback natives enabled: ${inlineFallbackAdded}`, '#ffaa00');
                 }
                 log(`LWJGL natives imported from module: ${Object.keys(lwjglNatives).length}`, '#888');
 
