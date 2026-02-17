@@ -1063,8 +1063,8 @@
                 }
                 window.lwjglCanvasElement = lwjglCanvas;
 
-                // Use stock LWJGL classes by default; opt into loading_patch explicitly.
-                const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
+                // Use loading_patch by default for obfuscated launcher class compatibility.
+                const useLoadingPatch = window.__USE_LOADING_PATCH__ !== false;
                 const jarFiles = ['fixer.jar', 'input_patch.jar', 'jaxb_compat.jar'];
                 if (useLoadingPatch) {
                     jarFiles.push('loading_patch.jar');
