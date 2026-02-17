@@ -1110,6 +1110,11 @@
                 // on GitHub Pages that can cause CheerpJ range-loading failures.
                 const classPathCacheKey = String(window.__STARSECTOR_CP_BUST__ || Date.now());
                 const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}?v=${classPathCacheKey}`);
+                // Include unpacked game content root so launcher texture/resource loads
+                // (e.g. graphics/ui/s_icon16.png) resolve through CLASSPATH.
+                if (window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ !== false) {
+                    classPathEntries.push(contentRoot);
+                }
                 // Optional precompiled script classes used by no-markets bootstrap fallback.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ !== false) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
