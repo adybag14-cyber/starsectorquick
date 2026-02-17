@@ -1,46 +1,46 @@
-fleettab/	-1
-16x_circle.png	1176
-16x_crossed_circle.png	1135
-16x_crossed_circle2.png	1134
-16x_empty_circle.png	1090
-16x_power_circle.png	1268
-16x_starburst_circle.png	1225
-16x_xcircle.png	1226
-16x_xed_circle.png	1160
-32x_bolt.png	1394
-32x_bolt_empty.png	1478
-32x_circle.png	1461
-32x_circle_zzz.png	1764
-32x_crossed_circle2.png	1443
-32x_hatched_star_circle.png	1832
-32x_levelup.png	1278
-32x_power_circle.png	1764
-32x_star_circle.png	1724
-32x_starburst_hollow.png	1820
-32x_xcircle.png	1612
-32x_zzz.png	1285
-64x_circle.png	2069
-64x_crossed_circle2.png	2087
-64x_power_circle.png	2608
-64x_xcircle.png	2342
-damagetype_energy.png	3593
-damagetype_energy_20x.png	606
-damagetype_fragmentation.png	4106
-damagetype_fragmentation_20x.png	591
-damagetype_high_explosive.png	6327
-damagetype_high_explosive_20x.png	718
-damagetype_kinetic.png	3501
-damagetype_kinetic_20x.png	624
-damagetype_other.png	1521
-icon_autopilot.png	241
-icon_deploy_reserves.png	241
-icon_op.png	1484
-icon_pause.png	241
-icon_play.png	289
-icon_repair_refit.png	578
-icon_retreat.png	433
-icon_retreat2.png	426
-icon_search_and_destroy.png	477
-icon_show_video_feed.png	538
-icon_transfer_command.png	685
-icon_videofeed.png	538
+fleettab/
+16x_circle.png
+16x_crossed_circle.png
+16x_crossed_circle2.png
+16x_empty_circle.png
+16x_power_circle.png
+16x_starburst_circle.png
+16x_xcircle.png
+16x_xed_circle.png
+32x_bolt.png
+32x_bolt_empty.png
+32x_circle.png
+32x_circle_zzz.png
+32x_crossed_circle2.png
+32x_hatched_star_circle.png
+32x_levelup.png
+32x_power_circle.png
+32x_star_circle.png
+32x_starburst_hollow.png
+32x_xcircle.png
+32x_zzz.png
+64x_circle.png
+64x_crossed_circle2.png
+64x_power_circle.png
+64x_xcircle.png
+damagetype_energy.png
+damagetype_energy_20x.png
+damagetype_fragmentation.png
+damagetype_fragmentation_20x.png
+damagetype_high_explosive.png
+damagetype_high_explosive_20x.png
+damagetype_kinetic.png
+damagetype_kinetic_20x.png
+damagetype_other.png
+icon_autopilot.png
+icon_deploy_reserves.png
+icon_op.png
+icon_pause.png
+icon_play.png
+icon_repair_refit.png
+icon_retreat.png
+icon_retreat2.png
+icon_search_and_destroy.png
+icon_show_video_feed.png
+icon_transfer_command.png
+icon_videofeed.png

@@ -1,345 +1,345 @@
-covers/	-1
-decorative/	-1
-ionpulser/	-1
-rotary/	-1
-shredder/	-1
-storm/	-1
-am_blaster_hardpoint_base.png	1848
-am_blaster_hardpoint_glow.png	15888
-am_blaster_turret_base.png	1656
-am_blaster_turret_glow.png	15375
-annihilator_rocket_launcher_hardpoint_base.png	3765
-annihilator_rocket_launcher_turret_base.png	1008
-arbalest_hardpoint_base.png	5167
-arbalest_hardpoint_recoil.png	4286
-arbalest_hardpoint_under.png	16173
-arbalest_turret_base.png	5193
-arbalest_turret_recoil.png	4104
-arbalest_turret_under.png	1621
-assault_chaingun_hardpoint_base.png	2070
-assault_chaingun_hardpoint_recoil.png	720
-assault_chaingun_turret_base.png	1772
-assault_chaingun_turret_recoil.png	675
-autopulse_laser_hardpoint_base.png	8709
-autopulse_laser_hardpoint_glow.png	4267
-autopulse_laser_turret_base.png	8275
-autopulse_laser_turret_glow.png	1100
-blaster2_hardpoint_base.png	5882
-blaster2_hardpoint_glow.png	841
-blaster2_turret_base.png	5908
-blaster2_turret_glow.png	788
-blaster_hardpoint_base.png	1987
-blaster_hardpoint_glow.png	1115
-blaster_turret_base.png	2098
-blaster_turret_glow.png	1207
-bomb_bay_hardpoint_base.png	717
-bomb_bay_turret_base.png	749
-breach_srm_pod_hardpoint.png	3305
-breach_srm_pod_turret.png	3370
-breach_srm_rack_hardpoint.png	4701
-breach_srm_rack_turret.png	4614
-burstpd_hardpoint_base.png	1341
-burstpd_hardpoint_glow.png	683
-burstpd_turret_base.png	1515
-burstpd_turret_glow.png	726
-burstpdheavy_hardpoint_base.png	2197
-burstpdheavy_hardpoint_glow.png	829
-burstpdheavy_turret_base.png	2352
-burstpdheavy_turret_glow.png	880
-cryoblaster_hardpoint_base.png	4072
-cryoblaster_hardpoint_glow.png	1090
-cryoblaster_turret_base.png	4305
-cryoblaster_turret_glow.png	1103
-cryoflamer_hardpoint_base.png	3556
-cryoflamer_hardpoint_glow.png	1437
-cryoflamer_turret_base.png	3586
-cryoflamer_turret_glow.png	1569
-cyclone_reaper_launcher_hardpoint_base.png	4156
-cyclone_reaper_launcher_turret_base.png	4256
-devastator_hardpoint_base.png	18180
-devastator_hardpoint_recoil.png	688
-devastator_turret_base.png	17871
-devastator_turret_recoil.png	704
-disintegrator_hardpoint_base.png	3608
-disintegrator_hardpoint_glow.png	880
-disintegrator_turret_base.png	3872
-disintegrator_turret_glow.png	865
-double_flak_cannon_hardpoint_base.png	2786
-double_flak_cannon_hardpoint_recoil.png	609
-double_flak_cannon_turret_base.png	2833
-double_flak_cannon_turret_recoil.png	564
-dragonfire_launcher_lrg_hardpoint.png	7635
-dragonfire_launcher_lrg_turret.png	8100
-dragonfire_rack_med_hardpoint.png	5695
-dragonfire_rack_med_turret.png	5901
-flak_cannon_hardpoint_base.png	2113
-flak_cannon_hardpoint_recoil.png	502
-flak_cannon_turret_base.png	2199
-flak_cannon_turret_recoil.png	483
-flechette_hardpoint_base.png	15852
-flechette_hardpoint_recoil.png	329
-flechette_heavy_hardpoint_base.png	16515
-flechette_heavy_hardpoint_recoil.png	550
-flechette_heavy_turret_base.png	16569
-flechette_heavy_turret_recoil.png	520
-flechette_storm_hardpoint_base.png	4244
-flechette_storm_hardpoint_recoil.png	1231
-flechette_storm_turret_base.png	4263
-flechette_storm_turret_recoil.png	1201
-flechette_turret_base.png	15598
-flechette_turret_recoil.png	334
-gauss_cannon_hardpoint_base.png	4661
-gauss_cannon_hardpoint_glow.png	2152
-gauss_cannon_turret_base.png	4610
-gauss_cannon_turret_glow.png	2207
-gazer2_small_hardpoint.png	4309
-gazer2_small_turret.png	4453
-gazer_med_hardpoint.png	2058
-gazer_med_turret.png	2331
-gazer_small_hardpoint.png	2353
-gazer_small_turret.png	2554
-gigacannon_hardpoint_base.png	8780
-gigacannon_hardpoint_glow.png	1026
-gigacannon_turret_base.png	8797
-gigacannon_turret_glow.png	2458
-gorgon_rackM_hardpoint_base.png	3599
-gorgon_rackM_turret_base.png	3653
-graviton_beam_hardpoint_base.png	3308
-graviton_beam_hardpoint_glow.png	819
-graviton_beam_turret_base.png	3386
-graviton_beam_turret_glow.png	854
-guardian_hardpoint_base.png	7141
-guardian_hardpoint_glow.png	2910
-guardian_turret_base.png	5374
-guardian_turret_glow.png	1562
-hammer_barrage_h.png	3712
-hammer_barrage_t.png	3886
-heavy_assault_cannon_hardpoint_base.png	19415
-heavy_assault_cannon_hardpoint_recoil.png	1844
-heavy_assault_cannon_turret_base.png	19478
-heavy_assault_cannon_turret_recoil.png	1998
-heavy_autocannon_hardpoint_base.png	3587
-heavy_autocannon_hardpoint_recoil.png	3094
-heavy_autocannon_turret_base.png	3821
-heavy_autocannon_turret_recoil.png	3078
-heavy_machinegun_hardpoint_base.png	5094
-heavy_machinegun_hardpoint_recoil.png	3821
-heavy_machinegun_turret_base.png	5145
-heavy_machinegun_turret_recoil.png	3821
-heavy_mortar_hardpoint.png	1924
-heavy_mortar_hardpoint_recoil.png	291
-heavy_mortar_turret.png	1937
-heavy_mortar_turret_recoil.png	318
-hellbore_cannon_hardpoint_base.png	4709
-hellbore_cannon_hardpoint_recoil.png	2646
-hellbore_cannon_turret_base.png	4162
-hellbore_cannon_turret_recoil.png	2306
-hephaestus_hardpoint_base.png	5337
-hephaestus_hardpoint_recoil.png	1131
-hephaestus_turret_base.png	4592
-hephaestus_turret_recoil.png	876
-high_intensity_laser_hardpoint.png	4229
-high_intensity_laser_hardpoint_glow.png	1068
-high_intensity_laser_turret.png	5437
-high_intensity_laser_turret_glow.png	1378
-hil_hardpoint_base.png	5086
-hil_hardpoint_glow.png	3895
-hil_turret_base.png	4186
-hil_turret_glow.png	3521
-hurricane_mirv_launcher_hardpoint_base.png	5926
-hurricane_mirv_launcher_turret_base.png	5793
-hydra_hardpoint_lrg.png	7519
-hydra_turret_lrg.png	5365
-hypervelocity_driver_hardpoint_base.png	1403
-hypervelocity_driver_hardpoint_recoil.png	1176
-hypervelocity_driver_turret_base.png	2640
-hypervelocity_driver_turret_recoil.png	2382
-ion_cannon_hardpoint_base.png	1350
-ion_cannon_hardpoint_glow.png	1279
-ion_cannon_turret_base.png	15875
-ion_cannon_turret_glow.png	1238
-ionbeam_h_base.png	2171
-ionbeam_h_glow.png	15381
-ionbeam_t_base.png	2225
-ionbeam_t_glow.png	15577
-ir_autolance_hardpoint.png	1643
-ir_autolance_hardpoint_glow.png	535
-ir_autolance_turret.png	1656
-ir_autolance_turret_glow.png	532
-jackhammer2_hardpoint_base.png	3209
-jackhammer2_turret_base.png	3207
-jackhammer_hardpoint_base.png	5825
-jackhammer_turret_base.png	5815
-kinetic_blaster_hardpoint_base.png	2166
-kinetic_blaster_hardpoint_glow.png	942
-kinetic_blaster_turret_base.png	2209
-kinetic_blaster_turret_glow.png	873
-launcher_annihilator_hardpoint_base.png	977
-launcher_annihilator_turret_base.png	1070
-launcher_m3_2x_hardpoint_base.png	2114
-launcher_m3_2x_turret_base.png	2144
-launcher_m4_2x_hardpoint_base.png	1745
-launcher_m4_2x_turret_base.png	1751
-launcher_m5_2x_hardpoint_base.png	2368
-launcher_m5_2x_turret_base.png	2464
-light_assault_gun_hardpoint_base.png	828
-light_assault_gun_hardpoint_recoil.png	294
-light_assault_gun_turret_base.png	878
-light_assault_gun_turret_recoil.png	267
-light_autocannon_hardpoint.png	3312
-light_autocannon_hardpoint_base.png	3254
-light_autocannon_hardpoint_recoil.png	2961
-light_autocannon_turret.png	3389
-light_autocannon_turret_base.png	3166
-light_autocannon_turret_recoil.png	2962
-light_dual_autocannon_hardpoint_base.png	643
-light_dual_autocannon_hardpoint_recoil.png	303
-light_dual_autocannon_turret_base.png	528
-light_dual_autocannon_turret_recoil.png	289
-light_machinegun_hardpoint_base.png	3354
-light_machinegun_hardpoint_recoil.png	2952
-light_machinegun_turret_base.png	691
-light_machinegun_turret_recoil.png	281
-light_mortar_hardpoint_base.png	3937
-light_mortar_hardpoint_recoil.png	3426
-light_mortar_turret_base.png	3965
-light_mortar_turret_recoil.png	3443
-light_pulse_laser_hardpoint_base.png	849
-light_pulse_laser_hardpoint_glow.png	295
-light_pulse_laser_turret_base.png	819
-light_pulse_laser_turret_glow.png	242
-light_reaper_launcher_hardpoint_base.png	734
-light_reaper_launcher_turret_base.png	819
-locust_hardpoint.png	18369
-locust_turret.png	18999
-lr_pd_laser_hardpoint_base.png	855
-lr_pd_laser_hardpoint_glow.png	269
-lr_pd_laser_turret_base.png	3611
-lr_pd_laser_turret_glow.png	2990
-mg_light_dual_hardpoint_base.png	4085
-mg_light_dual_hardpoint_recoil.png	3579
-mg_light_dual_turret_base.png	4074
-mg_light_dual_turret_recoil.png	3613
-mg_light_hardpoint_base.png	4223
-mg_light_hardpoint_recoil.png	3579
-mg_light_turret_base.png	4240
-mg_light_turret_recoil.png	3578
-mining_laser_hardpoint_base.png	1128
-mining_laser_hardpoint_glow.png	221
-mining_laser_turret_base.png	1163
-mining_laser_turret_glow.png	237
-minipulser_hardpoint_base.png	4976
-minipulser_hardpoint_glow.png	817
-minipulser_turret_base.png	5013
-minipulser_turret_glow.png	684
-missile_autoloader_1x_hardpoint_base.png	1055
-missile_autoloader_1x_turret_base.png	1065
-missile_autoloader_2x_hardpoint_base.png	1552
-missile_autoloader_2x_turret_base.png	1588
-missile_rack_1x_hardpoint_base.png	774
-missile_rack_1x_turret_base.png	787
-missile_rack_m_2x_hardpoint_base.png	981
-missile_rack_m_2x_turret_base.png	1032
-missile_rack_m_3x_hardpoint_base.png	950
-missile_rack_m_3x_turret_base.png	1006
-missile_rack_open_m_2x_hardpoint_base.png	1003
-missile_rack_open_m_2x_turret_base.png	1036
-missile_rack_open_m_3x_hardpoint_base.png	885
-missile_rack_open_m_3x_turret_base.png	989
-missile_rack_open_m_4x_hardpoint_base.png	973
-missile_rack_open_m_4x_turret_base.png	1104
-missile_rack_open_s_1x_hardpoint_base.png	828
-missile_rack_open_s_1x_turret_base.png	845
-missile_rack_open_s_2x_hardpoint_base.png	995
-missile_rack_open_s_2x_turret_base.png	973
-missile_rack_open_s_4x_hardpoint_base.png	598
-missile_rack_open_s_4x_turret_base.png	647
-mjolnir_hardpoint_base.png	2518
-mjolnir_hardpoint_recoil.png	1279
-mjolnir_hardpoint_under.png	2477
-mjolnir_turret_base.png	2527
-mjolnir_turret_recoil.png	1247
-mjolnir_turret_under.png	2940
-omega_rack_open_s_1x_hardpoint_base.png	972
-omega_rack_open_s_1x_turret_base.png	934
-onslaught_thermal_glow.png	1807
-onslaught_thermal_turret_base.png	5067
-pd_laser_hardpoint_base.png	610
-pd_laser_hardpoint_glow.png	255
-pd_laser_turret_base.png	693
-pd_laser_turret_glow.png	232
-phase_beam_hardpoint.png	2095
-phase_beam_hardpoint_glow.png	943
-phase_beam_turret.png	1879
-phase_beam_turret_glow.png	920
-phase_charge_launcher_hardpoint_base.png	1195
-phase_charge_launcher_turret_base.png	1372
-pilum_launcher_large_hardpoint.png	3878
-pilum_launcher_large_turret.png	4017
-pilum_lrm_launcher_hardpoint_base.png	5311
-pilum_lrm_launcher_turret_base.png	5410
-plasma_cannon_hardpoint_base.png	9538
-plasma_cannon_hardpoint_glow.png	5231
-plasma_cannon_turret_base.png	9565
-plasma_cannon_turret_glow.png	5338
-pulse_laser_hardpoint_base.png	1387
-pulse_laser_hardpoint_glow.png	445
-pulse_laser_turret_base.png	1371
-pulse_laser_turret_glow.png	442
-railgun_hardpoint_base.png	2511
-railgun_hardpoint_glow.png	1668
-railgun_turret_base.png	1237
-railgun_turret_glow.png	338
-reality_disruptor_hardpoint_base.png	4960
-reality_disruptor_hardpoint_glow.png	2552
-reality_disruptor_turret_base.png	5064
-reality_disruptor_turret_glow.png	2783
-resonator_hardpoint_base.png	4029
-resonator_turret_base.png	4242
-rift_beam_hardpoint_base.png	3656
-rift_beam_hardpoint_glow.png	2098
-rift_beam_turret_base.png	3760
-rift_beam_turret_glow.png	863
-rift_cascade_hardpoint_base.png	7577
-rift_cascade_hardpoint_glow.png	1566
-rift_cascade_turret_base.png	8266
-rift_cascade_turret_glow.png	2020
-rift_lance_hardpoint_base.png	2800
-rift_lance_hardpoint_glow.png	2096
-rift_lance_turret_base.png	1505
-rift_lance_turret_glow.png	718
-rift_torpedo_hardpoint.png	3449
-rift_torpedo_turret.png	3634
-shock_repeater_hardpoint_base.png	3104
-shock_repeater_hardpoint_glow.png	2332
-shock_repeater_turret_base.png	2933
-shock_repeater_turret_glow.png	1098
-squall_hardpoint_base.png	2836
-squall_hardpoint_under.png	18053
-squall_turret_base.png	17955
-squall_turret_under.png	18514
-swarmer_srm_launcher_hardpoint_base.png	622
-swarmer_srm_launcher_turret_base.png	661
-tachyon_lance_hardpoint_base.png	4293
-tachyon_lance_hardpoint_glow.png	4079
-tachyon_lance_turret_base.png	7718
-tachyon_lance_turret_glow.png	7091
-tactical_laser_hardpoint.png	16051
-tactical_laser_hardpoint_glow.png	969
-tactical_laser_turret.png	16084
-tactical_laser_turret2.png	831
-tactical_laser_turret_glow.png	1027
-torpedo_mount_2x_lowtech_small_hardpoint.png	1066
-torpedo_mount_2x_lowtech_small_turret.png	1543
-typhoon_reaper_launcher_hardpoint_base.png	1621
-typhoon_reaper_launcher_turret_base.png	1775
-vp_hardpoint_base.png	5331
-vp_hardpoint_glow.png	968
-vp_turret_base.png	4695
-vp_turret_glow.png	996
-vulcan_cannon_hardpoint.png	3412
-vulcan_cannon_hardpoint_base.png	597
-vulcan_cannon_hardpoint_recoil.png	261
-vulcan_cannon_turret.png	3351
-vulcan_cannon_turret_base.png	539
-vulcan_cannon_turret_recoil.png	255
+covers/
+decorative/
+ionpulser/
+rotary/
+shredder/
+storm/
+am_blaster_hardpoint_base.png
+am_blaster_hardpoint_glow.png
+am_blaster_turret_base.png
+am_blaster_turret_glow.png
+annihilator_rocket_launcher_hardpoint_base.png
+annihilator_rocket_launcher_turret_base.png
+arbalest_hardpoint_base.png
+arbalest_hardpoint_recoil.png
+arbalest_hardpoint_under.png
+arbalest_turret_base.png
+arbalest_turret_recoil.png
+arbalest_turret_under.png
+assault_chaingun_hardpoint_base.png
+assault_chaingun_hardpoint_recoil.png
+assault_chaingun_turret_base.png
+assault_chaingun_turret_recoil.png
+autopulse_laser_hardpoint_base.png
+autopulse_laser_hardpoint_glow.png
+autopulse_laser_turret_base.png
+autopulse_laser_turret_glow.png
+blaster2_hardpoint_base.png
+blaster2_hardpoint_glow.png
+blaster2_turret_base.png
+blaster2_turret_glow.png
+blaster_hardpoint_base.png
+blaster_hardpoint_glow.png
+blaster_turret_base.png
+blaster_turret_glow.png
+bomb_bay_hardpoint_base.png
+bomb_bay_turret_base.png
+breach_srm_pod_hardpoint.png
+breach_srm_pod_turret.png
+breach_srm_rack_hardpoint.png
+breach_srm_rack_turret.png
+burstpd_hardpoint_base.png
+burstpd_hardpoint_glow.png
+burstpd_turret_base.png
+burstpd_turret_glow.png
+burstpdheavy_hardpoint_base.png
+burstpdheavy_hardpoint_glow.png
+burstpdheavy_turret_base.png
+burstpdheavy_turret_glow.png
+cryoblaster_hardpoint_base.png
+cryoblaster_hardpoint_glow.png
+cryoblaster_turret_base.png
+cryoblaster_turret_glow.png
+cryoflamer_hardpoint_base.png
+cryoflamer_hardpoint_glow.png
+cryoflamer_turret_base.png
+cryoflamer_turret_glow.png
+cyclone_reaper_launcher_hardpoint_base.png
+cyclone_reaper_launcher_turret_base.png
+devastator_hardpoint_base.png
+devastator_hardpoint_recoil.png
+devastator_turret_base.png
+devastator_turret_recoil.png
+disintegrator_hardpoint_base.png
+disintegrator_hardpoint_glow.png
+disintegrator_turret_base.png
+disintegrator_turret_glow.png
+double_flak_cannon_hardpoint_base.png
+double_flak_cannon_hardpoint_recoil.png
+double_flak_cannon_turret_base.png
+double_flak_cannon_turret_recoil.png
+dragonfire_launcher_lrg_hardpoint.png
+dragonfire_launcher_lrg_turret.png
+dragonfire_rack_med_hardpoint.png
+dragonfire_rack_med_turret.png
+flak_cannon_hardpoint_base.png
+flak_cannon_hardpoint_recoil.png
+flak_cannon_turret_base.png
+flak_cannon_turret_recoil.png
+flechette_hardpoint_base.png
+flechette_hardpoint_recoil.png
+flechette_heavy_hardpoint_base.png
+flechette_heavy_hardpoint_recoil.png
+flechette_heavy_turret_base.png
+flechette_heavy_turret_recoil.png
+flechette_storm_hardpoint_base.png
+flechette_storm_hardpoint_recoil.png
+flechette_storm_turret_base.png
+flechette_storm_turret_recoil.png
+flechette_turret_base.png
+flechette_turret_recoil.png
+gauss_cannon_hardpoint_base.png
+gauss_cannon_hardpoint_glow.png
+gauss_cannon_turret_base.png
+gauss_cannon_turret_glow.png
+gazer2_small_hardpoint.png
+gazer2_small_turret.png
+gazer_med_hardpoint.png
+gazer_med_turret.png
+gazer_small_hardpoint.png
+gazer_small_turret.png
+gigacannon_hardpoint_base.png
+gigacannon_hardpoint_glow.png
+gigacannon_turret_base.png
+gigacannon_turret_glow.png
+gorgon_rackM_hardpoint_base.png
+gorgon_rackM_turret_base.png
+graviton_beam_hardpoint_base.png
+graviton_beam_hardpoint_glow.png
+graviton_beam_turret_base.png
+graviton_beam_turret_glow.png
+guardian_hardpoint_base.png
+guardian_hardpoint_glow.png
+guardian_turret_base.png
+guardian_turret_glow.png
+hammer_barrage_h.png
+hammer_barrage_t.png
+heavy_assault_cannon_hardpoint_base.png
+heavy_assault_cannon_hardpoint_recoil.png
+heavy_assault_cannon_turret_base.png
+heavy_assault_cannon_turret_recoil.png
+heavy_autocannon_hardpoint_base.png
+heavy_autocannon_hardpoint_recoil.png
+heavy_autocannon_turret_base.png
+heavy_autocannon_turret_recoil.png
+heavy_machinegun_hardpoint_base.png
+heavy_machinegun_hardpoint_recoil.png
+heavy_machinegun_turret_base.png
+heavy_machinegun_turret_recoil.png
+heavy_mortar_hardpoint.png
+heavy_mortar_hardpoint_recoil.png
+heavy_mortar_turret.png
+heavy_mortar_turret_recoil.png
+hellbore_cannon_hardpoint_base.png
+hellbore_cannon_hardpoint_recoil.png
+hellbore_cannon_turret_base.png
+hellbore_cannon_turret_recoil.png
+hephaestus_hardpoint_base.png
+hephaestus_hardpoint_recoil.png
+hephaestus_turret_base.png
+hephaestus_turret_recoil.png
+high_intensity_laser_hardpoint.png
+high_intensity_laser_hardpoint_glow.png
+high_intensity_laser_turret.png
+high_intensity_laser_turret_glow.png
+hil_hardpoint_base.png
+hil_hardpoint_glow.png
+hil_turret_base.png
+hil_turret_glow.png
+hurricane_mirv_launcher_hardpoint_base.png
+hurricane_mirv_launcher_turret_base.png
+hydra_hardpoint_lrg.png
+hydra_turret_lrg.png
+hypervelocity_driver_hardpoint_base.png
+hypervelocity_driver_hardpoint_recoil.png
+hypervelocity_driver_turret_base.png
+hypervelocity_driver_turret_recoil.png
+ion_cannon_hardpoint_base.png
+ion_cannon_hardpoint_glow.png
+ion_cannon_turret_base.png
+ion_cannon_turret_glow.png
+ionbeam_h_base.png
+ionbeam_h_glow.png
+ionbeam_t_base.png
+ionbeam_t_glow.png
+ir_autolance_hardpoint.png
+ir_autolance_hardpoint_glow.png
+ir_autolance_turret.png
+ir_autolance_turret_glow.png
+jackhammer2_hardpoint_base.png
+jackhammer2_turret_base.png
+jackhammer_hardpoint_base.png
+jackhammer_turret_base.png
+kinetic_blaster_hardpoint_base.png
+kinetic_blaster_hardpoint_glow.png
+kinetic_blaster_turret_base.png
+kinetic_blaster_turret_glow.png
+launcher_annihilator_hardpoint_base.png
+launcher_annihilator_turret_base.png
+launcher_m3_2x_hardpoint_base.png
+launcher_m3_2x_turret_base.png
+launcher_m4_2x_hardpoint_base.png
+launcher_m4_2x_turret_base.png
+launcher_m5_2x_hardpoint_base.png
+launcher_m5_2x_turret_base.png
+light_assault_gun_hardpoint_base.png
+light_assault_gun_hardpoint_recoil.png
+light_assault_gun_turret_base.png
+light_assault_gun_turret_recoil.png
+light_autocannon_hardpoint.png
+light_autocannon_hardpoint_base.png
+light_autocannon_hardpoint_recoil.png
+light_autocannon_turret.png
+light_autocannon_turret_base.png
+light_autocannon_turret_recoil.png
+light_dual_autocannon_hardpoint_base.png
+light_dual_autocannon_hardpoint_recoil.png
+light_dual_autocannon_turret_base.png
+light_dual_autocannon_turret_recoil.png
+light_machinegun_hardpoint_base.png
+light_machinegun_hardpoint_recoil.png
+light_machinegun_turret_base.png
+light_machinegun_turret_recoil.png
+light_mortar_hardpoint_base.png
+light_mortar_hardpoint_recoil.png
+light_mortar_turret_base.png
+light_mortar_turret_recoil.png
+light_pulse_laser_hardpoint_base.png
+light_pulse_laser_hardpoint_glow.png
+light_pulse_laser_turret_base.png
+light_pulse_laser_turret_glow.png
+light_reaper_launcher_hardpoint_base.png
+light_reaper_launcher_turret_base.png
+locust_hardpoint.png
+locust_turret.png
+lr_pd_laser_hardpoint_base.png
+lr_pd_laser_hardpoint_glow.png
+lr_pd_laser_turret_base.png
+lr_pd_laser_turret_glow.png
+mg_light_dual_hardpoint_base.png
+mg_light_dual_hardpoint_recoil.png
+mg_light_dual_turret_base.png
+mg_light_dual_turret_recoil.png
+mg_light_hardpoint_base.png
+mg_light_hardpoint_recoil.png
+mg_light_turret_base.png
+mg_light_turret_recoil.png
+mining_laser_hardpoint_base.png
+mining_laser_hardpoint_glow.png
+mining_laser_turret_base.png
+mining_laser_turret_glow.png
+minipulser_hardpoint_base.png
+minipulser_hardpoint_glow.png
+minipulser_turret_base.png
+minipulser_turret_glow.png
+missile_autoloader_1x_hardpoint_base.png
+missile_autoloader_1x_turret_base.png
+missile_autoloader_2x_hardpoint_base.png
+missile_autoloader_2x_turret_base.png
+missile_rack_1x_hardpoint_base.png
+missile_rack_1x_turret_base.png
+missile_rack_m_2x_hardpoint_base.png
+missile_rack_m_2x_turret_base.png
+missile_rack_m_3x_hardpoint_base.png
+missile_rack_m_3x_turret_base.png
+missile_rack_open_m_2x_hardpoint_base.png
+missile_rack_open_m_2x_turret_base.png
+missile_rack_open_m_3x_hardpoint_base.png
+missile_rack_open_m_3x_turret_base.png
+missile_rack_open_m_4x_hardpoint_base.png
+missile_rack_open_m_4x_turret_base.png
+missile_rack_open_s_1x_hardpoint_base.png
+missile_rack_open_s_1x_turret_base.png
+missile_rack_open_s_2x_hardpoint_base.png
+missile_rack_open_s_2x_turret_base.png
+missile_rack_open_s_4x_hardpoint_base.png
+missile_rack_open_s_4x_turret_base.png
+mjolnir_hardpoint_base.png
+mjolnir_hardpoint_recoil.png
+mjolnir_hardpoint_under.png
+mjolnir_turret_base.png
+mjolnir_turret_recoil.png
+mjolnir_turret_under.png
+omega_rack_open_s_1x_hardpoint_base.png
+omega_rack_open_s_1x_turret_base.png
+onslaught_thermal_glow.png
+onslaught_thermal_turret_base.png
+pd_laser_hardpoint_base.png
+pd_laser_hardpoint_glow.png
+pd_laser_turret_base.png
+pd_laser_turret_glow.png
+phase_beam_hardpoint.png
+phase_beam_hardpoint_glow.png
+phase_beam_turret.png
+phase_beam_turret_glow.png
+phase_charge_launcher_hardpoint_base.png
+phase_charge_launcher_turret_base.png
+pilum_launcher_large_hardpoint.png
+pilum_launcher_large_turret.png
+pilum_lrm_launcher_hardpoint_base.png
+pilum_lrm_launcher_turret_base.png
+plasma_cannon_hardpoint_base.png
+plasma_cannon_hardpoint_glow.png
+plasma_cannon_turret_base.png
+plasma_cannon_turret_glow.png
+pulse_laser_hardpoint_base.png
+pulse_laser_hardpoint_glow.png
+pulse_laser_turret_base.png
+pulse_laser_turret_glow.png
+railgun_hardpoint_base.png
+railgun_hardpoint_glow.png
+railgun_turret_base.png
+railgun_turret_glow.png
+reality_disruptor_hardpoint_base.png
+reality_disruptor_hardpoint_glow.png
+reality_disruptor_turret_base.png
+reality_disruptor_turret_glow.png
+resonator_hardpoint_base.png
+resonator_turret_base.png
+rift_beam_hardpoint_base.png
+rift_beam_hardpoint_glow.png
+rift_beam_turret_base.png
+rift_beam_turret_glow.png
+rift_cascade_hardpoint_base.png
+rift_cascade_hardpoint_glow.png
+rift_cascade_turret_base.png
+rift_cascade_turret_glow.png
+rift_lance_hardpoint_base.png
+rift_lance_hardpoint_glow.png
+rift_lance_turret_base.png
+rift_lance_turret_glow.png
+rift_torpedo_hardpoint.png
+rift_torpedo_turret.png
+shock_repeater_hardpoint_base.png
+shock_repeater_hardpoint_glow.png
+shock_repeater_turret_base.png
+shock_repeater_turret_glow.png
+squall_hardpoint_base.png
+squall_hardpoint_under.png
+squall_turret_base.png
+squall_turret_under.png
+swarmer_srm_launcher_hardpoint_base.png
+swarmer_srm_launcher_turret_base.png
+tachyon_lance_hardpoint_base.png
+tachyon_lance_hardpoint_glow.png
+tachyon_lance_turret_base.png
+tachyon_lance_turret_glow.png
+tactical_laser_hardpoint.png
+tactical_laser_hardpoint_glow.png
+tactical_laser_turret.png
+tactical_laser_turret2.png
+tactical_laser_turret_glow.png
+torpedo_mount_2x_lowtech_small_hardpoint.png
+torpedo_mount_2x_lowtech_small_turret.png
+typhoon_reaper_launcher_hardpoint_base.png
+typhoon_reaper_launcher_turret_base.png
+vp_hardpoint_base.png
+vp_hardpoint_glow.png
+vp_turret_base.png
+vp_turret_glow.png
+vulcan_cannon_hardpoint.png
+vulcan_cannon_hardpoint_base.png
+vulcan_cannon_hardpoint_recoil.png
+vulcan_cannon_turret.png
+vulcan_cannon_turret_base.png
+vulcan_cannon_turret_recoil.png

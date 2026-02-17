@@ -1,150 +1,150 @@
-aeroshuttle/	-1
-afflictor/	-1
-apogee/	-1
-astral/	-1
-atlas/	-1
-aurora/	-1
-brawler/	-1
-buffalo/	-1
-centurion/	-1
-cerberus/	-1
-champion/	-1
-colossus/	-1
-condor/	-1
-conquest/	-1
-deployables/	-1
-derelict/	-1
-dominator/	-1
-drones/	-1
-drover/	-1
-eagle/	-1
-enforcer/	-1
-eradicator/	-1
-falcon/	-1
-fighters/	-1
-fury/	-1
-gemini/	-1
-gryphon/	-1
-hammerhead/	-1
-harbinger/	-1
-hermes/	-1
-heron/	-1
-hound/	-1
-hyperion/	-1
-invictus/	-1
-lasher/	-1
-legion/	-1
-manticore/	-1
-medusa/	-1
-mercury/	-1
-mora/	-1
-mudskipper/	-1
-mule/	-1
-nebula/	-1
-omega/	-1
-omen/	-1
-onslaught/	-1
-ox/	-1
-pegasus/	-1
-phase/	-1
-prometheus/	-1
-remnants/	-1
-retribution/	-1
-scarab/	-1
-shade/	-1
-shrike/	-1
-starliner/	-1
-stations/	-1
-sunder/	-1
-talon/	-1
-tarsus/	-1
-valkyrie/	-1
-vanguard/	-1
-venture/	-1
-wayfarer/	-1
-wolf/	-1
-apogee_cx.png	85087
-astral_cv.png	146763
-atlas_af.png	125387
-aurora_ca.png	62690
-brawler.png	13033
-broadsword.png	16948
-broadsword_hftr.png	2247
-buffalo_af.png	48875
-buffalo_dd.png	32561
-buffalo_dd_old.png	40988
-claw.png	2361
-claw_old.png	2166
-cobra_bomber.png	2695
-com_relay.png	29449
-com_relay_makeshift.png	16070
-condor_dd.png	31676
-conquest_bc.png	138511
-construction_rig.png	20191
-dagger_trp.png	16398
-dominator.png	83554
-drone_tender.png	29924
-enforcer_dd.png	32826
-fighter_assault_midline.png	16827
-fighter_heavy_escort.png	19174
-fighter_heavy_escort_mk2.png	18643
-fighter_heavy_escort_strike.png	19261
-fighter_heavy_midline.png	17264
-frigate_phase_assault.png	11173
-frigate_phase_assault_glow.png	2253
-frigate_phase_strike.png	28126
-frigate_phase_strike_glow.png	1838
-hammerhead_dd.png	27675
-hound_ff.png	8651
-hyperion_ff.png	25675
-khopesh.png	18232
-lasher_ff.png	12080
-longbow_intg.png	17287
-medusa.png	52269
-midtech2x_cv.png	78872
-mining_drone.png	2212
-monitor_ff2.png	32468
-mule_dd.png	56207
-munitions_d1.png	56045
-munitions_drone.png	5324
-munitions_f1.png	30325
-munitions_load.png	5026
-nav_buoy.png	18499
-nav_buoy_makeshift.png	18907
-nav_buoy_old.png	4106
-odyssey.png	109211
-omen_ff.png	9546
-ox.png	23341
-paragon.png	220666
-perdition_bomber.png	2485
-piranha_bmb.png	2401
-repair_drone.png	1906
-salvage_rig.png	31400
-sarissa.png	3058
-sensor_array.png	8394
-sensor_array_base.png	29943
-sensor_array_dish.png	2098
-sensor_array_makeshift.png	8547
-sensor_array_old.png	28896
-sentinel_apbmb.png	2406
-shuttle.png	946
-sunder_ca.png	21975
-superhound.png	18877
-tanker_large.png	160203
-tanker_large_old.png	166588
-tanker_medium.png	55025
-tanker_medium_old.png	69866
-tanker_small.png	23827
-tanker_small_old.png	36351
-tarsus.png	29615
-tempest.png	10819
-thunder.png	17046
-thunder2.png	2315
-thunder3.png	2471
-trident.png	2757
-vigilance.png	13296
-vigilance_old.png	28196
-wasp_ftr.png	15547
-wolf_ff.png	8275
-xyphos.png	3507
-shroud/	-1
+aeroshuttle/
+afflictor/
+apogee/
+astral/
+atlas/
+aurora/
+brawler/
+buffalo/
+centurion/
+cerberus/
+champion/
+colossus/
+condor/
+conquest/
+deployables/
+derelict/
+dominator/
+drones/
+drover/
+eagle/
+enforcer/
+eradicator/
+falcon/
+fighters/
+fury/
+gemini/
+gryphon/
+hammerhead/
+harbinger/
+hermes/
+heron/
+hound/
+hyperion/
+invictus/
+lasher/
+legion/
+manticore/
+medusa/
+mercury/
+mora/
+mudskipper/
+mule/
+nebula/
+omega/
+omen/
+onslaught/
+ox/
+pegasus/
+phase/
+prometheus/
+remnants/
+retribution/
+scarab/
+shade/
+shrike/
+starliner/
+stations/
+sunder/
+talon/
+tarsus/
+valkyrie/
+vanguard/
+venture/
+wayfarer/
+wolf/
+apogee_cx.png
+astral_cv.png
+atlas_af.png
+aurora_ca.png
+brawler.png
+broadsword.png
+broadsword_hftr.png
+buffalo_af.png
+buffalo_dd.png
+buffalo_dd_old.png
+claw.png
+claw_old.png
+cobra_bomber.png
+com_relay.png
+com_relay_makeshift.png
+condor_dd.png
+conquest_bc.png
+construction_rig.png
+dagger_trp.png
+dominator.png
+drone_tender.png
+enforcer_dd.png
+fighter_assault_midline.png
+fighter_heavy_escort.png
+fighter_heavy_escort_mk2.png
+fighter_heavy_escort_strike.png
+fighter_heavy_midline.png
+frigate_phase_assault.png
+frigate_phase_assault_glow.png
+frigate_phase_strike.png
+frigate_phase_strike_glow.png
+hammerhead_dd.png
+hound_ff.png
+hyperion_ff.png
+khopesh.png
+lasher_ff.png
+longbow_intg.png
+medusa.png
+midtech2x_cv.png
+mining_drone.png
+monitor_ff2.png
+mule_dd.png
+munitions_d1.png
+munitions_drone.png
+munitions_f1.png
+munitions_load.png
+nav_buoy.png
+nav_buoy_makeshift.png
+nav_buoy_old.png
+odyssey.png
+omen_ff.png
+ox.png
+paragon.png
+perdition_bomber.png
+piranha_bmb.png
+repair_drone.png
+salvage_rig.png
+sarissa.png
+sensor_array.png
+sensor_array_base.png
+sensor_array_dish.png
+sensor_array_makeshift.png
+sensor_array_old.png
+sentinel_apbmb.png
+shuttle.png
+sunder_ca.png
+superhound.png
+tanker_large.png
+tanker_large_old.png
+tanker_medium.png
+tanker_medium_old.png
+tanker_small.png
+tanker_small_old.png
+tarsus.png
+tempest.png
+thunder.png
+thunder2.png
+thunder3.png
+trident.png
+vigilance.png
+vigilance_old.png
+wasp_ftr.png
+wolf_ff.png
+xyphos.png
+shroud/

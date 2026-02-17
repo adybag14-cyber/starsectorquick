@@ -1,32 +1,32 @@
-taskicons/	-1
-attack.png	1254
-clean_disengage.png	1634
-escort.png	368
-escort_package_effect.png	1058
-fog.png	4472
-icon_asteroid.png	2867
-icon_close.png	445
-icon_commandpoints.png	632
-icon_fleetpoints.png	309
-icon_full_retreat.png	504
-icon_missile.png	183
-icon_planet.png	662
-icon_search+destroy.png	660
-icon_star.png	24378
-icon_waypoint.png	699
-map_ping.png	1982
-nebula_warroom.png	11584
-objective_comm_relay.png	3911
-objective_nav_buoy.png	3276
-objective_sensor_array.png	4113
-pause_34x.png	283
-play_34x.png	343
-ship_arrow.png	546
-ship_ring.png	2480
-topright_widget.png	1531
-topright_widget_compact.png	391
-topright_widget_ingame.png	564
-topright_widget_large.png	604
-topright_widget_small.png	337
-ui_pauseplay.png	3125
-waypoint.png	324
+taskicons/
+attack.png
+clean_disengage.png
+escort.png
+escort_package_effect.png
+fog.png
+icon_asteroid.png
+icon_close.png
+icon_commandpoints.png
+icon_fleetpoints.png
+icon_full_retreat.png
+icon_missile.png
+icon_planet.png
+icon_search+destroy.png
+icon_star.png
+icon_waypoint.png
+map_ping.png
+nebula_warroom.png
+objective_comm_relay.png
+objective_nav_buoy.png
+objective_sensor_array.png
+pause_34x.png
+play_34x.png
+ship_arrow.png
+ship_ring.png
+topright_widget.png
+topright_widget_compact.png
+topright_widget_ingame.png
+topright_widget_large.png
+topright_widget_small.png
+ui_pauseplay.png
+waypoint.png

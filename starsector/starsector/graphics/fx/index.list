@@ -1,117 +1,117 @@
-beam_chunky_core.png	2836
-beam_chunky_fringe.png	4765
-beam_dark_core.png	1734
-beam_laser_core.png	2225
-beam_laser_fringe.png	5189
-beam_pulsar.png	92735
-beam_pulsar2.png	48460
-beam_rough2_core.png	2318
-beam_rough2_fringe.png	4667
-beam_weave_core.png	4507
-beam_weave_fringe.png	3780
-beamcore.png	1376
-beamcoreb.png	3580
-beamcorec.png	699
-beamfringe.png	3771
-beamfringeb.png	3891
-beamfringec.png	2716
-beamfringed.png	79549
-circle64.png	3930
-circle_mask_hires.png	8701
-cleaner_clouds00.png	109361
-contrail64b.png	4154
-dust_clouds_colorless.png	154172
-emp_arcs.png	86742
-empty.png	133
-engineflame32-orig.png	966
-engineflame32.png	1149
-engineflame32b.png	2271
-engineglow32.png	1180
-engineglow32b.png	2258
-engineglow32s.png	1114
-explosion0.png	9372
-explosion1.png	12356
-explosion2.png	10318
-explosion3.png	27105
-explosion4.png	19745
-explosion5.png	20398
-explosion6.png	31548
-explosion_ring0.png	12342
-fog_circle.png	4081
-fog_circle2.png	3469
-fx_clouds00.png	151294
-fx_clouds01.png	129365
-glow64.png	3989
-hit_glow.png	1982
-hit_glow_small.png	892
-muzzleflash32.1.png	972
-nebula_colorless.png	169370
-nebula_dark.png	353910
-nebula_old.png	101778
-neutrino_detector.png	22753
-noise.png	75824
-noise2.png	24226
-owner_glow.png	2048
-particlealpha32sq.png	678
-particlealpha64linear.png	1920
-particlealpha64sq.png	1923
-particlealpha_textured.png	2897
-particleline32ln.png	189
-portal_textures.png	416307
-portal_textures_small.png	50632
-projbody.png	636
-projtrail.png	907
-question_mark.png	810
-radial_fx.png	595364
-scandot22.png	127
-scandot3.png	130
-scandot4.png	133
-scandot44.png	140
-scanline11.png	133
-scanline1110.png	141
-scanline12.png	137
-scanline21.png	137
-scanline44.png	138
-scanline_large.png	160
-shield_rays.png	1151
-shields128c.png	19484
-shields128ringc.png	4098
-shields256.png	71691
-shields256ring.png	13744
-shields256ringb.png	13379
-shields256ringc.png	9989
-shields256ringd.png	9998
-shields64.png	6123
-shields64ring.png	2029
-shimmer.png	259
-ship_shadow_mask.png	809
-slipstream.png	484855
-slipstream0.png	336877
-slipstream2.png	451769
-slipstream3.png	498904
-slipstream_black.png	92698
-slipstream_dark.png	559420
-slipstream_edge1.png	122901
-slipstream_edge2.png	129811
-slipstream_edge3.png	199267
-slipstream_layer0.png	834851
-slipstream_layer1.png	851668
-slipstream_layer2.png	973237
-slipstream_map.png	20640
-slipstream_map2.png	1050
-slipstream_map3.png	5287
-slipstream_map4.png	14783
-slipstream_map_edge.png	10725
-slipstream_map_edge2.png	2851
-smoke32.png	1284
-soot64.png	4206
-star.png	420
-star_halo.png	53364
-starburst_glow1.png	64914
-torpedoray32.png	936
-wind_effect.png	2063
-wormhole_corona.png	202390
-wormhole_ring.png	9981
-wormhole_ring_bright.png	9337
-wormhole_ring_bright2.png	96121
-wormhole_ring_bright3.png	131128
+beam_chunky_core.png
+beam_chunky_fringe.png
+beam_dark_core.png
+beam_laser_core.png
+beam_laser_fringe.png
+beam_pulsar.png
+beam_pulsar2.png
+beam_rough2_core.png
+beam_rough2_fringe.png
+beam_weave_core.png
+beam_weave_fringe.png
+beamcore.png
+beamcoreb.png
+beamcorec.png
+beamfringe.png
+beamfringeb.png
+beamfringec.png
+beamfringed.png
+circle64.png
+circle_mask_hires.png
+cleaner_clouds00.png
+contrail64b.png
+dust_clouds_colorless.png
+emp_arcs.png
+empty.png
+engineflame32-orig.png
+engineflame32.png
+engineflame32b.png
+engineglow32.png
+engineglow32b.png
+engineglow32s.png
+explosion0.png
+explosion1.png
+explosion2.png
+explosion3.png
+explosion4.png
+explosion5.png
+explosion6.png
+explosion_ring0.png
+fog_circle.png
+fog_circle2.png
+fx_clouds00.png
+fx_clouds01.png
+glow64.png
+hit_glow.png
+hit_glow_small.png
+muzzleflash32.1.png
+nebula_colorless.png
+nebula_dark.png
+nebula_old.png
+neutrino_detector.png
+noise.png
+noise2.png
+owner_glow.png
+particlealpha32sq.png
+particlealpha64linear.png
+particlealpha64sq.png
+particlealpha_textured.png
+particleline32ln.png
+portal_textures.png
+portal_textures_small.png
+projbody.png
+projtrail.png
+question_mark.png
+radial_fx.png
+scandot22.png
+scandot3.png
+scandot4.png
+scandot44.png
+scanline11.png
+scanline1110.png
+scanline12.png
+scanline21.png
+scanline44.png
+scanline_large.png
+shield_rays.png
+shields128c.png
+shields128ringc.png
+shields256.png
+shields256ring.png
+shields256ringb.png
+shields256ringc.png
+shields256ringd.png
+shields64.png
+shields64ring.png
+shimmer.png
+ship_shadow_mask.png
+slipstream.png
+slipstream0.png
+slipstream2.png
+slipstream3.png
+slipstream_black.png
+slipstream_dark.png
+slipstream_edge1.png
+slipstream_edge2.png
+slipstream_edge3.png
+slipstream_layer0.png
+slipstream_layer1.png
+slipstream_layer2.png
+slipstream_map.png
+slipstream_map2.png
+slipstream_map3.png
+slipstream_map4.png
+slipstream_map_edge.png
+slipstream_map_edge2.png
+smoke32.png
+soot64.png
+star.png
+star_halo.png
+starburst_glow1.png
+torpedoray32.png
+wind_effect.png
+wormhole_corona.png
+wormhole_ring.png
+wormhole_ring_bright.png
+wormhole_ring_bright2.png
+wormhole_ring_bright3.png

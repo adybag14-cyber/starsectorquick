@@ -1,144 +1,144 @@
-bgs/	-1
-characters/	-1
-godiva.jpg	94592
-portrait12.png	34712
-portrait13.png	30988
-portrait14.png	37377
-portrait15.png	36444
-portrait16.png	32573
-portrait17.png	37699
-portrait18.png	32099
-portrait20.png	32049
-portrait21.png	32796
-portrait22.png	32356
-portrait23.png	34082
-portrait24.png	36289
-portrait25.png	27412
-portrait26.png	27960
-portrait27.png	30854
-portrait28.png	29524
-portrait29.png	33118
-portrait30.png	28044
-portrait31.png	32751
-portrait32.png	29311
-portrait33.png	29736
-portrait34.png	31249
-portrait35.png	31551
-portrait36.png	28791
-portrait37.png	31973
-portrait38.png	28673
-portrait39.png	32549
-portrait40.png	32068
-portrait41.png	46165
-portrait42.png	29164
-portrait43.png	30348
-portrait44.png	31455
-portrait45.png	30973
-portrait46.png	28991
-portrait47.png	29606
-portrait48.png	29201
-portrait_ai1.png	51899
-portrait_ai1b.png	30230
-portrait_ai2.png	51630
-portrait_ai2b.png	37243
-portrait_ai3.png	52647
-portrait_ai3b.png	37113
-portrait_corporate01.png	27596
-portrait_corporate02.png	28905
-portrait_corporate03.png	27004
-portrait_corporate04.png	25725
-portrait_corporate05.png	26812
-portrait_corporate06.png	30735
-portrait_corporate07.png	31412
-portrait_corporate08.png	27766
-portrait_corporate09.png	25628
-portrait_corporate10.png	28522
-portrait_corporate11.png	27014
-portrait_diktat01.png	27516
-portrait_diktat02.png	26715
-portrait_diktat03.png	30246
-portrait_diktat04.png	26668
-portrait_diktat05.png	29801
-portrait_diktat06.png	28674
-portrait_diktat07.png	23555
-portrait_diktat08.png	25266
-portrait_diktat09.png	26853
-portrait_diktat10.png	30618
-portrait_diktat11.png	27696
-portrait_diktat12.png	29560
-portrait_diktat13.png	28012
-portrait_diktat14.png	30225
-portrait_diktat15.png	28286
-portrait_diktat16.png	28424
-portrait_generic.png	11120
-portrait_generic_grayscale.png	6762
-portrait_hegemony01.png	29331
-portrait_hegemony02.png	33824
-portrait_hegemony03.png	34030
-portrait_hegemony04.png	27429
-portrait_hegemony05.png	30051
-portrait_hegemony06.png	29820
-portrait_hegemony07.png	24274
-portrait_hegemony08.png	27278
-portrait_hegemony09.png	30033
-portrait_hegemony10.png	27868
-portrait_hegemony11.png	43630
-portrait_hegemony12.png	24832
-portrait_hegemony13.png	29883
-portrait_hegemony14.png	32713
-portrait_hegemony15.png	34011
-portrait_hegemony16.png	23839
-portrait_hegemony17.png	26383
-portrait_league00.png	24563
-portrait_league01.png	33078
-portrait_league02.png	29859
-portrait_league03.png	35933
-portrait_league04.png	26475
-portrait_league05.png	26738
-portrait_league06.png	27846
-portrait_league07.png	28363
-portrait_league08.png	32879
-portrait_league09.png	29351
-portrait_league10.png	29895
-portrait_luddic00.png	28656
-portrait_luddic01.png	29854
-portrait_luddic02.png	32131
-portrait_luddic03.png	35221
-portrait_luddic04.png	29741
-portrait_luddic05.png	32146
-portrait_luddic06.png	34914
-portrait_luddic07.png	36393
-portrait_luddic08.png	29116
-portrait_luddic09.png	37337
-portrait_luddic10.png	29581
-portrait_luddic11.png	29989
-portrait_luddic12.png	33331
-portrait_mercenary01.png	27776
-portrait_mercenary02.png	33664
-portrait_mercenary03.png	31312
-portrait_mercenary04.png	30464
-portrait_mercenary05.png	32496
-portrait_mercenary06.png	40892
-portrait_mercenary07.png	41991
-portrait_mercenary08.png	29242
-portrait_pirate01.png	32840
-portrait_pirate02.png	28398
-portrait_pirate03.png	30446
-portrait_pirate04.png	43323
-portrait_pirate05.png	32208
-portrait_pirate06.png	28997
-portrait_pirate07.png	28384
-portrait_pirate08.png	31681
-portrait_pirate09.png	33213
-portrait_pirate10.png	33810
-portrait_pirate11.png	34922
-portrait_pirate12.png	30045
-portrait_pirate13.png	37893
-portrait_pirate14.png	32773
-portrait_pirate15.png	33430
-portrait_pirate16.png	35410
-portrait_pirate17.png	26114
-portrait_pirate18.png	28004
-portrait_pirate19.png	30490
-portrait_pirate20.png	30719
-portrait_pirate21.png	37477
+bgs/
+characters/
+godiva.jpg
+portrait12.png
+portrait13.png
+portrait14.png
+portrait15.png
+portrait16.png
+portrait17.png
+portrait18.png
+portrait20.png
+portrait21.png
+portrait22.png
+portrait23.png
+portrait24.png
+portrait25.png
+portrait26.png
+portrait27.png
+portrait28.png
+portrait29.png
+portrait30.png
+portrait31.png
+portrait32.png
+portrait33.png
+portrait34.png
+portrait35.png
+portrait36.png
+portrait37.png
+portrait38.png
+portrait39.png
+portrait40.png
+portrait41.png
+portrait42.png
+portrait43.png
+portrait44.png
+portrait45.png
+portrait46.png
+portrait47.png
+portrait48.png
+portrait_ai1.png
+portrait_ai1b.png
+portrait_ai2.png
+portrait_ai2b.png
+portrait_ai3.png
+portrait_ai3b.png
+portrait_corporate01.png
+portrait_corporate02.png
+portrait_corporate03.png
+portrait_corporate04.png
+portrait_corporate05.png
+portrait_corporate06.png
+portrait_corporate07.png
+portrait_corporate08.png
+portrait_corporate09.png
+portrait_corporate10.png
+portrait_corporate11.png
+portrait_diktat01.png
+portrait_diktat02.png
+portrait_diktat03.png
+portrait_diktat04.png
+portrait_diktat05.png
+portrait_diktat06.png
+portrait_diktat07.png
+portrait_diktat08.png
+portrait_diktat09.png
+portrait_diktat10.png
+portrait_diktat11.png
+portrait_diktat12.png
+portrait_diktat13.png
+portrait_diktat14.png
+portrait_diktat15.png
+portrait_diktat16.png
+portrait_generic.png
+portrait_generic_grayscale.png
+portrait_hegemony01.png
+portrait_hegemony02.png
+portrait_hegemony03.png
+portrait_hegemony04.png
+portrait_hegemony05.png
+portrait_hegemony06.png
+portrait_hegemony07.png
+portrait_hegemony08.png
+portrait_hegemony09.png
+portrait_hegemony10.png
+portrait_hegemony11.png
+portrait_hegemony12.png
+portrait_hegemony13.png
+portrait_hegemony14.png
+portrait_hegemony15.png
+portrait_hegemony16.png
+portrait_hegemony17.png
+portrait_league00.png
+portrait_league01.png
+portrait_league02.png
+portrait_league03.png
+portrait_league04.png
+portrait_league05.png
+portrait_league06.png
+portrait_league07.png
+portrait_league08.png
+portrait_league09.png
+portrait_league10.png
+portrait_luddic00.png
+portrait_luddic01.png
+portrait_luddic02.png
+portrait_luddic03.png
+portrait_luddic04.png
+portrait_luddic05.png
+portrait_luddic06.png
+portrait_luddic07.png
+portrait_luddic08.png
+portrait_luddic09.png
+portrait_luddic10.png
+portrait_luddic11.png
+portrait_luddic12.png
+portrait_mercenary01.png
+portrait_mercenary02.png
+portrait_mercenary03.png
+portrait_mercenary04.png
+portrait_mercenary05.png
+portrait_mercenary06.png
+portrait_mercenary07.png
+portrait_mercenary08.png
+portrait_pirate01.png
+portrait_pirate02.png
+portrait_pirate03.png
+portrait_pirate04.png
+portrait_pirate05.png
+portrait_pirate06.png
+portrait_pirate07.png
+portrait_pirate08.png
+portrait_pirate09.png
+portrait_pirate10.png
+portrait_pirate11.png
+portrait_pirate12.png
+portrait_pirate13.png
+portrait_pirate14.png
+portrait_pirate15.png
+portrait_pirate16.png
+portrait_pirate17.png
+portrait_pirate18.png
+portrait_pirate19.png
+portrait_pirate20.png
+portrait_pirate21.png
