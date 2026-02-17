@@ -43,6 +43,356 @@
             console.log(m);
         }
 
+        function createInlineLwjglNatives(logFn) {
+            const state = {
+                gl: null,
+                texById: new Map(),
+                nextTexId: 1,
+                vertexArrayEnabled: false
+            };
+
+            function ensureGl() {
+                if (state.gl) return state.gl;
+                const canvas = document.querySelector('#game-container canvas') || document.querySelector('canvas');
+                if (!canvas) return null;
+                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false }) ||
+                           canvas.getContext('webgl', { alpha: false, antialias: false });
+                if (!state.gl) logFn('Inline LWJGL bridge: failed to acquire WebGL context', '#ff8800');
+                return state.gl;
+            }
+
+            function toNumber(v) {
+                return typeof v === 'bigint' ? Number(v) : v;
+            }
+
+            function noThrow(fn) {
+                return (...args) => {
+                    try { return fn(...args); } catch (e) {
+                        console.warn('Inline LWJGL native failed:', e);
+                        return undefined;
+                    }
+                };
+            }
+
+            const n = {};
+
+            n.Java_org_lwjgl_Sys_getTimerResolution = () => BigInt(1000);
+            n.Java_org_lwjgl_Sys_getTime = () => BigInt(Math.floor(performance.now()));
+            n.Java_org_lwjgl_Sys_alert = (env, cls, title, message) => {
+                console.warn('[LWJGL ALERT]', String(title), String(message));
+            };
+
+            n.Java_org_lwjgl_opengl_Display_create = noThrow(() => {
+                ensureGl();
+            });
+            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval = () => {};
+            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nMakeCurrent = () => {};
+            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nIsCurrent = () => true;
+            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers = () =>
+                new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+            n.Java_org_lwjgl_opengl_GL11_nglGetString = noThrow((env, cls, name) => {
+                const p = toNumber(name);
+                if (p === 7938) return '2.1';
+                if (p === 7939) return 'GL_EXT_framebuffer_object GL_ARB_vertex_buffer_object';
+                return '';
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglGetIntegerv = noThrow((env, cls, pname, ptr) => {
+                const p = toNumber(pname);
+                const base = toNumber(ptr);
+                const dv = env.getJNIDataView();
+                if (p === 2978) {
+                    const gl = ensureGl();
+                    const w = gl ? gl.drawingBufferWidth : 1024;
+                    const h = gl ? gl.drawingBufferHeight : 768;
+                    dv.setInt32(base + 0, 0, true);
+                    dv.setInt32(base + 4, 0, true);
+                    dv.setInt32(base + 8, w, true);
+                    dv.setInt32(base + 12, h, true);
+                } else {
+                    dv.setInt32(base, 0, true);
+                }
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglClearColor = noThrow((env, cls, r, g, b, a) => {
+                const gl = ensureGl();
+                if (gl) gl.clearColor(r, g, b, a);
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglClear = noThrow((env, cls, mask) => {
+                const gl = ensureGl();
+                if (gl) gl.clear(toNumber(mask));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglViewport = noThrow((env, cls, x, y, w, h) => {
+                const gl = ensureGl();
+                if (gl) gl.viewport(toNumber(x), toNumber(y), toNumber(w), toNumber(h));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglEnable = noThrow((env, cls, cap) => {
+                const gl = ensureGl();
+                if (gl) gl.enable(toNumber(cap));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglDisable = noThrow((env, cls, cap) => {
+                const gl = ensureGl();
+                if (gl) gl.disable(toNumber(cap));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglBlendFunc = noThrow((env, cls, src, dst) => {
+                const gl = ensureGl();
+                if (gl) gl.blendFunc(toNumber(src), toNumber(dst));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglGenTextures = noThrow((env, cls, count, ptr) => {
+                const gl = ensureGl();
+                const dv = env.getJNIDataView();
+                const c = toNumber(count);
+                const base = toNumber(ptr);
+                for (let i = 0; i < c; i++) {
+                    const id = state.nextTexId++;
+                    const tex = gl ? gl.createTexture() : null;
+                    state.texById.set(id, tex);
+                    dv.setInt32(base + i * 4, id, true);
+                }
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglBindTexture = noThrow((env, cls, target, texture) => {
+                const gl = ensureGl();
+                if (!gl) return;
+                const id = toNumber(texture);
+                let tex = state.texById.get(id);
+                if (!tex && id > 0) {
+                    tex = gl.createTexture();
+                    state.texById.set(id, tex);
+                }
+                gl.bindTexture(toNumber(target), tex || null);
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglTexParameteri = noThrow((env, cls, target, pname, param) => {
+                const gl = ensureGl();
+                if (!gl) return;
+                gl.texParameteri(toNumber(target), toNumber(pname), toNumber(param));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglTexImage2D = noThrow((env, cls, target, level, internalFormat, width, height, border, format, type, pixelsPtr) => {
+                const gl = ensureGl();
+                if (!gl) return;
+                const t = toNumber(target), l = toNumber(level), i = toNumber(internalFormat);
+                const w = toNumber(width), h = toNumber(height), b = toNumber(border);
+                const f = toNumber(format), ty = toNumber(type), p = toNumber(pixelsPtr);
+                let data = null;
+                if (p > 0 && ty === gl.UNSIGNED_BYTE) {
+                    const comps = (f === gl.RGB || f === 6407) ? 3 : 4;
+                    const len = Math.max(0, w * h * comps);
+                    data = new Uint8Array(env.getJNIDataView().buffer, p, len);
+                }
+                gl.texImage2D(t, l, i, w, h, b, f, ty, data);
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglTexSubImage2D = noThrow((env, cls, target, level, x, y, width, height, format, type, pixelsPtr) => {
+                const gl = ensureGl();
+                if (!gl) return;
+                const p = toNumber(pixelsPtr);
+                const w = toNumber(width), h = toNumber(height), f = toNumber(format), ty = toNumber(type);
+                let data = null;
+                if (p > 0 && ty === gl.UNSIGNED_BYTE) {
+                    const comps = (f === gl.RGB || f === 6407) ? 3 : 4;
+                    const len = Math.max(0, w * h * comps);
+                    data = new Uint8Array(env.getJNIDataView().buffer, p, len);
+                }
+                gl.texSubImage2D(toNumber(target), toNumber(level), toNumber(x), toNumber(y), w, h, f, ty, data);
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglEnableClientState = noThrow(() => { state.vertexArrayEnabled = true; });
+            n.Java_org_lwjgl_opengl_GL11_nglDisableClientState = noThrow(() => { state.vertexArrayEnabled = false; });
+            n.Java_org_lwjgl_opengl_GL11_nglColorPointer = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglTexCoordPointer = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglVertexPointer = () => {};
+
+            n.Java_org_lwjgl_opengl_GL11_nglDrawArrays = noThrow((env, cls, mode, first, count) => {
+                const gl = ensureGl();
+                if (!gl || !state.vertexArrayEnabled) return;
+                gl.drawArrays(toNumber(mode), toNumber(first), toNumber(count));
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglFlush = noThrow(() => {
+                const gl = ensureGl();
+                if (gl) gl.flush();
+            });
+
+            n.Java_org_lwjgl_opengl_GL11_nglMatrixMode = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglLoadIdentity = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglOrtho = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglTranslatef = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglRotatef = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglScalef = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglPushMatrix = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglPopMatrix = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglPushAttrib = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglPopAttrib = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglShadeModel = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglLineWidth = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglAlphaFunc = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglColorMask = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglColor3f = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglColor4f = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglColor4ub = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglNormal3f = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglLightfv = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglCallList = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglGenLists = () => 1;
+            n.Java_org_lwjgl_opengl_GL11_nglNewList = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglEndList = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglBegin = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglEnd = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglTexCoord2f = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglVertex2f = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglVertex3f = () => {};
+
+            return n;
+        }
+
+        function createUnsafeFallbackNatives(logFn) {
+            const warned = new Set();
+            const warnOnce = (name) => {
+                if (warned.has(name)) return;
+                warned.add(name);
+                logFn(`[Unsafe JNI fallback] ${name} bridged via JS fallback`, '#ffaa00');
+            };
+
+            const voidFallback = (name) => (..._args) => {
+                warnOnce(name);
+                return;
+            };
+
+            const zeroFallback = (name) => (..._args) => {
+                warnOnce(name);
+                return 0;
+            };
+
+            const falseFallback = (name) => (..._args) => {
+                warnOnce(name);
+                return false;
+            };
+
+            const nullFallback = (name) => (..._args) => {
+                warnOnce(name);
+                return null;
+            };
+
+            const owners = [
+                'Java_jdk_internal_misc_Unsafe',
+                'Java_sun_misc_Unsafe'
+            ];
+            const primitives = [
+                { name: 'Byte', sig: 'B', ret: 'zero' },
+                { name: 'Short', sig: 'S', ret: 'zero' },
+                { name: 'Char', sig: 'C', ret: 'zero' },
+                { name: 'Int', sig: 'I', ret: 'zero' },
+                { name: 'Long', sig: 'J', ret: 'zero' },
+                { name: 'Float', sig: 'F', ret: 'zero' },
+                { name: 'Double', sig: 'D', ret: 'zero' },
+                { name: 'Boolean', sig: 'Z', ret: 'false' }
+            ];
+            const out = {};
+
+            for (const owner of owners) {
+                for (const p of primitives) {
+                    const putBase = `${owner}_put${p.name}`;
+                    const getBase = `${owner}_get${p.name}`;
+                    const ret = p.ret === 'false' ? falseFallback : zeroFallback;
+
+                    out[putBase] = voidFallback(putBase);
+                    out[`${putBase}__J${p.sig}`] = voidFallback(`${putBase}__J${p.sig}`);
+                    out[`${putBase}__Ljava_lang_Object_2J${p.sig}`] =
+                        voidFallback(`${putBase}__Ljava_lang_Object_2J${p.sig}`);
+                    out[`${putBase}Volatile`] = voidFallback(`${putBase}Volatile`);
+                    out[`${putBase}Volatile__Ljava_lang_Object_2J${p.sig}`] =
+                        voidFallback(`${putBase}Volatile__Ljava_lang_Object_2J${p.sig}`);
+
+                    out[getBase] = ret(getBase);
+                    out[`${getBase}__J`] = ret(`${getBase}__J`);
+                    out[`${getBase}__Ljava_lang_Object_2J`] = ret(`${getBase}__Ljava_lang_Object_2J`);
+                    out[`${getBase}Volatile`] = ret(`${getBase}Volatile`);
+                    out[`${getBase}Volatile__J`] = ret(`${getBase}Volatile__J`);
+                    out[`${getBase}Volatile__Ljava_lang_Object_2J`] =
+                        ret(`${getBase}Volatile__Ljava_lang_Object_2J`);
+                }
+
+                out[`${owner}_putObject`] = voidFallback(`${owner}_putObject`);
+                out[`${owner}_putObject__JLjava_lang_Object_2`] =
+                    voidFallback(`${owner}_putObject__JLjava_lang_Object_2`);
+                out[`${owner}_putObject__Ljava_lang_Object_2JLjava_lang_Object_2`] =
+                    voidFallback(`${owner}_putObject__Ljava_lang_Object_2JLjava_lang_Object_2`);
+                out[`${owner}_putObjectVolatile`] = voidFallback(`${owner}_putObjectVolatile`);
+                out[`${owner}_putObjectVolatile__Ljava_lang_Object_2JLjava_lang_Object_2`] =
+                    voidFallback(`${owner}_putObjectVolatile__Ljava_lang_Object_2JLjava_lang_Object_2`);
+                out[`${owner}_getObject`] = nullFallback(`${owner}_getObject`);
+                out[`${owner}_getObject__J`] = nullFallback(`${owner}_getObject__J`);
+                out[`${owner}_getObject__Ljava_lang_Object_2J`] =
+                    nullFallback(`${owner}_getObject__Ljava_lang_Object_2J`);
+                out[`${owner}_getObjectVolatile`] = nullFallback(`${owner}_getObjectVolatile`);
+                out[`${owner}_getObjectVolatile__J`] =
+                    nullFallback(`${owner}_getObjectVolatile__J`);
+                out[`${owner}_getObjectVolatile__Ljava_lang_Object_2J`] =
+                    nullFallback(`${owner}_getObjectVolatile__Ljava_lang_Object_2J`);
+
+                out[`${owner}_compareAndSetInt`] = falseFallback(`${owner}_compareAndSetInt`);
+                out[`${owner}_compareAndSetLong`] = falseFallback(`${owner}_compareAndSetLong`);
+                out[`${owner}_compareAndSetReference`] =
+                    falseFallback(`${owner}_compareAndSetReference`);
+            }
+
+            return out;
+        }
+
+        function installLwjglConsoleFilter() {
+            if (window.__lwjglConsoleFilterInstalled) return;
+            window.__lwjglConsoleFilterInstalled = true;
+
+            const patterns = [
+                /^\[LWJGL TRACE\]/,
+                /^\[LWJGL STAT\]/,
+                /^texParameteri:/,
+                /^texImage2D:/,
+                /^Patched internalFormat:/,
+                /^LWJGL: uploadDataImpl \(sampled\)/,
+                /^LWJGL: drawArraysImpl \(sampled\)/,
+                /^gl(GetInteger|Disable|Enable|PushAttrib|PopAttrib|PushMatrix|PopMatrix|Color3f|ShaderModel|Fog|Fogi|Fogf|ColorMaterial|ActiveTexture|LineWidth|PolygonOffset)/,
+                /^at com\.fs\.graphics\.TextureLoader\./,
+                /^at com\.fs\.graphics\.oOoO\./,
+                /^at com\.fs\.starfarer\.launcher\.opengl\.GLLauncher\./
+            ];
+            const textContains = [
+                'Unable to make public jdk.internal.ref.Cleaner java.nio.DirectByteBuffer.cleaner() accessible',
+                'java.lang.reflect.InaccessibleObjectException: Unable to make public jdk.internal.ref.Cleaner',
+                'module java.base does not "opens java.nio" to unnamed module'
+            ];
+
+            const shouldDrop = (msg) => {
+                if (!msg) return false;
+                for (const token of textContains) {
+                    if (msg.includes(token)) return true;
+                }
+                for (const pattern of patterns) {
+                    if (pattern.test(msg)) return true;
+                }
+                return false;
+            };
+
+            const wrap = (fn) => (...args) => {
+                const text = args.map((x) => String(x)).join(' ');
+                if (shouldDrop(text)) return;
+                fn.apply(console, args);
+            };
+
+            console.log = wrap(console.log.bind(console));
+            console.warn = wrap(console.warn.bind(console));
+            console.error = wrap(console.error.bind(console));
+        }
+
         document.getElementById('startBtn').addEventListener('click', async () => {
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
@@ -53,78 +403,692 @@
             try {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
-                // If local, we are at root. If GitHub, we are in /starsectorquick/
-                const projectPath = isLocal ? '' : 'starsectorquick/'; 
+                const projectPath = isLocal ? 'starsectorquick/' : 'starsectorquick/'; 
                 const fullAppPath = `/app/${projectPath}`;
                 
-                // Log for debugging
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
                 log(`App Path: ${fullAppPath}`, '#888');
+                if (!window.__DISABLE_LWJGL_CONSOLE_FILTER) {
+                    installLwjglConsoleFilter();
+                } else {
+                    log('LWJGL console filter disabled via window.__DISABLE_LWJGL_CONSOLE_FILTER', '#ffaa00');
+                }
 
                 const dataUrl = origin + projectPath + 'starsector/starsector/';
-                
-                await cheerpjInit({ 
-                    version: 17, 
+                const contentRoot = `${fullAppPath}starsector/starsector/`;
+                const starfarerResUrl = dataUrl;
+                const lwjglModuleName = window.__LWJGL_MODULE__ || 'lwjgl_clean.js';
+                const lwjglModuleUrl = `${origin}${projectPath}build/final/wasm-modules/${lwjglModuleName}?ts=${Date.now()}`;
+                log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
+                const lwjglModule = await import(lwjglModuleUrl);
+                const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
+                log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
+                const lwjglNatives = {};
+                const nativeStats = {
+                    totalCalls: 0,
+                    callsByName: Object.create(null),
+                    callSequence: [],
+                    errorsByName: Object.create(null),
+                    skippedListByName: Object.create(null),
+                    beginModes: Object.create(null),
+                    drawModes: Object.create(null),
+                    texImageCalls: [],
+                    texImageByteSamples: [],
+                    colorMaskCalls: [],
+                    blendFuncCalls: [],
+                    bindTextureCalls: [],
+                    clearColorCalls: [],
+                    color4ubCalls: [],
+                    color4fCalls: [],
+                    color4ubHistogram: Object.create(null),
+                    color4fHistogram: Object.create(null),
+                    viewportCalls: [],
+                    viewportHistogram: Object.create(null),
+                    vertex2fRange: { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity, samples: 0 },
+                    vertex3fRange: { minX: Infinity, minY: Infinity, minZ: Infinity, maxX: -Infinity, maxY: -Infinity, maxZ: -Infinity, samples: 0 },
+                    texCoord2fRange: { minS: Infinity, minT: Infinity, maxS: -Infinity, maxT: -Infinity, samples: 0 },
+                    enableCaps: Object.create(null),
+                    disableCaps: Object.create(null),
+                    lastName: null,
+                    lastAt: 0
+                };
+                window.__lwjglNativeStats = nativeStats;
+                const enableNativeTraceLog = !!window.__LWJGL_NATIVE_TRACE_LOG__;
+                const nativeTraceLimit = Math.max(0, Number(window.__LWJGL_NATIVE_TRACE_LIMIT__ || 24));
+                const firstLogLimit = Math.max(0, Number(window.__LWJGL_FIRST_LOG_LIMIT__ || 256));
+                let firstLogCount = 0;
+                let traceLogCount = 0;
+                for (const [key, value] of Object.entries(lwjglModule)) {
+                    if (typeof value !== 'function') continue;
+                    if (key.startsWith('Java_') || key.startsWith('JNI_OnLoad') || key.startsWith('JVM_') || key.startsWith('_JVM_')) {
+                        if (key === 'Java_org_lwjgl_Sys_alert') {
+                            lwjglNatives[key] = async (env, title, message) => {
+                                nativeStats.totalCalls++;
+                                nativeStats.lastName = key;
+                                nativeStats.lastAt = Date.now();
+                                const current = (nativeStats.callsByName[key] || 0) + 1;
+                                nativeStats.callsByName[key] = current;
+                                let safeTitle = title;
+                                let safeMessage = message;
+                                try {
+                                    if (safeTitle && typeof safeTitle.toString === 'function') safeTitle = safeTitle.toString();
+                                    if (safeMessage && typeof safeMessage.toString === 'function') safeMessage = safeMessage.toString();
+                                } catch (coerceErr) {
+                                    safeTitle = String(safeTitle);
+                                    safeMessage = String(safeMessage);
+                                }
+                                console.warn(`[LWJGL SYS ALERT suppressed] ${safeTitle}: ${safeMessage}`);
+                                return;
+                            };
+                            continue;
+                        }
+                        lwjglNatives[key] = (...args) => {
+                            nativeStats.totalCalls++;
+                            nativeStats.lastName = key;
+                            nativeStats.lastAt = Date.now();
+                            const current = (nativeStats.callsByName[key] || 0) + 1;
+                            nativeStats.callsByName[key] = current;
+                            if (nativeStats.callSequence.length < 2048) {
+                                nativeStats.callSequence.push({ key, current, at: nativeStats.lastAt });
+                            }
+                            const isCriticalNative =
+                                key.startsWith('Java_org_lwjgl_input_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_Display_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_LinuxDisplay_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_LinuxContextImplementation_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_LinuxEvent_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_LinuxMouse_') ||
+                                key.startsWith('Java_org_lwjgl_opengl_LinuxKeyboard_');
+                            if (current === 1 && firstLogCount < firstLogLimit) {
+                                firstLogCount++;
+                                log(`[LWJGL FIRST] ${key}`, '#66ffaa');
+                            }
+                            if (enableNativeTraceLog && isCriticalNative && traceLogCount < nativeTraceLimit) {
+                                traceLogCount++;
+                                log(`[LWJGL TRACE] ${key}#${current}`, '#66ffaa');
+                                if (traceLogCount === nativeTraceLimit) {
+                                    log(`[LWJGL TRACE] limit reached (${nativeTraceLimit}); suppressing further trace lines`, '#888');
+                                }
+                            }
+                            if (key === 'Java_org_lwjgl_opengl_GL11_nglBegin') {
+                                const mode = Number(args[1]);
+                                nativeStats.beginModes[mode] = (nativeStats.beginModes[mode] || 0) + 1;
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglDrawArrays') {
+                                const mode = Number(args[1]);
+                                nativeStats.drawModes[mode] = (nativeStats.drawModes[mode] || 0) + 1;
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglTexImage2D') {
+                                if (nativeStats.texImageCalls.length < 128) {
+                                    nativeStats.texImageCalls.push({
+                                        ifmt: Number(args[3]),
+                                        w: Number(args[4]),
+                                        h: Number(args[5]),
+                                        fmt: Number(args[7]),
+                                        type: Number(args[8]),
+                                        ptr: Number(args[9])
+                                    });
+                                }
+                                if (nativeStats.texImageByteSamples.length < 64) {
+                                    const ptr = Number(args[9]);
+                                    const w = Number(args[4]);
+                                    const h = Number(args[5]);
+                                    const fmt = Number(args[7]);
+                                    const comps = (fmt === 6407) ? 3 : 4;
+                                    const len = Math.max(0, w * h * comps);
+                                    let head = [];
+                                    try {
+                                        if (ptr > 0 && len > 0 && args[0] && typeof args[0].getJNIDataView === 'function') {
+                                            const view = args[0].getJNIDataView();
+                                            const n = Math.min(16, len);
+                                            head = Array.from(new Uint8Array(view.buffer, ptr, n));
+                                        }
+                                    } catch (_) {}
+                                    nativeStats.texImageByteSamples.push({ ptr, len, head });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglColorMask') {
+                                if (nativeStats.colorMaskCalls.length < 256) {
+                                    nativeStats.colorMaskCalls.push({
+                                        r: !!args[1],
+                                        g: !!args[2],
+                                        b: !!args[3],
+                                        a: !!args[4]
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglBlendFunc') {
+                                if (nativeStats.blendFuncCalls.length < 256) {
+                                    nativeStats.blendFuncCalls.push({
+                                        src: Number(args[1]),
+                                        dst: Number(args[2])
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglBindTexture') {
+                                if (nativeStats.bindTextureCalls.length < 256) {
+                                    nativeStats.bindTextureCalls.push({
+                                        target: Number(args[1]),
+                                        texture: Number(args[2])
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglClearColor') {
+                                if (nativeStats.clearColorCalls.length < 128) {
+                                    nativeStats.clearColorCalls.push({
+                                        r: Number(args[1]),
+                                        g: Number(args[2]),
+                                        b: Number(args[3]),
+                                        a: Number(args[4])
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglColor4ub') {
+                                const r = Number(args[1]) & 0xff;
+                                const g = Number(args[2]) & 0xff;
+                                const b = Number(args[3]) & 0xff;
+                                const a = Number(args[4]) & 0xff;
+                                const k = `${r},${g},${b},${a}`;
+                                nativeStats.color4ubHistogram[k] = (nativeStats.color4ubHistogram[k] || 0) + 1;
+                                if (nativeStats.color4ubCalls.length < 256) {
+                                    nativeStats.color4ubCalls.push({
+                                        r,
+                                        g,
+                                        b,
+                                        a
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglColor4f') {
+                                const r = Number(args[1]);
+                                const g = Number(args[2]);
+                                const b = Number(args[3]);
+                                const a = Number(args[4]);
+                                const k = `${r},${g},${b},${a}`;
+                                nativeStats.color4fHistogram[k] = (nativeStats.color4fHistogram[k] || 0) + 1;
+                                if (nativeStats.color4fCalls.length < 256) {
+                                    nativeStats.color4fCalls.push({
+                                        r,
+                                        g,
+                                        b,
+                                        a
+                                    });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglVertex2f') {
+                                const x = Number(args[1]);
+                                const y = Number(args[2]);
+                                const r = nativeStats.vertex2fRange;
+                                if (Number.isFinite(x) && Number.isFinite(y)) {
+                                    if (x < r.minX) r.minX = x;
+                                    if (y < r.minY) r.minY = y;
+                                    if (x > r.maxX) r.maxX = x;
+                                    if (y > r.maxY) r.maxY = y;
+                                    r.samples++;
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglVertex3f') {
+                                const x = Number(args[1]);
+                                const y = Number(args[2]);
+                                const z = Number(args[3]);
+                                const r = nativeStats.vertex3fRange;
+                                if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+                                    if (x < r.minX) r.minX = x;
+                                    if (y < r.minY) r.minY = y;
+                                    if (z < r.minZ) r.minZ = z;
+                                    if (x > r.maxX) r.maxX = x;
+                                    if (y > r.maxY) r.maxY = y;
+                                    if (z > r.maxZ) r.maxZ = z;
+                                    r.samples++;
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglTexCoord2f') {
+                                const s = Number(args[1]);
+                                const t = Number(args[2]);
+                                const r = nativeStats.texCoord2fRange;
+                                if (Number.isFinite(s) && Number.isFinite(t)) {
+                                    if (s < r.minS) r.minS = s;
+                                    if (t < r.minT) r.minT = t;
+                                    if (s > r.maxS) r.maxS = s;
+                                    if (t > r.maxT) r.maxT = t;
+                                    r.samples++;
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglViewport') {
+                                const x = Number(args[1]);
+                                const y = Number(args[2]);
+                                const w = Number(args[3]);
+                                const h = Number(args[4]);
+                                const key = `${w}x${h}`;
+                                nativeStats.viewportHistogram[key] = (nativeStats.viewportHistogram[key] || 0) + 1;
+                                if (nativeStats.viewportCalls.length < 256) {
+                                    nativeStats.viewportCalls.push({ x, y, w, h });
+                                }
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglEnable') {
+                                const cap = String(Number(args[1]));
+                                nativeStats.enableCaps[cap] = (nativeStats.enableCaps[cap] || 0) + 1;
+                            } else if (key === 'Java_org_lwjgl_opengl_GL11_nglDisable') {
+                                const cap = String(Number(args[1]));
+                                nativeStats.disableCaps[cap] = (nativeStats.disableCaps[cap] || 0) + 1;
+                            }
+                            try {
+                                return value(...args);
+                            } catch (err) {
+                                const msg = (err && err.message) ? err.message : String(err);
+                                if (msg.includes("__LWJGL_SKIP_LIST_CMD__")) {
+                                    nativeStats.skippedListByName[key] = (nativeStats.skippedListByName[key] || 0) + 1;
+                                    return;
+                                }
+                                nativeStats.errorsByName[key] = (nativeStats.errorsByName[key] || 0) + 1;
+                                throw err;
+                            }
+                        };
+                    }
+                }
+                const unsafeFallbackNatives = createUnsafeFallbackNatives(log);
+                const mergedNatives = { ...unsafeFallbackNatives, ...lwjglNatives };
+                const unsafeFallbackAdded = Object.keys(unsafeFallbackNatives).filter((k) => typeof lwjglNatives[k] !== 'function').length;
+                if (unsafeFallbackAdded > 0) {
+                    log(`Unsafe JNI fallback bridges enabled: ${unsafeFallbackAdded}`, '#ffaa00');
+                }
+                log(`LWJGL natives imported from module: ${Object.keys(lwjglNatives).length}`, '#888');
+
+                // Keep this opt-in; forcing it can drop hull specs needed by campaign preflight.
+                const disableShipHullPostPass = window.__DISABLE_SHIP_HULL_POST_PASS__ === true;
+                const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
+                const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
+                const autoCampaignMode = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new'
+                ).toString().trim().toLowerCase();
+                const autoCampaignVariant = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
+                ).toString().trim();
+                const autoCampaignSectorSize = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__ || 'small'
+                ).toString().trim().toLowerCase() || 'small';
+                const autoCampaignTitleSettleMs = Math.max(
+                    0,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ || 25000) || 25000
+                );
+                const autoCampaignFallbackMs = Math.max(
+                    1500,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_FALLBACK_MS__ || 7000) || 7000
+                );
+                const autoCampaignTimeoutMs = Math.max(
+                    60000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TIMEOUT_MS__ || 900000) || 900000
+                );
+                const autoCampaignDirectAttemptTimeoutMs = Math.max(
+                    2000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__ || 20000) || 20000
+                );
+                const autoCampaignDirectPostInitWaitMs = Math.max(
+                    8000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_POST_INIT_WAIT_MS__ || 45000) || 45000
+                );
+                const autoCampaignDirectTimeoutFailureLimit = Math.max(
+                    1,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
+                );
+                const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
+                    15000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
+                        || 120000
+                );
+                const modeDisablesDirectPath =
+                    autoCampaignMode.indexOf('no_direct') >= 0
+                    || autoCampaignMode.indexOf('nodirect') >= 0
+                    || autoCampaignMode.indexOf('menu_only') >= 0
+                    || autoCampaignMode.indexOf('menuonly') >= 0;
+                const autoCampaignAllowDirectEscape =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
+                    || (!modeDisablesDirectPath
+                        && autoCampaignMode.indexOf('direct') >= 0
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ !== false);
+                const autoVisitColonyRequested =
+                    window.__STARSECTOR_AUTO_VISIT_COLONY__ === true
+                    || autoCampaignMode.indexOf('visit_colony') >= 0;
+                const autoCampaignTitleRenderWarmup =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_RENDER_WARMUP__ === true;
+                const autoCampaignMutatingSpecPreflight =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === true
+                    || (autoVisitColonyRequested
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ !== false);
+                const autoCampaignSkipFactionPreflight =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ === true;
+                const hasAutoCampaignWithTimePassOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__ === 'boolean';
+                const autoCampaignWithTimePass = hasAutoCampaignWithTimePassOverride
+                    ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
+                    : true;
+                const autoCampaignInvokeCreateOnPlayerFleetNull =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
+                const autoCampaignInvokeCreateInCampaignState =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true;
+                const autoCampaignEnableSyntheticPlayerFleetFallback =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true
+                    || (autoVisitColonyRequested
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false);
+                const autoCampaignAllowDialogWithoutPlayerFleet =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true
+                    || (autoVisitColonyRequested
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false);
+                const autoCampaignPlayerFleetNullTransitionForceAfterMs = Math.max(
+                    30000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__ || 120000)
+                        || 120000
+                );
+                const hasDirectLaunchOverride =
+                    typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
+                const directLaunch = hasDirectLaunchOverride
+                    ? window.__STARSECTOR_DIRECT_LAUNCH__
+                    : (autoCampaign ? autoVisitColonyRequested : true);
+                const autoVisitColony = autoVisitColonyRequested;
+                const autoVisitColonyName = (
+                    window.__STARSECTOR_AUTO_VISIT_COLONY_NAME__ || ''
+                ).toString().trim();
+
+                const runtimeUserDir = `${fullAppPath}starsector/starsector`;
+                const javaProperties = [
+                    `--add-opens=java.base/java.lang=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.lang.reflect=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.util=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.nio=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.text=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.time=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.time.chrono=ALL-UNNAMED`,
+                    `--add-opens=java.base/java.io=ALL-UNNAMED`,
+                    `--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED`,
+                    `--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED`,
+                    `--add-opens=java.base/sun.nio.ch=ALL-UNNAMED`,
+                    `--add-opens=java.desktop/java.awt.font=ALL-UNNAMED`,
+                    `-Dlog4j.defaultInitOverride=false`,
+                    `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
+                    `-Dstarsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
+                    `-Dstarsector.forceBasicLog4j=false`,
+                    `-Djava.library.path=${fullAppPath}build/final/wasm-modules/`,
+                    `-Duser.dir=${runtimeUserDir}`,
+                    `-Dstarsector.userDir=${runtimeUserDir}`,
+                    `-Dcom.fs.starfarer.settings.paths.mods=/files/mods`,
+                    `-Dcom.fs.starfarer.settings.paths.saves=/files/saves`,
+                    `-Dcom.fs.starfarer.settings.paths.screenshots=/files/screenshots`,
+                    `-Dcom.fs.starfarer.settings.paths.logs=/files/logs`,
+                    `-Dcom.fs.starfarer.settings.linux=true`,
+                    `-Dstarsector.boot=${bootMode}`,
+                    `starsector.boot=${bootMode}`,
+                    `-Dstarsector.directLaunch=${directLaunch}`,
+                    `starsector.directLaunch=${directLaunch}`,
+                    `-DstartSound=false`,
+                    `startSound=false`,
+                    `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
+                    `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                ];
+                if (disableShipHullPostPass) {
+                    javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
+                    javaProperties.push(`starsector.disableShipHullPostPass=true`);
+                    log('Ship hull post-pass override enabled.', '#ffaa00');
+                }
+                if (autoCampaign) {
+                    javaProperties.push(`-Dstarsector.autoCampaign=true`);
+                    javaProperties.push(`starsector.autoCampaign=true`);
+                    javaProperties.push(`-Dstarsector.autoCampaignMode=${autoCampaignMode}`);
+                    javaProperties.push(`starsector.autoCampaignMode=${autoCampaignMode}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignStartVariant=${autoCampaignVariant}`);
+                    javaProperties.push(`starsector.autoCampaignStartVariant=${autoCampaignVariant}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
+                    javaProperties.push(`starsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
+                    javaProperties.push(`starsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowDirectEscape=${autoCampaignAllowDirectEscape}`);
+                    javaProperties.push(`starsector.autoCampaignAllowDirectEscape=${autoCampaignAllowDirectEscape}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignTitleRenderWarmup=${autoCampaignTitleRenderWarmup}`);
+                    javaProperties.push(`starsector.autoCampaignTitleRenderWarmup=${autoCampaignTitleRenderWarmup}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignFallbackMs=${autoCampaignFallbackMs}`);
+                    javaProperties.push(`starsector.autoCampaignFallbackMs=${autoCampaignFallbackMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignTimeoutMs=${autoCampaignTimeoutMs}`);
+                    javaProperties.push(`starsector.autoCampaignTimeoutMs=${autoCampaignTimeoutMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectAttemptTimeoutMs=${autoCampaignDirectAttemptTimeoutMs}`);
+                    javaProperties.push(`starsector.autoCampaignDirectAttemptTimeoutMs=${autoCampaignDirectAttemptTimeoutMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
+                    javaProperties.push(`starsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
+                    javaProperties.push(`starsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
+                    javaProperties.push(`starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
+                    javaProperties.push(`starsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignSkipFactionPreflight=${autoCampaignSkipFactionPreflight}`);
+                    javaProperties.push(`starsector.autoCampaignSkipFactionPreflight=${autoCampaignSkipFactionPreflight}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignInvokeCreateOnPlayerFleetNull=${autoCampaignInvokeCreateOnPlayerFleetNull}`);
+                    javaProperties.push(`starsector.autoCampaignInvokeCreateOnPlayerFleetNull=${autoCampaignInvokeCreateOnPlayerFleetNull}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
+                    javaProperties.push(`starsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
+                    javaProperties.push(`starsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
+                    javaProperties.push(`starsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
+                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignMutatingSpecPreflight=${autoCampaignMutatingSpecPreflight}`);
+                    javaProperties.push(`starsector.autoCampaignMutatingSpecPreflight=${autoCampaignMutatingSpecPreflight}`);
+                    if (autoVisitColony) {
+                        javaProperties.push(`-Dstarsector.autoVisitColony=true`);
+                        javaProperties.push(`starsector.autoVisitColony=true`);
+                        if (autoVisitColonyName.length > 0) {
+                            javaProperties.push(`-Dstarsector.autoVisitColonyName=${autoVisitColonyName}`);
+                            javaProperties.push(`starsector.autoVisitColonyName=${autoVisitColonyName}`);
+                        }
+                    }
+                    log(
+                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}).`,
+                        '#ffaa00'
+                    );
+                }
+                const useNpeFixNativeLib = window.__USE_NPE_FIX_LIB__ === true;
+                if (useNpeFixNativeLib) {
+                    log('NPE native mapping enabled (libnpefix.so -> npe_fix.js).', '#00d9ff');
+                    javaProperties.push(`-Dstarsector.npefix.native=true`);
+                    javaProperties.push(`starsector.npefix.native=true`);
+                } else {
+                    log('NPE native mapping disabled by default (set window.__USE_NPE_FIX_LIB__ = true to enable).', '#ffaa00');
+                }
+                log(`Boot mode: ${bootMode}`, '#00d9ff');
+
+                await cheerpjInit({
+                    version: 17,
                     enableX11: true,
-                    javaProperties: [
-                        `-Dlog4j.configuration=file:/files/log4j.properties`,
-                        `-Djava.library.path=${fullAppPath}build/final/wasm-modules/`,
-                        `-Duser.dir=/files/`,
-                        `-Dcom.fs.starfarer.settings.linux=true`,
-                        `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
-                        `-Dcom.fs.starfarer.settings.paths.logs=/files/`
-                    ],
-                    libraries: {
-                        'libGL.so.1': `${fullAppPath}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${fullAppPath}build/final/wasm-modules/lwjgl.js`,
-                        'liblwjgl64.so': `${fullAppPath}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${fullAppPath}build/final/wasm-modules/unsafe.wasm`,
-                        'libnpefix.so': `${fullAppPath}build/final/wasm-modules/npe_fix.js`,
-                        'libnpefix': `${fullAppPath}build/final/wasm-modules/npe_fix.js`,
-                        'npefix': `${fullAppPath}build/final/wasm-modules/npe_fix.js`
+                    natives: {
+                        ...mergedNatives,
+                        async Java_java_lang_NullPointerException_getExtendedNPEMessage(lib, self) {
+                            return null;
+                        }
                     },
+                    libraries: {
+                        ...(useNpeFixNativeLib
+                            ? {
+                                  'libnpefix.so': `${fullAppPath}build/final/wasm-modules/libnpefix.so`
+                              }
+                            : {}),
+                        'libGL.so.1': `${fullAppPath}build/final/wasm-modules/gl4es.wasm`,
+                        'libsun_misc_Unsafe.so': `${fullAppPath}build/final/wasm-modules/unsafe_jdk_alias.wasm`,
+                        'libjdk_internal_misc_Unsafe.so': `${fullAppPath}build/final/wasm-modules/unsafe_jdk_alias.wasm`,
+                        'libjawt.so': `${fullAppPath}build/final/wasm-modules/jawt.js`
+                    },
+                    javaProperties,
                     mounts: [
                         { type: 'http', path: '/app/', url: origin },
-                        { type: 'http', path: '/files/', url: dataUrl }
+                        // Starsector launcher resolves icons from ../starfarer.res/res.
+                        { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
                 });
 
+                const preloadSpecFiles = async () => {
+                    if (window.__PRELOAD_SPEC_FILES__ !== true) {
+                        log('Spec preloading disabled (enable with window.__PRELOAD_SPEC_FILES__ = true).', '#ffaa00');
+                        return;
+                    }
+                    if (typeof cheerpjAddStringFile !== 'function') {
+                        log('Spec preloading skipped: cheerpjAddStringFile not available.', '#ffaa00');
+                        return;
+                    }
+
+                    const roots = ['data/weapons', 'data/shipsystems', 'data/hulls'];
+                    const allowedExt = new Set(['wpn', 'proj', 'ship', 'system', 'skin']);
+                    const seenDirs = new Set();
+                    const files = [];
+
+                    const fetchIndexEntries = async (dir) => {
+                        const url = `${dataUrl}${dir}/index.list`;
+                        try {
+                            const resp = await fetch(url, { cache: 'no-store' });
+                            if (!resp.ok) return [];
+                            const raw = await resp.text();
+                            return raw
+                                .split(/\r?\n/)
+                                .map((line) => line.split('\t')[0].trim())
+                                .filter(Boolean);
+                        } catch (_) {
+                            return [];
+                        }
+                    };
+
+                    const walk = async (dir) => {
+                        if (seenDirs.has(dir)) return;
+                        seenDirs.add(dir);
+                        const entries = await fetchIndexEntries(dir);
+                        for (const entry of entries) {
+                            const clean = entry.replace(/^[/\\]+/, '').trim();
+                            if (!clean) continue;
+                            let rel = clean.startsWith('data/') ? clean : `${dir}/${clean}`;
+                            rel = rel.replace(/\/{2,}/g, '/').replace(/\/$/, '');
+                            const name = rel.split('/').pop() || '';
+                            const dot = name.lastIndexOf('.');
+                            if (dot > 0) {
+                                const ext = name.slice(dot + 1).toLowerCase();
+                                if (allowedExt.has(ext)) files.push(rel);
+                            } else {
+                                await walk(rel);
+                            }
+                        }
+                    };
+
+                    for (const root of roots) {
+                        await walk(root);
+                    }
+
+                    const unique = Array.from(new Set(files));
+                    if (!unique.length) {
+                        log('Spec preloading found no candidate files.', '#ffaa00');
+                        return;
+                    }
+
+                    const concurrency = 8;
+                    let loaded = 0;
+                    let failed = 0;
+                    for (let i = 0; i < unique.length; i += concurrency) {
+                        const chunk = unique.slice(i, i + concurrency);
+                        await Promise.all(
+                            chunk.map(async (rel) => {
+                                try {
+                                    const resp = await fetch(`${dataUrl}${rel}`, { cache: 'no-store' });
+                                    if (!resp.ok) {
+                                        failed += 1;
+                                        return;
+                                    }
+                                    const text = await resp.text();
+                                    cheerpjAddStringFile(`/app/starsector/starsector/${rel}`, text);
+                                    cheerpjAddStringFile(`/files/${rel}`, text);
+                                    loaded += 1;
+                                } catch (_) {
+                                    failed += 1;
+                                }
+                            })
+                        );
+                    }
+
+                    log(`Spec preload complete: loaded=${loaded}, failed=${failed}`, failed ? '#ffaa00' : '#00ff88');
+                };
+
+                const maybePatchCodexEntries = async () => {
+                    if (window.__ENABLE_CODEX_GUARD__ !== true) {
+                        return;
+                    }
+                    if (typeof cheerpjAddStringFile !== 'function') {
+                        log('Codex guard skipped: cheerpjAddStringFile not available.', '#ffaa00');
+                        return;
+                    }
+
+                    const codexRelPath = 'data/codex/text_codex_entries.csv';
+                    const minimalCodexCsv = 'filename\n';
+                    cheerpjAddStringFile(`/files/${codexRelPath}`, minimalCodexCsv);
+                    cheerpjAddStringFile(`${contentRoot}${codexRelPath}`, minimalCodexCsv);
+                    log('Codex startup guard enabled (text_codex_entries.csv overridden).', '#ffaa00');
+                };
+
+                await preloadSpecFiles();
+                await maybePatchCodexEntries();
+
                 log('Mounting Display to Canvas...', '#00ff88');
-                cheerpjCreateDisplay(1024, 768, document.getElementById('game-container'));
+                const gameContainer = document.getElementById('game-container');
+                gameContainer.style.position = 'relative';
+                gameContainer.style.overflow = 'hidden';
+                cheerpjCreateDisplay(1024, 768, gameContainer);
 
-                const jarFiles = [
-                    'fixer.jar',
-                    'stubs.jar',
+                let lwjglCanvas = gameContainer.querySelector('canvas');
+                if (!lwjglCanvas) {
+                    lwjglCanvas = document.createElement('canvas');
+                    lwjglCanvas.width = 1024;
+                    lwjglCanvas.height = 768;
+                    gameContainer.appendChild(lwjglCanvas);
+                    log('Created fallback LWJGL canvas for native bridge.', '#ffaa00');
+                }
+                lwjglCanvas.id = 'lwjglCanvas';
+                lwjglCanvas.style.position = 'absolute';
+                lwjglCanvas.style.left = '0';
+                lwjglCanvas.style.top = '0';
+                lwjglCanvas.style.width = '1024px';
+                lwjglCanvas.style.height = '768px';
+                lwjglCanvas.style.display = 'block';
+                lwjglCanvas.style.zIndex = '2';
+                lwjglCanvas.style.pointerEvents = 'auto';
+                if (!lwjglCanvas.hasAttribute('tabindex')) {
+                    lwjglCanvas.setAttribute('tabindex', '0');
+                }
+                window.lwjglCanvasElement = lwjglCanvas;
+
+                // Use stock LWJGL classes by default; opt into loading_patch explicitly.
+                const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
+                const jarFiles = ['fixer.jar', 'input_patch.jar', 'jaxb_compat.jar'];
+                if (useLoadingPatch) {
+                    jarFiles.push('loading_patch.jar');
+                }
+                jarFiles.push(
+                    'lwjgl_bridge.jar',
                     'resources.jar',
-                    'janino.jar', 'commons-compiler.jar', 'starfarer.api.jar', 
-                    'starfarer_obf.jar', 'jogg-0.0.7.jar', 'jorbis-0.0.15.jar', 
-                    'json.jar', 'lwjgl.jar', 'jinput.jar', 'log4j-1.2.9.jar', 
-                    'lwjgl_util.jar', 'fs.sound_obf.jar', 'fs.common_obf.jar', 
-                    'xstream-1.4.10.jar'
-                ];
-                
-                const cp = [`/files/`].concat(jarFiles.map(j => `${fullAppPath}jars/${j}`)).concat([
-                    `${fullAppPath}jars/`,
-                    '/files/data/config/'
-                ]).join(':');
-                log('Final ClassPath: ' + cp);
+                    'janino.jar',
+                    'commons-compiler.jar',
+                    'starfarer.api.jar',
+                    'starfarer_obf.jar',
+                    'jogg-0.0.7.jar',
+                    'jorbis-0.0.15.jar',
+                    'json.jar',
+                    'game_lwjgl.jar',
+                    'jinput.jar',
+                    'log4j-1.2.9.jar',
+                    'lwjgl_util.jar',
+                    'fs.sound_obf.jar',
+                    'fs.common_obf.jar',
+                    'xstream-1.4.10.jar',
+                    'sectorgen_bootstrap.jar'
+                );
 
-                log('Starting Main Class: Fixer', '#ff9f43');
-                btn.textContent = '🚀 RUNNING';
+                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
+                // Optional precompiled script classes used by no-markets bootstrap fallback.
+                if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ !== false) {
+                    classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
+                }
+                classPathEntries.push(`${contentRoot}data/config/`);
+                const finalClassPath = classPathEntries.join(':');
                 
-                await cheerpjRunMain('Fixer', cp, '-nosound');
-                
-                log('Execution loop started. Watch for Java output.', '#00ff88');
+                log('Final ClassPath: ' + finalClassPath, '#888');
+
+                log('Starting Main Class: Fixer', '#00d9ff');
+                await cheerpjRunMain('Fixer', finalClassPath);
+
             } catch (e) {
-                log(`CRITICAL ERROR: ${e ? e.message : 'Unknown'}`, '#ff4444');
+                log('Error: ' + e.message, '#ff4444');
                 console.error(e);
-                btn.disabled = false;
-                btn.textContent = '❌ RETRY LAUNCH';
             }
         });
-
-        log('Welcome to Starsector Web Edition. System ready.');
     </script>
 </body>
 </html>
