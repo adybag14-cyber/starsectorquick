@@ -798,7 +798,7 @@
                     typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
                 const directLaunch = hasDirectLaunchOverride
                     ? window.__STARSECTOR_DIRECT_LAUNCH__
-                    : (autoCampaign ? autoVisitColonyRequested : true);
+                    : true;
                 const autoVisitColony = autoVisitColonyRequested;
                 const autoVisitColonyName = (
                     window.__STARSECTOR_AUTO_VISIT_COLONY_NAME__ || ''
