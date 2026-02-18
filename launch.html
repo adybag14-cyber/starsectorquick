@@ -405,6 +405,35 @@
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
                 const projectPath = isLocal ? 'starsectorquick/' : 'starsectorquick/'; 
                 const fullAppPath = `/app/${projectPath}`;
+                if (!isLocal && !window.__starsectorFetchRewriteInstalled) {
+                    const rewriteRemoteStarsectorUrl = (value) => {
+                        if (!value) return value;
+                        const asString = String(value);
+                        const withOrigin = `${origin}starsector/`;
+                        if (asString.startsWith(withOrigin)) {
+                            return `${origin}${projectPath}${asString.slice(origin.length)}`;
+                        }
+                        if (asString.startsWith('/starsector/')) {
+                            return `/${projectPath}${asString.replace(/^\/+/, '')}`;
+                        }
+                        return value;
+                    };
+                    const nativeFetch = window.fetch.bind(window);
+                    window.fetch = (input, init) => {
+                        if (typeof input === 'string' || input instanceof URL) {
+                            return nativeFetch(rewriteRemoteStarsectorUrl(input), init);
+                        }
+                        if (input && input.url) {
+                            const rewritten = rewriteRemoteStarsectorUrl(input.url);
+                            if (rewritten !== input.url) {
+                                return nativeFetch(new Request(rewritten, input), init);
+                            }
+                        }
+                        return nativeFetch(input, init);
+                    };
+                    window.__starsectorFetchRewriteInstalled = true;
+                    log('Installed fetch rewrite for legacy /starsector/* paths on project pages.', '#888');
+                }
                 
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
