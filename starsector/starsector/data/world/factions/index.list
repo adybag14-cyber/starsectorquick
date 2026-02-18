@@ -1,23 +1,23 @@
-default_fleet_type_names.json
-default_ranks.json
-default_ship_roles.json
-derelict.faction
-factions.csv
-hegemony.faction
-independent.faction
-knights_of_ludd.faction
-lions_guard.faction
-luddic_church.faction
-luddic_path.faction
-mercenary.faction
-neutral.faction
-omega.faction
-persean_league.faction
-pirates.faction
-player.faction
-poor.faction
-remnants.faction
-scavengers.faction
-sindrian_diktat.faction
-sleeper.faction
-tritachyon.faction
+default_fleet_type_names.json	987
+default_ranks.json	4425
+default_ship_roles.json	14949
+derelict.faction	4766
+factions.csv	829
+hegemony.faction	8413
+independent.faction	5869
+knights_of_ludd.faction	2279
+lions_guard.faction	5137
+luddic_church.faction	8611
+luddic_path.faction	7454
+mercenary.faction	5300
+neutral.faction	639
+omega.faction	3750
+persean_league.faction	8466
+pirates.faction	7473
+player.faction	14038
+poor.faction	2261
+remnants.faction	4816
+scavengers.faction	4328
+sindrian_diktat.faction	6992
+sleeper.faction	2253
+tritachyon.faction	8113
