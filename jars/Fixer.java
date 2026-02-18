@@ -13850,49 +13850,61 @@ public class Fixer {
             }
 
             Object fleet = null;
-            Method createEmptyFleetById =
-                    findMethodRecursive(
-                            factory.getClass(),
-                            "createEmptyFleet",
-                            String.class,
-                            String.class,
-                                    Boolean.TYPE);
-            if (createEmptyFleetById != null) {
-                createEmptyFleetById.setAccessible(true);
-                String[] factionIdCandidates =
-                        resolveSyntheticFactionIdCandidates(sector, selectedEntity);
-                String[] fleetTypeCandidates = resolveSyntheticFleetTypeCandidates();
-                for (int f = 0; f < factionIdCandidates.length && fleet == null; f++) {
-                    String factionId = factionIdCandidates[f];
-                    if (factionId == null || factionId.trim().isEmpty()) {
-                        continue;
-                    }
-                    for (int i = 0; i < fleetTypeCandidates.length && fleet == null; i++) {
-                        String fleetType = fleetTypeCandidates[i];
-                        try {
-                            fleet =
-                                    createEmptyFleetById.invoke(
-                                            factory, factionId, fleetType, Boolean.TRUE);
-                        } catch (Throwable t) {
-                            maybeLogSyntheticPlayerFleetException(
-                                    "createEmptyFleetById("
-                                            + String.valueOf(factionId)
-                                            + ","
-                                            + String.valueOf(fleetType)
-                                            + ")",
-                                    t);
-                            creationFailures.add(
-                                    "createEmptyFleet("
-                                            + String.valueOf(factionId)
-                                            + ","
-                                            + String.valueOf(fleetType)
-                                            + ") exception: "
-                                            + describeThrowableChain(t));
+            boolean preferConstructorPath =
+                    Boolean.parseBoolean(
+                            System.getProperty(
+                                    "starsector.autoCampaignSyntheticFleetPreferConstructor",
+                                    "true"));
+            if (preferConstructorPath) {
+                fleet =
+                        tryCreateSyntheticPlayerFleetViaConstructor(
+                                sector, selectedEntity, creationFailures);
+            }
+            if (fleet == null) {
+                Method createEmptyFleetById =
+                        findMethodRecursive(
+                                factory.getClass(),
+                                "createEmptyFleet",
+                                String.class,
+                                String.class,
+                                        Boolean.TYPE);
+                if (createEmptyFleetById != null) {
+                    createEmptyFleetById.setAccessible(true);
+                    String[] factionIdCandidates =
+                            resolveSyntheticFactionIdCandidates(sector, selectedEntity);
+                    String[] fleetTypeCandidates = resolveSyntheticFleetTypeCandidates();
+                    for (int f = 0; f < factionIdCandidates.length && fleet == null; f++) {
+                        String factionId = factionIdCandidates[f];
+                        if (factionId == null || factionId.trim().isEmpty()) {
+                            continue;
+                        }
+                        for (int i = 0; i < fleetTypeCandidates.length && fleet == null; i++) {
+                            String fleetType = fleetTypeCandidates[i];
+                            try {
+                                fleet =
+                                        createEmptyFleetById.invoke(
+                                                factory, factionId, fleetType, Boolean.TRUE);
+                            } catch (Throwable t) {
+                                maybeLogSyntheticPlayerFleetException(
+                                        "createEmptyFleetById("
+                                                + String.valueOf(factionId)
+                                                + ","
+                                                + String.valueOf(fleetType)
+                                                + ")",
+                                        t);
+                                creationFailures.add(
+                                        "createEmptyFleet("
+                                                + String.valueOf(factionId)
+                                                + ","
+                                                + String.valueOf(fleetType)
+                                                + ") exception: "
+                                                + describeThrowableChain(t));
+                            }
                         }
                     }
+                } else {
+                    creationFailures.add("createEmptyFleet(String,String,boolean) method missing");
                 }
-            } else {
-                creationFailures.add("createEmptyFleet(String,String,boolean) method missing");
             }
             if (fleet == null) {
                 try {
