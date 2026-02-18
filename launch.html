@@ -934,9 +934,10 @@
                     },
                     javaProperties,
                     mounts: [
-                        // Legacy Fixer paths resolve via /app/starsector/...
+                        // Primary app mount for this repo deployment path.
+                        { type: 'http', path: fullAppPath, url: `${origin}${projectPath}` },
+                        // Legacy Fixer paths still resolve via /app/starsector/... in Java.
                         { type: 'http', path: '/app/starsector/', url: `${origin}${projectPath}` },
-                        { type: 'http', path: '/app/', url: origin },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
@@ -1121,7 +1122,7 @@
                 // Warm a fresh range/etag entry for the largest JAR to reduce stale If-Range
                 // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
                 try {
-                    const rangePrimeUrl = `${fullAppPath}jars/starfarer_obf.jar`;
+                    const rangePrimeUrl = `${origin}${projectPath}jars/starfarer_obf.jar`;
                     const rangePrimeResp = await fetch(rangePrimeUrl, {
                         method: 'GET',
                         headers: { Range: 'bytes=0-0' },
