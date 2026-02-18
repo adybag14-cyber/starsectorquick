@@ -1,14 +1,14 @@
-ai/	-1
-AmmoFeedStats.java	1343
-BurnDriveStats.java	1209
-CombatBurnStats.java	1141
-DisplacerStats.java	1088
-DynamicStabilizerStats.java	4000
-FortressShieldStats.java	1530
-HighEnergyFocusStats.java	2237
-ManeuveringJetsStats.java	2463
-MicroBurnOmegaStats.java	2123
-MicroBurnStats.java	1893
-PhaseCloakStatsOld.java	2550
-SensorDroneStats.java	1590
-TravelDriveStats.java	1211
+ai/
+AmmoFeedStats.java
+BurnDriveStats.java
+CombatBurnStats.java
+DisplacerStats.java
+DynamicStabilizerStats.java
+FortressShieldStats.java
+HighEnergyFocusStats.java
+ManeuveringJetsStats.java
+MicroBurnOmegaStats.java
+MicroBurnStats.java
+PhaseCloakStatsOld.java
+SensorDroneStats.java
+TravelDriveStats.java

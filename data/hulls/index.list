@@ -1,207 +1,207 @@
-skins/	-1
-afflictor.ship	3237
-anubis.ship	3477
-apex.ship	6116
-apogee.ship	6627
-aspect.ship	1360
-assault_unit.ship	5976
-astral.ship	10383
-atlas.ship	4525
-atlas2.ship	7543
-attack_swarm.ship	2325
-aurora.ship	8184
-bastillon.ship	6224
-berserker.ship	3919
-brawler.ship	3693
-brilliant.ship	5710
-broadsword.ship	2380
-buffalo_mk2.ship	4714
-buffalo.ship	4180
-centurion.ship	3651
-champion.ship	6412
-claw.ship	1346
-cobra.ship	1282
-colossus.ship	4649
-colossus2.ship	7221
-colossus3.ship	7293
-condor.ship	3555
-conquest.ship	10755
-constructionrig.ship	2315
-dagger.ship	1340
-defender.ship	4094
-dem_drone.ship	940
-derelict_mothership_bow_module.ship	1260
-derelict_mothership_pod_engine_left.ship	1581
-derelict_mothership_pod_m_left.ship	1524
-derelict_mothership_pod_m_right.ship	1232
-derelict_mothership_pod_s_right.ship	1205
-derelict_mothership_sensor_mast.ship	2028
-derelict_mothership.ship	3223
-dominator.ship	7301
-doom.ship	6817
-dram.ship	3324
-drone_assault.ship	917
-drone_borer.ship	1444
-drone_pd_midline.ship	908
-drone_pd.ship	904
-drone_sensor.ship	913
-drone_terminator.ship	1304
-drover.ship	6374
-eagle.ship	7415
-enforcer.ship	5158
-eradicator.ship	6433
-fabricator_unit.ship	13099
-facet.ship	4643
-falcon.ship	6642
-flare.ship	2335
-flash.ship	2379
-fulgent.ship	6426
-fury.ship	5143
-gargoyle.ship	2541
-gemini.ship	4035
-gladius.ship	1873
-glimmer.ship	4486
-gremlin.ship	3454
-grendel.ship	7737
-gryphon.ship	6193
-guardian.ship	8864
-hammerhead.ship	4666
-harbinger.ship	3695
-hermes.ship	3013
-heron.ship	6095
-hive_unit.ship	7198
-hoplon.ship	2645
-hound.ship	2227
-hyperion.ship	2532
-invictus.ship	10955
-kite.ship	3322
-lasher.ship	4614
-legion.ship	9432
-longbow.ship	1600
-lumen.ship	3902
-lux.ship	1870
-manticore.ship	4979
-medusa.ship	5133
-mercury.ship	3932
-merlon.ship	3184
-mining_drone.ship	1280
-module_armour1.ship	768
-module_armour2.ship	801
-module_armour3.ship	778
-module_armour4.ship	775
-module_armour5.ship	848
-module_bastion_pd1_lowtech.ship	3310
-module_bastion_pd1.ship	3302
-module_bastion1_lowtech.ship	2903
-module_blocker1.ship	702
-module_blocker2.ship	695
-module_blocker2b.ship	716
-module_blocker2c.ship	720
-module_citadel1_lowtech.ship	5324
-module_decor_midline1.ship	717
-module_decor_midline2.ship	743
-module_hightech_armour.ship	798
-module_hightech_attack.ship	4301
-module_hightech_citadel.ship	4421
-module_hightech_decor.ship	651
-module_hightech_hangar.ship	4107
-module_hightech_shield.ship	768
-module_hightech_strut.ship	683
-module_large1_lowtech.ship	6695
-module_large2_lowtech.ship	4928
-module_midline_bastion.ship	2710
-module_midline_broadside.ship	6862
-module_midline_citadel.ship	2909
-module_midline_support.ship	5234
-module_onslaught_armor_left.ship	792
-module_onslaught_armor_right.ship	794
-monitor.ship	4381
-mora.ship	5860
-mudskipper.ship	2383
-mule.ship	5483
-nebula.ship	3369
-nova.ship	8475
-odyssey.ship	7887
-omen.ship	3188
-onslaught_mk1.ship	9912
-onslaught.ship	10160
-overseer_unit.ship	5451
-ox.ship	2538
-paragon.ship	10322
-pegasus.ship	8875
-perdition.ship	1261
-phaeton.ship	4231
-phantom.ship	2931
-picket.ship	2471
-piranha.ship	1868
-platform1.ship	1468
-prometheus.ship	7316
-prometheus2.ship	9676
-radiant.ship	8655
-rampart.ship	3812
-ravelin.ship	4277
-remnant_armour1.ship	708
-remnant_armour2.ship	655
-remnant_armour3.ship	685
-remnant_hangar1.ship	3501
-remnant_shield1.ship	2281
-remnant_shield2.ship	1200
-remnant_station1.ship	7903
-remnant_station2.ship	7293
-remnant_weapon_platform1.ship	2000
-remnant_weapon_platform2.ship	2064
-remnant_weapon_platform3.ship	2035
-retribution.ship	8034
-revenant.ship	4184
-sarissa.ship	1861
-scarab.ship	4095
-scintilla.ship	6150
-sentry.ship	2196
-shade.ship	2842
-shard_left.ship	2040
-shard_right.ship	2339
-shepherd.ship	3054
-ship_data.csv	44246
-ship_data.csv.bak_test	43901
-shrike.ship	4823
-shrouded_ejecta.ship	1024
-shrouded_eye.ship	3793
-shrouded_maelstrom.ship	3964
-shrouded_maw.ship	7286
-shrouded_tendril.ship	3142
-shrouded_vortex.ship	2074
-shuttlepod.ship	1438
-skirmish_unit.ship	2356
-spark.ship	2095
-standoff_unit.ship	7766
-starliner.ship	4982
-station_small.ship	3810
-station1_hightech.ship	4154
-station1_midline.ship	2948
-station1.ship	4295
-station2_hightech.ship	4152
-station2_midline.ship	4146
-station2.ship	6802
-station3_hightech.ship	4152
-station3_midline.ship	8077
-station3.ship	9324
-sunder.ship	4844
-talon.ship	1826
-tarsus.ship	3382
-tempest.ship	2202
-tesseract.ship	5242
-thunder.ship	1812
-trident.ship	2621
-valkyrie.ship	3730
-vanguard.ship	4049
-venture.ship	5795
-vigilance.ship	2386
-warden.ship	2200
-warhound.ship	2946
-warthog.ship	2362
-wasp.ship	1581
-wayfarer.ship	3961
-wing_data.csv	6094
-wolf.ship	3193
-xyphos.ship	1964
-ziggurat.ship	6907
+skins/
+afflictor.ship
+anubis.ship
+apex.ship
+apogee.ship
+aspect.ship
+assault_unit.ship
+astral.ship
+atlas.ship
+atlas2.ship
+attack_swarm.ship
+aurora.ship
+bastillon.ship
+berserker.ship
+brawler.ship
+brilliant.ship
+broadsword.ship
+buffalo_mk2.ship
+buffalo.ship
+centurion.ship
+champion.ship
+claw.ship
+cobra.ship
+colossus.ship
+colossus2.ship
+colossus3.ship
+condor.ship
+conquest.ship
+constructionrig.ship
+dagger.ship
+defender.ship
+dem_drone.ship
+derelict_mothership_bow_module.ship
+derelict_mothership_pod_engine_left.ship
+derelict_mothership_pod_m_left.ship
+derelict_mothership_pod_m_right.ship
+derelict_mothership_pod_s_right.ship
+derelict_mothership_sensor_mast.ship
+derelict_mothership.ship
+dominator.ship
+doom.ship
+dram.ship
+drone_assault.ship
+drone_borer.ship
+drone_pd_midline.ship
+drone_pd.ship
+drone_sensor.ship
+drone_terminator.ship
+drover.ship
+eagle.ship
+enforcer.ship
+eradicator.ship
+fabricator_unit.ship
+facet.ship
+falcon.ship
+flare.ship
+flash.ship
+fulgent.ship
+fury.ship
+gargoyle.ship
+gemini.ship
+gladius.ship
+glimmer.ship
+gremlin.ship
+grendel.ship
+gryphon.ship
+guardian.ship
+hammerhead.ship
+harbinger.ship
+hermes.ship
+heron.ship
+hive_unit.ship
+hoplon.ship
+hound.ship
+hyperion.ship
+invictus.ship
+kite.ship
+lasher.ship
+legion.ship
+longbow.ship
+lumen.ship
+lux.ship
+manticore.ship
+medusa.ship
+mercury.ship
+merlon.ship
+mining_drone.ship
+module_armour1.ship
+module_armour2.ship
+module_armour3.ship
+module_armour4.ship
+module_armour5.ship
+module_bastion_pd1_lowtech.ship
+module_bastion_pd1.ship
+module_bastion1_lowtech.ship
+module_blocker1.ship
+module_blocker2.ship
+module_blocker2b.ship
+module_blocker2c.ship
+module_citadel1_lowtech.ship
+module_decor_midline1.ship
+module_decor_midline2.ship
+module_hightech_armour.ship
+module_hightech_attack.ship
+module_hightech_citadel.ship
+module_hightech_decor.ship
+module_hightech_hangar.ship
+module_hightech_shield.ship
+module_hightech_strut.ship
+module_large1_lowtech.ship
+module_large2_lowtech.ship
+module_midline_bastion.ship
+module_midline_broadside.ship
+module_midline_citadel.ship
+module_midline_support.ship
+module_onslaught_armor_left.ship
+module_onslaught_armor_right.ship
+monitor.ship
+mora.ship
+mudskipper.ship
+mule.ship
+nebula.ship
+nova.ship
+odyssey.ship
+omen.ship
+onslaught_mk1.ship
+onslaught.ship
+overseer_unit.ship
+ox.ship
+paragon.ship
+pegasus.ship
+perdition.ship
+phaeton.ship
+phantom.ship
+picket.ship
+piranha.ship
+platform1.ship
+prometheus.ship
+prometheus2.ship
+radiant.ship
+rampart.ship
+ravelin.ship
+remnant_armour1.ship
+remnant_armour2.ship
+remnant_armour3.ship
+remnant_hangar1.ship
+remnant_shield1.ship
+remnant_shield2.ship
+remnant_station1.ship
+remnant_station2.ship
+remnant_weapon_platform1.ship
+remnant_weapon_platform2.ship
+remnant_weapon_platform3.ship
+retribution.ship
+revenant.ship
+sarissa.ship
+scarab.ship
+scintilla.ship
+sentry.ship
+shade.ship
+shard_left.ship
+shard_right.ship
+shepherd.ship
+ship_data.csv
+ship_data.csv.bak_test
+shrike.ship
+shrouded_ejecta.ship
+shrouded_eye.ship
+shrouded_maelstrom.ship
+shrouded_maw.ship
+shrouded_tendril.ship
+shrouded_vortex.ship
+shuttlepod.ship
+skirmish_unit.ship
+spark.ship
+standoff_unit.ship
+starliner.ship
+station_small.ship
+station1_hightech.ship
+station1_midline.ship
+station1.ship
+station2_hightech.ship
+station2_midline.ship
+station2.ship
+station3_hightech.ship
+station3_midline.ship
+station3.ship
+sunder.ship
+talon.ship
+tarsus.ship
+tempest.ship
+tesseract.ship
+thunder.ship
+trident.ship
+valkyrie.ship
+vanguard.ship
+venture.ship
+vigilance.ship
+warden.ship
+warhound.ship
+warthog.ship
+wasp.ship
+wayfarer.ship
+wing_data.csv
+wolf.ship
+xyphos.ship
+ziggurat.ship

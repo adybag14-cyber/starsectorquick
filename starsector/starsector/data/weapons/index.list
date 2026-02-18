@@ -1,160 +1,160 @@
-proj/	-1
-abyssal_glare.wpn	1557
-amblaster.wpn	1347
-amsrm.wpn	970
-annihilator_fighter.wpn	868
-annihilator.wpn	1207
-annihilatorpod.wpn	896
-arbalest.wpn	1361
-assaying_rift.wpn	1223
-atropos_single.wpn	888
-atropos.wpn	901
-autopulse.wpn	1232
-beam_weapon.sample	1009
-blinker_green.wpn	852
-blinker_red.wpn	843
-bomb.wpn	870
-breach.wpn	916
-breachpod.wpn	917
-chaingun.wpn	1554
-clusterbomb.wpn	614
-cryoblaster.wpn	1126
-cryoflux.wpn	1451
-cyclone.wpn	933
-devastator.wpn	1274
-devouring_swarm.wpn	1277
-disintegrator.wpn	1424
-dragon_payload.wpn	1073
-dragon.wpn	920
-dragonpod.wpn	870
-dualflak.wpn	1271
-flak.wpn	1215
-fragbomb.wpn	905
-gauss.wpn	1229
-gazer_payload.wpn	854
-gazer.wpn	1133
-gazerpod.wpn	899
-gigacannon.wpn	1237
-gorgon_payload.wpn	1051
-gorgon.wpn	890
-gorgonpod.wpn	889
-gravitonbeam.wpn	950
-guardian.wpn	1202
-hammer_single.wpn	873
-hammer.wpn	906
-hammerrack.wpn	936
-harpoon_single.wpn	931
-harpoon.wpn	964
-harpoonpod.wpn	909
-heatseeker.wpn	1204
-heavy_adjudicator.wpn	1341
-heavy_mass_driver.wpn	1496
-heavyac.wpn	1353
-heavyblaster.wpn	1346
-heavyburst.wpn	1049
-heavymauler.wpn	1234
-heavymg.wpn	1422
-heavymortar.wpn	1201
-heavyneedler.wpn	1309
-hellbore.wpn	1210
-hephag.wpn	1256
-hil.wpn	1117
-hurricane.wpn	915
-hveldriver.wpn	1281
-hydra_payload.wpn	1159
-hydra.wpn	832
-inimical_emanation.wpn	1114
-interdictorbeam.wpn	715
-ionbeam.wpn	883
-ioncannon_fighter.wpn	1205
-ioncannon.wpn	1197
-ionpulser.wpn	1373
-irautolance.wpn	958
-irpulse_fighter.wpn	1376
-irpulse.wpn	1368
-jackhammer.wpn	954
-kinetic_fragments.wpn	962
-kineticblaster.wpn	1120
-lidardish.wpn	816
-light_mass_driver.wpn	1518
-lightac.wpn	1282
-lightag.wpn	1257
-lightdualac.wpn	1337
-lightdualmg.wpn	1277
-lightmg.wpn	1199
-lightmortar.wpn	1240
-lightneedler.wpn	1163
-lights_buffalo.wpn	749
-lights_hound.wpn	739
-locust.wpn	1279
-lrpdlaser.wpn	875
-mark9.wpn	1273
-minelayer1.wpn	945
-minelayer2.wpn	969
-miningblaster.wpn	1351
-mininglaser.wpn	1125
-minipulser.wpn	1292
-mjolnir.wpn	1472
-multineedler.wpn	1456
-nb_bomblauncher.wpn	931
-neoferric_quadcoil.wpn	1729
-neutron_torpedo.wpn	893
-novalaser.wpn	927
-od_bomblauncher.wpn	933
-pdburst_fighter.wpn	964
-pdburst.wpn	990
-pdlaser.wpn	956
-phasebeam.wpn	824
-phasecl_bomber.wpn	914
-phasecl.wpn	893
-pilum_large.wpn	1128
-pilum.wpn	911
-plasma.wpn	1236
-projectile_weapon.sample	2391
-pseudoparticle_jet.wpn	1427
-pulselaser.wpn	1230
-pusherplate_lt_small.wpn	849
-pusherplate_lt.wpn	843
-pusherplate_nova.wpn	844
-railgun.wpn	888
-realitydisruptor.wpn	1012
-reaper.wpn	903
-resonatormrm.wpn	677
-rift_lightning_minelayer.wpn	698
-rift_lightning.wpn	1053
-riftbeam_minelayer.wpn	617
-riftbeam.wpn	1032
-riftcascade_minelayer.wpn	633
-riftcascade.wpn	1232
-riftlance_minelayer.wpn	620
-riftlance.wpn	921
-rifttorpedo.wpn	889
-sabot_fighter.wpn	942
-sabot_single.wpn	941
-sabot.wpn	978
-sabotpod.wpn	907
-salamanderpod.wpn	934
-seeker_fragment.wpn	963
-sensordish.wpn	687
-shockrepeater.wpn	930
-shredder.wpn	1233
-squall.wpn	1162
-swarm_launcher.wpn	1109
-swarmer_fighter.wpn	1018
-swarmer.wpn	1010
-tachyonlance.wpn	1214
-taclaser.wpn	1083
-targetinglaser1.wpn	868
-targetinglaser2.wpn	868
-targetinglaser3.wpn	1028
-terminator_missile.wpn	946
-tpc.wpn	1064
-typhoon.wpn	903
-unstable_fragment.wpn	978
-voidblaster.wpn	1572
-voltaic_cannon.wpn	1311
-voltaic_discharge.wpn	1167
-vortex_launcher.wpn	1007
-vpdriver.wpn	1203
-vulcan.wpn	1259
-weapon_data.csv	41694
+proj/
+abyssal_glare.wpn
+amblaster.wpn
+amsrm.wpn
+annihilator_fighter.wpn
+annihilator.wpn
+annihilatorpod.wpn
+arbalest.wpn
+assaying_rift.wpn
+atropos_single.wpn
+atropos.wpn
+autopulse.wpn
+beam_weapon.sample
+blinker_green.wpn
+blinker_red.wpn
+bomb.wpn
+breach.wpn
+breachpod.wpn
+chaingun.wpn
+clusterbomb.wpn
+cryoblaster.wpn
+cryoflux.wpn
+cyclone.wpn
+devastator.wpn
+devouring_swarm.wpn
+disintegrator.wpn
+dragon_payload.wpn
+dragon.wpn
+dragonpod.wpn
+dualflak.wpn
+flak.wpn
+fragbomb.wpn
+gauss.wpn
+gazer_payload.wpn
+gazer.wpn
+gazerpod.wpn
+gigacannon.wpn
+gorgon_payload.wpn
+gorgon.wpn
+gorgonpod.wpn
+gravitonbeam.wpn
+guardian.wpn
+hammer_single.wpn
+hammer.wpn
+hammerrack.wpn
+harpoon_single.wpn
+harpoon.wpn
+harpoonpod.wpn
+heatseeker.wpn
+heavy_adjudicator.wpn
+heavy_mass_driver.wpn
+heavyac.wpn
+heavyblaster.wpn
+heavyburst.wpn
+heavymauler.wpn
+heavymg.wpn
+heavymortar.wpn
+heavyneedler.wpn
+hellbore.wpn
+hephag.wpn
+hil.wpn
+hurricane.wpn
+hveldriver.wpn
+hydra_payload.wpn
+hydra.wpn
+inimical_emanation.wpn
+interdictorbeam.wpn
+ionbeam.wpn
+ioncannon_fighter.wpn
+ioncannon.wpn
+ionpulser.wpn
+irautolance.wpn
+irpulse_fighter.wpn
+irpulse.wpn
+jackhammer.wpn
+kinetic_fragments.wpn
+kineticblaster.wpn
+lidardish.wpn
+light_mass_driver.wpn
+lightac.wpn
+lightag.wpn
+lightdualac.wpn
+lightdualmg.wpn
+lightmg.wpn
+lightmortar.wpn
+lightneedler.wpn
+lights_buffalo.wpn
+lights_hound.wpn
+locust.wpn
+lrpdlaser.wpn
+mark9.wpn
+minelayer1.wpn
+minelayer2.wpn
+miningblaster.wpn
+mininglaser.wpn
+minipulser.wpn
+mjolnir.wpn
+multineedler.wpn
+nb_bomblauncher.wpn
+neoferric_quadcoil.wpn
+neutron_torpedo.wpn
+novalaser.wpn
+od_bomblauncher.wpn
+pdburst_fighter.wpn
+pdburst.wpn
+pdlaser.wpn
+phasebeam.wpn
+phasecl_bomber.wpn
+phasecl.wpn
+pilum_large.wpn
+pilum.wpn
+plasma.wpn
+projectile_weapon.sample
+pseudoparticle_jet.wpn
+pulselaser.wpn
+pusherplate_lt_small.wpn
+pusherplate_lt.wpn
+pusherplate_nova.wpn
+railgun.wpn
+realitydisruptor.wpn
+reaper.wpn
+resonatormrm.wpn
+rift_lightning_minelayer.wpn
+rift_lightning.wpn
+riftbeam_minelayer.wpn
+riftbeam.wpn
+riftcascade_minelayer.wpn
+riftcascade.wpn
+riftlance_minelayer.wpn
+riftlance.wpn
+rifttorpedo.wpn
+sabot_fighter.wpn
+sabot_single.wpn
+sabot.wpn
+sabotpod.wpn
+salamanderpod.wpn
+seeker_fragment.wpn
+sensordish.wpn
+shockrepeater.wpn
+shredder.wpn
+squall.wpn
+swarm_launcher.wpn
+swarmer_fighter.wpn
+swarmer.wpn
+tachyonlance.wpn
+taclaser.wpn
+targetinglaser1.wpn
+targetinglaser2.wpn
+targetinglaser3.wpn
+terminator_missile.wpn
+tpc.wpn
+typhoon.wpn
+unstable_fragment.wpn
+voidblaster.wpn
+voltaic_cannon.wpn
+voltaic_discharge.wpn
+vortex_launcher.wpn
+vpdriver.wpn
+vulcan.wpn
+weapon_data.csv
