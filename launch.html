@@ -1027,6 +1027,9 @@
                         { type: 'http', path: fullAppPath, url: `${origin}${projectPath}` },
                         // Legacy Fixer paths still resolve via /app/starsector/... in Java.
                         { type: 'http', path: '/app/starsector/', url: `${origin}${projectPath}` },
+                        // Some runtime code resolves absolute /starsector/... paths.
+                        // On project pages, remap this to /starsectorquick/starsector/...
+                        { type: 'http', path: '/starsector/', url: `${origin}${projectPath}starsector/` },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
