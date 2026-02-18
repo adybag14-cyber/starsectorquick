@@ -5496,6 +5496,30 @@ public class Fixer {
                                     "starsector.autoCampaignInvokeCreateOnPlayerFleetNull",
                                     "true"));
                 if (!allowPlayerFleetNullInvokeCreate && !forceInvokeCreateForCampaignState) {
+                    if (clearForcedFactionPreloadBeforeCreate
+                            && forcedFactionSpecStoreClassForCleanup != null
+                            && forcedFactionSpecClassForCleanup != null
+                            && !forcedFactionIdsForCleanup.isEmpty()) {
+                        boolean cleanupForcedFactionPreloadBeforeCreate =
+                                Boolean.parseBoolean(
+                                        System.getProperty(
+                                                "starsector.autoCampaignCleanupForcedFactionPreloadBeforeCreate",
+                                                "true"));
+                        if (cleanupForcedFactionPreloadBeforeCreate) {
+                            int removedTemporaryFactionSpecs =
+                                    removeSpecIdsForClass(
+                                            forcedFactionSpecStoreClassForCleanup,
+                                            forcedFactionSpecClassForCleanup,
+                                            forcedFactionIdsForCleanup);
+                            clearForcedFactionPreloadBeforeCreate = false;
+                            System.out.println(
+                                    "Fixer: direct-new-game temporary forced faction preload cleanup pre-return removed="
+                                            + removedTemporaryFactionSpecs
+                                            + " requested="
+                                            + forcedFactionIdsForCleanup.size()
+                                            + ".");
+                        }
+                    }
                     System.out.println(
                             "Fixer: direct-new-game pre-invoke readiness=player-fleet-null; skipping create() and deferring to campaign transition/synthetic-fleet recovery.");
                     directNewGameLastNullMarker = "pre-invoke-ready";
@@ -5510,10 +5534,28 @@ public class Fixer {
                     && forcedFactionSpecStoreClassForCleanup != null
                     && forcedFactionSpecClassForCleanup != null
                     && !forcedFactionIdsForCleanup.isEmpty()) {
-                System.out.println(
-                        "Fixer: direct-new-game temporary forced faction preload cleanup deferred until post-create (requested="
-                                + forcedFactionIdsForCleanup.size()
-                                + ").");
+                boolean cleanupForcedFactionPreloadBeforeCreate =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignCleanupForcedFactionPreloadBeforeCreate",
+                                        "true"));
+                if (cleanupForcedFactionPreloadBeforeCreate) {
+                    int removedTemporaryFactionSpecs =
+                            removeSpecIdsForClass(
+                                    forcedFactionSpecStoreClassForCleanup,
+                                    forcedFactionSpecClassForCleanup,
+                                    forcedFactionIdsForCleanup);
+                    clearForcedFactionPreloadBeforeCreate = false;
+                    System.out.println(
+                            "Fixer: direct-new-game temporary forced faction preload cleanup pre-create removed="
+                                    + removedTemporaryFactionSpecs
+                                    + " requested="
+                                    + forcedFactionIdsForCleanup.size()
+                                    + ".");
+                } else {
+                    System.out.println(
+                            "Fixer: direct-new-game temporary forced faction preload cleanup pre-create skipped (set -Dstarsector.autoCampaignCleanupForcedFactionPreloadBeforeCreate=true to remove before create).");
+                }
             }
 
             Object data = buildDefaultCharacterCreationData(createMethod.getParameterTypes()[0]);

@@ -774,6 +774,8 @@
                     500,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_TIMEOUT_MS__ || 2500) || 2500
                 );
+                const autoCampaignColonyProbeBootstrapSectorGen =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__ === true;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
                     15000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
@@ -942,6 +944,8 @@
                     javaProperties.push(`starsector.autoCampaignColonyProbeDelayMs=${autoCampaignColonyProbeDelayMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignColonyProbeTimeoutMs=${autoCampaignColonyProbeTimeoutMs}`);
                     javaProperties.push(`starsector.autoCampaignColonyProbeTimeoutMs=${autoCampaignColonyProbeTimeoutMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
+                    javaProperties.push(`starsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
                     javaProperties.push(`-Dstarsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
