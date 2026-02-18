@@ -1119,16 +1119,26 @@
                 }
                 classPathEntries.push(`${contentRoot}data/config/`);
 
-                // Warm a fresh range/etag entry for the largest JAR to reduce stale If-Range
+                // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
                 // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
                 try {
-                    const rangePrimeUrl = `${origin}${projectPath}jars/starfarer_obf.jar`;
-                    const rangePrimeResp = await fetch(rangePrimeUrl, {
-                        method: 'GET',
-                        headers: { Range: 'bytes=0-0' },
-                        cache: 'reload'
-                    });
-                    log(`Range prime ${rangePrimeResp.status}: starfarer_obf.jar`, '#888');
+                    let ok = 0;
+                    let warn = 0;
+                    for (const jar of jarFiles) {
+                        const rangePrimeUrl = `${origin}${projectPath}jars/${jar}`;
+                        const rangePrimeResp = await fetch(rangePrimeUrl, {
+                            method: 'GET',
+                            headers: { Range: 'bytes=0-0' },
+                            cache: 'reload'
+                        });
+                        if (rangePrimeResp.status === 206) {
+                            ok += 1;
+                        } else {
+                            warn += 1;
+                            log(`Range prime ${rangePrimeResp.status}: ${jar}`, '#ffaa00');
+                        }
+                    }
+                    log(`Range prime summary: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
                 } catch (e) {
                     log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
                 }
