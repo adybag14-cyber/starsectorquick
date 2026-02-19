@@ -5017,7 +5017,12 @@ public class Fixer {
                 }
             }
             directNewGameLastNullMarker = "after-galatia-preflight";
-            boolean runBroadSpecPreflight = mutatingSpecPreflight;
+            boolean runBroadSpecPreflight =
+                    mutatingSpecPreflight
+                            && Boolean.parseBoolean(
+                                    System.getProperty(
+                                            "starsector.autoCampaignRunBroadSpecPreflight",
+                                            "false"));
             // Non-mutating mode should not pre-insert broad spec sets because the loader
             // will register them later and can fail on duplicate IDs (e.g. asteroid_field).
             boolean allowTemporarySpecInjection = mutatingSpecPreflight;
