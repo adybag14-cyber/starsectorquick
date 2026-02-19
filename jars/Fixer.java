@@ -5023,9 +5023,16 @@ public class Fixer {
                                     System.getProperty(
                                             "starsector.autoCampaignRunBroadSpecPreflight",
                                             "false"));
-            // Non-mutating mode should not pre-insert broad spec sets because the loader
-            // will register them later and can fail on duplicate IDs (e.g. asteroid_field).
-            boolean allowTemporarySpecInjection = mutatingSpecPreflight;
+            // Temporary spec injection is now opt-in because pre-registering specs before
+            // ResourceLoaderState.init can race with loader-owned registration and trigger
+            // duplicate-id fatals (for example terrain:asteroid_field).
+            boolean allowTemporarySpecInjection =
+                    runBroadSpecPreflight
+                            || (mutatingSpecPreflight
+                                    && Boolean.parseBoolean(
+                                            System.getProperty(
+                                                    "starsector.autoCampaignAllowTemporarySpecInjection",
+                                                    "false")));
             System.out.println(
                     "Fixer: direct-new-game preflight mode runBroadSpecPreflight="
                             + runBroadSpecPreflight
