@@ -128,6 +128,12 @@ public class Fixer {
             "starsector.autoCampaignMutatingSpecPreflight";
     private static final String AUTO_CAMPAIGN_NON_MUTATING_ORBITAL_JUNK_FALLBACK_PROPERTY =
             "starsector.autoCampaignAllowOrbitalJunkFallbackWhenNonMutating";
+    private static final String DEBUG_THREAD_DUMP_AFTER_MS_PROPERTY =
+            "starsector.debugThreadDumpAfterMs";
+    private static final String DEBUG_THREAD_DUMP_REPEAT_PROPERTY =
+            "starsector.debugThreadDumpRepeat";
+    private static final String DEBUG_THREAD_DUMP_REPEAT_MS_PROPERTY =
+            "starsector.debugThreadDumpRepeatMs";
     private static final String AUTO_CAMPAIGN_ORBITAL_SPEC_WATCHDOG_PROPERTY =
             "starsector.autoCampaignOrbitalSpecWatchdog";
     private static final String ALLOW_THREAD_LOADER_SCAN_PROPERTY =
@@ -264,6 +270,8 @@ public class Fixer {
         applyStartupPreferenceOverrides();
         maybeDisableLauncherWarnings();
         initializeInputBridges();
+        logLwjglSysClockDiagnostics();
+        patchGraphicsTimerResolutionGuard();
 
         configureFilesystemPaths();
 
@@ -286,6 +294,7 @@ public class Fixer {
                             + "(set -Dstarsector.mirrorCoreSpecsToFiles=true to enable, false to disable).");
         }
         installUncaughtExceptionLogging();
+        maybeStartThreadDumpWatchdog();
         maybePreloadRuleCommandClasses();
         if (Boolean.parseBoolean(System.getProperty("starsector.primeProjectiles", "false"))) {
             primeProjectileSpecs();
@@ -346,6 +355,219 @@ public class Fixer {
 
         System.out.println("Fixer: Launching StarfarerLauncher UI path.");
         com.fs.starfarer.StarfarerLauncher.main(args == null ? new String[0] : args);
+    }
+
+    private static void logLwjglSysClockDiagnostics() {
+        try {
+            Class<?> sysClass = Class.forName("org.lwjgl.Sys");
+            Method getTimerResolution = sysClass.getMethod("getTimerResolution");
+            Method getTime = sysClass.getMethod("getTime");
+            long timerResolution = ((Long) getTimerResolution.invoke(null)).longValue();
+            long t0 = ((Long) getTime.invoke(null)).longValue();
+            long t1 = ((Long) getTime.invoke(null)).longValue();
+            System.out.println(
+                    "Fixer: LWJGL Sys clock timerResolution="
+                            + timerResolution
+                            + " t0="
+                            + t0
+                            + " t1="
+                            + t1);
+        } catch (Throwable t) {
+            System.out.println("Fixer: LWJGL Sys clock diagnostics failed: " + t);
+        }
+    }
+
+    private static void patchGraphicsTimerResolutionGuard() {
+        try {
+            Class<?> graphicsUtilClass = Class.forName("com.fs.graphics.util.B");
+            Field[] fields = graphicsUtilClass.getDeclaredFields();
+            Field timerResolutionField = null;
+            for (Field field : fields) {
+                if (!Modifier.isStatic(field.getModifiers()) || field.getType() != Long.TYPE) {
+                    continue;
+                }
+                if ("super".equals(field.getName())) {
+                    timerResolutionField = field;
+                    break;
+                }
+            }
+            if (timerResolutionField == null) {
+                System.out.println(
+                        "Fixer: graphics timer guard skipped (timer resolution field not found).");
+                return;
+            }
+            timerResolutionField.setAccessible(true);
+            long timerResolution = timerResolutionField.getLong(null);
+            if (timerResolution > 0L) {
+                System.out.println(
+                        "Fixer: graphics timer guard not needed (timerResolution="
+                                + timerResolution
+                                + ").");
+                return;
+            }
+            timerResolutionField.setLong(null, 1000L);
+            System.out.println(
+                    "Fixer: graphics timer guard patched com.fs.graphics.util.B."
+                            + timerResolutionField.getName()
+                            + "="
+                            + timerResolution
+                            + " -> 1000");
+        } catch (Throwable t) {
+            System.out.println("Fixer: graphics timer guard failed: " + t);
+        }
+    }
+
+    private static void maybeStartThreadDumpWatchdog() {
+        final long delayMs = Math.max(0L, parseLongProperty(DEBUG_THREAD_DUMP_AFTER_MS_PROPERTY, 0L));
+        if (delayMs <= 0L) {
+            return;
+        }
+        final boolean repeat =
+                Boolean.parseBoolean(System.getProperty(DEBUG_THREAD_DUMP_REPEAT_PROPERTY, "false"));
+        final long repeatMs =
+                Math.max(10000L, parseLongProperty(DEBUG_THREAD_DUMP_REPEAT_MS_PROPERTY, 60000L));
+        Thread dumpThread =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Thread.sleep(delayMs);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    return;
+                                }
+                                dumpAllThreads("delay-elapsed");
+                                while (repeat) {
+                                    try {
+                                        Thread.sleep(repeatMs);
+                                    } catch (InterruptedException ie) {
+                                        Thread.currentThread().interrupt();
+                                        return;
+                                    }
+                                    dumpAllThreads("repeat");
+                                }
+                            }
+                        },
+                        "fixer-thread-dump-watchdog");
+        dumpThread.setDaemon(true);
+        dumpThread.start();
+        System.out.println(
+                "Fixer: debug thread dump watchdog enabled delay="
+                        + delayMs
+                        + "ms repeat="
+                        + repeat
+                        + " repeatMs="
+                        + repeatMs
+                        + "ms.");
+    }
+
+    private static void dumpAllThreads(String reason) {
+        try {
+            Map traces = Thread.getAllStackTraces();
+            int size = traces == null ? 0 : traces.size();
+            System.out.println(
+                    "Fixer: thread dump begin reason=" + reason + " threads=" + size);
+            if (traces == null) {
+                System.out.println("Fixer: thread dump end reason=" + reason);
+                return;
+            }
+            for (Object entryObj : traces.entrySet()) {
+                Map.Entry entry = (Map.Entry) entryObj;
+                Thread thread = (Thread) entry.getKey();
+                StackTraceElement[] stack = (StackTraceElement[]) entry.getValue();
+                if (thread == null) {
+                    continue;
+                }
+                System.out.println(
+                        "Fixer: thread "
+                                + thread.getName()
+                                + " id="
+                                + thread.getId()
+                                + " state="
+                                + thread.getState()
+                                + " daemon="
+                                + thread.isDaemon());
+                if (stack != null) {
+                    int limit = Math.min(stack.length, 48);
+                    for (int i = 0; i < limit; i++) {
+                        System.out.println("Fixer:   at " + stack[i]);
+                    }
+                    if (stack.length > limit) {
+                        System.out.println(
+                                "Fixer:   ... " + (stack.length - limit) + " more frames");
+                    }
+                }
+            }
+            System.out.println("Fixer: thread dump end reason=" + reason);
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: thread dump failed reason="
+                            + reason
+                            + " error="
+                            + describeThrowableChain(t));
+            dumpAllThreadsFallback(reason);
+        }
+    }
+
+    private static void dumpAllThreadsFallback(String reason) {
+        try {
+            ThreadGroup root = Thread.currentThread().getThreadGroup();
+            while (root != null && root.getParent() != null) {
+                root = root.getParent();
+            }
+            if (root == null) {
+                System.out.println("Fixer: thread fallback dump unavailable (no root group).");
+                return;
+            }
+            int alloc = Math.max(64, root.activeCount() * 2 + 32);
+            Thread[] threads = new Thread[alloc];
+            int count = root.enumerate(threads, true);
+            System.out.println(
+                    "Fixer: thread fallback dump begin reason="
+                            + reason
+                            + " threads="
+                            + count);
+            for (int i = 0; i < count && i < threads.length; i++) {
+                Thread thread = threads[i];
+                if (thread == null) {
+                    continue;
+                }
+                System.out.println(
+                        "Fixer: fallback thread "
+                                + thread.getName()
+                                + " id="
+                                + thread.getId()
+                                + " state="
+                                + thread.getState()
+                                + " daemon="
+                                + thread.isDaemon());
+                try {
+                    StackTraceElement[] stack = thread.getStackTrace();
+                    if (stack == null) {
+                        continue;
+                    }
+                    int limit = Math.min(stack.length, 48);
+                    for (int j = 0; j < limit; j++) {
+                        System.out.println("Fixer:   at " + stack[j]);
+                    }
+                    if (stack.length > limit) {
+                        System.out.println(
+                                "Fixer:   ... " + (stack.length - limit) + " more frames");
+                    }
+                } catch (Throwable stackErr) {
+                    System.out.println(
+                            "Fixer:   stack unavailable: " + describeThrowableChain(stackErr));
+                }
+            }
+            System.out.println("Fixer: thread fallback dump end reason=" + reason);
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: thread fallback dump failed reason="
+                            + reason
+                            + " error="
+                            + describeThrowableChain(t));
+        }
     }
 
     private static void loadNpeFixNativeLibrary() {
@@ -807,6 +1029,7 @@ public class Fixer {
         long lastCampaignPlayerFleetNullRecoveryAttemptAt = 0L;
         int campaignPlayerFleetNullRecoveryAttempts = 0;
         long campaignStateSince = -1L;
+        boolean campaignStateResourcesEnsured = false;
         while (System.currentTimeMillis() - startedAt < timeoutMs) {
             try {
                 DriverContext ctx = resolveDriverContext();
@@ -874,6 +1097,11 @@ public class Fixer {
                 if (isCampaignState(stateId, currentState)) {
                     if (campaignStateSince <= 0L) {
                         campaignStateSince = System.currentTimeMillis();
+                        campaignStateResourcesEnsured = false;
+                    }
+                    if (!campaignStateResourcesEnsured) {
+                        ensureCampaignStateResources();
+                        campaignStateResourcesEnsured = true;
                     }
                     if (!enableColonyVisit) {
                         System.out.println("Fixer: auto campaign watcher reached Campaign State.");
@@ -1074,6 +1302,7 @@ public class Fixer {
                     continue;
                 }
                 campaignStateSince = -1L;
+                campaignStateResourcesEnsured = false;
                 Object titleState =
                         isTitleState(stateId, currentState) ? currentState : titleStateFromMap;
                 long now = System.currentTimeMillis();
@@ -5523,7 +5752,7 @@ public class Fixer {
                     System.out.println(
                             "Fixer: direct-new-game pre-invoke readiness=player-fleet-null; skipping create() and deferring to campaign transition/synthetic-fleet recovery.");
                     directNewGameLastNullMarker = "pre-invoke-ready";
-                    return null;
+                    return "direct new-game preflight pending: player-fleet-null-create-deferred";
                 }
                 System.out.println(
                         "Fixer: direct-new-game pre-invoke readiness=player-fleet-null; invoking create() to build campaign runtime.");
@@ -12472,32 +12701,63 @@ public class Fixer {
         Thread workerToJoin = null;
         int workerId = 0;
         synchronized (AUTO_CAMPAIGN_COLONY_PROBE_LOCK) {
-            if (autoCampaignColonyProbeWorker != null && autoCampaignColonyProbeWorker.isAlive()) {
-                long ageMs = Math.max(0L, System.currentTimeMillis() - autoCampaignColonyProbeStartedAt);
-                long staleAfterMs = Math.max(10000L, effectiveTimeoutMs * 4L);
-                if (ageMs >= staleAfterMs) {
-                    System.out.println(
-                            "Fixer: auto campaign interrupting stale colony probe worker id="
-                                    + autoCampaignColonyProbeActiveId
-                                    + " age="
-                                    + ageMs
-                                    + "ms.");
-                    try {
-                        autoCampaignColonyProbeWorker.interrupt();
-                    } catch (Throwable ignored) {
-                    }
-                } else {
-                    long now = System.currentTimeMillis();
-                    if (now - autoCampaignColonyProbePendingLogAt >= 5000L) {
+            if (autoCampaignColonyProbeWorker != null) {
+                if (autoCampaignColonyProbeWorker.isAlive()) {
+                    long ageMs =
+                            Math.max(0L, System.currentTimeMillis() - autoCampaignColonyProbeStartedAt);
+                    long staleAfterMs =
+                            Math.max(
+                                    30000L,
+                                    parseLongProperty(
+                                            "starsector.autoCampaignColonyProbeStaleAfterMs",
+                                            Math.max(120000L, effectiveTimeoutMs * 6L)));
+                    if (ageMs >= staleAfterMs) {
                         System.out.println(
-                                "Fixer: auto campaign colony probe worker active id="
+                                "Fixer: auto campaign interrupting stale colony probe worker id="
                                         + autoCampaignColonyProbeActiveId
                                         + " age="
                                         + ageMs
                                         + "ms.");
-                        autoCampaignColonyProbePendingLogAt = now;
+                        try {
+                            autoCampaignColonyProbeWorker.interrupt();
+                        } catch (Throwable ignored) {
+                        }
+                    } else {
+                        long now = System.currentTimeMillis();
+                        if (now - autoCampaignColonyProbePendingLogAt >= 5000L) {
+                            System.out.println(
+                                    "Fixer: auto campaign colony probe worker active id="
+                                            + autoCampaignColonyProbeActiveId
+                                            + " age="
+                                            + ageMs
+                                            + "ms.");
+                            autoCampaignColonyProbePendingLogAt = now;
+                        }
+                        return "pending:colony-probe-active(" + ageMs + "ms)";
                     }
-                    return "pending:colony-probe-active(" + ageMs + "ms)";
+                } else if (autoCampaignColonyProbeCompleted) {
+                    Throwable completedError = autoCampaignColonyProbeError;
+                    String completedResult = autoCampaignColonyProbeResult;
+                    int completedId = autoCampaignColonyProbeActiveId;
+                    autoCampaignColonyProbeWorker = null;
+                    autoCampaignColonyProbeStartedAt = 0L;
+                    autoCampaignColonyProbeActiveId = 0;
+                    if (completedError != null) {
+                        return "pending:colony-probe-error:" + describeThrowableChain(completedError);
+                    }
+                    if (completedResult == null) {
+                        System.out.println(
+                                "Fixer: auto campaign adopting completed colony probe id="
+                                        + completedId
+                                        + " result=success.");
+                    } else {
+                        System.out.println(
+                                "Fixer: auto campaign adopting completed colony probe id="
+                                        + completedId
+                                        + " result="
+                                        + completedResult);
+                    }
+                    return completedResult;
                 }
             }
             autoCampaignColonyProbeCompleted = false;
@@ -12555,11 +12815,18 @@ public class Fixer {
                                 + " timeoutMs="
                                 + effectiveTimeoutMs
                                 + ".");
-                try {
-                    if (autoCampaignColonyProbeWorker != null) {
-                        autoCampaignColonyProbeWorker.interrupt();
+                boolean interruptWorkerOnTimeout =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignInterruptColonyProbeOnTimeout",
+                                        "false"));
+                if (interruptWorkerOnTimeout) {
+                    try {
+                        if (autoCampaignColonyProbeWorker != null) {
+                            autoCampaignColonyProbeWorker.interrupt();
+                        }
+                    } catch (Throwable ignored) {
                     }
-                } catch (Throwable ignored) {
                 }
                 return "pending:colony-probe-timeout(" + effectiveTimeoutMs + "ms)";
             }
@@ -12568,6 +12835,208 @@ public class Fixer {
             }
             return autoCampaignColonyProbeResult;
         }
+    }
+
+    private static void ensureCampaignStateResources() {
+        try {
+            Object sector = readGlobalSectorForSectorGen();
+            if (sector == null) {
+                System.out.println(
+                        "Fixer: auto campaign campaign-state ensure skipped: sector-null.");
+                return;
+            }
+
+            Method getEconomy = findMethodRecursive(sector.getClass(), "getEconomy");
+            if (getEconomy == null) {
+                System.out.println(
+                        "Fixer: auto campaign campaign-state ensure skipped: Sector.getEconomy missing.");
+                return;
+            }
+            getEconomy.setAccessible(true);
+            Object economy = getEconomy.invoke(sector);
+            if (economy == null) {
+                System.out.println(
+                        "Fixer: auto campaign campaign-state ensure skipped: sector economy null.");
+                return;
+            }
+
+            List markets = new ArrayList();
+            Method getMarketsCopy = findMethodRecursive(economy.getClass(), "getMarketsCopy");
+            if (getMarketsCopy != null) {
+                getMarketsCopy.setAccessible(true);
+                List currentMarkets = coerceToList(getMarketsCopy.invoke(economy));
+                if (currentMarkets != null && !currentMarkets.isEmpty()) {
+                    markets.addAll(currentMarkets);
+                }
+            }
+            if (markets.isEmpty()) {
+                List fallbackMarkets = collectMarketsFromSectorEntities(sector);
+                if (!fallbackMarkets.isEmpty()) {
+                    markets.addAll(fallbackMarkets);
+                    System.out.println(
+                            "Fixer: auto campaign campaign-state ensure recovered markets from sector entities count="
+                                    + markets.size());
+                }
+            }
+            if (markets.isEmpty()) {
+                boolean allowSectorGenBootstrap =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignEnsureBootstrapSectorGen",
+                                        "false"));
+                if (allowSectorGenBootstrap) {
+                    boolean bootstrapped = tryBootstrapSectorGenForNoMarkets(sector, economy, markets);
+                    if (bootstrapped && getMarketsCopy != null) {
+                        List refreshedMarkets = coerceToList(getMarketsCopy.invoke(economy));
+                        if (refreshedMarkets != null && !refreshedMarkets.isEmpty()) {
+                            markets.addAll(refreshedMarkets);
+                        }
+                        if (markets.isEmpty()) {
+                            List fallbackMarkets = collectMarketsFromSectorEntities(sector);
+                            if (!fallbackMarkets.isEmpty()) {
+                                markets.addAll(fallbackMarkets);
+                            }
+                        }
+                    }
+                }
+            }
+            if (markets.isEmpty()) {
+                Object fallbackMarket = tryCreateMinimalFallbackMarketInHyperspace(sector, economy);
+                if (fallbackMarket != null) {
+                    markets.add(fallbackMarket);
+                    System.out.println(
+                            "Fixer: auto campaign campaign-state ensure seeded fallback market entity="
+                                    + describeEntityName(extractPrimaryEntityFromMarket(fallbackMarket)));
+                }
+            }
+
+            Object playerFleet = null;
+            Method getPlayerFleet = findMethodRecursive(sector.getClass(), "getPlayerFleet");
+            if (getPlayerFleet != null) {
+                getPlayerFleet.setAccessible(true);
+                playerFleet = getPlayerFleet.invoke(sector);
+            }
+            if (playerFleet == null) {
+                playerFleet = tryRecoverPlayerFleetFromSectorEntities(sector);
+            }
+            if (playerFleet == null) {
+                playerFleet = tryRecoverPlayerFleetFromCampaignEngine(sector);
+            }
+            if (playerFleet == null) {
+                boolean enableSyntheticFleetFallback =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignEnableSyntheticPlayerFleetFallback",
+                                        "true"));
+                if (enableSyntheticFleetFallback) {
+                    Object preferredEntity = resolvePreferredCampaignTargetEntity(markets, sector);
+                    playerFleet = tryCreateSyntheticPlayerFleetFastPath(sector, preferredEntity);
+                    long syntheticTimeoutMs =
+                            Math.max(
+                                    3000L,
+                                    Math.min(
+                                            10000L,
+                                            parseLongProperty(
+                                                    "starsector.autoCampaignSyntheticFleetTimeoutMs",
+                                                    12000L)));
+                    if (playerFleet == null) {
+                        playerFleet =
+                                tryCreateSyntheticPlayerFleetWithTimeout(
+                                        sector,
+                                        preferredEntity,
+                                        syntheticTimeoutMs,
+                                        "campaign-state-ensure");
+                    }
+                }
+            }
+            if (playerFleet != null) {
+                assignRecoveredPlayerFleetToSector(sector, playerFleet);
+                assignRecoveredPlayerFleetToCampaignEngine(playerFleet);
+            }
+
+            int economyMarketsAfter = countEconomyMarketsSafe(economy);
+            System.out.println(
+                    "Fixer: auto campaign campaign-state ensure result economyMarkets="
+                            + economyMarketsAfter
+                            + " marketCandidates="
+                            + markets.size()
+                            + " playerFleet="
+                            + (playerFleet != null));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: auto campaign campaign-state ensure exception: "
+                            + describeThrowableChain(t));
+        }
+    }
+
+    private static Object resolvePreferredCampaignTargetEntity(List markets, Object sector) {
+        if (markets != null) {
+            for (Object market : markets) {
+                Object entity = extractPrimaryEntityFromMarket(market);
+                if (entity != null) {
+                    return entity;
+                }
+            }
+        }
+        return findPreferredColonyEntity(sector, "");
+    }
+
+    private static Object tryCreateSyntheticPlayerFleetWithTimeout(
+            final Object sector,
+            final Object preferredEntity,
+            long timeoutMs,
+            String reason) {
+        final long effectiveTimeoutMs = Math.max(3000L, timeoutMs);
+        final Object[] fleetHolder = new Object[1];
+        final Throwable[] errorHolder = new Throwable[1];
+        final boolean[] done = new boolean[] {false};
+        Thread worker =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    fleetHolder[0] =
+                                            tryCreateSyntheticPlayerFleetForInteraction(
+                                                    sector, preferredEntity);
+                                } catch (Throwable t) {
+                                    errorHolder[0] = t;
+                                } finally {
+                                    done[0] = true;
+                                }
+                            }
+                        },
+                        "fixer-synthetic-fleet-" + String.valueOf(reason));
+        worker.setDaemon(true);
+        worker.start();
+        try {
+            worker.join(effectiveTimeoutMs);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+        if (!done[0]) {
+            System.out.println(
+                    "Fixer: synthetic fleet fallback timed out in "
+                            + String.valueOf(reason)
+                            + " after "
+                            + effectiveTimeoutMs
+                            + "ms.");
+            try {
+                worker.interrupt();
+            } catch (Throwable ignored) {
+            }
+            return null;
+        }
+        if (errorHolder[0] != null) {
+            System.out.println(
+                    "Fixer: synthetic fleet fallback error in "
+                            + String.valueOf(reason)
+                            + ": "
+                            + describeThrowableChain(errorHolder[0]));
+            return null;
+        }
+        return fleetHolder[0];
     }
 
     private static String tryPrimeColonyInteractionTargetImmediate() {
@@ -12880,10 +13349,15 @@ public class Fixer {
                         Boolean.parseBoolean(
                                 System.getProperty(
                                         "starsector.autoCampaignEnableSyntheticPlayerFleetFallback",
-                                        "false"));
+                                        "true"));
                 if (enableSyntheticFleetFallback) {
                     System.out.println(
                             "Fixer: auto campaign player fleet missing; attempting synthetic fleet fallback.");
+                    Object fastSynthFleet =
+                            tryCreateSyntheticPlayerFleetFastPath(sector, selectedEntity);
+                    if (fastSynthFleet != null) {
+                        playerFleet = fastSynthFleet;
+                    }
                     final Object syntheticSector = sector;
                     final Object syntheticTargetEntity = selectedEntity;
                     final long syntheticTimeoutMs =
@@ -12895,56 +13369,59 @@ public class Fixer {
                     final Object[] syntheticFleetHolder = new Object[1];
                     final Throwable[] syntheticFleetError = new Throwable[1];
                     final boolean[] syntheticFleetDone = new boolean[] {false};
-                    Thread syntheticFleetWorker =
-                            new Thread(
-                                    new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            try {
-                                                syntheticFleetHolder[0] =
-                                                        tryCreateSyntheticPlayerFleetForInteraction(
-                                                                syntheticSector, syntheticTargetEntity);
-                                            } catch (Throwable t) {
-                                                syntheticFleetError[0] = t;
-                                            } finally {
-                                                syntheticFleetDone[0] = true;
+                    if (playerFleet == null) {
+                        Thread syntheticFleetWorker =
+                                new Thread(
+                                        new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    syntheticFleetHolder[0] =
+                                                            tryCreateSyntheticPlayerFleetForInteraction(
+                                                                    syntheticSector,
+                                                                    syntheticTargetEntity);
+                                                } catch (Throwable t) {
+                                                    syntheticFleetError[0] = t;
+                                                } finally {
+                                                    syntheticFleetDone[0] = true;
+                                                }
                                             }
-                                        }
-                                    },
-                                    "fixer-synthetic-fleet-fallback");
-                    syntheticFleetWorker.setDaemon(true);
-                    syntheticFleetWorker.start();
-                    try {
-                        syntheticFleetWorker.join(syntheticTimeoutMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        System.out.println(
-                                "Fixer: synthetic fleet fallback interrupted while waiting for worker.");
-                    }
-                    if (!syntheticFleetDone[0]) {
-                        System.out.println(
-                                "Fixer: synthetic fleet fallback timed out after "
-                                        + syntheticTimeoutMs
-                                        + "ms; continuing with dialog fallback.");
+                                        },
+                                        "fixer-synthetic-fleet-fallback");
+                        syntheticFleetWorker.setDaemon(true);
+                        syntheticFleetWorker.start();
                         try {
-                            syntheticFleetWorker.interrupt();
-                        } catch (Throwable ignored) {
+                            syntheticFleetWorker.join(syntheticTimeoutMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            System.out.println(
+                                    "Fixer: synthetic fleet fallback interrupted while waiting for worker.");
                         }
-                    } else if (syntheticFleetError[0] != null) {
+                        if (!syntheticFleetDone[0]) {
+                            System.out.println(
+                                    "Fixer: synthetic fleet fallback timed out after "
+                                            + syntheticTimeoutMs
+                                            + "ms; continuing with dialog fallback.");
+                            try {
+                                syntheticFleetWorker.interrupt();
+                            } catch (Throwable ignored) {
+                            }
+                        } else if (syntheticFleetError[0] != null) {
+                            System.out.println(
+                                    "Fixer: synthetic fleet fallback worker error: "
+                                            + describeThrowableChain(syntheticFleetError[0]));
+                        }
+                        Object synthesizedFleet = syntheticFleetHolder[0];
                         System.out.println(
-                                "Fixer: synthetic fleet fallback worker error: "
-                                        + describeThrowableChain(syntheticFleetError[0]));
-                    }
-                    Object synthesizedFleet = syntheticFleetHolder[0];
-                    System.out.println(
-                            "Fixer: auto campaign synthetic fleet fallback result="
-                                    + (synthesizedFleet == null
-                                            ? "null"
-                                            : synthesizedFleet.getClass().getName()));
-                    if (synthesizedFleet != null) {
-                        playerFleet = synthesizedFleet;
-                        System.out.println(
-                                "Fixer: auto campaign synthesized player fleet for interaction fallback.");
+                                "Fixer: auto campaign synthetic fleet fallback result="
+                                        + (synthesizedFleet == null
+                                                ? "null"
+                                                : synthesizedFleet.getClass().getName()));
+                        if (synthesizedFleet != null) {
+                            playerFleet = synthesizedFleet;
+                            System.out.println(
+                                    "Fixer: auto campaign synthesized player fleet for interaction fallback.");
+                        }
                     }
                 } else {
                     System.out.println(
@@ -12960,17 +13437,24 @@ public class Fixer {
                 if (!allowDialogWithoutPlayerFleet) {
                     return "pending:player-fleet-null";
                 }
-                if (selectedMarket == null) {
-                    System.out.println(
-                            "Fixer: auto campaign skipping dialog fallback because selected entity has no market while player fleet is null: "
-                                    + describeEntityName(selectedEntity));
-                    return "pending:no-markets-available";
-                }
                 if (requestCampaignInteractionDialog(
                         campaignUI, selectedEntity, "without-player-fleet")) {
                     System.out.println(
                             "Fixer: auto campaign colony target primed via dialog-only fallback entity="
                                     + describeEntityName(selectedEntity));
+                    return null;
+                }
+                Object dialogFallbackEntity =
+                        findDialogCapableEntityFromSector(
+                                sector, campaignUI, preferredName, selectedEntity);
+                if (dialogFallbackEntity != null
+                        && requestCampaignInteractionDialog(
+                                campaignUI,
+                                dialogFallbackEntity,
+                                "without-player-fleet")) {
+                    System.out.println(
+                            "Fixer: auto campaign colony target primed via dialog-only sector fallback entity="
+                                    + describeEntityName(dialogFallbackEntity));
                     return null;
                 }
                 return "pending:player-fleet-null";
@@ -13736,6 +14220,36 @@ public class Fixer {
         }
     }
 
+    private static Object findDialogCapableEntityFromSector(
+            Object sector, Object campaignUI, String preferredName, Object currentEntity) {
+        if (sector == null || campaignUI == null) {
+            return null;
+        }
+        String preferredLower =
+                preferredName == null ? "" : preferredName.trim().toLowerCase();
+        Object firstCandidate = null;
+        List entities = collectSectorEntities(sector);
+        for (int i = 0; i < entities.size(); i++) {
+            Object entity = entities.get(i);
+            if (entity == null || entity == currentEntity) {
+                continue;
+            }
+            if (!canPickInteractionDialogPlugin(campaignUI, entity)) {
+                continue;
+            }
+            if (firstCandidate == null) {
+                firstCandidate = entity;
+            }
+            if (!preferredLower.isEmpty()) {
+                String name = describeEntityName(entity);
+                if (name != null && name.toLowerCase().indexOf(preferredLower) >= 0) {
+                    return entity;
+                }
+            }
+        }
+        return firstCandidate;
+    }
+
     private static String ensurePersonNameStoreReadyForSyntheticFleet() {
         try {
             Class<?> personNameStoreClass = Class.forName("com.fs.starfarer.loading.PersonNameStore");
@@ -13780,6 +14294,122 @@ public class Fixer {
             return null;
         } catch (Throwable t) {
             return "exception:" + describeThrowableChain(t);
+        }
+    }
+
+    private static Object tryCreateSyntheticPlayerFleetFastPath(
+            Object sector, Object selectedEntity) {
+        try {
+            List<String> creationFailures = new ArrayList<String>();
+            Object fleet = null;
+            try {
+                Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+                Method getFactory = findMethodRecursive(globalClass, "getFactory");
+                if (getFactory != null) {
+                    getFactory.setAccessible(true);
+                    Object factory = getFactory.invoke(null);
+                    if (factory != null) {
+                        Method createEmptyFleetById =
+                                findMethodRecursive(
+                                        factory.getClass(),
+                                        "createEmptyFleet",
+                                        String.class,
+                                        String.class,
+                                        Boolean.TYPE);
+                        if (createEmptyFleetById != null) {
+                            createEmptyFleetById.setAccessible(true);
+                            String[] factionIdCandidates =
+                                    resolveSyntheticFactionIdCandidates(sector, selectedEntity);
+                            String[] fleetTypeCandidates = resolveSyntheticFleetTypeCandidates();
+                            for (int f = 0;
+                                    f < factionIdCandidates.length && fleet == null;
+                                    f++) {
+                                String factionId = factionIdCandidates[f];
+                                if (factionId == null || factionId.trim().isEmpty()) {
+                                    continue;
+                                }
+                                for (int i = 0;
+                                        i < fleetTypeCandidates.length && fleet == null;
+                                        i++) {
+                                    String fleetType = fleetTypeCandidates[i];
+                                    try {
+                                        fleet =
+                                                createEmptyFleetById.invoke(
+                                                        factory,
+                                                        factionId,
+                                                        fleetType,
+                                                        Boolean.TRUE);
+                                    } catch (Throwable t) {
+                                        creationFailures.add(
+                                                "fast-createEmptyFleet("
+                                                        + String.valueOf(factionId)
+                                                        + ","
+                                                        + String.valueOf(fleetType)
+                                                        + ") exception: "
+                                                        + describeThrowableChain(t));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                creationFailures.add(
+                        "fast-factory-path exception: " + describeThrowableChain(t));
+            }
+            if (fleet == null) {
+                fleet =
+                        tryCreateSyntheticPlayerFleetViaConstructor(
+                                sector, selectedEntity, creationFailures);
+            }
+            if (fleet == null) {
+                if (!creationFailures.isEmpty()) {
+                    maybeLogSyntheticPlayerFleetIssue(
+                            "synthetic-fast-path-failures:"
+                                    + joinSyntheticCreationFailures(creationFailures));
+                }
+                return null;
+            }
+            try {
+                Method setName = findMethodRecursive(fleet.getClass(), "setName", String.class);
+                if (setName != null) {
+                    setName.setAccessible(true);
+                    setName.invoke(fleet, "Player Fleet");
+                }
+            } catch (Throwable ignored) {
+            }
+            try {
+                Method setFactionWithApply =
+                        findMethodRecursive(fleet.getClass(), "setFaction", String.class, Boolean.TYPE);
+                if (setFactionWithApply != null) {
+                    setFactionWithApply.setAccessible(true);
+                    setFactionWithApply.invoke(fleet, "player", Boolean.FALSE);
+                } else {
+                    Method setFactionSimple =
+                            findMethodRecursive(fleet.getClass(), "setFaction", String.class);
+                    if (setFactionSimple != null) {
+                        setFactionSimple.setAccessible(true);
+                        setFactionSimple.invoke(fleet, "player");
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            bindSyntheticPlayerFleetCommander(sector, fleet);
+            ensureSyntheticPlayerFleetHasStarterShip(fleet);
+            placeSyntheticPlayerFleetForInteraction(sector, fleet, selectedEntity);
+            if (!assignRecoveredPlayerFleetToSector(sector, fleet)) {
+                return null;
+            }
+            assignRecoveredPlayerFleetToCampaignEngine(fleet);
+            maybeLogSyntheticPlayerFleetIssue(
+                    "synthetic-fleet-fast-ready class=" + fleet.getClass().getName());
+            System.out.println(
+                    "Fixer: synthetic player fleet fast-path success class="
+                            + fleet.getClass().getName());
+            return fleet;
+        } catch (Throwable t) {
+            maybeLogSyntheticPlayerFleetException("synthetic-player-fleet-fast-path", t);
+            return null;
         }
     }
 
@@ -16961,6 +17591,16 @@ public class Fixer {
                 }
             }
             if (playerFleet == null) {
+                boolean allowPlayerFleetNullPreInvoke =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignAllowPlayerFleetNullPreInvoke",
+                                        "true"));
+                if (allowPlayerFleetNullPreInvoke) {
+                    System.out.println(
+                            "Fixer: direct-new-game readiness allowing player-fleet-null pre-invoke (set -Dstarsector.autoCampaignAllowPlayerFleetNullPreInvoke=false to enforce).");
+                    return null;
+                }
                 return "player-fleet-null";
             }
 
