@@ -13437,6 +13437,11 @@ public class Fixer {
                 if (!allowDialogWithoutPlayerFleet) {
                     return "pending:player-fleet-null";
                 }
+                if (autoCampaignColonyDialogSafeMode) {
+                    System.out.println(
+                            "Fixer: auto campaign colony dialog safe mode active without player fleet; accepting target without forcing dialog.");
+                    return null;
+                }
                 if (requestCampaignInteractionDialog(
                         campaignUI, selectedEntity, "without-player-fleet")) {
                     System.out.println(
