@@ -8,3 +8,7 @@ settings.json
 sounds.json
 tag_data.json
 title_screen_variants.csv
+commodities.csv
+industries.csv
+market_conditions.csv
+submarkets.csv
