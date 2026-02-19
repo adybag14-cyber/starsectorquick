@@ -31,17 +31,52 @@
     </div>
 
     <script>
+        const LOG_MAX_ENTRIES = 900;
+        let lastLogMessage = null;
+        let lastLogEntry = null;
+        let lastLogCount = 1;
+
         function log(m, color = '#fff') {
             const l = document.getElementById('log');
             if (l) {
-                const entry = document.createElement('div');
-                entry.style.color = color;
-                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
-                l.appendChild(entry);
+                const now = new Date().toLocaleTimeString();
+                const msg = String(m);
+                if (lastLogEntry && lastLogMessage === msg) {
+                    lastLogCount += 1;
+                    lastLogEntry.textContent = `[${now}] ${msg} (x${lastLogCount})`;
+                } else {
+                    const entry = document.createElement('div');
+                    entry.style.color = color;
+                    entry.textContent = `[${now}] ${msg}`;
+                    l.appendChild(entry);
+                    lastLogEntry = entry;
+                    lastLogMessage = msg;
+                    lastLogCount = 1;
+                }
+                while (l.childElementCount > LOG_MAX_ENTRIES) {
+                    l.removeChild(l.firstChild);
+                }
                 l.scrollTop = l.scrollHeight;
             }
             console.log(m);
         }
+
+        let cheerpjDisplayPendingStatus = 'idle';
+        const setCheerpjDisplayStatus = (status) => {
+            cheerpjDisplayPendingStatus = status;
+            const displayEl = document.getElementById('cheerpjDisplay');
+            if (displayEl) {
+                displayEl.setAttribute('data-status', status);
+            }
+        };
+        const refreshCheerpjDisplayStatus = () => {
+            const displayEl = document.getElementById('cheerpjDisplay');
+            if (displayEl) {
+                displayEl.setAttribute('data-status', cheerpjDisplayPendingStatus);
+            }
+        };
+
+        setCheerpjDisplayStatus('idle');
 
         function createInlineLwjglNatives(logFn) {
             const state = {
@@ -397,6 +432,7 @@
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
             btn.textContent = '⌛ INITIALIZING...';
+            setCheerpjDisplayStatus('initializing');
 
             log('Initializing CheerpJ 4.2 Runtime (Java 8)...', '#00d9ff');
             
@@ -825,8 +861,18 @@
                     || autoCampaignMode.indexOf('visit_colony') >= 0;
                 const autoCampaignTitleRenderWarmup =
                     window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_RENDER_WARMUP__ === true;
+                const hasAutoCampaignMutatingSpecPreflightOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === 'boolean';
                 const autoCampaignMutatingSpecPreflight =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === true;
+                    hasAutoCampaignMutatingSpecPreflightOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignDeferredColonyWorkerOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_DEFERRED_COLONY_WORKER__ === 'boolean';
+                const autoCampaignDeferredColonyWorker =
+                    hasAutoCampaignDeferredColonyWorkerOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_DEFERRED_COLONY_WORKER__
+                        : !autoVisitColonyRequested;
                 const autoCampaignSkipFactionPreflight =
                     window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ === true
                     || (autoVisitColonyRequested
@@ -837,7 +883,7 @@
                     ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
                     : true;
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ !== false;
                 const autoCampaignInvokeCreateInCampaignState =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true
                     || (autoVisitColonyRequested
@@ -900,6 +946,16 @@
                 const directLaunch = hasDirectLaunchOverride
                     ? window.__STARSECTOR_DIRECT_LAUNCH__
                     : true;
+                const debugThreadDumpAfterMs = Math.max(
+                    0,
+                    Number(window.__STARSECTOR_DEBUG_THREAD_DUMP_AFTER_MS__ || 0) || 0
+                );
+                const debugThreadDumpRepeat =
+                    window.__STARSECTOR_DEBUG_THREAD_DUMP_REPEAT__ === true;
+                const debugThreadDumpRepeatMs = Math.max(
+                    10000,
+                    Number(window.__STARSECTOR_DEBUG_THREAD_DUMP_REPEAT_MS__ || 60000) || 60000
+                );
                 const autoVisitColony = autoVisitColonyRequested;
                 const autoVisitColonyName = (
                     window.__STARSECTOR_AUTO_VISIT_COLONY_NAME__ || ''
@@ -940,6 +996,18 @@
                 if (mirrorCoreSpecsToFiles) {
                     log('Core spec mirroring to /files enabled.', '#ffaa00');
                 }
+                if (debugThreadDumpAfterMs > 0) {
+                    javaProperties.push(`-Dstarsector.debugThreadDumpAfterMs=${debugThreadDumpAfterMs}`);
+                    javaProperties.push(`starsector.debugThreadDumpAfterMs=${debugThreadDumpAfterMs}`);
+                    javaProperties.push(`-Dstarsector.debugThreadDumpRepeat=${debugThreadDumpRepeat}`);
+                    javaProperties.push(`starsector.debugThreadDumpRepeat=${debugThreadDumpRepeat}`);
+                    javaProperties.push(`-Dstarsector.debugThreadDumpRepeatMs=${debugThreadDumpRepeatMs}`);
+                    javaProperties.push(`starsector.debugThreadDumpRepeatMs=${debugThreadDumpRepeatMs}`);
+                    log(
+                        `Fixer thread-dump watchdog enabled (after=${debugThreadDumpAfterMs}ms, repeat=${debugThreadDumpRepeat}, repeatMs=${debugThreadDumpRepeatMs}).`,
+                        '#ffaa00'
+                    );
+                }
                 if (autoCampaign) {
                     javaProperties.push(`-Dstarsector.autoCampaign=true`);
                     javaProperties.push(`starsector.autoCampaign=true`);
@@ -975,6 +1043,8 @@
                     javaProperties.push(`starsector.autoCampaignColonyProbeTimeoutMs=${autoCampaignColonyProbeTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
                     javaProperties.push(`starsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDeferredColonyWorker=${autoCampaignDeferredColonyWorker}`);
+                    javaProperties.push(`starsector.autoCampaignDeferredColonyWorker=${autoCampaignDeferredColonyWorker}`);
                     javaProperties.push(`-Dstarsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
@@ -1016,10 +1086,11 @@
                         }
                     }
                     log(
-                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}).`,
+                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}, mutating=${autoCampaignMutatingSpecPreflight}, deferredColonyWorker=${autoCampaignDeferredColonyWorker}).`,
                         '#ffaa00'
                     );
                 }
+                const finalDisplayStatus = autoCampaign ? 'auto-campaign' : 'game-running';
                 const useNpeFixNativeLib = window.__USE_NPE_FIX_LIB__ === true;
                 if (useNpeFixNativeLib) {
                     log('NPE native mapping enabled (libnpefix.so -> npe_fix.js).', '#00d9ff');
@@ -1175,6 +1246,7 @@
                 gameContainer.style.position = 'relative';
                 gameContainer.style.overflow = 'hidden';
                 cheerpjCreateDisplay(1024, 768, gameContainer);
+                refreshCheerpjDisplayStatus();
 
                 let lwjglCanvas = gameContainer.querySelector('canvas');
                 if (!lwjglCanvas) {
@@ -1275,6 +1347,7 @@
                 const finalClassPath = classPathEntries.join(':');
                 
                 log('Final ClassPath: ' + finalClassPath, '#888');
+                setCheerpjDisplayStatus(finalDisplayStatus);
 
                 log('Starting Main Class: Fixer', '#00d9ff');
                 await cheerpjRunMain('Fixer', finalClassPath);
