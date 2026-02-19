@@ -17612,10 +17612,10 @@ public class Fixer {
                         Boolean.parseBoolean(
                                 System.getProperty(
                                         "starsector.autoCampaignAllowPlayerFleetNullPreInvoke",
-                                        "true"));
+                                        "false"));
                 if (allowPlayerFleetNullPreInvoke) {
                     System.out.println(
-                            "Fixer: direct-new-game readiness allowing player-fleet-null pre-invoke (set -Dstarsector.autoCampaignAllowPlayerFleetNullPreInvoke=false to enforce).");
+                            "Fixer: direct-new-game readiness allowing player-fleet-null pre-invoke (set -Dstarsector.autoCampaignAllowPlayerFleetNullPreInvoke=true to bypass create when fleet is missing).");
                     return null;
                 }
                 return "player-fleet-null";
