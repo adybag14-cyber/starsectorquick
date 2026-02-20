@@ -12815,7 +12815,7 @@ public class Fixer {
                 boolean disableDialogAfterTimeout =
                         Boolean.parseBoolean(
                                 System.getProperty(
-                                        "starsector.autoCampaignDisableDialogAfterProbeTimeout", "true"));
+                                        "starsector.autoCampaignDisableDialogAfterProbeTimeout", "false"));
                 if (disableDialogAfterTimeout && !autoCampaignColonyDialogSafeMode) {
                     autoCampaignColonyDialogSafeMode = true;
                     System.out.println(
