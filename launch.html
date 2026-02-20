@@ -1300,7 +1300,24 @@
                 }
                 jarFiles.push('sectorgen_bootstrap.jar');
 
-                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
+                const disableJarCacheBust = window.__STARSECTOR_DISABLE_JAR_CACHE_BUST__ === true;
+                const explicitJarCacheBust = window.__STARSECTOR_CLASSPATH_CACHE_BUST__;
+                const jarCacheBustToken = disableJarCacheBust
+                    ? ''
+                    : String(explicitJarCacheBust || Date.now());
+                const withJarCacheBust = (baseUrl) => {
+                    if (!jarCacheBustToken) return baseUrl;
+                    const sep = baseUrl.includes('?') ? '&' : '?';
+                    return `${baseUrl}${sep}v=${encodeURIComponent(jarCacheBustToken)}`;
+                };
+
+                if (jarCacheBustToken) {
+                    log(`JAR cache-bust enabled token=${jarCacheBustToken}`, '#888');
+                } else {
+                    log('JAR cache-bust disabled.', '#888');
+                }
+
+                const classPathEntries = jarFiles.map(jar => withJarCacheBust(`${fullAppPath}jars/${jar}`));
                 // Include unpacked game content root so launcher texture/resource loads
                 // (e.g. graphics/ui/s_icon16.png) resolve through CLASSPATH.
                 if (window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ !== false) {
@@ -1326,11 +1343,11 @@
                     let ok = 0;
                     let warn = 0;
                     for (const jar of jarFiles) {
-                        const rangePrimeUrl = `${origin}${projectPath}jars/${jar}`;
+                        const rangePrimeUrl = withJarCacheBust(`${origin}${projectPath}jars/${jar}`);
                         const rangePrimeResp = await fetch(rangePrimeUrl, {
                             method: 'GET',
                             headers: { Range: 'bytes=0-0' },
-                            cache: 'reload'
+                            cache: 'no-store'
                         });
                         if (rangePrimeResp.status === 206) {
                             ok += 1;
