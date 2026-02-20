@@ -18609,6 +18609,36 @@ public class Fixer {
         return normalized.length() == 0 ? null : normalized;
     }
 
+    private static String normalizeClassPathEntry(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String normalized = raw.trim();
+        if (normalized.length() == 0) {
+            return null;
+        }
+        if (normalized.startsWith("jar:")) {
+            normalized = normalized.substring(4);
+        }
+        if (normalized.startsWith("file:")) {
+            normalized = normalized.substring(5);
+        }
+        int bang = normalized.indexOf('!');
+        if (bang >= 0) {
+            normalized = normalized.substring(0, bang);
+        }
+        int query = normalized.indexOf('?');
+        if (query >= 0) {
+            normalized = normalized.substring(0, query);
+        }
+        int hash = normalized.indexOf('#');
+        if (hash >= 0) {
+            normalized = normalized.substring(0, hash);
+        }
+        normalized = normalized.trim();
+        return normalized.length() == 0 ? null : normalized;
+    }
+
     private static String deriveUserDirFromClassPath() {
         String classPath = System.getProperty("java.class.path", "");
         if (classPath == null || classPath.length() == 0) {
@@ -18616,7 +18646,7 @@ public class Fixer {
         }
         String[] entries = classPath.split(File.pathSeparator);
         for (String entry : entries) {
-            String normalized = normalizePathLikeValue(entry);
+            String normalized = normalizePathLikeValue(normalizeClassPathEntry(entry));
             if (normalized == null) {
                 continue;
             }
@@ -18800,12 +18830,13 @@ public class Fixer {
         String[] entries = classPath.split(File.pathSeparator);
 
         for (String entry : entries) {
-            if (entry == null || !entry.endsWith(".jar")) {
+            String normalizedEntry = normalizeClassPathEntry(entry);
+            if (normalizedEntry == null || !normalizedEntry.toLowerCase().endsWith(".jar")) {
                 continue;
             }
             JarFile jar = null;
             try {
-                jar = new JarFile(entry);
+                jar = new JarFile(normalizedEntry);
                 Enumeration<JarEntry> e = jar.entries();
                 while (e.hasMoreElements()) {
                     JarEntry je = e.nextElement();
@@ -19339,12 +19370,13 @@ public class Fixer {
             String cp = System.getProperty("java.class.path", "");
             String[] entries = cp.split(File.pathSeparator);
             for (String entry : entries) {
-                if (entry == null || !entry.endsWith(".jar")) {
+                String normalizedEntry = normalizeClassPathEntry(entry);
+                if (normalizedEntry == null || !normalizedEntry.toLowerCase().endsWith(".jar")) {
                     continue;
                 }
                 JarFile jar = null;
                 try {
-                    jar = new JarFile(entry);
+                    jar = new JarFile(normalizedEntry);
                     Enumeration<JarEntry> e = jar.entries();
                     while (e.hasMoreElements()) {
                         JarEntry je = e.nextElement();
