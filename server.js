@@ -26,6 +26,11 @@ const javaFallbackRoots = [
   path.join(root, 'starsector-gwt', 'src', 'main', 'java'),
   path.join(root, 'tmp_cfr_core'),
 ];
+const enableJavaFallback = process.env.STARSECTOR_ENABLE_JAVA_FALLBACK === '1';
+const allowApiJavaFallback = process.env.STARSECTOR_ALLOW_API_JAVA_FALLBACK === '1';
+const enableSyntheticJavaFallback = process.env.STARSECTOR_ENABLE_SYNTHETIC_JAVA_FALLBACK !== '0';
+const enableSyntheticSerialFile = process.env.STARSECTOR_ENABLE_SYNTHETIC_SERIAL !== '0';
+const enableEmptyDirectoryFallback = process.env.STARSECTOR_ENABLE_EMPTY_DIRECTORY_FALLBACK !== '0';
 const javaBasenameIndex = new Map();
 let javaBasenameIndexed = false;
 const variantFallbackRoot = path.join(root, 'starsector', 'starsector', 'data', 'variants');
@@ -89,8 +94,18 @@ const indexJavaFallbackByBasename = () => {
 };
 
 const findJavaFallbackPath = (relativePath) => {
+  if (!enableJavaFallback) {
+    return null;
+  }
   const normalizedRelativePath = normalizeSlashPath(relativePath);
   if (!/\.java$/i.test(normalizedRelativePath)) return null;
+  const lowerRelative = normalizedRelativePath.toLowerCase();
+
+  // Default-safe behavior: do not serve decompiled API Java sources as runtime fallback.
+  // Janino should resolve API types from classpath jars, not transient .java mirrors.
+  if (!allowApiJavaFallback && lowerRelative.includes('com/fs/starfarer/api/')) {
+    return null;
+  }
 
   const candidates = new Set();
   addJavaFallbackCandidate(candidates, normalizedRelativePath);
@@ -124,7 +139,6 @@ const findJavaFallbackPath = (relativePath) => {
     }
   }
 
-  const lowerRelative = normalizedRelativePath.toLowerCase();
   const baseName = path.basename(normalizedRelativePath).toLowerCase();
   const allowBasenameFallbackOutsideApi =
     /^(aihints|factions|commodities|shiproles|hullmods|tags|stats|skills|memflags|submarkets|global|color)\.java$/i.test(
@@ -225,6 +239,15 @@ const findHullAliasFallbackPath = (relativePath) => {
   return null;
 };
 
+const buildSyntheticJavaSource = (normalizedRelativePath) => {
+  const baseRaw = path.basename(String(normalizedRelativePath || ''), '.java');
+  let className = String(baseRaw || 'SyntheticStub').replace(/[^A-Za-z0-9_$]/g, '_');
+  if (!/^[A-Za-z_$]/.test(className)) {
+    className = `_${className}`;
+  }
+  return `/* synthetic java source fallback for ${normalizedRelativePath} */\npublic class ${className} {}\n`;
+};
+
 const jpegToPngCache = new Map();
 const MAX_JPEG_CACHE_ENTRIES = 512;
 
@@ -284,7 +307,13 @@ const parseRange = (rangeHeader, fileSize) => {
   return { start, end };
 };
 
-const sanitizeTabSizedPath = (value) => value.replace(/\t-?\d+(?=\/|$)/g, '');
+const sanitizeTabSizedPath = (value) =>
+  String(value || '')
+    .replace(/%09-?\d+(?=\/|$)/gi, '')
+    .replace(/%60t-?\d+(?=\/|$)/gi, '')
+    .replace(/\t-?\d+(?=\/|$)/g, '')
+    .replace(/`t-?\d+(?=\/|$)/g, '')
+    .replace(/\/{2,}/g, '/');
 const pushUnique = (arr, value) => {
   if (!value) return;
   if (!arr.includes(value)) arr.push(value);
@@ -373,7 +402,7 @@ const server = http.createServer((req, res) => {
   
   // 🛡️ Content Security Policy (allow inline scripts + CheerpJ CDN + WASM 'unsafe-eval')
   res.setHeader('Content-Security-Policy', 
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://cjrtnc.leaningtech.com; frame-src 'self' https://cjrtnc.leaningtech.com"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com; img-src 'self' data: https://cjrtnc.leaningtech.com; style-src 'self' 'unsafe-inline' https://cjrtnc.leaningtech.com; frame-src 'self' https://cjrtnc.leaningtech.com"
   );
   
   // 🛡️ Additional security headers
@@ -381,6 +410,11 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
   
   let url = req.url.split('?')[0];
+  if (url === '/.starsector_serial' && enableSyntheticSerialFile) {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (url === '/starsectorquick') url = '/';
   if (url.startsWith('/starsectorquick/')) {
     url = url.substring('/starsectorquick'.length);
@@ -631,6 +665,25 @@ const server = http.createServer((req, res) => {
           res.end();
           return;
         }
+        if (ext === '.java' && enableSyntheticJavaFallback) {
+          const body = buildSyntheticJavaSource(normalizedRelativePath);
+          verbose('JAVA-SYNTHETIC:', req.url, '->', normalizedRelativePath);
+          res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(body);
+          return;
+        }
+        if (
+          !ext &&
+          enableEmptyDirectoryFallback &&
+          /starsector[\\/]+starsector[\\/]+data[\\/]+(?:scripts|weapons|shipsystems|hulls)(?:[\\/]|$)/i.test(
+            normalizedRelativePath
+          )
+        ) {
+          verbose('PATH->EMPTY:', req.url, '->', normalizedRelativePath);
+          res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end('');
+          return;
+        }
         if (/\.(png|jpg|jpeg)$/i.test(filePath)) {
           fs.stat(missingImageFallback, (fallbackErr, fallbackStats) => {
             if (!fallbackErr && fallbackStats.isFile()) {
@@ -657,6 +710,13 @@ const server = http.createServer((req, res) => {
           if (!indexErr && indexStats.isFile()) {
             verbose('DIR->INDEX:', req.url, '->', indexListPath);
             serveFile(indexListPath, indexStats, 'text/plain; charset=utf-8');
+            return;
+          }
+
+          if (enableEmptyDirectoryFallback) {
+            verbose('DIR->EMPTY:', req.url, '->', filePath);
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+            res.end('');
             return;
           }
 

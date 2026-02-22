@@ -441,34 +441,90 @@
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
                 const projectPath = isLocal ? 'starsectorquick/' : 'starsectorquick/'; 
                 const fullAppPath = `/app/${projectPath}`;
-                if (!isLocal && !window.__starsectorFetchRewriteInstalled) {
-                    const rewriteRemoteStarsectorUrl = (value) => {
+                if (!window.__starsectorFetchRewriteInstalled) {
+                    const sourceStubUrl = `${origin}${projectPath}starsector/starsector/data/config/__source_fallback__.java`;
+                    const directoryIndexTargets = new Map([
+                        ['/starsector/starsector/data/scripts/plugins', '/starsector/starsector/data/scripts/plugins/index.list'],
+                        ['/starsector/starsector/data/scripts/world', '/starsector/starsector/data/scripts/world/index.list'],
+                        ['/starsector/starsector/data/weapons', '/starsector/starsector/data/weapons/index.list'],
+                        ['/starsector/starsector/data/weapons/proj', '/starsector/starsector/data/weapons/proj/index.list'],
+                        ['/starsector/starsector/data/shipsystems/proj', '/starsector/starsector/data/shipsystems/proj/index.list'],
+                        ['/starsector/starsector/data/shipsystems/wpn', '/starsector/starsector/data/shipsystems/wpn/index.list'],
+                        ['/starsector/starsector/data/hulls', '/starsector/starsector/data/hulls/index.list']
+                    ]);
+
+                    const rewriteStarsectorUrl = (value) => {
                         if (!value) return value;
-                        const asString = String(value);
-                        const withOrigin = `${origin}starsector/`;
-                        if (asString.startsWith(withOrigin)) {
-                            return `${origin}${projectPath}${asString.slice(origin.length)}`;
+                        let asString = String(value);
+
+                        // Project-pages compatibility: map legacy /starsector/* into /starsectorquick/starsector/*
+                        if (!isLocal) {
+                            const withOrigin = `${origin}starsector/`;
+                            if (asString.startsWith(withOrigin)) {
+                                asString = `${origin}${projectPath}${asString.slice(origin.length)}`;
+                            } else if (asString.startsWith('/starsector/')) {
+                                asString = `/${projectPath}${asString.replace(/^\/+/, '')}`;
+                            }
                         }
-                        if (asString.startsWith('/starsector/')) {
-                            return `/${projectPath}${asString.replace(/^\/+/, '')}`;
+
+                        let parsed;
+                        try {
+                            parsed = new URL(asString, window.location.href);
+                        } catch (_err) {
+                            return asString;
                         }
-                        return value;
+
+                        const pathName = parsed.pathname || '';
+                        const lowerPath = pathName.toLowerCase();
+                        const canonicalPath = lowerPath.replace(/^\/starsectorquick\//, '/');
+                        const hasProjectPrefix = lowerPath.startsWith('/starsectorquick/');
+
+                        // Avoid repeated missing serial-file fetch noise when serial is intentionally omitted.
+                        if (canonicalPath === '/.starsector_serial') {
+                            return 'data:text/plain,';
+                        }
+
+                        // Source-probe lookups are best-effort diagnostics; serve a stable stub to avoid 404 spam.
+                        if (/\/starsector\/starsector\/.*\.java$/i.test(canonicalPath)) {
+                            return sourceStubUrl;
+                        }
+
+                        for (const [probePath, replacementPath] of directoryIndexTargets.entries()) {
+                            if (canonicalPath === probePath || canonicalPath === `${probePath}/`) {
+                                parsed.pathname = `${hasProjectPrefix ? '/starsectorquick' : ''}${replacementPath}`;
+                                parsed.search = '';
+                                return parsed.toString();
+                            }
+                        }
+
+                        return parsed.toString();
                     };
+
                     const nativeFetch = window.fetch.bind(window);
                     window.fetch = (input, init) => {
                         if (typeof input === 'string' || input instanceof URL) {
-                            return nativeFetch(rewriteRemoteStarsectorUrl(input), init);
+                            return nativeFetch(rewriteStarsectorUrl(input), init);
                         }
                         if (input && input.url) {
-                            const rewritten = rewriteRemoteStarsectorUrl(input.url);
+                            const rewritten = rewriteStarsectorUrl(input.url);
                             if (rewritten !== input.url) {
                                 return nativeFetch(new Request(rewritten, input), init);
                             }
                         }
                         return nativeFetch(input, init);
                     };
+
+                    if (!window.__starsectorXhrRewriteInstalled) {
+                        const nativeOpen = XMLHttpRequest.prototype.open;
+                        XMLHttpRequest.prototype.open = function patchedOpen(method, requestUrl, ...rest) {
+                            const rewritten = rewriteStarsectorUrl(requestUrl);
+                            return nativeOpen.call(this, method, rewritten, ...rest);
+                        };
+                        window.__starsectorXhrRewriteInstalled = true;
+                    }
+
                     window.__starsectorFetchRewriteInstalled = true;
-                    log('Installed fetch rewrite for legacy /starsector/* paths on project pages.', '#888');
+                    log('Installed Starsector resource URL rewrite layer (fetch + XHR).', '#888');
                 }
                 
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
@@ -505,8 +561,20 @@
                     throw lastLwjglImportError || new Error('Unable to load any LWJGL module candidate');
                 }
                 log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
-                const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
-                log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
+                const configuredSerial = String(window.__STARSECTOR_SERIAL__ || '').trim();
+                const serialFallback = String(
+                    window.__STARSECTOR_SERIAL_FALLBACK__ || ''
+                ).trim();
+                const resolvedSerial = configuredSerial || serialFallback;
+                window.__STARSECTOR_SERIAL__ = resolvedSerial;
+                const serialLen = resolvedSerial.length;
+                if (configuredSerial) {
+                    log(`Serial provided: true (len=${serialLen})`, '#888');
+                } else if (serialFallback) {
+                    log(`Serial fallback applied (len=${serialLen})`, '#ffaa00');
+                } else {
+                    log('Serial provided: false', '#888');
+                }
                 const lwjglNatives = {};
                 const nativeStats = {
                     totalCalls: 0,
@@ -833,14 +901,19 @@
                 );
                 const autoCampaignColonyProbeDelayMs = Math.max(
                     0,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_DELAY_MS__ || 8000) || 8000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_DELAY_MS__ || 12000) || 12000
                 );
                 const autoCampaignColonyProbeTimeoutMs = Math.max(
                     500,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_TIMEOUT_MS__ || 2500) || 2500
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_TIMEOUT_MS__ || 12000) || 12000
                 );
+                const hasAutoCampaignColonyProbeBootstrapSectorGenOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__ === 'boolean';
                 const autoCampaignColonyProbeBootstrapSectorGen =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__ === true;
+                    hasAutoCampaignColonyProbeBootstrapSectorGenOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__
+                        : (autoCampaignMode.indexOf('visit_colony') >= 0
+                            || autoCampaignMode.indexOf('visitcolony') >= 0);
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
                     15000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
@@ -896,6 +969,12 @@
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true
                     || (autoVisitColonyRequested
                         && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false);
+                const hasAutoCampaignAllowNullCampaignUiEngineOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__ === 'boolean';
+                const autoCampaignAllowNullCampaignUiEngine =
+                    hasAutoCampaignAllowNullCampaignUiEngineOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__
+                        : !autoVisitColonyRequested;
                 const hasAutoCampaignPlayerFleetNullRequireWorldPopulationOverride =
                     typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_REQUIRE_WORLD_POPULATION__ === 'boolean';
                 const autoCampaignPlayerFleetNullRequireWorldPopulation =
@@ -908,6 +987,48 @@
                     hasAutoCampaignAllowImmediatePlayerFleetNullTransitionOverride
                         ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__
                         : null;
+                const hasAutoCampaignForceActivationAllowWorldEmptyOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_FORCE_ACTIVATION_ALLOW_WORLD_EMPTY__ === 'boolean';
+                const autoCampaignForceActivationAllowWorldEmpty =
+                    hasAutoCampaignForceActivationAllowWorldEmptyOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_FORCE_ACTIVATION_ALLOW_WORLD_EMPTY__
+                        : false;
+                const hasAutoCampaignAllowSyntheticFallbackMarketForColonyProbeOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_FOR_COLONY_PROBE__ === 'boolean';
+                const autoCampaignAllowSyntheticFallbackMarketForColonyProbe =
+                    hasAutoCampaignAllowSyntheticFallbackMarketForColonyProbeOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_FOR_COLONY_PROBE__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsureOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_DURING_CAMPAIGN_STATE_ENSURE__ === 'boolean';
+                const autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure =
+                    hasAutoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsureOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_DURING_CAMPAIGN_STATE_ENSURE__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignPlayerFleetNullAllowFallbackEconomyMarketsOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ECONOMY_MARKETS__ === 'boolean';
+                const autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets =
+                    hasAutoCampaignPlayerFleetNullAllowFallbackEconomyMarketsOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ECONOMY_MARKETS__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignPlayerFleetNullAllowFallbackEntityMarketsOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ENTITY_MARKETS__ === 'boolean';
+                const autoCampaignPlayerFleetNullAllowFallbackEntityMarkets =
+                    hasAutoCampaignPlayerFleetNullAllowFallbackEntityMarketsOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ENTITY_MARKETS__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignBootstrapAllowFallbackEntityMarketsOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_ALLOW_FALLBACK_ENTITY_MARKETS__ === 'boolean';
+                const autoCampaignBootstrapAllowFallbackEntityMarkets =
+                    hasAutoCampaignBootstrapAllowFallbackEntityMarketsOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_ALLOW_FALLBACK_ENTITY_MARKETS__
+                        : autoVisitColonyRequested;
+                const hasAutoCampaignBootstrapSectorGenOnNoMarketsOverride =
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTOR_GEN_ON_NO_MARKETS__ === 'boolean';
+                const autoCampaignBootstrapSectorGenOnNoMarkets =
+                    hasAutoCampaignBootstrapSectorGenOnNoMarketsOverride
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTOR_GEN_ON_NO_MARKETS__
+                        : autoVisitColonyRequested;
                 const autoCampaignPlayerFleetNullMinDeferMs = Math.max(
                     1000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_MIN_DEFER_MS__ || 5000)
@@ -917,22 +1038,22 @@
                     30000,
                     Number(
                         window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__
-                            || (autoVisitColonyRequested ? 45000 : 120000)
-                    ) || (autoVisitColonyRequested ? 45000 : 120000)
+                            || 120000
+                    ) || 120000
                 );
                 const autoCampaignSectorGenBootstrapTimeoutMs = Math.max(
                     10000,
                     Number(
                         window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_GEN_BOOTSTRAP_TIMEOUT_MS__
-                            || (autoVisitColonyRequested ? 120000 : 30000)
-                    ) || (autoVisitColonyRequested ? 120000 : 30000)
+                            || (autoVisitColonyRequested ? 600000 : 30000)
+                    ) || (autoVisitColonyRequested ? 600000 : 30000)
                 );
                 const autoCampaignSectorGenBootstrapMaxAttempts = Math.max(
                     1,
                     Number(
                         window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_GEN_BOOTSTRAP_MAX_ATTEMPTS__
-                            || (autoVisitColonyRequested ? 4 : 2)
-                    ) || (autoVisitColonyRequested ? 4 : 2)
+                            || (autoVisitColonyRequested ? 2 : 2)
+                    ) || (autoVisitColonyRequested ? 2 : 2)
                 );
                 const autoCampaignSyntheticFleetTimeoutMs = Math.max(
                     3000,
@@ -945,7 +1066,7 @@
                     typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
                 const directLaunch = hasDirectLaunchOverride
                     ? window.__STARSECTOR_DIRECT_LAUNCH__
-                    : true;
+                    : (autoVisitColonyRequested ? false : true);
                 const debugThreadDumpAfterMs = Math.max(
                     0,
                     Number(window.__STARSECTOR_DEBUG_THREAD_DUMP_AFTER_MS__ || 0) || 0
@@ -985,9 +1106,14 @@
                     `starsector.directLaunch=${directLaunch}`,
                     `-DstartSound=false`,
                     `startSound=false`,
-                    `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
                     `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                 ];
+                if (resolvedSerial) {
+                    javaProperties.push(`-Dstarsector.serial=${resolvedSerial}`);
+                    javaProperties.push(`starsector.serial=${resolvedSerial}`);
+                } else {
+                    log('Serial provided: false (omitting starsector.serial property).', '#888');
+                }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
                     javaProperties.push(`starsector.disableShipHullPostPass=true`);
@@ -1059,6 +1185,8 @@
                     javaProperties.push(`starsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
                     javaProperties.push(`starsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
+                    javaProperties.push(`starsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
                     javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullRequireWorldPopulation=${autoCampaignPlayerFleetNullRequireWorldPopulation}`);
                     javaProperties.push(`starsector.autoCampaignPlayerFleetNullRequireWorldPopulation=${autoCampaignPlayerFleetNullRequireWorldPopulation}`);
                     if (hasAutoCampaignAllowImmediatePlayerFleetNullTransitionOverride) {
@@ -1069,6 +1197,20 @@
                     javaProperties.push(`starsector.autoCampaignPlayerFleetNullMinDeferMs=${autoCampaignPlayerFleetNullMinDeferMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
                     javaProperties.push(`starsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignForceActivationAllowWorldEmpty=${autoCampaignForceActivationAllowWorldEmpty}`);
+                    javaProperties.push(`starsector.autoCampaignForceActivationAllowWorldEmpty=${autoCampaignForceActivationAllowWorldEmpty}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowSyntheticFallbackMarketForColonyProbe=${autoCampaignAllowSyntheticFallbackMarketForColonyProbe}`);
+                    javaProperties.push(`starsector.autoCampaignAllowSyntheticFallbackMarketForColonyProbe=${autoCampaignAllowSyntheticFallbackMarketForColonyProbe}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure=${autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure}`);
+                    javaProperties.push(`starsector.autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure=${autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets=${autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets}`);
+                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets=${autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullAllowFallbackEntityMarkets=${autoCampaignPlayerFleetNullAllowFallbackEntityMarkets}`);
+                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullAllowFallbackEntityMarkets=${autoCampaignPlayerFleetNullAllowFallbackEntityMarkets}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignBootstrapAllowFallbackEntityMarkets=${autoCampaignBootstrapAllowFallbackEntityMarkets}`);
+                    javaProperties.push(`starsector.autoCampaignBootstrapAllowFallbackEntityMarkets=${autoCampaignBootstrapAllowFallbackEntityMarkets}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
+                    javaProperties.push(`starsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
                     javaProperties.push(`-Dstarsector.autoCampaignSectorGenBootstrapTimeoutMs=${autoCampaignSectorGenBootstrapTimeoutMs}`);
                     javaProperties.push(`starsector.autoCampaignSectorGenBootstrapTimeoutMs=${autoCampaignSectorGenBootstrapTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignSectorGenBootstrapMaxAttempts=${autoCampaignSectorGenBootstrapMaxAttempts}`);
@@ -1086,7 +1228,7 @@
                         }
                     }
                     log(
-                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}, mutating=${autoCampaignMutatingSpecPreflight}, deferredColonyWorker=${autoCampaignDeferredColonyWorker}).`,
+                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}, mutating=${autoCampaignMutatingSpecPreflight}, deferredColonyWorker=${autoCampaignDeferredColonyWorker}, noMarketsSectorGen=${autoCampaignBootstrapSectorGenOnNoMarkets}).`,
                         '#ffaa00'
                     );
                 }
