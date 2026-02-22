@@ -2,6 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
+    <link rel='icon' href='data:,'>
     <title>Starsector 2 - GitHub Pages Deployment (v65 - Java 8)</title>
     <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
     <style>
@@ -1083,6 +1084,8 @@
                 ).toString().trim();
 
                 const runtimeUserDir = `${fullAppPath}starsector/starsector`;
+                const runtimeVersionRaw = Number(window.__STARSECTOR_RUNTIME_VERSION__ || 8);
+                const runtimeVersion = runtimeVersionRaw === 11 || runtimeVersionRaw === 17 ? runtimeVersionRaw : 8;
                 const javaProperties = [
                     `-Dlog4j.defaultInitOverride=false`,
                     `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
@@ -1242,9 +1245,10 @@
                     log('NPE native mapping disabled by default (set window.__USE_NPE_FIX_LIB__ = true to enable).', '#ffaa00');
                 }
                 log(`Boot mode: ${bootMode}`, '#00d9ff');
+                log(`CheerpJ runtime version: ${runtimeVersion}`, '#00d9ff');
 
                 await cheerpjInit({
-                    version: 17,
+                    version: runtimeVersion,
                     enableX11: true,
                     natives: {
                         ...mergedNatives,
@@ -1460,23 +1464,22 @@
                 }
 
                 const classPathEntries = jarFiles.map(jar => withJarCacheBust(`${fullAppPath}jars/${jar}`));
-                // Include unpacked game content root so launcher texture/resource loads
-                // (e.g. graphics/ui/s_icon16.png) resolve through CLASSPATH.
-                if (window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ !== false) {
+                const includeContentRootCp = window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ === true;
+                // Keep directory classpath roots opt-in. They trigger large amounts of
+                // class/service probing 404s on GH Pages and are not required for normal
+                // Starsector Java 8 launcher flow.
+                if (includeContentRootCp) {
                     classPathEntries.push(contentRoot);
+                    log('Classpath content root enabled (opt-in).', '#ffaa00');
                 }
                 // Optional precompiled script classes used by no-markets bootstrap fallback.
                 // Keep this opt-in; including it by default can duplicate content roots.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
-                // Keep data/config as a fallback root only when contentRoot is intentionally disabled.
-                // This avoids duplicate spec loading from overlapping classpath roots.
-                if (
-                    window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ === false ||
-                    window.__STARSECTOR_FORCE_CONFIG_CP__ === true
-                ) {
+                if (window.__STARSECTOR_FORCE_CONFIG_CP__ === true) {
                     classPathEntries.push(`${contentRoot}data/config/`);
+                    log('Classpath data/config fallback enabled (opt-in).', '#ffaa00');
                 }
 
                 // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
