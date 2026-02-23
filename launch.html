@@ -444,6 +444,7 @@
                 const fullAppPath = `/app/${projectPath}`;
                 if (!window.__starsectorFetchRewriteInstalled) {
                     const sourceStubUrl = `${origin}${projectPath}starsector/starsector/data/config/__source_fallback__.java`;
+                    const serialStubUrl = `${origin}${projectPath}starsector_serial_stub.txt`;
                     const directoryIndexTargets = new Map([
                         ['/starsector/starsector/data/scripts/plugins', '/starsector/starsector/data/scripts/plugins/index.list'],
                         ['/starsector/starsector/data/scripts/world', '/starsector/starsector/data/scripts/world/index.list'],
@@ -481,8 +482,9 @@
                         const hasProjectPrefix = lowerPath.startsWith('/starsectorquick/');
 
                         // Avoid repeated missing serial-file fetch noise when serial is intentionally omitted.
+                        // Use a real static file (not data:) so CheerpJ range checks never fail on live hosts.
                         if (canonicalPath === '/.starsector_serial') {
-                            return 'data:text/plain,';
+                            return serialStubUrl;
                         }
 
                         // Source-probe lookups are best-effort diagnostics; serve a stable stub to avoid 404 spam.
