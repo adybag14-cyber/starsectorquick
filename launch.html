@@ -1086,8 +1086,11 @@
                 ).toString().trim();
 
                 const runtimeUserDir = `${fullAppPath}starsector/starsector`;
-                const runtimeVersionRaw = Number(window.__STARSECTOR_RUNTIME_VERSION__ || 8);
-                const runtimeVersion = runtimeVersionRaw === 11 || runtimeVersionRaw === 17 ? runtimeVersionRaw : 8;
+                const runtimeVersionRaw = Number(window.__STARSECTOR_RUNTIME_VERSION__ || 17);
+                const runtimeVersion =
+                    runtimeVersionRaw === 8 || runtimeVersionRaw === 11 || runtimeVersionRaw === 17
+                        ? runtimeVersionRaw
+                        : 17;
                 const javaProperties = [
                     `-Dlog4j.defaultInitOverride=false`,
                     `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
