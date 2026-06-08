@@ -495,7 +495,8 @@
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
                 const projectPath = isLocal ? '' : 'starsectorquick/';
-                const fullAppPath = `/app/${projectPath}`;
+                const siteRootUrl = origin + projectPath;
+                const fullAppPath = '/app/';
 
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
@@ -506,7 +507,7 @@
                     log('LWJGL console filter disabled via window.__DISABLE_LWJGL_CONSOLE_FILTER', '#ffaa00');
                 }
 
-                const dataUrl = origin + projectPath + 'starsector/starsector/';
+                const dataUrl = siteRootUrl + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
                 ensureLwjglCanvas();
@@ -519,7 +520,7 @@
                 let lwjglModuleName = null;
                 let lastLwjglImportError = null;
                 for (const candidate of uniqueModuleCandidates) {
-                    const candidateUrl = `${origin}${projectPath}build/final/wasm-modules/${candidate}?ts=${Date.now()}`;
+                    const candidateUrl = `${siteRootUrl}build/final/wasm-modules/${candidate}?ts=${Date.now()}`;
                     try {
                         lwjglModule = await import(candidateUrl);
                         lwjglModuleName = candidate;
@@ -1028,7 +1029,7 @@
                         // even when the live project is hosted under /starsectorquick/.
                         // Keep the legacy runtime path pointed at the same content root.
                         { type: 'http', path: '/app/starsector/starsector/', url: dataUrl },
-                        { type: 'http', path: '/app/', url: origin },
+                        { type: 'http', path: '/app/', url: siteRootUrl },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
@@ -1067,7 +1068,7 @@
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
                 let jarFiles = [];
                 try {
-                    const jarIndexUrl = `${origin}${projectPath}jars/index.list?ts=${Date.now()}`;
+                    const jarIndexUrl = `${siteRootUrl}jars/index.list?ts=${Date.now()}`;
                     const jarIndexResponse = await fetch(jarIndexUrl, { cache: 'no-store' });
                     if (!jarIndexResponse.ok) {
                         throw new Error(`HTTP ${jarIndexResponse.status}`);
@@ -1141,7 +1142,7 @@
                     let ok = 0;
                     let warn = 0;
                     for (const jar of jarFiles) {
-                        const rangePrimeUrl = withJarCacheBust(`${origin}${projectPath}jars/${jar}`);
+                        const rangePrimeUrl = withJarCacheBust(`${siteRootUrl}jars/${jar}`);
                         const rangePrimeResp = await fetch(rangePrimeUrl, {
                             method: 'GET',
                             headers: { Range: 'bytes=0-0' },
