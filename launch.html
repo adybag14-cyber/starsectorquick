@@ -1126,7 +1126,9 @@
                     log('JAR cache-bust disabled.', '#888');
                 }
 
-                const classPathEntries = jarFiles.map(jar => withJarCacheBust(`${fullAppPath}jars/${jar}`));
+                // Keep the Java classpath itself query-free; Starsector parses resource URLs as paths.
+                // The network fetches are still cache-busted by the range-prime step below.
+                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
                 // Optional sectorgen fallback classes are opt-in because the local repo does not ship them by default.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
