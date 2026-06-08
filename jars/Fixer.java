@@ -1,4 +1,4 @@
-import java.io.File;
+﻿import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Field;
@@ -178,6 +179,9 @@ public class Fixer {
     private static boolean autoCampaignPersonNameStorePrimeAttempted = false;
     private static long autoCampaignPersonNameStoreLogAt = 0L;
     private static String autoCampaignPersonNameStoreSignature = null;
+    private static boolean autoCampaignCombatReadinessPluginPrimeAttempted = false;
+    private static long autoCampaignCombatReadinessPluginLogAt = 0L;
+    private static String autoCampaignCombatReadinessPluginSignature = null;
     private static long autoCampaignDialogPluginFallbackLogAt = 0L;
     private static String autoCampaignDialogPluginFallbackSignature = null;
     private static long autoCampaignCampaignUiEngineNullLogAt = 0L;
@@ -15111,6 +15115,7 @@ public class Fixer {
             creationFailures.add("synthetic-preflight-exception:" + describeThrowableChain(t));
         }
         ensurePersonNameStoreReadyForSyntheticFleet(creationFailures);
+        ensureCombatReadinessPluginCachedForSyntheticFleet(creationFailures);
         try {
             Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
             Method getFactory = findMethodRecursive(globalClass, "getFactory");
@@ -15373,6 +15378,152 @@ public class Fixer {
                 creationFailures.add("person-name-store-prime:" + signature);
             }
         }
+    }
+
+    private static void ensureCombatReadinessPluginCachedForSyntheticFleet(List<String> creationFailures) {
+        try {
+            if (autoCampaignCombatReadinessPluginPrimeAttempted) {
+                maybeLogCombatReadinessPluginPrimeStatus("already-attempted");
+                return;
+            }
+            autoCampaignCombatReadinessPluginPrimeAttempted = true;
+            Class<?> settingsClass = Class.forName("com.fs.starfarer.settings.StarfarerSettings");
+            Class<?> pluginInterface = Class.forName("com.fs.starfarer.api.combat.CombatReadinessPlugin");
+            Object plugin = readCombatReadinessPluginFromSettingsCache(settingsClass, pluginInterface);
+            String source = "cache";
+            if (plugin == null) {
+                Class<?> pluginClass = Class.forName("com.fs.starfarer.api.impl.combat.CRPluginImpl");
+                Constructor<?> ctor = pluginClass.getDeclaredConstructor(new Class[0]);
+                ctor.setAccessible(true);
+                plugin = ctor.newInstance(new Object[0]);
+                source = "constructed";
+            }
+            if (plugin == null || !pluginInterface.isInstance(plugin)) {
+                String signature = "plugin-invalid:" + describeRuntimeClass(plugin);
+                maybeLogCombatReadinessPluginPrimeStatus(signature);
+                if (creationFailures != null) {
+                    creationFailures.add("combat-readiness-plugin:" + signature);
+                }
+                return;
+            }
+            String cacheStatus = writeCombatReadinessPluginToSettingsCache(settingsClass, plugin);
+            String fieldStatus = writeCombatReadinessPluginToTypedField(settingsClass, plugin, pluginInterface);
+            String verifyStatus = "unknown";
+            Object verified = readCombatReadinessPluginFromSettingsCache(settingsClass, pluginInterface);
+            if (verified != null && pluginInterface.isInstance(verified)) {
+                verifyStatus = "cache-ok";
+            } else if (fieldStatus.indexOf("set") >= 0) {
+                verifyStatus = "typed-field-only";
+            } else {
+                verifyStatus = "missing-after-prime";
+            }
+            String signature =
+                    "source="
+                            + source
+                            + " cache="
+                            + cacheStatus
+                            + " typedField="
+                            + fieldStatus
+                            + " verify="
+                            + verifyStatus
+                            + " plugin="
+                            + describeRuntimeClass(plugin);
+            maybeLogCombatReadinessPluginPrimeStatus(signature);
+            if ("missing-after-prime".equals(verifyStatus) && creationFailures != null) {
+                creationFailures.add("combat-readiness-plugin:" + signature);
+            }
+        } catch (Throwable t) {
+            String signature = "exception:" + describeThrowableChain(t);
+            maybeLogCombatReadinessPluginPrimeStatus(signature);
+            if (creationFailures != null) {
+                creationFailures.add("combat-readiness-plugin:" + signature);
+            }
+        }
+    }
+
+    private static Object readCombatReadinessPluginFromSettingsCache(
+            Class<?> settingsClass, Class<?> pluginInterface) {
+        if (settingsClass == null || pluginInterface == null) {
+            return null;
+        }
+        try {
+            Field cacheField = findFieldRecursive(settingsClass, "\u00d400000");
+            Object mapObj = null;
+            if (cacheField != null && Modifier.isStatic(cacheField.getModifiers())) {
+                cacheField.setAccessible(true);
+                mapObj = cacheField.get(null);
+            }
+            if (mapObj instanceof Map) {
+                Object plugin = ((Map) mapObj).get("combatReadinessPlugin");
+                if (plugin != null && pluginInterface.isInstance(plugin)) {
+                    return plugin;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private static String writeCombatReadinessPluginToSettingsCache(
+            Class<?> settingsClass, Object plugin) {
+        if (settingsClass == null || plugin == null) {
+            return "missing-input";
+        }
+        try {
+            Field cacheField = findFieldRecursive(settingsClass, "\u00d400000");
+            if (cacheField == null || !Modifier.isStatic(cacheField.getModifiers())) {
+                return "field-missing";
+            }
+            cacheField.setAccessible(true);
+            Object mapObj = cacheField.get(null);
+            if (!(mapObj instanceof Map)) {
+                return "field-not-map:" + describeRuntimeClass(mapObj);
+            }
+            ((Map) mapObj).put("combatReadinessPlugin", plugin);
+            return "set:" + cacheField.getName();
+        } catch (Throwable t) {
+            return "exception:" + describeThrowableChain(t);
+        }
+    }
+
+    private static String writeCombatReadinessPluginToTypedField(
+            Class<?> settingsClass, Object plugin, Class<?> pluginInterface) {
+        if (settingsClass == null || plugin == null || pluginInterface == null) {
+            return "missing-input";
+        }
+        try {
+            Field[] fields = settingsClass.getDeclaredFields();
+            for (int i = 0; i < fields.length; i++) {
+                Field field = fields[i];
+                if (field == null || !Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+                Class<?> fieldType = field.getType();
+                if (fieldType == null || !fieldType.isInstance(plugin)) {
+                    continue;
+                }
+                field.setAccessible(true);
+                field.set(null, plugin);
+                return "set:" + field.getName();
+            }
+            return "field-missing";
+        } catch (Throwable t) {
+            return "exception:" + describeThrowableChain(t);
+        }
+    }
+
+    private static void maybeLogCombatReadinessPluginPrimeStatus(String signature) {
+        if (signature == null || signature.trim().isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        boolean changed = !signature.equals(autoCampaignCombatReadinessPluginSignature);
+        if (!changed && (now - autoCampaignCombatReadinessPluginLogAt) < 8000L) {
+            return;
+        }
+        autoCampaignCombatReadinessPluginSignature = signature;
+        autoCampaignCombatReadinessPluginLogAt = now;
+        System.out.println("Fixer: combat readiness plugin prime status: " + signature);
     }
 
     private static int seedPersonNameStoreFallbackNames(Class<?> storeClass) {
