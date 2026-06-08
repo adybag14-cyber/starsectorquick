@@ -510,10 +510,11 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260608-storage-reset-v1';
+                    const aliasWorkerVersion = '20260608-sw-version-reload-v1';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
+                    const versionReloadKey = `${reloadKey}:${aliasWorkerVersion}`;
                     try {
                         const registration = await navigator.serviceWorker.register(workerUrl, {
                             scope: scopePath,
@@ -536,9 +537,27 @@
                             window.location.reload();
                             await new Promise(() => {});
                         }
+                        const controllerUrl = navigator.serviceWorker.controller && navigator.serviceWorker.controller.scriptURL
+                            ? navigator.serviceWorker.controller.scriptURL
+                            : '';
+                        if (
+                            controllerUrl &&
+                            !controllerUrl.includes(aliasWorkerVersion) &&
+                            !sessionStorage.getItem(versionReloadKey)
+                        ) {
+                            sessionStorage.setItem(versionReloadKey, '1');
+                            log(
+                                `Project path alias worker updated from ${controllerUrl}; reloading once to activate ${aliasWorkerVersion}.`,
+                                '#888'
+                            );
+                            window.location.reload();
+                            await new Promise(() => {});
+                        }
                         if (navigator.serviceWorker.controller) {
                             sessionStorage.removeItem(reloadKey);
-                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion})`, '#888');
+                            sessionStorage.removeItem(versionReloadKey);
+                            const activeControllerUrl = navigator.serviceWorker.controller.scriptURL || 'unknown-controller';
+                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion}, controller=${activeControllerUrl})`, '#888');
                         } else {
                             log('Project path alias worker registered but not controlling this page.', '#ffaa00');
                         }
