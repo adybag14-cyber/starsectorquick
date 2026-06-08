@@ -1,8 +1,12 @@
 package org.lwjgl.opengl;
 
+import org.lwjgl.LWJGLException;
+import org.lwjgl.PointerBuffer;
+
 public interface Drawable {
-    void makeCurrent() throws org.lwjgl.LWJGLException;
-    void releaseContext() throws org.lwjgl.LWJGLException;
-    boolean isCurrent() throws org.lwjgl.LWJGLException;
-    void setPointer(long pointer);
+    boolean isCurrent() throws LWJGLException;
+    void makeCurrent() throws LWJGLException;
+    void releaseContext() throws LWJGLException;
+    void destroy();
+    void setCLSharingProperties(PointerBuffer properties) throws LWJGLException;
 }

@@ -2,9 +2,8 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <link rel='icon' href='data:,'>
     <title>Starsector 2 - GitHub Pages Deployment (v65 - Java 8)</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <script src='https://cjrtnc.leaningtech.com/4.3/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -19,65 +18,81 @@
     <div class="container">
         <h1>🚀 Starsector 2 Web (JAVA 8)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
-        
+
         <div style="margin: 20px 0;">
             <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
         </div>
+        <div id='runtime-status' style="margin: 10px 0; color: #888; font-family: monospace;">STATE: waiting</div>
 
         <div id='game-container'></div>
-        
+
         <div id='log'>
             <div style="color: #888;">[SYSTEM] Waiting for initialization...</div>
         </div>
     </div>
 
     <script>
-        const LOG_MAX_ENTRIES = 900;
-        let lastLogMessage = null;
-        let lastLogEntry = null;
-        let lastLogCount = 1;
-
         function log(m, color = '#fff') {
             const l = document.getElementById('log');
             if (l) {
-                const now = new Date().toLocaleTimeString();
-                const msg = String(m);
-                if (lastLogEntry && lastLogMessage === msg) {
-                    lastLogCount += 1;
-                    lastLogEntry.textContent = `[${now}] ${msg} (x${lastLogCount})`;
-                } else {
-                    const entry = document.createElement('div');
-                    entry.style.color = color;
-                    entry.textContent = `[${now}] ${msg}`;
-                    l.appendChild(entry);
-                    lastLogEntry = entry;
-                    lastLogMessage = msg;
-                    lastLogCount = 1;
-                }
-                while (l.childElementCount > LOG_MAX_ENTRIES) {
-                    l.removeChild(l.firstChild);
-                }
+                const entry = document.createElement('div');
+                entry.style.color = color;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+                l.appendChild(entry);
                 l.scrollTop = l.scrollHeight;
             }
             console.log(m);
         }
 
-        let cheerpjDisplayPendingStatus = 'idle';
-        const setCheerpjDisplayStatus = (status) => {
-            cheerpjDisplayPendingStatus = status;
-            const displayEl = document.getElementById('cheerpjDisplay');
-            if (displayEl) {
-                displayEl.setAttribute('data-status', status);
+        function updateRuntimeState(state, detail = '') {
+            const normalized = String(state || 'unknown');
+            const detailText = detail ? String(detail) : '';
+            const statusText = detailText ? `STATE: ${normalized} | ${detailText}` : `STATE: ${normalized}`;
+            const statusEl = document.getElementById('runtime-status');
+            if (statusEl) {
+                statusEl.textContent = statusText;
             }
-        };
-        const refreshCheerpjDisplayStatus = () => {
-            const displayEl = document.getElementById('cheerpjDisplay');
-            if (displayEl) {
-                displayEl.setAttribute('data-status', cheerpjDisplayPendingStatus);
+            document.documentElement.setAttribute('data-runtime-state', normalized);
+            document.body.setAttribute('data-runtime-state', normalized);
+            if (detailText) {
+                document.documentElement.setAttribute('data-runtime-detail', detailText);
+                document.body.setAttribute('data-runtime-detail', detailText);
+            } else {
+                document.documentElement.removeAttribute('data-runtime-detail');
+                document.body.removeAttribute('data-runtime-detail');
             }
-        };
+            window.__STARSECTOR_RUNTIME_STATE__ = {
+                state: normalized,
+                detail: detailText,
+                at: new Date().toISOString()
+            };
+        }
 
-        setCheerpjDisplayStatus('idle');
+        function reportRuntimeFailure(errorLike) {
+            const message = errorLike && errorLike.message ? errorLike.message : String(errorLike || 'Unknown runtime error');
+            const btn = document.getElementById('startBtn');
+            updateRuntimeState('failed', message);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'RETRY STARSECTOR';
+                btn.setAttribute('data-last-error', message);
+            }
+            log('Runtime failure: ' + message, '#ff4444');
+        }
+
+        window.addEventListener('error', (event) => {
+            if (event && (event.error || event.message)) {
+                reportRuntimeFailure(event.error || event.message);
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            if (event && event.reason) {
+                reportRuntimeFailure(event.reason);
+            }
+        });
+
+        updateRuntimeState('waiting');
 
         function createInlineLwjglNatives(logFn) {
             const state = {
@@ -429,107 +444,59 @@
             console.error = wrap(console.error.bind(console));
         }
 
-        document.getElementById('startBtn').addEventListener('click', async () => {
+        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container')) {
+            if (!gameContainer) {
+                throw new Error('Missing #game-container');
+            }
+            gameContainer.style.position = 'relative';
+            gameContainer.style.overflow = 'hidden';
+
+            let lwjglCanvas = gameContainer.querySelector('#lwjglCanvas');
+            if (!(lwjglCanvas instanceof HTMLCanvasElement)) {
+                const existingCanvas = gameContainer.querySelector('canvas');
+                if (existingCanvas instanceof HTMLCanvasElement) {
+                    lwjglCanvas = existingCanvas;
+                } else {
+                    lwjglCanvas = document.createElement('canvas');
+                    gameContainer.appendChild(lwjglCanvas);
+                }
+            }
+
+            lwjglCanvas.width = 1024;
+            lwjglCanvas.height = 768;
+            lwjglCanvas.id = 'lwjglCanvas';
+            lwjglCanvas.style.position = 'absolute';
+            lwjglCanvas.style.left = '0';
+            lwjglCanvas.style.top = '0';
+            lwjglCanvas.style.width = '1024px';
+            lwjglCanvas.style.height = '768px';
+            lwjglCanvas.style.display = 'block';
+            lwjglCanvas.style.zIndex = '2';
+            lwjglCanvas.style.pointerEvents = 'auto';
+            if (!lwjglCanvas.hasAttribute('tabindex')) {
+                lwjglCanvas.setAttribute('tabindex', '0');
+            }
+            gameContainer.appendChild(lwjglCanvas);
+            window.lwjglCanvasElement = lwjglCanvas;
+            return lwjglCanvas;
+        }
+
+        async function startGame() {
+            if (window.__STARSECTOR_STARTING__) return;
+            window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
             btn.textContent = '⌛ INITIALIZING...';
-            setCheerpjDisplayStatus('initializing');
+            updateRuntimeState('initializing', 'CheerpJ bootstrap');
 
-            log('Initializing CheerpJ 4.2 Runtime (Java 8)...', '#00d9ff');
-            
+            log('Initializing CheerpJ 4.3 Runtime (Java 8)...', '#00d9ff');
+
             try {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
-                const projectPath = isLocal ? 'starsectorquick/' : 'starsectorquick/'; 
+                const projectPath = isLocal ? '' : 'starsectorquick/';
                 const fullAppPath = `/app/${projectPath}`;
-                if (!window.__starsectorFetchRewriteInstalled) {
-                    const sourceStubUrl = `${origin}${projectPath}starsector/starsector/data/config/__source_fallback__.java`;
-                    const serialStubUrl = `${origin}${projectPath}starsector_serial_stub.txt`;
-                    const directoryIndexTargets = new Map([
-                        ['/starsector/starsector/data/scripts/plugins', '/starsector/starsector/data/scripts/plugins/index.list'],
-                        ['/starsector/starsector/data/scripts/world', '/starsector/starsector/data/scripts/world/index.list'],
-                        ['/starsector/starsector/data/weapons', '/starsector/starsector/data/weapons/index.list'],
-                        ['/starsector/starsector/data/weapons/proj', '/starsector/starsector/data/weapons/proj/index.list'],
-                        ['/starsector/starsector/data/shipsystems/proj', '/starsector/starsector/data/shipsystems/proj/index.list'],
-                        ['/starsector/starsector/data/shipsystems/wpn', '/starsector/starsector/data/shipsystems/wpn/index.list'],
-                        ['/starsector/starsector/data/hulls', '/starsector/starsector/data/hulls/index.list']
-                    ]);
 
-                    const rewriteStarsectorUrl = (value) => {
-                        if (!value) return value;
-                        let asString = String(value);
-
-                        // Project-pages compatibility: map legacy /starsector/* into /starsectorquick/starsector/*
-                        if (!isLocal) {
-                            const withOrigin = `${origin}starsector/`;
-                            if (asString.startsWith(withOrigin)) {
-                                asString = `${origin}${projectPath}${asString.slice(origin.length)}`;
-                            } else if (asString.startsWith('/starsector/')) {
-                                asString = `/${projectPath}${asString.replace(/^\/+/, '')}`;
-                            }
-                        }
-
-                        let parsed;
-                        try {
-                            parsed = new URL(asString, window.location.href);
-                        } catch (_err) {
-                            return asString;
-                        }
-
-                        const pathName = parsed.pathname || '';
-                        const lowerPath = pathName.toLowerCase();
-                        const canonicalPath = lowerPath.replace(/^\/starsectorquick\//, '/');
-                        const hasProjectPrefix = lowerPath.startsWith('/starsectorquick/');
-
-                        // Avoid repeated missing serial-file fetch noise when serial is intentionally omitted.
-                        // Use a real static file (not data:) so CheerpJ range checks never fail on live hosts.
-                        if (canonicalPath === '/.starsector_serial') {
-                            return serialStubUrl;
-                        }
-
-                        // Source-probe lookups are best-effort diagnostics; serve a stable stub to avoid 404 spam.
-                        if (/\/starsector\/starsector\/.*\.java$/i.test(canonicalPath)) {
-                            return sourceStubUrl;
-                        }
-
-                        for (const [probePath, replacementPath] of directoryIndexTargets.entries()) {
-                            if (canonicalPath === probePath || canonicalPath === `${probePath}/`) {
-                                parsed.pathname = `${hasProjectPrefix ? '/starsectorquick' : ''}${replacementPath}`;
-                                parsed.search = '';
-                                return parsed.toString();
-                            }
-                        }
-
-                        return parsed.toString();
-                    };
-
-                    const nativeFetch = window.fetch.bind(window);
-                    window.fetch = (input, init) => {
-                        if (typeof input === 'string' || input instanceof URL) {
-                            return nativeFetch(rewriteStarsectorUrl(input), init);
-                        }
-                        if (input && input.url) {
-                            const rewritten = rewriteStarsectorUrl(input.url);
-                            if (rewritten !== input.url) {
-                                return nativeFetch(new Request(rewritten, input), init);
-                            }
-                        }
-                        return nativeFetch(input, init);
-                    };
-
-                    if (!window.__starsectorXhrRewriteInstalled) {
-                        const nativeOpen = XMLHttpRequest.prototype.open;
-                        XMLHttpRequest.prototype.open = function patchedOpen(method, requestUrl, ...rest) {
-                            const rewritten = rewriteStarsectorUrl(requestUrl);
-                            return nativeOpen.call(this, method, rewritten, ...rest);
-                        };
-                        window.__starsectorXhrRewriteInstalled = true;
-                    }
-
-                    window.__starsectorFetchRewriteInstalled = true;
-                    log('Installed Starsector resource URL rewrite layer (fetch + XHR).', '#888');
-                }
-                
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
                 log(`App Path: ${fullAppPath}`, '#888');
@@ -542,9 +509,11 @@
                 const dataUrl = origin + projectPath + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
+                ensureLwjglCanvas();
+                log('LWJGL canvas bridge ready.', '#888');
                 const lwjglModuleCandidates = [];
                 if (window.__LWJGL_MODULE__) lwjglModuleCandidates.push(window.__LWJGL_MODULE__);
-                lwjglModuleCandidates.push('lwjgl_clean.js', 'lwjgl.js');
+                lwjglModuleCandidates.push('lwjgl.js');
                 const uniqueModuleCandidates = [...new Set(lwjglModuleCandidates)];
                 let lwjglModule = null;
                 let lwjglModuleName = null;
@@ -563,21 +532,10 @@
                 if (!lwjglModule) {
                     throw lastLwjglImportError || new Error('Unable to load any LWJGL module candidate');
                 }
+                const lwjglNativeSource = (lwjglModule && (lwjglModule.default || lwjglModule)) || {};
                 log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
-                const configuredSerial = String(window.__STARSECTOR_SERIAL__ || '').trim();
-                const serialFallback = String(
-                    window.__STARSECTOR_SERIAL_FALLBACK__ || ''
-                ).trim();
-                const resolvedSerial = configuredSerial || serialFallback;
-                window.__STARSECTOR_SERIAL__ = resolvedSerial;
-                const serialLen = resolvedSerial.length;
-                if (configuredSerial) {
-                    log(`Serial provided: true (len=${serialLen})`, '#888');
-                } else if (serialFallback) {
-                    log(`Serial fallback applied (len=${serialLen})`, '#ffaa00');
-                } else {
-                    log('Serial provided: false', '#888');
-                }
+                const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
+                log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
                 const lwjglNatives = {};
                 const nativeStats = {
                     totalCalls: 0,
@@ -613,7 +571,7 @@
                 const firstLogLimit = Math.max(0, Number(window.__LWJGL_FIRST_LOG_LIMIT__ || 256));
                 let firstLogCount = 0;
                 let traceLogCount = 0;
-                for (const [key, value] of Object.entries(lwjglModule)) {
+                for (const [key, value] of Object.entries(lwjglNativeSource)) {
                     if (typeof value !== 'function') continue;
                     if (key.startsWith('Java_') || key.startsWith('JNI_OnLoad') || key.startsWith('JVM_') || key.startsWith('_JVM_')) {
                         if (key === 'Java_org_lwjgl_Sys_alert') {
@@ -828,32 +786,20 @@
                         };
                     }
                 }
-                const inlineLwjglNatives = createInlineLwjglNatives(log);
                 const unsafeFallbackNatives = createUnsafeFallbackNatives(log);
-                const mergedNatives = {
-                    ...unsafeFallbackNatives,
-                    ...inlineLwjglNatives,
-                    ...lwjglNatives
-                };
+                const mergedNatives = { ...unsafeFallbackNatives, ...lwjglNatives };
                 const unsafeFallbackAdded = Object.keys(unsafeFallbackNatives).filter((k) => typeof lwjglNatives[k] !== 'function').length;
-                const inlineFallbackAdded = Object.keys(inlineLwjglNatives).filter((k) => typeof lwjglNatives[k] !== 'function').length;
                 if (unsafeFallbackAdded > 0) {
                     log(`Unsafe JNI fallback bridges enabled: ${unsafeFallbackAdded}`, '#ffaa00');
                 }
-                if (inlineFallbackAdded > 0) {
-                    log(`Inline LWJGL fallback natives enabled: ${inlineFallbackAdded}`, '#ffaa00');
-                }
                 log(`LWJGL natives imported from module: ${Object.keys(lwjglNatives).length}`, '#888');
 
-                // Keep hull post-pass override opt-in; it can hide missing core-spec issues.
+                // Keep this opt-in; forcing it can drop hull specs needed by campaign preflight.
                 const disableShipHullPostPass = window.__DISABLE_SHIP_HULL_POST_PASS__ === true;
-                // Mirror core specs by default; set window.__STARSECTOR_MIRROR_CORE_SPECS_TO_FILES__ = false to disable.
-                const mirrorCoreSpecsToFiles =
-                    window.__STARSECTOR_MIRROR_CORE_SPECS_TO_FILES__ !== false;
                 const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
                 const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
                 const autoCampaignMode = (
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new'
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new_direct'
                 ).toString().trim().toLowerCase();
                 const autoCampaignVariant = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
@@ -881,42 +827,10 @@
                     8000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_POST_INIT_WAIT_MS__ || 45000) || 45000
                 );
-                const autoCampaignVisitColonyMode =
-                    window.__STARSECTOR_AUTO_VISIT_COLONY__ === true
-                    || autoCampaignMode.indexOf('visit_colony') >= 0;
-                const autoCampaignDirectTransitionMinSettleMs = Math.max(
-                    0,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TRANSITION_MIN_SETTLE_MS__
-                            || (autoCampaignVisitColonyMode ? 0 : 5000)
-                    ) || (autoCampaignVisitColonyMode ? 0 : 5000)
-                );
-                const autoCampaignDirectCreateSettleMs = Math.max(
-                    5000,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__
-                            || (autoCampaignVisitColonyMode ? 8000 : 45000)
-                    ) || (autoCampaignVisitColonyMode ? 8000 : 45000)
-                );
                 const autoCampaignDirectTimeoutFailureLimit = Math.max(
                     1,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
                 );
-                const autoCampaignColonyProbeDelayMs = Math.max(
-                    0,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_DELAY_MS__ || 12000) || 12000
-                );
-                const autoCampaignColonyProbeTimeoutMs = Math.max(
-                    500,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_TIMEOUT_MS__ || 12000) || 12000
-                );
-                const hasAutoCampaignColonyProbeBootstrapSectorGenOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__ === 'boolean';
-                const autoCampaignColonyProbeBootstrapSectorGen =
-                    hasAutoCampaignColonyProbeBootstrapSectorGenOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_COLONY_PROBE_BOOTSTRAP_SECTOR_GEN__
-                        : (autoCampaignMode.indexOf('visit_colony') >= 0
-                            || autoCampaignMode.indexOf('visitcolony') >= 0);
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
                     15000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
@@ -927,6 +841,8 @@
                     || autoCampaignMode.indexOf('nodirect') >= 0
                     || autoCampaignMode.indexOf('menu_only') >= 0
                     || autoCampaignMode.indexOf('menuonly') >= 0;
+                const autoCampaignUsesDirectPath =
+                    !modeDisablesDirectPath && autoCampaignMode.indexOf('direct') >= 0;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -937,167 +853,56 @@
                     || autoCampaignMode.indexOf('visit_colony') >= 0;
                 const autoCampaignTitleRenderWarmup =
                     window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_RENDER_WARMUP__ === true;
-                const hasAutoCampaignMutatingSpecPreflightOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === 'boolean';
                 const autoCampaignMutatingSpecPreflight =
-                    hasAutoCampaignMutatingSpecPreflightOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignDeferredColonyWorkerOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_DEFERRED_COLONY_WORKER__ === 'boolean';
-                const autoCampaignDeferredColonyWorker =
-                    hasAutoCampaignDeferredColonyWorkerOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_DEFERRED_COLONY_WORKER__
-                        : !autoVisitColonyRequested;
-                const autoCampaignSkipFactionPreflight =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ === true
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === true
                     || (autoVisitColonyRequested
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ !== false);
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ !== false);
+                const autoCampaignSkipFactionPreflight =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ === true;
                 const hasAutoCampaignWithTimePassOverride =
                     typeof window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__ === 'boolean';
                 const autoCampaignWithTimePass = hasAutoCampaignWithTimePassOverride
                     ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
                     : true;
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ !== false;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
                 const autoCampaignInvokeCreateInCampaignState =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true
-                    || (autoVisitColonyRequested
+                    || (autoCampaignUsesDirectPath
                         && window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false);
+                const autoCampaignAllowImmediatePlayerFleetNullTransition =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === true
+                    || (autoCampaignUsesDirectPath
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false);
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true
-                    || (autoVisitColonyRequested
+                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
                         && window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false);
                 const autoCampaignAllowDialogWithoutPlayerFleet =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true
-                    || (autoVisitColonyRequested
+                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
                         && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false);
-                const hasAutoCampaignAllowNullCampaignUiEngineOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__ === 'boolean';
-                const autoCampaignAllowNullCampaignUiEngine =
-                    hasAutoCampaignAllowNullCampaignUiEngineOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__
-                        : !autoVisitColonyRequested;
-                const hasAutoCampaignPlayerFleetNullRequireWorldPopulationOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_REQUIRE_WORLD_POPULATION__ === 'boolean';
-                const autoCampaignPlayerFleetNullRequireWorldPopulation =
-                    hasAutoCampaignPlayerFleetNullRequireWorldPopulationOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_REQUIRE_WORLD_POPULATION__
-                        : !autoVisitColonyRequested;
-                const hasAutoCampaignAllowImmediatePlayerFleetNullTransitionOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === 'boolean';
-                const autoCampaignAllowImmediatePlayerFleetNullTransition =
-                    hasAutoCampaignAllowImmediatePlayerFleetNullTransitionOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__
-                        : null;
-                const hasAutoCampaignForceActivationAllowWorldEmptyOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_FORCE_ACTIVATION_ALLOW_WORLD_EMPTY__ === 'boolean';
-                const autoCampaignForceActivationAllowWorldEmpty =
-                    hasAutoCampaignForceActivationAllowWorldEmptyOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_FORCE_ACTIVATION_ALLOW_WORLD_EMPTY__
-                        : false;
-                const hasAutoCampaignAllowSyntheticFallbackMarketForColonyProbeOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_FOR_COLONY_PROBE__ === 'boolean';
-                const autoCampaignAllowSyntheticFallbackMarketForColonyProbe =
-                    hasAutoCampaignAllowSyntheticFallbackMarketForColonyProbeOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_FOR_COLONY_PROBE__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsureOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_DURING_CAMPAIGN_STATE_ENSURE__ === 'boolean';
-                const autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure =
-                    hasAutoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsureOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_SYNTHETIC_FALLBACK_MARKET_DURING_CAMPAIGN_STATE_ENSURE__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignPlayerFleetNullAllowFallbackEconomyMarketsOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ECONOMY_MARKETS__ === 'boolean';
-                const autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets =
-                    hasAutoCampaignPlayerFleetNullAllowFallbackEconomyMarketsOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ECONOMY_MARKETS__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignPlayerFleetNullAllowFallbackEntityMarketsOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ENTITY_MARKETS__ === 'boolean';
-                const autoCampaignPlayerFleetNullAllowFallbackEntityMarkets =
-                    hasAutoCampaignPlayerFleetNullAllowFallbackEntityMarketsOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_ALLOW_FALLBACK_ENTITY_MARKETS__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignBootstrapAllowFallbackEntityMarketsOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_ALLOW_FALLBACK_ENTITY_MARKETS__ === 'boolean';
-                const autoCampaignBootstrapAllowFallbackEntityMarkets =
-                    hasAutoCampaignBootstrapAllowFallbackEntityMarketsOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_ALLOW_FALLBACK_ENTITY_MARKETS__
-                        : autoVisitColonyRequested;
-                const hasAutoCampaignBootstrapSectorGenOnNoMarketsOverride =
-                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTOR_GEN_ON_NO_MARKETS__ === 'boolean';
-                const autoCampaignBootstrapSectorGenOnNoMarkets =
-                    hasAutoCampaignBootstrapSectorGenOnNoMarketsOverride
-                        ? window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTOR_GEN_ON_NO_MARKETS__
-                        : autoVisitColonyRequested;
-                const autoCampaignPlayerFleetNullMinDeferMs = Math.max(
-                    1000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_MIN_DEFER_MS__ || 5000)
-                        || 5000
-                );
                 const autoCampaignPlayerFleetNullTransitionForceAfterMs = Math.max(
                     30000,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__
-                            || 120000
-                    ) || 120000
-                );
-                const autoCampaignSectorGenBootstrapTimeoutMs = Math.max(
-                    10000,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_GEN_BOOTSTRAP_TIMEOUT_MS__
-                            || (autoVisitColonyRequested ? 600000 : 30000)
-                    ) || (autoVisitColonyRequested ? 600000 : 30000)
-                );
-                const autoCampaignSectorGenBootstrapMaxAttempts = Math.max(
-                    1,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_GEN_BOOTSTRAP_MAX_ATTEMPTS__
-                            || (autoVisitColonyRequested ? 2 : 2)
-                    ) || (autoVisitColonyRequested ? 2 : 2)
-                );
-                const autoCampaignSyntheticFleetTimeoutMs = Math.max(
-                    3000,
-                    Number(
-                        window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__
-                            || (autoVisitColonyRequested ? 45000 : 12000)
-                    ) || (autoVisitColonyRequested ? 45000 : 12000)
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__ || 120000)
+                        || 120000
                 );
                 const hasDirectLaunchOverride =
                     typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
                 const directLaunch = hasDirectLaunchOverride
                     ? window.__STARSECTOR_DIRECT_LAUNCH__
-                    : (autoVisitColonyRequested ? false : true);
-                const debugThreadDumpAfterMs = Math.max(
-                    0,
-                    Number(window.__STARSECTOR_DEBUG_THREAD_DUMP_AFTER_MS__ || 0) || 0
-                );
-                const debugThreadDumpRepeat =
-                    window.__STARSECTOR_DEBUG_THREAD_DUMP_REPEAT__ === true;
-                const debugThreadDumpRepeatMs = Math.max(
-                    10000,
-                    Number(window.__STARSECTOR_DEBUG_THREAD_DUMP_REPEAT_MS__ || 60000) || 60000
-                );
+                    : true;
                 const autoVisitColony = autoVisitColonyRequested;
                 const autoVisitColonyName = (
                     window.__STARSECTOR_AUTO_VISIT_COLONY_NAME__ || ''
                 ).toString().trim();
 
                 const runtimeUserDir = `${fullAppPath}starsector/starsector`;
-                const runtimeVersionRaw = Number(window.__STARSECTOR_RUNTIME_VERSION__ || 17);
-                const runtimeVersion =
-                    runtimeVersionRaw === 8 || runtimeVersionRaw === 11 || runtimeVersionRaw === 17
-                        ? runtimeVersionRaw
-                        : 17;
                 const javaProperties = [
                     `-Dlog4j.defaultInitOverride=false`,
                     `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
                     `-Dstarsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
                     `-Dstarsector.forceBasicLog4j=false`,
-                    `starsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
-                    `starsector.forceBasicLog4j=false`,
                     `-Djava.library.path=${fullAppPath}build/final/wasm-modules/`,
                     `-Duser.dir=${runtimeUserDir}`,
                     `-Dstarsector.userDir=${runtimeUserDir}`,
@@ -1108,39 +913,17 @@
                     `-Dcom.fs.starfarer.settings.linux=true`,
                     `-Dstarsector.boot=${bootMode}`,
                     `starsector.boot=${bootMode}`,
-                    `-Dstarsector.mirrorCoreSpecsToFiles=${mirrorCoreSpecsToFiles}`,
-                    `starsector.mirrorCoreSpecsToFiles=${mirrorCoreSpecsToFiles}`,
                     `-Dstarsector.directLaunch=${directLaunch}`,
                     `starsector.directLaunch=${directLaunch}`,
                     `-DstartSound=false`,
                     `startSound=false`,
+                    `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
                     `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
                 ];
-                if (resolvedSerial) {
-                    javaProperties.push(`-Dstarsector.serial=${resolvedSerial}`);
-                    javaProperties.push(`starsector.serial=${resolvedSerial}`);
-                } else {
-                    log('Serial provided: false (omitting starsector.serial property).', '#888');
-                }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
                     javaProperties.push(`starsector.disableShipHullPostPass=true`);
                     log('Ship hull post-pass override enabled.', '#ffaa00');
-                }
-                if (mirrorCoreSpecsToFiles) {
-                    log('Core spec mirroring to /files enabled.', '#ffaa00');
-                }
-                if (debugThreadDumpAfterMs > 0) {
-                    javaProperties.push(`-Dstarsector.debugThreadDumpAfterMs=${debugThreadDumpAfterMs}`);
-                    javaProperties.push(`starsector.debugThreadDumpAfterMs=${debugThreadDumpAfterMs}`);
-                    javaProperties.push(`-Dstarsector.debugThreadDumpRepeat=${debugThreadDumpRepeat}`);
-                    javaProperties.push(`starsector.debugThreadDumpRepeat=${debugThreadDumpRepeat}`);
-                    javaProperties.push(`-Dstarsector.debugThreadDumpRepeatMs=${debugThreadDumpRepeatMs}`);
-                    javaProperties.push(`starsector.debugThreadDumpRepeatMs=${debugThreadDumpRepeatMs}`);
-                    log(
-                        `Fixer thread-dump watchdog enabled (after=${debugThreadDumpAfterMs}ms, repeat=${debugThreadDumpRepeat}, repeatMs=${debugThreadDumpRepeatMs}).`,
-                        '#ffaa00'
-                    );
                 }
                 if (autoCampaign) {
                     javaProperties.push(`-Dstarsector.autoCampaign=true`);
@@ -1165,20 +948,8 @@
                     javaProperties.push(`starsector.autoCampaignDirectAttemptTimeoutMs=${autoCampaignDirectAttemptTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignDirectTransitionMinSettleMs=${autoCampaignDirectTransitionMinSettleMs}`);
-                    javaProperties.push(`starsector.autoCampaignDirectTransitionMinSettleMs=${autoCampaignDirectTransitionMinSettleMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
-                    javaProperties.push(`starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`starsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignColonyProbeDelayMs=${autoCampaignColonyProbeDelayMs}`);
-                    javaProperties.push(`starsector.autoCampaignColonyProbeDelayMs=${autoCampaignColonyProbeDelayMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignColonyProbeTimeoutMs=${autoCampaignColonyProbeTimeoutMs}`);
-                    javaProperties.push(`starsector.autoCampaignColonyProbeTimeoutMs=${autoCampaignColonyProbeTimeoutMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
-                    javaProperties.push(`starsector.autoCampaignColonyProbeBootstrapSectorGen=${autoCampaignColonyProbeBootstrapSectorGen}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignDeferredColonyWorker=${autoCampaignDeferredColonyWorker}`);
-                    javaProperties.push(`starsector.autoCampaignDeferredColonyWorker=${autoCampaignDeferredColonyWorker}`);
                     javaProperties.push(`-Dstarsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
@@ -1189,42 +960,14 @@
                     javaProperties.push(`starsector.autoCampaignInvokeCreateOnPlayerFleetNull=${autoCampaignInvokeCreateOnPlayerFleetNull}`);
                     javaProperties.push(`-Dstarsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
                     javaProperties.push(`starsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
+                    javaProperties.push(`starsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
                     javaProperties.push(`-Dstarsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`starsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
                     javaProperties.push(`starsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
-                    javaProperties.push(`starsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullRequireWorldPopulation=${autoCampaignPlayerFleetNullRequireWorldPopulation}`);
-                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullRequireWorldPopulation=${autoCampaignPlayerFleetNullRequireWorldPopulation}`);
-                    if (hasAutoCampaignAllowImmediatePlayerFleetNullTransitionOverride) {
-                        javaProperties.push(`-Dstarsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
-                        javaProperties.push(`starsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
-                    }
-                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullMinDeferMs=${autoCampaignPlayerFleetNullMinDeferMs}`);
-                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullMinDeferMs=${autoCampaignPlayerFleetNullMinDeferMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
                     javaProperties.push(`starsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignForceActivationAllowWorldEmpty=${autoCampaignForceActivationAllowWorldEmpty}`);
-                    javaProperties.push(`starsector.autoCampaignForceActivationAllowWorldEmpty=${autoCampaignForceActivationAllowWorldEmpty}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignAllowSyntheticFallbackMarketForColonyProbe=${autoCampaignAllowSyntheticFallbackMarketForColonyProbe}`);
-                    javaProperties.push(`starsector.autoCampaignAllowSyntheticFallbackMarketForColonyProbe=${autoCampaignAllowSyntheticFallbackMarketForColonyProbe}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure=${autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure}`);
-                    javaProperties.push(`starsector.autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure=${autoCampaignAllowSyntheticFallbackMarketDuringCampaignStateEnsure}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets=${autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets}`);
-                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets=${autoCampaignPlayerFleetNullAllowFallbackEconomyMarkets}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullAllowFallbackEntityMarkets=${autoCampaignPlayerFleetNullAllowFallbackEntityMarkets}`);
-                    javaProperties.push(`starsector.autoCampaignPlayerFleetNullAllowFallbackEntityMarkets=${autoCampaignPlayerFleetNullAllowFallbackEntityMarkets}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignBootstrapAllowFallbackEntityMarkets=${autoCampaignBootstrapAllowFallbackEntityMarkets}`);
-                    javaProperties.push(`starsector.autoCampaignBootstrapAllowFallbackEntityMarkets=${autoCampaignBootstrapAllowFallbackEntityMarkets}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
-                    javaProperties.push(`starsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignSectorGenBootstrapTimeoutMs=${autoCampaignSectorGenBootstrapTimeoutMs}`);
-                    javaProperties.push(`starsector.autoCampaignSectorGenBootstrapTimeoutMs=${autoCampaignSectorGenBootstrapTimeoutMs}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignSectorGenBootstrapMaxAttempts=${autoCampaignSectorGenBootstrapMaxAttempts}`);
-                    javaProperties.push(`starsector.autoCampaignSectorGenBootstrapMaxAttempts=${autoCampaignSectorGenBootstrapMaxAttempts}`);
-                    javaProperties.push(`-Dstarsector.autoCampaignSyntheticFleetTimeoutMs=${autoCampaignSyntheticFleetTimeoutMs}`);
-                    javaProperties.push(`starsector.autoCampaignSyntheticFleetTimeoutMs=${autoCampaignSyntheticFleetTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignMutatingSpecPreflight=${autoCampaignMutatingSpecPreflight}`);
                     javaProperties.push(`starsector.autoCampaignMutatingSpecPreflight=${autoCampaignMutatingSpecPreflight}`);
                     if (autoVisitColony) {
@@ -1236,11 +979,10 @@
                         }
                     }
                     log(
-                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}, mutating=${autoCampaignMutatingSpecPreflight}, deferredColonyWorker=${autoCampaignDeferredColonyWorker}, noMarketsSectorGen=${autoCampaignBootstrapSectorGenOnNoMarkets}).`,
+                        `Auto campaign bootstrap enabled (mode=${autoCampaignMode}, variant=${autoCampaignVariant}, sectorSize=${autoCampaignSectorSize}, directLaunch=${directLaunch}, visitColony=${autoVisitColony}${autoVisitColonyName ? ', target=' + autoVisitColonyName : ''}).`,
                         '#ffaa00'
                     );
                 }
-                const finalDisplayStatus = autoCampaign ? 'auto-campaign' : 'game-running';
                 const useNpeFixNativeLib = window.__USE_NPE_FIX_LIB__ === true;
                 if (useNpeFixNativeLib) {
                     log('NPE native mapping enabled (libnpefix.so -> npe_fix.js).', '#00d9ff');
@@ -1250,10 +992,9 @@
                     log('NPE native mapping disabled by default (set window.__USE_NPE_FIX_LIB__ = true to enable).', '#ffaa00');
                 }
                 log(`Boot mode: ${bootMode}`, '#00d9ff');
-                log(`CheerpJ runtime version: ${runtimeVersion}`, '#00d9ff');
 
                 await cheerpjInit({
-                    version: runtimeVersion,
+                    version: 17,
                     enableX11: true,
                     natives: {
                         ...mergedNatives,
@@ -1274,13 +1015,7 @@
                     },
                     javaProperties,
                     mounts: [
-                        // Primary app mount for this repo deployment path.
-                        { type: 'http', path: fullAppPath, url: `${origin}${projectPath}` },
-                        // Legacy Fixer paths still resolve via /app/starsector/... in Java.
-                        { type: 'http', path: '/app/starsector/', url: `${origin}${projectPath}` },
-                        // Some runtime code resolves absolute /starsector/... paths.
-                        // On project pages, remap this to /starsectorquick/starsector/...
-                        { type: 'http', path: '/starsector/', url: `${origin}${projectPath}starsector/` },
+                        { type: 'http', path: '/app/', url: origin },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
@@ -1291,102 +1026,20 @@
                         log('Spec preloading disabled (enable with window.__PRELOAD_SPEC_FILES__ = true).', '#ffaa00');
                         return;
                     }
-                    if (typeof cheerpjAddStringFile !== 'function') {
-                        log('Spec preloading skipped: cheerpjAddStringFile not available.', '#ffaa00');
-                        return;
-                    }
-
-                    const roots = ['data/weapons', 'data/shipsystems', 'data/hulls'];
-                    const allowedExt = new Set(['wpn', 'proj', 'ship', 'system', 'skin']);
-                    const seenDirs = new Set();
-                    const files = [];
-
-                    const fetchIndexEntries = async (dir) => {
-                        const url = `${dataUrl}${dir}/index.list`;
-                        try {
-                            const resp = await fetch(url, { cache: 'no-store' });
-                            if (!resp.ok) return [];
-                            const raw = await resp.text();
-                            return raw
-                                .split(/\r?\n/)
-                                .map((line) => line.split('\t')[0].trim())
-                                .filter(Boolean);
-                        } catch (_) {
-                            return [];
-                        }
-                    };
-
-                    const walk = async (dir) => {
-                        if (seenDirs.has(dir)) return;
-                        seenDirs.add(dir);
-                        const entries = await fetchIndexEntries(dir);
-                        for (const entry of entries) {
-                            const clean = entry.replace(/^[/\\]+/, '').trim();
-                            if (!clean) continue;
-                            let rel = clean.startsWith('data/') ? clean : `${dir}/${clean}`;
-                            rel = rel.replace(/\/{2,}/g, '/').replace(/\/$/, '');
-                            const name = rel.split('/').pop() || '';
-                            const dot = name.lastIndexOf('.');
-                            if (dot > 0) {
-                                const ext = name.slice(dot + 1).toLowerCase();
-                                if (allowedExt.has(ext)) files.push(rel);
-                            } else {
-                                await walk(rel);
-                            }
-                        }
-                    };
-
-                    for (const root of roots) {
-                        await walk(root);
-                    }
-
-                    const unique = Array.from(new Set(files));
-                    if (!unique.length) {
-                        log('Spec preloading found no candidate files.', '#ffaa00');
-                        return;
-                    }
-
-                    const concurrency = 8;
-                    let loaded = 0;
-                    let failed = 0;
-                    for (let i = 0; i < unique.length; i += concurrency) {
-                        const chunk = unique.slice(i, i + concurrency);
-                        await Promise.all(
-                            chunk.map(async (rel) => {
-                                try {
-                                    const resp = await fetch(`${dataUrl}${rel}`, { cache: 'no-store' });
-                                    if (!resp.ok) {
-                                        failed += 1;
-                                        return;
-                                    }
-                                    const text = await resp.text();
-                                    cheerpjAddStringFile(`/app/starsector/starsector/${rel}`, text);
-                                    cheerpjAddStringFile(`/files/${rel}`, text);
-                                    loaded += 1;
-                                } catch (_) {
-                                    failed += 1;
-                                }
-                            })
-                        );
-                    }
-
-                    log(`Spec preload complete: loaded=${loaded}, failed=${failed}`, failed ? '#ffaa00' : '#00ff88');
+                    log(
+                        'Spec preloading skipped: CheerpJ 4.3 only permits JS-added files under /str/, so synthetic /app and /files overrides are disabled.',
+                        '#ffaa00'
+                    );
                 };
 
                 const maybePatchCodexEntries = async () => {
                     if (window.__ENABLE_CODEX_GUARD__ !== true) {
                         return;
                     }
-                    if (typeof cheerpjAddStringFile !== 'function') {
-                        log('Codex guard skipped: cheerpjAddStringFile not available.', '#ffaa00');
-                        return;
-                    }
-
-                    const codexRelPath = 'data/codex/text_codex_entries.csv';
-                    const minimalCodexCsv = 'filename\n';
-                    cheerpjAddStringFile(`/files/${codexRelPath}`, minimalCodexCsv);
-                    cheerpjAddStringFile(`${contentRoot}${codexRelPath}`, minimalCodexCsv);
-                    log('Codex startup guard enabled (text_codex_entries.csv overridden).', '#ffaa00');
+                    log(
+                        'Codex guard skipped: CheerpJ 4.3 JS file injection cannot override /files or /app paths directly.',
+                        '#ffaa00'
+                    );
                 };
 
                 await preloadSpecFiles();
@@ -1394,136 +1047,90 @@
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 const gameContainer = document.getElementById('game-container');
-                gameContainer.style.position = 'relative';
-                gameContainer.style.overflow = 'hidden';
                 cheerpjCreateDisplay(1024, 768, gameContainer);
-                refreshCheerpjDisplayStatus();
+                ensureLwjglCanvas(gameContainer);
 
-                let lwjglCanvas = gameContainer.querySelector('canvas');
-                if (!lwjglCanvas) {
-                    lwjglCanvas = document.createElement('canvas');
-                    lwjglCanvas.width = 1024;
-                    lwjglCanvas.height = 768;
-                    gameContainer.appendChild(lwjglCanvas);
-                    log('Created fallback LWJGL canvas for native bridge.', '#ffaa00');
+                // Use stock LWJGL classes by default; opt into loading_patch explicitly.
+                const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
+                let jarFiles = [];
+                try {
+                    const jarIndexUrl = `${origin}${projectPath}jars/index.list?ts=${Date.now()}`;
+                    const jarIndexResponse = await fetch(jarIndexUrl, { cache: 'no-store' });
+                    if (!jarIndexResponse.ok) {
+                        throw new Error(`HTTP ${jarIndexResponse.status}`);
+                    }
+                    const jarIndexText = await jarIndexResponse.text();
+                    jarFiles = jarIndexText
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(Boolean)
+                        .map(line => line.split(/\s+/)[0])
+                        .filter(Boolean);
+                    log(`Loaded ${jarFiles.length} jar entr${jarFiles.length === 1 ? 'y' : 'ies'} from jars/index.list`, '#888');
+                } catch (jarIndexError) {
+                    log(`Jar index load failed; using fallback list (${jarIndexError.message})`, '#ffaa00');
+                    jarFiles = [
+                        'bridge.jar',
+                        'fixer.jar',
+                        'resources.jar',
+                        'janino.jar',
+                        'commons-compiler.jar',
+                        'starfarer.api.jar',
+                        'starfarer_obf.jar',
+                        'jogg-0.0.7.jar',
+                        'jorbis-0.0.15.jar',
+                        'json.jar',
+                        'lwjgl.jar',
+                        'jinput.jar',
+                        'log4j-1.2.9.jar',
+                        'lwjgl_util.jar',
+                        'fs.sound_obf.jar',
+                        'fs.common_obf.jar',
+                        'xstream-1.4.10.jar',
+                        'starfarer.res.jar',
+                        'scripts-precompiled.jar'
+                    ];
                 }
-                lwjglCanvas.id = 'lwjglCanvas';
-                lwjglCanvas.style.position = 'absolute';
-                lwjglCanvas.style.left = '0';
-                lwjglCanvas.style.top = '0';
-                lwjglCanvas.style.width = '1024px';
-                lwjglCanvas.style.height = '768px';
-                lwjglCanvas.style.display = 'block';
-                lwjglCanvas.style.zIndex = '2';
-                lwjglCanvas.style.pointerEvents = 'auto';
-                if (!lwjglCanvas.hasAttribute('tabindex')) {
-                    lwjglCanvas.setAttribute('tabindex', '0');
-                }
-                window.lwjglCanvasElement = lwjglCanvas;
-
-                // Use loading_patch by default for obfuscated launcher class compatibility.
-                const useLoadingPatch = window.__USE_LOADING_PATCH__ !== false;
-                const jarFiles = [
-                    'fixer.jar',
-                    'input_patch.jar',
-                    'jaxb_compat.jar',
-                    'lwjgl_bridge.jar',
-                    'resources.jar',
-                    'janino.jar',
-                    'commons-compiler.jar',
-                    'starfarer.api.jar',
-                    'starfarer_obf.jar',
-                    'jogg-0.0.7.jar',
-                    'jorbis-0.0.15.jar',
-                    'json.jar',
-                    'game_lwjgl.jar',
-                    'jinput.jar',
-                    'log4j-1.2.9.jar',
-                    'lwjgl_util.jar',
-                    'fs.sound_obf.jar',
-                    'fs.common_obf.jar',
-                    'xstream-1.4.10.jar'
-                ];
-                // Keep loading_patch available for missing launcher classes (e.g. GLContext),
-                // but place it after primary LWJGL jars so it does not shadow DisplayMode.
-                if (useLoadingPatch) {
-                    jarFiles.push('loading_patch.jar');
-                }
-                jarFiles.push('sectorgen_bootstrap.jar');
-
-                const disableJarCacheBust = window.__STARSECTOR_DISABLE_JAR_CACHE_BUST__ === true;
-                const explicitJarCacheBust = window.__STARSECTOR_CLASSPATH_CACHE_BUST__;
-                const jarCacheBustToken = disableJarCacheBust
-                    ? ''
-                    : String(explicitJarCacheBust || Date.now());
-                const withJarCacheBust = (baseUrl) => {
-                    if (!jarCacheBustToken) return baseUrl;
-                    const sep = baseUrl.includes('?') ? '&' : '?';
-                    return `${baseUrl}${sep}v=${encodeURIComponent(jarCacheBustToken)}`;
-                };
-
-                if (jarCacheBustToken) {
-                    log(`JAR cache-bust enabled token=${jarCacheBustToken}`, '#888');
-                } else {
-                    log('JAR cache-bust disabled.', '#888');
+                jarFiles = [...new Set(jarFiles.filter(Boolean))];
+                if (useLoadingPatch && !jarFiles.includes('loading_patch.jar')) {
+                    jarFiles.unshift('loading_patch.jar');
                 }
 
-                const classPathEntries = jarFiles.map(jar => withJarCacheBust(`${fullAppPath}jars/${jar}`));
-                const includeContentRootCp = window.__STARSECTOR_INCLUDE_CONTENTROOT_CP__ === true;
-                // Keep directory classpath roots opt-in. They trigger large amounts of
-                // class/service probing 404s on GH Pages and are not required for normal
-                // Starsector Java 8 launcher flow.
-                if (includeContentRootCp) {
-                    classPathEntries.push(contentRoot);
-                    log('Classpath content root enabled (opt-in).', '#ffaa00');
-                }
-                // Optional precompiled script classes used by no-markets bootstrap fallback.
-                // Keep this opt-in; including it by default can duplicate content roots.
+                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
+                // Optional sectorgen fallback classes are opt-in because the local repo does not ship them by default.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
-                if (window.__STARSECTOR_FORCE_CONFIG_CP__ === true) {
-                    classPathEntries.push(`${contentRoot}data/config/`);
-                    log('Classpath data/config fallback enabled (opt-in).', '#ffaa00');
-                }
-
-                // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
-                // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
-                try {
-                    let ok = 0;
-                    let warn = 0;
-                    for (const jar of jarFiles) {
-                        const rangePrimeUrl = withJarCacheBust(`${origin}${projectPath}jars/${jar}`);
-                        const rangePrimeResp = await fetch(rangePrimeUrl, {
-                            method: 'GET',
-                            headers: { Range: 'bytes=0-0' },
-                            cache: 'no-store'
-                        });
-                        if (rangePrimeResp.status === 206) {
-                            ok += 1;
-                        } else {
-                            warn += 1;
-                            log(`Range prime ${rangePrimeResp.status}: ${jar}`, '#ffaa00');
-                        }
-                    }
-                    log(`Range prime summary: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
-                } catch (e) {
-                    log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
-                }
-
+                classPathEntries.push(`${contentRoot}data/config/`);
                 const finalClassPath = classPathEntries.join(':');
-                
+
                 log('Final ClassPath: ' + finalClassPath, '#888');
-                setCheerpjDisplayStatus(finalDisplayStatus);
 
                 log('Starting Main Class: Fixer', '#00d9ff');
+                updateRuntimeState('running', 'Fixer');
                 await cheerpjRunMain('Fixer', finalClassPath);
+                updateRuntimeState('main-returned', 'Fixer returned');
+                btn.textContent = 'RELAUNCH STARSECTOR';
+                btn.disabled = false;
 
             } catch (e) {
-                log('Error: ' + e.message, '#ff4444');
+                reportRuntimeFailure(e);
                 console.error(e);
+            } finally {
+                window.__STARSECTOR_STARTING__ = false;
             }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            void startGame();
         });
+
+        if (new URLSearchParams(window.location.search).get('autostart')) {
+            setTimeout(() => {
+                log('Autostart requested via query parameter.', '#888');
+                void startGame();
+            }, 50);
+        }
     </script>
 </body>
 </html>

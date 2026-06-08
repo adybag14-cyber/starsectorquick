@@ -10,4 +10,5 @@ public final class DisplayMode {
     public int getHeight() { return height; }
     public int getBitsPerPixel() { return bpp; }
     public int getFrequency() { return freq; }
+    public String toString() { return width + " x " + height + " x " + bpp + " @" + freq + "Hz"; }
 }

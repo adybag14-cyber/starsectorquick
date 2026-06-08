@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starsector 2 - V6J FINAL (cheerpjRunJar API - WORKING)</title>
-    <script src="https://cjrtnc.leaningtech.com/20260129_2897/loader.js"></script>
+    <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -198,6 +198,29 @@
         const canvas = document.getElementById('gameCanvas');
         if (canvas) window.lwjglCanvasElement = canvas;
 
+        const runtimeConsoleBuffer = [];
+        const rememberRuntimeConsole = (...args) => {
+            const text = args
+                .map(arg => {
+                    if (typeof arg === 'string') return arg;
+                    try {
+                        return JSON.stringify(arg);
+                    } catch (_err) {
+                        return String(arg);
+                    }
+                })
+                .join(' ');
+            runtimeConsoleBuffer.push(text);
+            if (runtimeConsoleBuffer.length > 512) runtimeConsoleBuffer.shift();
+        };
+        for (const level of ['log', 'warn', 'error']) {
+            const original = console[level].bind(console);
+            console[level] = (...args) => {
+                rememberRuntimeConsole(...args);
+                original(...args);
+            };
+        }
+
         function log(msg, type = 'info') {
             const logDiv = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
@@ -205,6 +228,29 @@
             const entry = document.createElement("div"); entry.className = "log-entry " + type; entry.style.color = color; entry.style.margin = "5px 0"; entry.textContent = "[" + time + "] " + msg; logDiv.appendChild(entry); while (logDiv.children.length > 1000) { logDiv.removeChild(logDiv.firstChild); }
             logDiv.scrollTop = logDiv.scrollHeight;
             console.log(`[${type.toUpperCase()}]`, msg);
+        }
+
+        function extractRuntimeFailure(startIndex) {
+            const recent = runtimeConsoleBuffer.slice(startIndex).join('\n');
+            const patterns = [
+                /Could not find or load main class[^\n]*/i,
+                /ClassNotFoundException[^\n]*/i,
+                /NoClassDefFoundError[^\n]*/i,
+                /UnsatisfiedLinkError[^\n]*/i,
+                /ExceptionInInitializerError[^\n]*/i,
+                /Could not initialize class[^\n]*/i,
+                /NoSuchMethodError[^\n]*/i,
+                /NullPointerException[^\n]*/i,
+                /AWTError[^\n]*/i,
+                /FileNotFoundException[^\n]*/i,
+                /LWJGL alert:[^\n]*/i,
+                /Fatal:[^\n]*/i
+            ];
+            for (const pattern of patterns) {
+                const match = recent.match(pattern);
+                if (match) return match[0];
+            }
+            return '';
         }
         
         let cheerpjReady = false;
@@ -216,6 +262,8 @@
             
             // Expected JAR files for a full launch
             const expectedJarFiles = [
+                'bridge.jar',
+                'fixer.jar',
                 'commons-compiler.jar',
                 'fs.common_obf.jar',
                 'fs.sound_obf.jar',
@@ -279,7 +327,12 @@
                 }
             }
 
-            const jarFiles = availableJars.length > 0 ? availableJars : expectedJarFiles;
+            const discoveredJarFiles = availableJars.length > 0 ? availableJars : expectedJarFiles;
+            const jarFiles = [
+                'bridge.jar',
+                'fixer.jar',
+                ...discoveredJarFiles.filter(jar => jar !== 'bridge.jar' && jar !== 'fixer.jar')
+            ];
             if (availableJars.length > 0 && availableJars.length < expectedJarFiles.length) {
                 const missingExpected = expectedJarFiles.filter(jar => !availableJars.includes(jar));
                 log(`⚠️ Using ${availableJars.length} JAR(s) from jars/index.list; full game requires ${expectedJarFiles.length}.`, 'warning');
@@ -290,12 +343,15 @@
                 return;
             }
 
-            const classpaths = jarFiles.map(j => `${jarBaseUrl}${j}`);
+            const mountedJarBase = '/app/jars/';
+            const classpaths = jarFiles.map(j => `${mountedJarBase}${j}`);
+            const jarUrls = jarFiles.map(j => `${jarBaseUrl}${j}`);
             classPathString = classpaths.join(':');
             log(`📦 Classpaths: ${classpaths.length} JARs loaded`, 'info');
+            log(`📦 Mounted JAR base: ${mountedJarBase}`, 'info');
 
             const missingJars = [];
-            await Promise.all(classpaths.map(async (jarUrl) => {
+            await Promise.all(jarUrls.map(async (jarUrl) => {
                 try {
                     const response = await fetch(jarUrl, { method: 'HEAD' });
                     if (!response.ok) missingJars.push(jarUrl);
@@ -319,6 +375,10 @@
             }
             
             try {
+                const contentRoot = '/app/starsector/starsector';
+                const lwjglModule = await import(`${baseUrl}build/final/wasm-modules/lwjgl.js?ts=${Date.now()}`);
+                const lwjglNatives = (lwjglModule && (lwjglModule.default || lwjglModule)) || {};
+                log(`📦 lwjgl natives registered: ${Object.keys(lwjglNatives).length}`, 'info');
                 await cheerpjInit({
                     version: 17,
                     fileSystem: {
@@ -327,14 +387,57 @@
                         lower: { type: 'http', url: baseUrl },
                         upper: { type: 'indexedDB', name: 'starsector_v6j' }
                     },
+                    natives: {
+                        ...lwjglNatives,
+                        async Java_java_lang_NullPointerException_getExtendedNPEMessage(lib, self) {
+                            return null;
+                        }
+                    },
                     javaProperties: [
-                        `java.library.path=${baseUrl}build/final/wasm-modules`
+                        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+                        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED',
+                        '--add-opens=java.base/java.util=ALL-UNNAMED',
+                        '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                        '--add-opens=java.base/java.text=ALL-UNNAMED',
+                        '--add-opens=java.base/java.time=ALL-UNNAMED',
+                        '--add-opens=java.base/java.time.chrono=ALL-UNNAMED',
+                        '--add-opens=java.base/java.io=ALL-UNNAMED',
+                        '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                        '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED',
+                        '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                        '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED',
+                        '-Djava.library.path=/app/build/final/wasm-modules',
+                        'java.library.path=/app/build/final/wasm-modules',
+                        `-Dstarsector.userDir=${contentRoot}`,
+                        `starsector.userDir=${contentRoot}`,
+                        `-Dstarsector.contentRoot=${contentRoot}`,
+                        `starsector.contentRoot=${contentRoot}`,
+                        `-Dstarsector.log4jConfig=file:${contentRoot}/log4j.properties`,
+                        `starsector.log4jConfig=file:${contentRoot}/log4j.properties`,
+                        '-Dstarsector.boot=combat',
+                        'starsector.boot=combat',
+                        '-Dstarsector.directLaunch=true',
+                        'starsector.directLaunch=true',
+                        '-Dstarsector.disableShipHullPostPass=true',
+                        'starsector.disableShipHullPostPass=true',
+                        '-Dstarsector.disableLauncherWarnings=true',
+                        'starsector.disableLauncherWarnings=true',
+                        '-Dstarsector.suppressStartupPrompts=true',
+                        'starsector.suppressStartupPrompts=true',
+                        '-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true',
+                        'org.lwjgl.opengl.Display.allowSoftwareOpenGL=true',
+                        '-DstartRes=1280x768',
+                        'startRes=1280x768',
+                        '-DstartFS=false',
+                        'startFS=false',
+                        '-DstartSound=true',
+                        'startSound=true'
                     ],
                     classPaths: classpaths,
                     libraries: {
                         'libGL.so.1': `${baseUrl}build/final/wasm-modules/gl4es.wasm`,
-                        'liblwjgl.so': `${baseUrl}build/final/wasm-modules/lwjgl.js`,
-                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe.wasm`
+                        'libsun_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe_jdk_alias.wasm`,
+                        'libjdk_internal_misc_Unsafe.so': `${baseUrl}build/final/wasm-modules/unsafe_jdk_alias.wasm`
                     },
                     enableX11: true,
                     print: function(msg) {
@@ -372,33 +475,40 @@
         async function launchGame() {
             if (!cheerpjReady) return;
             
-            log('🚀 LAUNCHING - cheerpjRunMain with class name', 'info');
+            log('🚀 LAUNCHING - Fixer bootstrap', 'info');
             
-            // Primary approach: Use cheerpjRunMain with class name (classpaths already loaded)
+            // Primary approach: use the repo bootstrap so filesystem/resource fixes apply before launch.
             try {
-                log('🎯 Attempt 1: cheerpjRunMain with class name', 'info');
-                log('📦 Main class: com.fs.starfarer.StarfarerLauncher', 'info');
-                
-                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', classPathString);
-                
-                log('✅ STARSECTOR 2 LAUNCHED with class name!', 'success');
+                log('🎯 Attempt 1: cheerpjRunMain with Fixer', 'info');
+                log('📦 Main class: Fixer', 'info');
+                const launchStart = runtimeConsoleBuffer.length;
+                await cheerpjRunMain('Fixer', classPathString);
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                const launchFailure = extractRuntimeFailure(launchStart);
+                if (launchFailure) {
+                    throw new Error(launchFailure);
+                }
+                log('✅ STARSECTOR 2 LAUNCHED with Fixer!', 'success');
                 document.getElementById('launchButton').textContent = '✅ RUNNING';
                 return; // Success - don't try other methods
                 
             } catch (error) {
-                log(`❌ cheerpjRunMain with class name failed: ${error.message}`, 'error');
+                log(`❌ Fixer bootstrap failed: ${error.message}`, 'error');
                 console.error(error);
             }
             
-            // Fallback: Try cheerpjRunJar with explicit JAR URL
+            // Fallback: raw launcher path for comparison if the bootstrap itself is broken.
             try {
-                log('🎯 Attempt 2: cheerpjRunJar with JAR file', 'info');
-                log('📦 Path: ./jars/starfarer_obf.jar', 'info');
-                
-                const jarUrl = `${window.location.origin}/jars/starfarer_obf.jar`;
-                await cheerpjRunJar(jarUrl);
-                
-                log('✅ STARSECTOR 2 LAUNCHED with cheerpjRunJar!', 'success');
+                log('🎯 Attempt 2: raw launcher main class', 'info');
+                log('📦 Main class: com.fs.starfarer.StarfarerLauncher', 'info');
+                const launchStart = runtimeConsoleBuffer.length;
+                await cheerpjRunMain('com.fs.starfarer.StarfarerLauncher', classPathString);
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                const launchFailure = extractRuntimeFailure(launchStart);
+                if (launchFailure) {
+                    throw new Error(launchFailure);
+                }
+                log('✅ STARSECTOR 2 LAUNCHED with raw launcher!', 'success');
                 document.getElementById('launchButton').textContent = '✅ RUNNING';
                 return;
                 

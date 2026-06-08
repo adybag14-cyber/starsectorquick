@@ -9,6 +9,7 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.PeerInfo;
 
 final class LinuxDisplay implements DisplayImplementation {
+    private static boolean createPbufferLogged = false;
     public void createWindow(DrawableLWJGL drawable, DisplayMode mode, Canvas parent, int x, int y) throws LWJGLException {
         System.out.println("LinuxDisplay.createWindow");
     }
@@ -60,6 +61,10 @@ final class LinuxDisplay implements DisplayImplementation {
     public int getPbufferCapabilities() { return 0; }
     public boolean isBufferLost(PeerInfo handle) { return false; }
     public PeerInfo createPbuffer(int width, int height, PixelFormat pixel_format, ContextAttribs attribs, IntBuffer pixelFormatCaps, IntBuffer pBufferAttribs) throws LWJGLException {
+        if (!createPbufferLogged) {
+            createPbufferLogged = true;
+            System.out.println("Bridge LinuxDisplay.createPbuffer(" + width + "x" + height + ")");
+        }
         return new LinuxPbufferPeerInfo(width, height, pixel_format);
     }
     public void setPbufferAttrib(PeerInfo handle, int attrib, int value) {}

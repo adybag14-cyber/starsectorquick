@@ -10,10 +10,17 @@ import java.util.Set;
 import org.lwjgl.MemoryUtil;
 
 public final class GL11 {
+    private static boolean getIntegerLogged = false;
+    private static boolean viewportLogged = false;
+    private static boolean disableLogged = false;
+    private static boolean matrixModeLogged = false;
+    private static boolean loadIdentityLogged = false;
+    private static boolean colorMaskLogged = false;
+    private static boolean pushAttribLogged = false;
+    private static boolean popAttribLogged = false;
+    private static final Set<String> skippedTexParameterCalls = new HashSet<String>();
     static {
-        try {
-            System.loadLibrary("lwjgl");
-        } catch (Throwable ignored) {}
+        System.out.println("Bridge GL11.<clinit>()");
     }
 
     public static final int GL_VERSION = 7938;
@@ -45,6 +52,58 @@ public final class GL11 {
 
     private static IntBuffer newIntBuffer(int count) {
         return ByteBuffer.allocateDirect(Math.max(1, count) * 4).order(ByteOrder.nativeOrder()).asIntBuffer();
+    }
+
+    private static boolean isSupportedTexParameterName(int pname) {
+        switch (pname) {
+            case 10240: // GL_TEXTURE_MAG_FILTER
+            case 10241: // GL_TEXTURE_MIN_FILTER
+            case 10242: // GL_TEXTURE_WRAP_S
+            case 10243: // GL_TEXTURE_WRAP_T
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static String textureParameterName(int pname) {
+        switch (pname) {
+            case 10240:
+                return "GL_TEXTURE_MAG_FILTER";
+            case 10241:
+                return "GL_TEXTURE_MIN_FILTER";
+            case 10242:
+                return "GL_TEXTURE_WRAP_S";
+            case 10243:
+                return "GL_TEXTURE_WRAP_T";
+            case 33082:
+                return "GL_TEXTURE_MIN_LOD";
+            case 33083:
+                return "GL_TEXTURE_MAX_LOD";
+            case 33084:
+                return "GL_TEXTURE_BASE_LEVEL";
+            case 33085:
+                return "GL_TEXTURE_MAX_LEVEL";
+            case 33169:
+                return "GL_GENERATE_MIPMAP";
+            default:
+                return "0x" + Integer.toHexString(pname);
+        }
+    }
+
+    private static void logSkippedTexParameter(int target, int pname, int param) {
+        String key = target + ":" + pname + ":" + param;
+        if (skippedTexParameterCalls.add(key)) {
+            System.out.println(
+                    "Bridge GL11.glTexParameteri skip target="
+                            + target
+                            + " pname="
+                            + textureParameterName(pname)
+                            + " ("
+                            + pname
+                            + ") param="
+                            + param);
+        }
     }
 
     public static void glAlphaFunc(int p0, float p1) { nglAlphaFunc(p0, p1, 0L); }
@@ -85,10 +144,23 @@ public final class GL11 {
     public static void glColor4f(float p0, float p1, float p2, float p3) { nglColor4f(p0, p1, p2, p3, 0L); }
     static native void nglColor4f(float p0, float p1, float p2, float p3, long p4);
 
-    public static void glColor4ub(byte p0, byte p1, byte p2, byte p3) { nglColor4ub(p0, p1, p2, p3, 0L); }
+    public static void glColor4ub(byte p0, byte p1, byte p2, byte p3) {
+        glColor4f(
+                (p0 & 0xFF) / 255.0f,
+                (p1 & 0xFF) / 255.0f,
+                (p2 & 0xFF) / 255.0f,
+                (p3 & 0xFF) / 255.0f);
+    }
     static native void nglColor4ub(byte p0, byte p1, byte p2, byte p3, long p4);
 
-    public static void glColorMask(boolean p0, boolean p1, boolean p2, boolean p3) { nglColorMask(p0, p1, p2, p3, 0L); }
+    public static void glColorMask(boolean p0, boolean p1, boolean p2, boolean p3) {
+        if (!colorMaskLogged) {
+            colorMaskLogged = true;
+            System.out.println(
+                    "Bridge GL11.glColorMask(" + p0 + ", " + p1 + ", " + p2 + ", " + p3 + ")");
+        }
+        nglColorMask(p0, p1, p2, p3, 0L);
+    }
     static native void nglColorMask(boolean p0, boolean p1, boolean p2, boolean p3, long p4);
 
     public static void glColorPointer(int p0, int p1, FloatBuffer p2) { nglColorPointer(p0, p1, 0, addr(p2), 0L); }
@@ -110,7 +182,13 @@ public final class GL11 {
         }
     }
 
-    public static void glDisable(int p0) { nglDisable(p0, 0L); }
+    public static void glDisable(int p0) {
+        if (!disableLogged) {
+            disableLogged = true;
+            System.out.println("Bridge GL11.glDisable(" + p0 + ")");
+        }
+        nglDisable(p0, 0L);
+    }
     static native void nglDisable(int p0, long p1);
 
     public static void glDisableClientState(int p0) { nglDisableClientState(p0, 0L); }
@@ -176,6 +254,10 @@ public final class GL11 {
     static native void nglGenTextures(int p0, long p1, long p2);
 
     public static int glGetInteger(int p0) {
+        if (!getIntegerLogged) {
+            getIntegerLogged = true;
+            System.out.println("Bridge GL11.glGetInteger(" + p0 + ")");
+        }
         IntBuffer tmp = newIntBuffer(4);
         glGetInteger(p0, tmp);
         return tmp.get(0);
@@ -215,14 +297,26 @@ public final class GL11 {
     public static void glLineWidth(float p0) { nglLineWidth(p0, 0L); }
     static native void nglLineWidth(float p0, long p1);
 
-    public static void glLoadIdentity() { nglLoadIdentity(0L); }
+    public static void glLoadIdentity() {
+        if (!loadIdentityLogged) {
+            loadIdentityLogged = true;
+            System.out.println("Bridge GL11.glLoadIdentity()");
+        }
+        nglLoadIdentity(0L);
+    }
     static native void nglLoadIdentity(long p0);
 
     public static void glMaterial(int p0, int p1, FloatBuffer p2) {}
     public static void glMateriali(int p0, int p1, int p2) {}
     public static void glColorMaterial(int p0, int p1) {}
 
-    public static void glMatrixMode(int p0) { nglMatrixMode(p0, 0L); }
+    public static void glMatrixMode(int p0) {
+        if (!matrixModeLogged) {
+            matrixModeLogged = true;
+            System.out.println("Bridge GL11.glMatrixMode(" + p0 + ")");
+        }
+        nglMatrixMode(p0, 0L);
+    }
     static native void nglMatrixMode(int p0, long p1);
 
     public static void glNewList(int p0, int p1) { nglNewList(p0, p1, 0L); }
@@ -239,13 +333,23 @@ public final class GL11 {
     public static void glPolygonMode(int p0, int p1) {}
     public static boolean glIsEnabled(int p0) { return true; }
 
-    public static void glPopAttrib() { nglPopAttrib(0L); }
+    public static void glPopAttrib() {
+        if (!popAttribLogged) {
+            popAttribLogged = true;
+            System.out.println("Bridge GL11.glPopAttrib()");
+        }
+    }
     static native void nglPopAttrib(long p0);
 
     public static void glPopMatrix() { nglPopMatrix(0L); }
     static native void nglPopMatrix(long p0);
 
-    public static void glPushAttrib(int p0) { nglPushAttrib(p0, 0L); }
+    public static void glPushAttrib(int p0) {
+        if (!pushAttribLogged) {
+            pushAttribLogged = true;
+            System.out.println("Bridge GL11.glPushAttrib(" + p0 + ")");
+        }
+    }
     static native void nglPushAttrib(int p0, long p1);
 
     public static void glPushMatrix() { nglPushMatrix(0L); }
@@ -296,7 +400,13 @@ public final class GL11 {
     }
     static native void nglTexImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, long p8, long p9);
 
-    public static void glTexParameteri(int p0, int p1, int p2) { nglTexParameteri(p0, p1, p2, 0L); }
+    public static void glTexParameteri(int p0, int p1, int p2) {
+        if (!isSupportedTexParameterName(p1)) {
+            logSkippedTexParameter(p0, p1, p2);
+            return;
+        }
+        nglTexParameteri(p0, p1, p2, 0L);
+    }
     static native void nglTexParameteri(int p0, int p1, int p2, long p3);
 
     public static void glTexSubImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, ByteBuffer p8) {
@@ -309,7 +419,7 @@ public final class GL11 {
     public static void glTranslatef(float p0, float p1, float p2) { nglTranslatef(p0, p1, p2, 0L); }
     static native void nglTranslatef(float p0, float p1, float p2, long p3);
 
-    public static void glVertex2f(float p0, float p1) { nglVertex2f(p0, p1, 0L); }
+    public static void glVertex2f(float p0, float p1) { glVertex3f(p0, p1, 0.0f); }
     static native void nglVertex2f(float p0, float p1, long p2);
 
     public static void glVertex3d(double p0, double p1, double p2) { glVertex3f((float) p0, (float) p1, (float) p2); }
@@ -324,6 +434,21 @@ public final class GL11 {
 
     public static void glInterleavedArrays(int p0, int p1, FloatBuffer p2) {}
 
-    public static void glViewport(int p0, int p1, int p2, int p3) { nglViewport(p0, p1, p2, p3, 0L); }
+    public static void glViewport(int p0, int p1, int p2, int p3) {
+        if (!viewportLogged) {
+            viewportLogged = true;
+            System.out.println(
+                    "Bridge GL11.glViewport("
+                            + p0
+                            + ", "
+                            + p1
+                            + ", "
+                            + p2
+                            + ", "
+                            + p3
+                            + ")");
+        }
+        nglViewport(p0, p1, p2, p3, 0L);
+    }
     static native void nglViewport(int p0, int p1, int p2, int p3, long p4);
 }

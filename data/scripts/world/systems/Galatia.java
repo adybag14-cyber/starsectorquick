@@ -173,7 +173,8 @@ public class Galatia {
 		
 		
 		SectorEntityToken tetra = system.addPlanet("tetra", star, "Tetra", "barren", 135f + 180f, 70, beltOrbitRadius + 1000f, 310);
-		if (shouldSkipTutorialDerelicts()) {
+		boolean compatibilityFastPath = shouldSkipTutorialDerelicts();
+		if (compatibilityFastPath) {
 			try {
 				Global.getLogger(Galatia.class).warn("Skipping Galatia tutorial derelicts for CheerpJ/compatibility runtime.");
 			} catch (Throwable ignored) {
@@ -188,6 +189,15 @@ public class Galatia {
 			addDerelict(system, tetra, "hammerhead_Balanced", ShipCondition.AVERAGE, 450f, true);
 			addDerelict(system, tetra, "condor_Support", ShipCondition.BATTERED, 500f, false);
 			addDerelict(system, tetra, "dram_Light", ShipCondition.BATTERED, 525f, true);
+		}
+		if (compatibilityFastPath) {
+			try {
+				Global.getLogger(Galatia.class).warn("Skipping late Galatia tutorial system extras for CheerpJ/compatibility runtime.");
+			} catch (Throwable ignored) {
+			}
+			system.setEnteredByPlayer(true);
+			Misc.setAllPlanetsSurveyed(system, true);
+			return;
 		}
 		
 		SectorEntityToken derinkuyuStation = system.addCustomEntity("derinkuyu_station", "Derinkuyu Mining Station", "station_mining00", Factions.PIRATES);
@@ -431,7 +441,6 @@ public class Galatia {
 		return vendor != null && vendor.toLowerCase().indexOf("cheerpj") >= 0;
 	}
 }
-
 
 
 
