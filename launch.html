@@ -1096,12 +1096,54 @@
                     jarFiles.unshift('loading_patch.jar');
                 }
 
-                const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
+                const disableJarCacheBust = window.__STARSECTOR_DISABLE_JAR_CACHE_BUST__ === true;
+                const explicitJarCacheBust = window.__STARSECTOR_CLASSPATH_CACHE_BUST__;
+                const jarCacheBustToken = disableJarCacheBust
+                    ? ''
+                    : String(explicitJarCacheBust || Date.now());
+                const withJarCacheBust = (baseUrl) => {
+                    if (!jarCacheBustToken) return baseUrl;
+                    const sep = baseUrl.includes('?') ? '&' : '?';
+                    return `${baseUrl}${sep}v=${encodeURIComponent(jarCacheBustToken)}`;
+                };
+
+                if (jarCacheBustToken) {
+                    log(`JAR cache-bust enabled token=${jarCacheBustToken}`, '#888');
+                } else {
+                    log('JAR cache-bust disabled.', '#888');
+                }
+
+                const classPathEntries = jarFiles.map(jar => withJarCacheBust(`${fullAppPath}jars/${jar}`));
                 // Optional sectorgen fallback classes are opt-in because the local repo does not ship them by default.
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
                 classPathEntries.push(`${contentRoot}data/config/`);
+
+                // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
+                // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
+                try {
+                    let ok = 0;
+                    let warn = 0;
+                    for (const jar of jarFiles) {
+                        const rangePrimeUrl = withJarCacheBust(`${origin}${projectPath}jars/${jar}`);
+                        const rangePrimeResp = await fetch(rangePrimeUrl, {
+                            method: 'GET',
+                            headers: { Range: 'bytes=0-0' },
+                            cache: 'no-store'
+                        });
+                        if (rangePrimeResp.status === 206) {
+                            ok += 1;
+                        } else {
+                            warn += 1;
+                            log(`Range prime ${rangePrimeResp.status}: ${jar}`, '#ffaa00');
+                        }
+                    }
+                    log(`Range prime summary: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
+                } catch (e) {
+                    log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
+                }
+
                 const finalClassPath = classPathEntries.join(':');
 
                 log('Final ClassPath: ' + finalClassPath, '#888');
