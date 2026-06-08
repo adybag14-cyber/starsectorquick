@@ -136,6 +136,7 @@ public class Fixer {
     private static final String AUTO_CAMPAIGN_ORBITAL_SPEC_WATCHDOG_PROPERTY =
             "starsector.autoCampaignOrbitalSpecWatchdog";
     private static final String USER_DIR_OVERRIDE_PROPERTY = "starsector.userDir";
+    private static final String CONTENT_ROOT_PROPERTY = "starsector.contentRoot";
     private static final String SPEC_DIAGNOSTICS_PROPERTY = "starsector.specDiagnostics";
     private static final String CAMPAIGN_SESSION_KEY = "campaign state in session";
     private static final String TITLE_STATE_ID = "Title Screen State";
@@ -145,7 +146,7 @@ public class Fixer {
     private static final String LOG4J_FORCE_BASIC_PROPERTY = "starsector.forceBasicLog4j";
     private static final String NPEFIX_NATIVE_PROPERTY = "starsector.npefix.native";
     private static final String DEFAULT_LOG4J_CONFIG = "file:/app/starsector/starsector/log4j.properties";
-    private static final String APP_ROOT = "/app/starsector/starsector";
+    private static final String DEFAULT_APP_ROOT = "/app/starsector/starsector";
     private static final String FILES_ROOT = "/files";
     private static final int AUTO_CAMPAIGN_MENU_TRACE_LIMIT = 3;
     private static int autoCampaignMenuTraceCount = 0;
@@ -431,7 +432,7 @@ public class Fixer {
             String text = readFirstAvailableResourceText(
                     "data/config/settings.json",
                     "/data/config/settings.json",
-                    APP_ROOT + "/data/config/settings.json",
+                    resolveAppRoot() + "/data/config/settings.json",
                     FILES_ROOT + "/data/config/settings.json");
             if (text == null || text.trim().isEmpty()) {
                 System.out.println("Fixer: StarfarerSettings defaults skipped; source settings.json unavailable.");
@@ -7561,7 +7562,7 @@ public class Fixer {
             loadPaths.add("/" + trimmed);
         }
         if (noLeadingSlash.length() > 0) {
-            loadPaths.add(APP_ROOT + "/" + noLeadingSlash);
+            loadPaths.add(resolveAppRoot() + "/" + noLeadingSlash);
         }
 
         boolean attemptedLoad = false;
@@ -18767,6 +18768,22 @@ public class Fixer {
         return null;
     }
 
+    private static String resolveAppRoot() {
+        String fromContentRoot = normalizePathLikeValue(System.getProperty(CONTENT_ROOT_PROPERTY));
+        if (fromContentRoot != null) {
+            return fromContentRoot;
+        }
+        String fromOverride = normalizePathLikeValue(System.getProperty(USER_DIR_OVERRIDE_PROPERTY));
+        if (fromOverride != null) {
+            return fromOverride;
+        }
+        String fromUserDir = normalizePathLikeValue(System.getProperty("user.dir"));
+        if (fromUserDir != null && !"/files".equals(fromUserDir) && !"/app".equals(fromUserDir)) {
+            return fromUserDir;
+        }
+        return DEFAULT_APP_ROOT;
+    }
+
     private static String resolveRuntimeUserDir() {
         String fromOverride = normalizePathLikeValue(System.getProperty(USER_DIR_OVERRIDE_PROPERTY));
         if (fromOverride != null) {
@@ -18780,7 +18797,7 @@ public class Fixer {
         if (fromUserDir != null && !"/files".equals(fromUserDir) && !"/app".equals(fromUserDir)) {
             return fromUserDir;
         }
-        return APP_ROOT;
+        return resolveAppRoot();
     }
 
     private static String[] buildResourceManagerRoots() {
@@ -18789,7 +18806,7 @@ public class Fixer {
         // do not silently fall back to stale hardcoded paths.
         addResourceManagerRootVariants(roots, System.getProperty("starsector.userDir"));
         addResourceManagerRootVariants(roots, System.getProperty("user.dir"));
-        addResourceManagerRootVariants(roots, System.getProperty("starsector.contentRoot"));
+        addResourceManagerRootVariants(roots, System.getProperty(CONTENT_ROOT_PROPERTY));
 
         roots.add("/app/starsector/starsector/.");
         roots.add("/app/starsector/starsector");
