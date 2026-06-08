@@ -1,3 +1,4 @@
+const ALIAS_WORKER_VERSION = '20260608-config-classpath-v1';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -13,6 +14,8 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET' && event.request.method !== 'HEAD') return;
+
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
@@ -23,5 +26,14 @@ self.addEventListener('fetch', event => {
   const target = new URL(event.request.url);
   target.pathname = to + url.pathname.slice(from.length);
 
-  event.respondWith(fetch(new Request(target.toString(), event.request)));
+  event.respondWith(fetch(target.toString(), {
+    method: event.request.method,
+    headers: event.request.headers,
+    credentials: event.request.credentials,
+    cache: event.request.cache,
+    redirect: event.request.redirect,
+    referrer: event.request.referrer,
+    referrerPolicy: event.request.referrerPolicy,
+    integrity: event.request.integrity
+  }));
 });

@@ -510,11 +510,16 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const workerUrl = `${siteRootUrl}starsectorquick-sw.js`;
+                    const aliasWorkerVersion = '20260608-config-classpath-v1';
+                    const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
                     try {
-                        const registration = await navigator.serviceWorker.register(workerUrl, { scope: scopePath });
+                        const registration = await navigator.serviceWorker.register(workerUrl, {
+                            scope: scopePath,
+                            updateViaCache: 'none'
+                        });
+                        await registration.update();
                         await navigator.serviceWorker.ready;
                         if (!navigator.serviceWorker.controller) {
                             await new Promise(resolve => {
@@ -533,7 +538,7 @@
                         }
                         if (navigator.serviceWorker.controller) {
                             sessionStorage.removeItem(reloadKey);
-                            log(`Project path alias worker active: ${registration.scope}`, '#888');
+                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion})`, '#888');
                         } else {
                             log('Project path alias worker registered but not controlling this page.', '#ffaa00');
                         }
@@ -1170,7 +1175,11 @@
                 if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
-                classPathEntries.push(`${contentRoot}data/config/`);
+                // GitHub Pages returns 404 for directory-style classpath probes. Fixer reads
+                // Starsector config through starsector.contentRoot/resource manager instead.
+                if (window.__STARSECTOR_INCLUDE_CONFIG_CLASSPATH__ === true) {
+                    classPathEntries.push(`${contentRoot}data/config/`);
+                }
 
                 // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
                 // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
