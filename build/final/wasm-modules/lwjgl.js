@@ -195,14 +195,11 @@ var fragmentShaderSrc = `
 	precision mediump float;
 	uniform float uTextureMask;
 	uniform sampler2D uSampler;
-	uniform sampler2D uSampler2; // Additional texture sampler
 	varying vec2 vTexCoord;
 	varying vec4 vColor;
 	void main() {
-		vec4 texSample = texture2D(uSampler, vTexCoord) * uTextureMask;
-		vec4 texSample2 = texture2D(uSampler2, vTexCoord);
-		vec4 colorValue = vColor;
-		gl_FragColor = mix(texSample, colorValue, texSample2);
+		vec4 texSample = texture2D(uSampler, vTexCoord);
+		gl_FragColor = mix(vColor, texSample * vColor, uTextureMask);
 	}
 `;
 var vertexShader = glCtx.createShader(glCtx.VERTEX_SHADER);
@@ -269,6 +266,9 @@ var immediateModeData =
 	mode: 0,
 	vertexBuf: new Float32Array(32),
 	vertexPos: 0,
+	colorBuf: new Float32Array(32),
+	colorPos: 0,
+	currentColor: [1, 1, 1, 1],
 	texCoordBuf: new Float32Array(32),
 	texCoordPos: 0
 };
@@ -309,6 +309,10 @@ function ensureFramebufferSize()
 	fbWidth = nextWidth;
 	fbHeight = nextHeight;
 	glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
+	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.NEAREST);
+	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.NEAREST);
+	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE);
+	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 	glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
 	glCtx.bindTexture(glCtx.TEXTURE_2D, null);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
@@ -323,6 +327,15 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride)
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, buf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, type, type != glCtx.FLOAT, stride, 0);
 	glCtx.enableVertexAttribArray(attributeLocation);
+}
+function applyCurrentColorAttrib()
+{
+	glCtx.disableVertexAttribArray(colorLocation);
+	glCtx.vertexAttrib4f(colorLocation,
+		immediateModeData.currentColor[0],
+		immediateModeData.currentColor[1],
+		immediateModeData.currentColor[2],
+		immediateModeData.currentColor[3]);
 }
 function uploadData(v, data, buffer, attributeLocation, count)
 {
@@ -339,7 +352,16 @@ function uploadData(v, data, buffer, attributeLocation, count)
 	}
 	else
 	{
-		glCtx.disableVertexAttribArray(attributeLocation);
+		if(attributeLocation == colorLocation)
+		{
+			applyCurrentColorAttrib();
+		}
+		else
+		{
+			glCtx.disableVertexAttribArray(attributeLocation);
+			if(attributeLocation == texCoord)
+				glCtx.vertexAttrib2f(texCoord, 0, 0);
+		}
 	}
 }
 function captureData(v, data, count)
@@ -442,6 +464,7 @@ function drawArraysInList(mode, first, count, capturedVertexData, capturedColorD
 }
 // Fix the sampler to texture unit 0
 glCtx.uniform1i(samplerLocation, 0);
+glCtx.uniform1f(texMaskLocation, 0);
 var curList = null;
 var listBase = 0;
 var cmdLists = [null];
@@ -450,6 +473,10 @@ var textureObjects = [null];
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
 glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
+glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.NEAREST);
+glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.NEAREST);
+glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE);
+glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, getCanvasWidth(), getCanvasHeight(), 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
 glCtx.bindTexture(glCtx.TEXTURE_2D, null);
 mainFb = glCtx.createFramebuffer();
@@ -851,9 +878,9 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
-	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST)
+	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.disable(a);
-	else if(a == 0x806F/*GL_TEXTURE_3D*/)
+	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
 		glCtx.uniform1f(texMaskLocation, 0);
 	}
@@ -865,9 +892,9 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
-	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST)
+	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.enable(a);
-	else if(a == 0x806F/*GL_TEXTURE_3D*/)
+	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
 	glCtx.uniform1f(texMaskLocation, 1);
 	}
@@ -1013,7 +1040,11 @@ function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor4f);
-	glCtx.vertexAttrib4f(colorLocation, r, g, b, a);
+	immediateModeData.currentColor[0] = r;
+	immediateModeData.currentColor[1] = g;
+	immediateModeData.currentColor[2] = b;
+	immediateModeData.currentColor[3] = a;
+	applyCurrentColorAttrib();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglAlphaFunc()
@@ -1053,10 +1084,15 @@ function Java_org_lwjgl_opengl_GL11_nglEndList(lib, funcPtr)
 	curList = null;
 }
 
-function Java_org_lwjgl_opengl_GL11_nglColor3f()
+function Java_org_lwjgl_opengl_GL11_nglColor3f(lib, r, g, b, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor3f);
+	immediateModeData.currentColor[0] = r;
+	immediateModeData.currentColor[1] = g;
+	immediateModeData.currentColor[2] = b;
+	immediateModeData.currentColor[3] = 1;
+	applyCurrentColorAttrib();
 	if(verboseLog)
 		console.log("glColor3f");
 }
@@ -1334,6 +1370,7 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
 	immediateModeData.mode = mode;
 	immediateModeData.vertexPos = 0;
+	immediateModeData.colorPos = 0;
 	immediateModeData.texCoordPos = 0;
 }
 
@@ -1360,19 +1397,38 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 	immediateModeData.vertexBuf[curPos + 1] = y;
 	immediateModeData.vertexBuf[curPos + 2] = z;
 	immediateModeData.vertexPos = curPos + 3;
+
+	var colorPos = immediateModeData.colorPos;
+	immediateModeData.colorBuf =
+		ensureImmediateArrayCapacity(immediateModeData.colorBuf, colorPos + 4);
+	immediateModeData.colorBuf[colorPos] = immediateModeData.currentColor[0];
+	immediateModeData.colorBuf[colorPos + 1] = immediateModeData.currentColor[1];
+	immediateModeData.colorBuf[colorPos + 2] = immediateModeData.currentColor[2];
+	immediateModeData.colorBuf[colorPos + 3] = immediateModeData.currentColor[3];
+	immediateModeData.colorPos = colorPos + 4;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
+	var vertexCount = immediateModeData.vertexPos / 3;
 	// Upload vertex data
 	uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
-	// TODO: Should we do something about color data?
-	// Upload tex coord data
-	uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, immediateModeData.texCoordPos), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
+	// Upload the OpenGL immediate-mode color captured for each vertex.
+	uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
+	// Upload tex coord data when present; otherwise use the OpenGL default (0, 0).
+	if(immediateModeData.texCoordPos >= vertexCount * 2)
+	{
+		uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
+	}
+	else
+	{
+		glCtx.disableVertexAttribArray(texCoord);
+		glCtx.vertexAttrib2f(texCoord, 0, 0);
+	}
 	// NOTE: We count vertices
-	drawArraysImpl(immediateModeData.mode, 0, immediateModeData.vertexPos / 3);
+	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
 }
 
 // These stubs make sure audio creation fails sooner rather than later

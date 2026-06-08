@@ -189,6 +189,8 @@ Star Fortress,station3_hightech,Star Fortress,High Tech,drone_station_high,400,1
 ,module_hightech_armour,Station Armour,High Tech,,1,20000,4000,0,2500,100,0,,0,0,0,3,6,1000,NONE,,0,0,0,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, MODULE",module_hull_bar_only,,,,1,2,3,,2074
 ,module_hightech_strut,Station Extension,High Tech,,1,5000,1500,0,2500,100,0,,0,0,0,3,10,500,NONE,,0,0,0,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, UNDER_PARENT, MODULE",,,,,1,2,3,,2075
 ,module_hightech_attack,Station Battery,High Tech,,1,12000,1750,15000,25000,1000,1000,,0,0,0,10,10,1000,NONE,,0,0.4,1,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, MODULE",,,,,0.5,2,4,,2076
+"Flare","flare",,"Remnant",,,100,10,100,,50,0,,300,500,400,180,360,5,"NONE",,0,0,0,,,0,0,,,,,,,,,,,,,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX","no_battle_salvage","Not available","flare_Hull",,0,,,,116.5
+,"module_hightech_decor","Station Extension",High Tech,,1,5000,1500,0,2500,100,0,,0,0,0,3,10,300,"NONE",,0,0,0,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, MODULE",,,,,1,2,3,,2076.5
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 ,derelict_mothership_pod_s_right,"Gun Pod, Small",Explorarium,,1,1500,300,1000,2500,100,14,,0,0,0,10,10,70,NONE,,0,0,0,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, MODULE",,,,,0.5,2,2,,2101
 ,derelict_mothership_pod_m_right,"Gun Pod, Medium",Explorarium,,1,2500,400,1500,5000,200,22,,0,0,0,10,10,120,NONE,,0,0,0,,,0,0,0,0,1,0,,500000,,1,,,0,0,,,,,,,"UNBOARDABLE, HIDE_IN_CODEX, MODULE",,,,,0.5,2,2,,2102
