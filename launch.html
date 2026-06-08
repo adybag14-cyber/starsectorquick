@@ -1015,6 +1015,10 @@
                     },
                     javaProperties,
                     mounts: [
+                        // Some Starsector internals resolve assets relative to /app/starsector/starsector
+                        // even when the live project is hosted under /starsectorquick/.
+                        // Keep the legacy runtime path pointed at the same content root.
+                        { type: 'http', path: '/app/starsector/starsector/', url: dataUrl },
                         { type: 'http', path: '/app/', url: origin },
                         // Starsector launcher resolves icons from ../starfarer.res/res.
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
