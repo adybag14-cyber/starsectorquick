@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260608-storage-reset-v1';
+const ALIAS_WORKER_VERSION = '20260608-sw-version-reload-v1';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -50,6 +50,7 @@ const copyTextHeaders = (upstream, length) => {
   }
   headers.set('accept-ranges', 'bytes');
   headers.set('content-length', String(length));
+  headers.set('x-starsectorquick-sw-version', ALIAS_WORKER_VERSION);
   return headers;
 };
 
