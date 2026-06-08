@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260608-jar-range-proxy-v1';
+const ALIAS_WORKER_VERSION = '20260608-storage-reset-v1';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
