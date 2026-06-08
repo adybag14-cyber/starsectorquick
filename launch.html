@@ -496,10 +496,13 @@
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
                 const projectPath = isLocal ? '' : 'starsectorquick/';
                 const siteRootUrl = origin + projectPath;
-                const fullAppPath = isLocal ? '/app/' : `/app/${projectPath}`;
+                const cheerpjDocumentBase = siteRootUrl;
+                const cheerpjRuntimeOptions = isLocal ? {} : { overrideDocumentBase: cheerpjDocumentBase };
+                const fullAppPath = '/app/';
 
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
+                log(`CheerpJ document base: ${isLocal ? '(default)' : cheerpjDocumentBase}`, '#888');
                 log(`App Path: ${fullAppPath}`, '#888');
                 if (!window.__DISABLE_LWJGL_CONSOLE_FILTER) {
                     installLwjglConsoleFilter();
@@ -1006,6 +1009,7 @@
                 await cheerpjInit({
                     version: 17,
                     enableX11: true,
+                    ...cheerpjRuntimeOptions,
                     natives: {
                         ...mergedNatives,
                         async Java_java_lang_NullPointerException_getExtendedNPEMessage(lib, self) {
