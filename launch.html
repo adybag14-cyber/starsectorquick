@@ -1076,6 +1076,25 @@
                     ]
                 });
 
+                const installCheerpJDownloaderGuard = () => {
+                    if (window.__STARSECTOR_CHEERPJ_DOWNLOADER_GUARD__) return;
+                    if (typeof ddlOnData !== 'function') {
+                        log('CheerpJ downloader guard skipped: ddlOnData unavailable.', '#ffaa00');
+                        return;
+                    }
+
+                    const originalDdlOnData = ddlOnData;
+                    ddlOnData = function guardedDdlOnData(downloader, reader) {
+                        if (downloader && downloader.chunkSize === 0 && (!downloader.chunk || typeof downloader.chunk.push !== 'function')) {
+                            downloader.chunk = [];
+                        }
+                        return originalDdlOnData(downloader, reader);
+                    };
+                    window.__STARSECTOR_CHEERPJ_DOWNLOADER_GUARD__ = true;
+                    log('CheerpJ downloader guard installed.', '#888');
+                };
+                installCheerpJDownloaderGuard();
+
                 const preloadSpecFiles = async () => {
                     if (window.__PRELOAD_SPEC_FILES__ !== true) {
                         log('Spec preloading disabled (enable with window.__PRELOAD_SPEC_FILES__ = true).', '#ffaa00');
