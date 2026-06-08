@@ -510,7 +510,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260608-range-normalize-v2';
+                    const aliasWorkerVersion = '20260608-jar-range-proxy-v1';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -1224,26 +1224,39 @@
                     classPathEntries.push(`${contentRoot}data/config/`);
                 }
 
-                // Warm fresh range/etag entries for all runtime JARs to reduce stale If-Range
+                // Warm fresh range/etag entries for runtime JARs to reduce stale If-Range
                 // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
+                // CheerpJ later loads query-free classpath URLs, so probe those exact URLs too.
                 try {
                     let ok = 0;
                     let warn = 0;
+                    let classpathOk = 0;
+                    let classpathWarn = 0;
+                    const primeJarRange = async (url, cacheMode) => fetch(url, {
+                        method: 'GET',
+                        headers: { Range: 'bytes=0-0' },
+                        cache: cacheMode
+                    });
                     for (const jar of jarFiles) {
-                        const rangePrimeUrl = withJarCacheBust(`${siteRootUrl}jars/${jar}`);
-                        const rangePrimeResp = await fetch(rangePrimeUrl, {
-                            method: 'GET',
-                            headers: { Range: 'bytes=0-0' },
-                            cache: 'no-store'
-                        });
+                        const baseJarUrl = `${siteRootUrl}jars/${jar}`;
+                        const rangePrimeResp = await primeJarRange(withJarCacheBust(baseJarUrl), 'no-store');
                         if (rangePrimeResp.status === 206) {
                             ok += 1;
                         } else {
                             warn += 1;
                             log(`Range prime ${rangePrimeResp.status}: ${jar}`, '#ffaa00');
                         }
+
+                        const classpathRangeResp = await primeJarRange(baseJarUrl, 'reload');
+                        if (classpathRangeResp.status === 206) {
+                            classpathOk += 1;
+                        } else {
+                            classpathWarn += 1;
+                            log(`Classpath range prime ${classpathRangeResp.status}: ${jar}`, '#ffaa00');
+                        }
                     }
-                    log(`Range prime summary: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
+                    const rangeColor = (warn || classpathWarn) ? '#ffaa00' : '#888';
+                    log(`Range prime summary: ok=${ok} warn=${warn} classpathOk=${classpathOk} classpathWarn=${classpathWarn}`, rangeColor);
                 } catch (e) {
                     log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
                 }

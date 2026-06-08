@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260608-range-normalize-v2';
+const ALIAS_WORKER_VERSION = '20260608-jar-range-proxy-v1';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -8,6 +8,8 @@ const RANGE_NORMALIZED_PREFIXES = [
   `${PROJECT_PREFIX}starsector/starsector/data/`
 ];
 const TEXT_LIKE_DATA_FILE = /\.(csv|faction|fnt|json|layout|list|proj|ship|skin|system|txt|variant|wpn)$/i;
+const JAR_RANGE_PREFIX = `${PROJECT_PREFIX}jars/`;
+const JAR_FILE = /\.jar$/i;
 const rangeBodyCache = new Map();
 
 self.addEventListener('install', event => {
@@ -78,6 +80,41 @@ const shouldNormalizeRange = (url, request) => {
   return TEXT_LIKE_DATA_FILE.test(url.pathname);
 };
 
+const shouldProxyJarRange = (url, request) => {
+  if (!request.headers.has('range')) return false;
+  if (!url.pathname.startsWith(JAR_RANGE_PREFIX)) return false;
+  return JAR_FILE.test(url.pathname);
+};
+
+const buildJarRangeHeaders = request => {
+  const headers = new Headers();
+  const range = request.headers.get('range');
+  const ifRange = request.headers.get('if-range');
+  if (range) headers.set('range', range);
+  if (ifRange) headers.set('if-range', ifRange);
+  return headers;
+};
+
+const fetchJarRange = (url, request, bust) => {
+  const target = new URL(url.toString());
+  if (bust) target.searchParams.set('sw-range-retry', `${ALIAS_WORKER_VERSION}-${Date.now()}`);
+  return fetch(target.toString(), {
+    method: request.method,
+    headers: buildJarRangeHeaders(request),
+    credentials: 'same-origin',
+    cache: 'no-store',
+    redirect: 'follow'
+  });
+};
+
+const respondWithJarRange = async (url, request) => {
+  let response = await fetchJarRange(url, request, false);
+  if (request.method === 'GET' && response.status !== 206) {
+    response = await fetchJarRange(url, request, true);
+  }
+  return response;
+};
+
 const respondWithNormalizedRange = async (url, request) => {
   const full = await fetchFullBody(url);
   if (full.upstream && !full.body) return full.upstream;
@@ -114,6 +151,11 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (shouldProxyJarRange(url, event.request)) {
+    event.respondWith(respondWithJarRange(url, event.request));
+    return;
+  }
 
   if (shouldNormalizeRange(url, event.request)) {
     event.respondWith(respondWithNormalizedRange(url, event.request));
