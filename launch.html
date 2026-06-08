@@ -16,11 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Starsector 2 Web (JAVA 8)</h1>
+        <h1>Ã°Å¸Å¡â‚¬ Starsector 2 Web (JAVA 8)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
 
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
+            <button id='startBtn' class="btn">Ã°Å¸Å¡â‚¬ LAUNCH STARSECTOR</button>
         </div>
         <div id='runtime-status' style="margin: 10px 0; color: #888; font-family: monospace;">STATE: waiting</div>
 
@@ -486,7 +486,7 @@
             window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
-            btn.textContent = '⌛ INITIALIZING...';
+            btn.textContent = 'Ã¢Å’â€º INITIALIZING...';
             updateRuntimeState('initializing', 'CheerpJ bootstrap');
 
             log('Initializing CheerpJ 4.3 Runtime (Java 8)...', '#00d9ff');
@@ -841,7 +841,7 @@
                 const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
                 const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
                 const autoCampaignMode = (
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new_direct'
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new_direct_visit_colony'
                 ).toString().trim().toLowerCase();
                 const autoCampaignVariant = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
@@ -873,6 +873,12 @@
                     1,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
                 );
+                const autoCampaignDirectUseWorkerThread =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__ !== false;
+                const autoCampaignDirectNonBlockingWorker =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
+                const autoCampaignSkipDirectUiPreflight =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ !== false;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
                     15000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
@@ -896,9 +902,7 @@
                 const autoCampaignTitleRenderWarmup =
                     window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_RENDER_WARMUP__ === true;
                 const autoCampaignMutatingSpecPreflight =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === true
-                    || (autoVisitColonyRequested
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ !== false);
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__ === true;
                 const autoCampaignSkipFactionPreflight =
                     window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_FACTION_PREFLIGHT__ === true;
                 const hasAutoCampaignWithTimePassOverride =
@@ -909,21 +913,27 @@
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
                 const autoCampaignInvokeCreateInCampaignState =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true
-                    || (autoCampaignUsesDirectPath
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false);
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true;
                 const autoCampaignAllowImmediatePlayerFleetNullTransition =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === true
-                    || (autoCampaignUsesDirectPath
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false);
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === true;
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true
-                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false);
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true;
+                const autoCampaignSyntheticFleetTimeoutMs = Math.max(
+                    3000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__ || 12000)
+                        || 12000
+                );
                 const autoCampaignAllowDialogWithoutPlayerFleet =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true
-                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
-                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false);
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true;
+                const autoCampaignAllowNullCampaignUiEngine =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__ === true;
+                const autoCampaignInvokeCreateCallTimeoutMs = Math.max(
+                    5000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_CALL_TIMEOUT_MS__ || 45000)
+                        || 45000
+                );
+                const autoCampaignBootstrapSectorGenOnNoMarkets =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTORGEN_ON_NO_MARKETS__ === true;
                 const autoCampaignPlayerFleetNullTransitionForceAfterMs = Math.max(
                     30000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__ || 120000)
@@ -1001,6 +1011,12 @@
                     javaProperties.push(`starsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`starsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectUseWorkerThread=${autoCampaignDirectUseWorkerThread}`);
+                    javaProperties.push(`starsector.autoCampaignDirectUseWorkerThread=${autoCampaignDirectUseWorkerThread}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectNonBlockingWorker=${autoCampaignDirectNonBlockingWorker}`);
+                    javaProperties.push(`starsector.autoCampaignDirectNonBlockingWorker=${autoCampaignDirectNonBlockingWorker}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignSkipDirectUiPreflight=${autoCampaignSkipDirectUiPreflight}`);
+                    javaProperties.push(`starsector.autoCampaignSkipDirectUiPreflight=${autoCampaignSkipDirectUiPreflight}`);
                     javaProperties.push(`-Dstarsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs=${autoCampaignCoreSpecBaselineNonMutatingWaitMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignWithTimePass=${autoCampaignWithTimePass}`);
@@ -1015,8 +1031,16 @@
                     javaProperties.push(`starsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
                     javaProperties.push(`-Dstarsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`starsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignSyntheticFleetTimeoutMs=${autoCampaignSyntheticFleetTimeoutMs}`);
+                    javaProperties.push(`starsector.autoCampaignSyntheticFleetTimeoutMs=${autoCampaignSyntheticFleetTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
                     javaProperties.push(`starsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
+                    javaProperties.push(`starsector.autoCampaignAllowNullCampaignUiEngine=${autoCampaignAllowNullCampaignUiEngine}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignInvokeCreateCallTimeoutMs=${autoCampaignInvokeCreateCallTimeoutMs}`);
+                    javaProperties.push(`starsector.autoCampaignInvokeCreateCallTimeoutMs=${autoCampaignInvokeCreateCallTimeoutMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
+                    javaProperties.push(`starsector.autoCampaignBootstrapSectorGenOnNoMarkets=${autoCampaignBootstrapSectorGenOnNoMarkets}`);
                     javaProperties.push(`-Dstarsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
                     javaProperties.push(`starsector.autoCampaignPlayerFleetNullTransitionForceAfterMs=${autoCampaignPlayerFleetNullTransitionForceAfterMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignMutatingSpecPreflight=${autoCampaignMutatingSpecPreflight}`);
