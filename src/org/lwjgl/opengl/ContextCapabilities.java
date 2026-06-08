@@ -2374,6 +2374,7 @@ public class ContextCapabilities {
 
     public ContextCapabilities() {}
     public ContextCapabilities(boolean forwardCompatible) {
+        System.out.println("Bridge ContextCapabilities(" + forwardCompatible + ")");
         GLContext.setCapabilities(this);
     }
     static void unloadAllStubs() {}

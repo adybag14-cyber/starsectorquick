@@ -4,23 +4,53 @@ import java.nio.ByteBuffer;
 import org.lwjgl.LWJGLException;
 
 public final class Display {
+    private static boolean getDrawableLogged = false;
+    private static boolean getImplementationLogged = false;
+    private static boolean setLocationLogged = false;
+    private static boolean setIconLogged = false;
+    private static boolean setTitleLogged = false;
+    private static boolean setFullscreenLogged = false;
+    private static boolean setVsyncLogged = false;
+    private static boolean createPixelFormatLogged = false;
+    private static boolean getDisplayModeLogged = false;
+    private static boolean getDesktopDisplayModeLogged = false;
+    private static boolean setDisplayModeLogged = false;
+    private static boolean getAvailableDisplayModesLogged = false;
+    private static boolean getWidthLogged = false;
+    private static boolean getHeightLogged = false;
+    private static boolean getPixelScaleLogged = false;
+    private static int updateCount = 0;
+    private static int swapBuffersCount = 0;
     static {
-        try {
-            System.loadLibrary("lwjgl");
-        } catch (Throwable ignored) {}
+        System.out.println("Bridge Display.<clinit>()");
     }
 
     private static boolean created = false;
     private static boolean fullscreen = false;
     private static DisplayMode displayMode = new DisplayMode(1024, 768);
+    private static final DisplayImplementation implementation = new LinuxDisplay();
+    private static java.awt.Canvas parent;
+    private static String title = "Starsector";
+    private static int swapInterval = 0;
 
     private Display() {}
 
-    public static native void create() throws LWJGLException;
+    private static void maybeLogLoop(String kind, int count) {
+        if (count <= 3 || count == 10 || count % 300 == 0) {
+            System.out.println("Bridge Display." + kind + " count=" + count);
+        }
+    }
+
+    public static void create() throws LWJGLException {
+        created = true;
+    }
 
     public static void create(PixelFormat pixel_format) throws LWJGLException {
+        if (!createPixelFormatLogged) {
+            createPixelFormatLogged = true;
+            System.out.println("Bridge Display.create(PixelFormat)");
+        }
         create();
-        created = true;
     }
 
     public static void create(PixelFormat pixel_format, ContextAttribs attribs) throws LWJGLException {
@@ -31,7 +61,27 @@ public final class Display {
         create(pixel_format);
     }
 
+    public static void create(PixelFormat pixel_format, Drawable shared_drawable, ContextAttribs attribs) throws LWJGLException {
+        create(pixel_format);
+    }
+
     public static void create(PixelFormat pixel_format, ContextAttribs attribs, Drawable shared_drawable) throws LWJGLException {
+        create(pixel_format);
+    }
+
+    public static void create(PixelFormatLWJGL pixel_format) throws LWJGLException {
+        create(pixel_format instanceof PixelFormat ? (PixelFormat) pixel_format : new PixelFormat());
+    }
+
+    public static void create(PixelFormatLWJGL pixel_format, Drawable shared_drawable) throws LWJGLException {
+        create(pixel_format);
+    }
+
+    public static void create(PixelFormatLWJGL pixel_format, org.lwjgl.opengles.ContextAttribs attribs) throws LWJGLException {
+        create(pixel_format);
+    }
+
+    public static void create(PixelFormatLWJGL pixel_format, Drawable shared_drawable, org.lwjgl.opengles.ContextAttribs attribs) throws LWJGLException {
         create(pixel_format);
     }
 
@@ -54,16 +104,37 @@ public final class Display {
         return true;
     }
 
-    public static void setLocation(int x, int y) {}
-
-    public static void setVSyncEnabled(boolean sync) {
-        // Some builds of the JS lwjgl shim do not expose nSetSwapInterval reliably.
-        // Keep this as a no-op to avoid fatal startup linkage errors.
+    public static void setLocation(int x, int y) {
+        if (!setLocationLogged) {
+            setLocationLogged = true;
+            System.out.println("Bridge Display.setLocation(" + x + ", " + y + ")");
+        }
     }
 
-    public static void setTitle(String title) {}
+    public static void setVSyncEnabled(boolean sync) {
+        if (!setVsyncLogged) {
+            setVsyncLogged = true;
+            System.out.println("Bridge Display.setVSyncEnabled(" + sync + ")");
+        }
+        // Some builds of the JS lwjgl shim do not expose nSetSwapInterval reliably.
+        // Keep this as a no-op to avoid fatal startup linkage errors.
+        setSwapInterval(sync ? 1 : 0);
+    }
+
+    public static void setTitle(String value) {
+        if (!setTitleLogged) {
+            setTitleLogged = true;
+            System.out.println("Bridge Display.setTitle(" + value + ")");
+        }
+        title = value == null ? "" : value;
+    }
 
     public static int setIcon(ByteBuffer[] icons) {
+        if (!setIconLogged) {
+            setIconLogged = true;
+            System.out.println(
+                    "Bridge Display.setIcon(count=" + (icons == null ? 0 : icons.length) + ")");
+        }
         return 0;
     }
 
@@ -86,32 +157,60 @@ public final class Display {
     }
 
     public static int getWidth() {
+        if (!getWidthLogged) {
+            getWidthLogged = true;
+            System.out.println("Bridge Display.getWidth()");
+        }
         return displayMode.getWidth();
     }
 
     public static int getHeight() {
+        if (!getHeightLogged) {
+            getHeightLogged = true;
+            System.out.println("Bridge Display.getHeight()");
+        }
         return displayMode.getHeight();
     }
 
     public static DisplayMode getDisplayMode() {
+        if (!getDisplayModeLogged) {
+            getDisplayModeLogged = true;
+            System.out.println("Bridge Display.getDisplayMode()");
+        }
         return displayMode;
     }
 
     public static DisplayMode getDesktopDisplayMode() {
+        if (!getDesktopDisplayModeLogged) {
+            getDesktopDisplayModeLogged = true;
+            System.out.println("Bridge Display.getDesktopDisplayMode()");
+        }
         return displayMode;
     }
 
     public static void setDisplayMode(DisplayMode mode) throws LWJGLException {
+        if (!setDisplayModeLogged) {
+            setDisplayModeLogged = true;
+            System.out.println("Bridge Display.setDisplayMode(" + mode + ")");
+        }
         if (mode != null) {
             displayMode = mode;
         }
     }
 
     public static DisplayMode[] getAvailableDisplayModes() throws LWJGLException {
+        if (!getAvailableDisplayModesLogged) {
+            getAvailableDisplayModesLogged = true;
+            System.out.println("Bridge Display.getAvailableDisplayModes()");
+        }
         return new DisplayMode[] { displayMode, new DisplayMode(1280, 720), new DisplayMode(1366, 768) };
     }
 
     public static void setFullscreen(boolean value) throws LWJGLException {
+        if (!setFullscreenLogged) {
+            setFullscreenLogged = true;
+            System.out.println("Bridge Display.setFullscreen(" + value + ")");
+        }
         fullscreen = value;
     }
 
@@ -120,16 +219,31 @@ public final class Display {
     }
 
     public static float getPixelScaleFactor() {
+        if (!getPixelScaleLogged) {
+            getPixelScaleLogged = true;
+            System.out.println("Bridge Display.getPixelScaleFactor()");
+        }
         return 1.0f;
     }
 
-    public static void setParent(java.awt.Canvas parent) throws LWJGLException {}
+    public static void setParent(java.awt.Canvas value) throws LWJGLException { parent = value; }
+    public static java.awt.Canvas getParent() { return parent; }
+    public static String getTitle() { return title; }
+    public static void setDisplayConfiguration(float gamma, float brightness, float contrast) throws LWJGLException {}
+    public static void setDisplayModeAndFullscreen(DisplayMode mode) throws LWJGLException {
+        setDisplayMode(mode);
+        setFullscreen(true);
+    }
 
     public static void update() {
+        updateCount++;
+        maybeLogLoop("update", updateCount);
         LinuxContextImplementation.nSwapBuffers();
     }
 
     public static void update(boolean process_messages) {
+        updateCount++;
+        maybeLogLoop("update(" + process_messages + ")", updateCount);
         LinuxContextImplementation.nSwapBuffers();
     }
 
@@ -138,6 +252,11 @@ public final class Display {
     public static void makeCurrent() throws LWJGLException {
         LinuxContextImplementation.nMakeCurrent();
     }
+
+    public static void releaseContext() throws LWJGLException {}
+    public static boolean isCurrent() throws LWJGLException { return true; }
+    public static void setInitialBackground(float r, float g, float b) {}
+    public static void setSwapInterval(int value) { swapInterval = value; }
 
     public static String getAdapter() {
         return "CheerpJ WebGL";
@@ -150,11 +269,25 @@ public final class Display {
     public static void processMessages() {}
 
     public static void swapBuffers() throws LWJGLException {
+        swapBuffersCount++;
+        maybeLogLoop("swapBuffers", swapBuffersCount);
         LinuxContextImplementation.nSwapBuffers();
     }
 
     public static Drawable getDrawable() {
+        if (!getDrawableLogged) {
+            getDrawableLogged = true;
+            System.out.println("Bridge Display.getDrawable()");
+        }
         return null;
+    }
+
+    static DisplayImplementation getImplementation() {
+        if (!getImplementationLogged) {
+            getImplementationLogged = true;
+            System.out.println("Bridge Display.getImplementation()");
+        }
+        return implementation;
     }
 
     public static boolean isCloseRequested() {
@@ -164,4 +297,14 @@ public final class Display {
     public static boolean isDirty() {
         return false;
     }
+
+    static boolean getPrivilegedBoolean(String key) {
+        return Boolean.getBoolean(key);
+    }
+
+    static String getPrivilegedString(String key) {
+        return System.getProperty(key);
+    }
+
+    static void pollDevices() {}
 }

@@ -5,10 +5,9 @@ import java.nio.IntBuffer;
 import org.lwjgl.LWJGLException;
 
 final class LinuxContextImplementation implements ContextImplementation {
+    private static boolean createLogged = false;
     static {
-        try {
-            System.loadLibrary("lwjgl");
-        } catch (Throwable ignored) {}
+        System.out.println("Bridge LinuxContextImplementation.<clinit>()");
     }
 
     static native void nMakeCurrent();
@@ -17,6 +16,10 @@ final class LinuxContextImplementation implements ContextImplementation {
     static native void nSwapBuffers();
 
     public ByteBuffer create(PeerInfo peer_info, IntBuffer attribs, ByteBuffer shared_context_handle) throws LWJGLException {
+        if (!createLogged) {
+            createLogged = true;
+            System.out.println("Bridge LinuxContextImplementation.create()");
+        }
         return ByteBuffer.allocateDirect(8);
     }
 

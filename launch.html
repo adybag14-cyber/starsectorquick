@@ -3,7 +3,7 @@
 <head>
     <meta charset='UTF-8'>
     <title>Starsector 2 - GitHub Pages Deployment (v65 - Java 8)</title>
-    <script src='https://cjrtnc.leaningtech.com/4.2/loader.js'></script>
+    <script src='https://cjrtnc.leaningtech.com/4.3/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -18,13 +18,14 @@
     <div class="container">
         <h1>🚀 Starsector 2 Web (JAVA 8)</h1>
         <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
-        
+
         <div style="margin: 20px 0;">
             <button id='startBtn' class="btn">🚀 LAUNCH STARSECTOR</button>
         </div>
+        <div id='runtime-status' style="margin: 10px 0; color: #888; font-family: monospace;">STATE: waiting</div>
 
         <div id='game-container'></div>
-        
+
         <div id='log'>
             <div style="color: #888;">[SYSTEM] Waiting for initialization...</div>
         </div>
@@ -42,6 +43,56 @@
             }
             console.log(m);
         }
+
+        function updateRuntimeState(state, detail = '') {
+            const normalized = String(state || 'unknown');
+            const detailText = detail ? String(detail) : '';
+            const statusText = detailText ? `STATE: ${normalized} | ${detailText}` : `STATE: ${normalized}`;
+            const statusEl = document.getElementById('runtime-status');
+            if (statusEl) {
+                statusEl.textContent = statusText;
+            }
+            document.documentElement.setAttribute('data-runtime-state', normalized);
+            document.body.setAttribute('data-runtime-state', normalized);
+            if (detailText) {
+                document.documentElement.setAttribute('data-runtime-detail', detailText);
+                document.body.setAttribute('data-runtime-detail', detailText);
+            } else {
+                document.documentElement.removeAttribute('data-runtime-detail');
+                document.body.removeAttribute('data-runtime-detail');
+            }
+            window.__STARSECTOR_RUNTIME_STATE__ = {
+                state: normalized,
+                detail: detailText,
+                at: new Date().toISOString()
+            };
+        }
+
+        function reportRuntimeFailure(errorLike) {
+            const message = errorLike && errorLike.message ? errorLike.message : String(errorLike || 'Unknown runtime error');
+            const btn = document.getElementById('startBtn');
+            updateRuntimeState('failed', message);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'RETRY STARSECTOR';
+                btn.setAttribute('data-last-error', message);
+            }
+            log('Runtime failure: ' + message, '#ff4444');
+        }
+
+        window.addEventListener('error', (event) => {
+            if (event && (event.error || event.message)) {
+                reportRuntimeFailure(event.error || event.message);
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            if (event && event.reason) {
+                reportRuntimeFailure(event.reason);
+            }
+        });
+
+        updateRuntimeState('waiting');
 
         function createInlineLwjglNatives(logFn) {
             const state = {
@@ -393,19 +444,59 @@
             console.error = wrap(console.error.bind(console));
         }
 
-        document.getElementById('startBtn').addEventListener('click', async () => {
+        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container')) {
+            if (!gameContainer) {
+                throw new Error('Missing #game-container');
+            }
+            gameContainer.style.position = 'relative';
+            gameContainer.style.overflow = 'hidden';
+
+            let lwjglCanvas = gameContainer.querySelector('#lwjglCanvas');
+            if (!(lwjglCanvas instanceof HTMLCanvasElement)) {
+                const existingCanvas = gameContainer.querySelector('canvas');
+                if (existingCanvas instanceof HTMLCanvasElement) {
+                    lwjglCanvas = existingCanvas;
+                } else {
+                    lwjglCanvas = document.createElement('canvas');
+                    gameContainer.appendChild(lwjglCanvas);
+                }
+            }
+
+            lwjglCanvas.width = 1024;
+            lwjglCanvas.height = 768;
+            lwjglCanvas.id = 'lwjglCanvas';
+            lwjglCanvas.style.position = 'absolute';
+            lwjglCanvas.style.left = '0';
+            lwjglCanvas.style.top = '0';
+            lwjglCanvas.style.width = '1024px';
+            lwjglCanvas.style.height = '768px';
+            lwjglCanvas.style.display = 'block';
+            lwjglCanvas.style.zIndex = '2';
+            lwjglCanvas.style.pointerEvents = 'auto';
+            if (!lwjglCanvas.hasAttribute('tabindex')) {
+                lwjglCanvas.setAttribute('tabindex', '0');
+            }
+            gameContainer.appendChild(lwjglCanvas);
+            window.lwjglCanvasElement = lwjglCanvas;
+            return lwjglCanvas;
+        }
+
+        async function startGame() {
+            if (window.__STARSECTOR_STARTING__) return;
+            window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
             btn.textContent = '⌛ INITIALIZING...';
+            updateRuntimeState('initializing', 'CheerpJ bootstrap');
 
-            log('Initializing CheerpJ 4.2 Runtime (Java 8)...', '#00d9ff');
-            
+            log('Initializing CheerpJ 4.3 Runtime (Java 8)...', '#00d9ff');
+
             try {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
-                const projectPath = isLocal ? 'starsectorquick/' : 'starsectorquick/'; 
+                const projectPath = isLocal ? '' : 'starsectorquick/';
                 const fullAppPath = `/app/${projectPath}`;
-                
+
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
                 log(`App Path: ${fullAppPath}`, '#888');
@@ -418,9 +509,11 @@
                 const dataUrl = origin + projectPath + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
+                ensureLwjglCanvas();
+                log('LWJGL canvas bridge ready.', '#888');
                 const lwjglModuleCandidates = [];
                 if (window.__LWJGL_MODULE__) lwjglModuleCandidates.push(window.__LWJGL_MODULE__);
-                lwjglModuleCandidates.push('lwjgl_clean.js', 'lwjgl.js');
+                lwjglModuleCandidates.push('lwjgl.js');
                 const uniqueModuleCandidates = [...new Set(lwjglModuleCandidates)];
                 let lwjglModule = null;
                 let lwjglModuleName = null;
@@ -439,6 +532,7 @@
                 if (!lwjglModule) {
                     throw lastLwjglImportError || new Error('Unable to load any LWJGL module candidate');
                 }
+                const lwjglNativeSource = (lwjglModule && (lwjglModule.default || lwjglModule)) || {};
                 log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
                 const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
                 log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
@@ -477,7 +571,7 @@
                 const firstLogLimit = Math.max(0, Number(window.__LWJGL_FIRST_LOG_LIMIT__ || 256));
                 let firstLogCount = 0;
                 let traceLogCount = 0;
-                for (const [key, value] of Object.entries(lwjglModule)) {
+                for (const [key, value] of Object.entries(lwjglNativeSource)) {
                     if (typeof value !== 'function') continue;
                     if (key.startsWith('Java_') || key.startsWith('JNI_OnLoad') || key.startsWith('JVM_') || key.startsWith('_JVM_')) {
                         if (key === 'Java_org_lwjgl_Sys_alert') {
@@ -705,7 +799,7 @@
                 const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
                 const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
                 const autoCampaignMode = (
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new'
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new_direct'
                 ).toString().trim().toLowerCase();
                 const autoCampaignVariant = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
@@ -747,6 +841,8 @@
                     || autoCampaignMode.indexOf('nodirect') >= 0
                     || autoCampaignMode.indexOf('menu_only') >= 0
                     || autoCampaignMode.indexOf('menuonly') >= 0;
+                const autoCampaignUsesDirectPath =
+                    !modeDisablesDirectPath && autoCampaignMode.indexOf('direct') >= 0;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -771,14 +867,20 @@
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
                 const autoCampaignInvokeCreateInCampaignState =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true
+                    || (autoCampaignUsesDirectPath
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false);
+                const autoCampaignAllowImmediatePlayerFleetNullTransition =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === true
+                    || (autoCampaignUsesDirectPath
+                        && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false);
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true
-                    || (autoVisitColonyRequested
+                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
                         && window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false);
                 const autoCampaignAllowDialogWithoutPlayerFleet =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true
-                    || (autoVisitColonyRequested
+                    || ((autoCampaignUsesDirectPath || autoVisitColonyRequested)
                         && window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false);
                 const autoCampaignPlayerFleetNullTransitionForceAfterMs = Math.max(
                     30000,
@@ -789,7 +891,7 @@
                     typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
                 const directLaunch = hasDirectLaunchOverride
                     ? window.__STARSECTOR_DIRECT_LAUNCH__
-                    : (autoCampaign ? autoVisitColonyRequested : true);
+                    : true;
                 const autoVisitColony = autoVisitColonyRequested;
                 const autoVisitColonyName = (
                     window.__STARSECTOR_AUTO_VISIT_COLONY_NAME__ || ''
@@ -797,18 +899,6 @@
 
                 const runtimeUserDir = `${fullAppPath}starsector/starsector`;
                 const javaProperties = [
-                    `--add-opens=java.base/java.lang=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.lang.reflect=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.util=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.nio=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.text=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.time=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.time.chrono=ALL-UNNAMED`,
-                    `--add-opens=java.base/java.io=ALL-UNNAMED`,
-                    `--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED`,
-                    `--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED`,
-                    `--add-opens=java.base/sun.nio.ch=ALL-UNNAMED`,
-                    `--add-opens=java.desktop/java.awt.font=ALL-UNNAMED`,
                     `-Dlog4j.defaultInitOverride=false`,
                     `-Dlog4j.configuration=file:${runtimeUserDir}/log4j.properties`,
                     `-Dstarsector.log4jConfig=file:${runtimeUserDir}/log4j.properties`,
@@ -870,6 +960,8 @@
                     javaProperties.push(`starsector.autoCampaignInvokeCreateOnPlayerFleetNull=${autoCampaignInvokeCreateOnPlayerFleetNull}`);
                     javaProperties.push(`-Dstarsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
                     javaProperties.push(`starsector.autoCampaignInvokeCreateInCampaignState=${autoCampaignInvokeCreateInCampaignState}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
+                    javaProperties.push(`starsector.autoCampaignAllowImmediatePlayerFleetNullTransition=${autoCampaignAllowImmediatePlayerFleetNullTransition}`);
                     javaProperties.push(`-Dstarsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`starsector.autoCampaignEnableSyntheticPlayerFleetFallback=${autoCampaignEnableSyntheticPlayerFleetFallback}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDialogWithoutPlayerFleet=${autoCampaignAllowDialogWithoutPlayerFleet}`);
@@ -934,102 +1026,20 @@
                         log('Spec preloading disabled (enable with window.__PRELOAD_SPEC_FILES__ = true).', '#ffaa00');
                         return;
                     }
-                    if (typeof cheerpjAddStringFile !== 'function') {
-                        log('Spec preloading skipped: cheerpjAddStringFile not available.', '#ffaa00');
-                        return;
-                    }
-
-                    const roots = ['data/weapons', 'data/shipsystems', 'data/hulls'];
-                    const allowedExt = new Set(['wpn', 'proj', 'ship', 'system', 'skin']);
-                    const seenDirs = new Set();
-                    const files = [];
-
-                    const fetchIndexEntries = async (dir) => {
-                        const url = `${dataUrl}${dir}/index.list`;
-                        try {
-                            const resp = await fetch(url, { cache: 'no-store' });
-                            if (!resp.ok) return [];
-                            const raw = await resp.text();
-                            return raw
-                                .split(/\r?\n/)
-                                .map((line) => line.split('\t')[0].trim())
-                                .filter(Boolean);
-                        } catch (_) {
-                            return [];
-                        }
-                    };
-
-                    const walk = async (dir) => {
-                        if (seenDirs.has(dir)) return;
-                        seenDirs.add(dir);
-                        const entries = await fetchIndexEntries(dir);
-                        for (const entry of entries) {
-                            const clean = entry.replace(/^[/\\]+/, '').trim();
-                            if (!clean) continue;
-                            let rel = clean.startsWith('data/') ? clean : `${dir}/${clean}`;
-                            rel = rel.replace(/\/{2,}/g, '/').replace(/\/$/, '');
-                            const name = rel.split('/').pop() || '';
-                            const dot = name.lastIndexOf('.');
-                            if (dot > 0) {
-                                const ext = name.slice(dot + 1).toLowerCase();
-                                if (allowedExt.has(ext)) files.push(rel);
-                            } else {
-                                await walk(rel);
-                            }
-                        }
-                    };
-
-                    for (const root of roots) {
-                        await walk(root);
-                    }
-
-                    const unique = Array.from(new Set(files));
-                    if (!unique.length) {
-                        log('Spec preloading found no candidate files.', '#ffaa00');
-                        return;
-                    }
-
-                    const concurrency = 8;
-                    let loaded = 0;
-                    let failed = 0;
-                    for (let i = 0; i < unique.length; i += concurrency) {
-                        const chunk = unique.slice(i, i + concurrency);
-                        await Promise.all(
-                            chunk.map(async (rel) => {
-                                try {
-                                    const resp = await fetch(`${dataUrl}${rel}`, { cache: 'no-store' });
-                                    if (!resp.ok) {
-                                        failed += 1;
-                                        return;
-                                    }
-                                    const text = await resp.text();
-                                    cheerpjAddStringFile(`/app/starsector/starsector/${rel}`, text);
-                                    cheerpjAddStringFile(`/files/${rel}`, text);
-                                    loaded += 1;
-                                } catch (_) {
-                                    failed += 1;
-                                }
-                            })
-                        );
-                    }
-
-                    log(`Spec preload complete: loaded=${loaded}, failed=${failed}`, failed ? '#ffaa00' : '#00ff88');
+                    log(
+                        'Spec preloading skipped: CheerpJ 4.3 only permits JS-added files under /str/, so synthetic /app and /files overrides are disabled.',
+                        '#ffaa00'
+                    );
                 };
 
                 const maybePatchCodexEntries = async () => {
                     if (window.__ENABLE_CODEX_GUARD__ !== true) {
                         return;
                     }
-                    if (typeof cheerpjAddStringFile !== 'function') {
-                        log('Codex guard skipped: cheerpjAddStringFile not available.', '#ffaa00');
-                        return;
-                    }
-
-                    const codexRelPath = 'data/codex/text_codex_entries.csv';
-                    const minimalCodexCsv = 'filename\n';
-                    cheerpjAddStringFile(`/files/${codexRelPath}`, minimalCodexCsv);
-                    cheerpjAddStringFile(`${contentRoot}${codexRelPath}`, minimalCodexCsv);
-                    log('Codex startup guard enabled (text_codex_entries.csv overridden).', '#ffaa00');
+                    log(
+                        'Codex guard skipped: CheerpJ 4.3 JS file injection cannot override /files or /app paths directly.',
+                        '#ffaa00'
+                    );
                 };
 
                 await preloadSpecFiles();
@@ -1037,76 +1047,90 @@
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 const gameContainer = document.getElementById('game-container');
-                gameContainer.style.position = 'relative';
-                gameContainer.style.overflow = 'hidden';
                 cheerpjCreateDisplay(1024, 768, gameContainer);
-
-                let lwjglCanvas = gameContainer.querySelector('canvas');
-                if (!lwjglCanvas) {
-                    lwjglCanvas = document.createElement('canvas');
-                    lwjglCanvas.width = 1024;
-                    lwjglCanvas.height = 768;
-                    gameContainer.appendChild(lwjglCanvas);
-                    log('Created fallback LWJGL canvas for native bridge.', '#ffaa00');
-                }
-                lwjglCanvas.id = 'lwjglCanvas';
-                lwjglCanvas.style.position = 'absolute';
-                lwjglCanvas.style.left = '0';
-                lwjglCanvas.style.top = '0';
-                lwjglCanvas.style.width = '1024px';
-                lwjglCanvas.style.height = '768px';
-                lwjglCanvas.style.display = 'block';
-                lwjglCanvas.style.zIndex = '2';
-                lwjglCanvas.style.pointerEvents = 'auto';
-                if (!lwjglCanvas.hasAttribute('tabindex')) {
-                    lwjglCanvas.setAttribute('tabindex', '0');
-                }
-                window.lwjglCanvasElement = lwjglCanvas;
+                ensureLwjglCanvas(gameContainer);
 
                 // Use stock LWJGL classes by default; opt into loading_patch explicitly.
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
-                const jarFiles = ['fixer.jar', 'input_patch.jar', 'jaxb_compat.jar'];
-                if (useLoadingPatch) {
-                    jarFiles.push('loading_patch.jar');
+                let jarFiles = [];
+                try {
+                    const jarIndexUrl = `${origin}${projectPath}jars/index.list?ts=${Date.now()}`;
+                    const jarIndexResponse = await fetch(jarIndexUrl, { cache: 'no-store' });
+                    if (!jarIndexResponse.ok) {
+                        throw new Error(`HTTP ${jarIndexResponse.status}`);
+                    }
+                    const jarIndexText = await jarIndexResponse.text();
+                    jarFiles = jarIndexText
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(Boolean)
+                        .map(line => line.split(/\s+/)[0])
+                        .filter(Boolean);
+                    log(`Loaded ${jarFiles.length} jar entr${jarFiles.length === 1 ? 'y' : 'ies'} from jars/index.list`, '#888');
+                } catch (jarIndexError) {
+                    log(`Jar index load failed; using fallback list (${jarIndexError.message})`, '#ffaa00');
+                    jarFiles = [
+                        'bridge.jar',
+                        'fixer.jar',
+                        'resources.jar',
+                        'janino.jar',
+                        'commons-compiler.jar',
+                        'starfarer.api.jar',
+                        'starfarer_obf.jar',
+                        'jogg-0.0.7.jar',
+                        'jorbis-0.0.15.jar',
+                        'json.jar',
+                        'lwjgl.jar',
+                        'jinput.jar',
+                        'log4j-1.2.9.jar',
+                        'lwjgl_util.jar',
+                        'fs.sound_obf.jar',
+                        'fs.common_obf.jar',
+                        'xstream-1.4.10.jar',
+                        'starfarer.res.jar',
+                        'scripts-precompiled.jar'
+                    ];
                 }
-                jarFiles.push(
-                    'lwjgl_bridge.jar',
-                    'resources.jar',
-                    'janino.jar',
-                    'commons-compiler.jar',
-                    'starfarer.api.jar',
-                    'starfarer_obf.jar',
-                    'jogg-0.0.7.jar',
-                    'jorbis-0.0.15.jar',
-                    'json.jar',
-                    'game_lwjgl.jar',
-                    'jinput.jar',
-                    'log4j-1.2.9.jar',
-                    'lwjgl_util.jar',
-                    'fs.sound_obf.jar',
-                    'fs.common_obf.jar',
-                    'xstream-1.4.10.jar',
-                    'sectorgen_bootstrap.jar'
-                );
+                jarFiles = [...new Set(jarFiles.filter(Boolean))];
+                if (useLoadingPatch && !jarFiles.includes('loading_patch.jar')) {
+                    jarFiles.unshift('loading_patch.jar');
+                }
 
                 const classPathEntries = jarFiles.map(jar => `${fullAppPath}jars/${jar}`);
-                // Optional precompiled script classes used by no-markets bootstrap fallback.
-                if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ !== false) {
+                // Optional sectorgen fallback classes are opt-in because the local repo does not ship them by default.
+                if (window.__STARSECTOR_ENABLE_SECTORGEN_FALLBACK_CP__ === true) {
                     classPathEntries.push(`${fullAppPath}tmp_compile_sectorgen_check/`);
                 }
                 classPathEntries.push(`${contentRoot}data/config/`);
                 const finalClassPath = classPathEntries.join(':');
-                
+
                 log('Final ClassPath: ' + finalClassPath, '#888');
 
                 log('Starting Main Class: Fixer', '#00d9ff');
+                updateRuntimeState('running', 'Fixer');
                 await cheerpjRunMain('Fixer', finalClassPath);
+                updateRuntimeState('main-returned', 'Fixer returned');
+                btn.textContent = 'RELAUNCH STARSECTOR';
+                btn.disabled = false;
 
             } catch (e) {
-                log('Error: ' + e.message, '#ff4444');
+                reportRuntimeFailure(e);
                 console.error(e);
+            } finally {
+                window.__STARSECTOR_STARTING__ = false;
             }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            void startGame();
         });
+
+        if (new URLSearchParams(window.location.search).get('autostart')) {
+            setTimeout(() => {
+                log('Autostart requested via query parameter.', '#888');
+                void startGame();
+            }, 50);
+        }
     </script>
 </body>
 </html>

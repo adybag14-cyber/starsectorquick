@@ -11,7 +11,9 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.Buffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -27,6 +29,7 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.prefs.Preferences;
+import javax.imageio.ImageIO;
 
 public class Fixer {
     private static final String LOGS_PROPERTY = "com.fs.starfarer.settings.paths.logs";
@@ -58,8 +61,10 @@ public class Fixer {
     private static final String DEFAULT_JAVA_SPEC_VENDOR = "Oracle Corporation";
     private static final String DEFAULT_JAVA_SPEC_NAME = "Java Platform API Specification";
     private static final String BOOT_MODE_PROPERTY = "starsector.boot";
+    private static final String BOOT_WATCHDOG_PROPERTY = "starsector.bootWatchdog";
     private static final String SUPPRESS_STARTUP_PROMPTS_PROPERTY = "starsector.suppressStartupPrompts";
     private static final String FORCE_CONTROLS_VERSION_PROPERTY = "starsector.forceControlsVersion";
+    private static final String FORCE_SCREEN_SCALE_PROPERTY = "starsector.forceScreenScale";
     private static final String DISABLE_LAUNCHER_WARNINGS_PROPERTY = "starsector.disableLauncherWarnings";
     private static final String AUTO_CAMPAIGN_PROPERTY = "starsector.autoCampaign";
     private static final String AUTO_CAMPAIGN_MODE_PROPERTY = "starsector.autoCampaignMode";
@@ -192,6 +197,7 @@ public class Fixer {
     private static volatile Object lastDirectNewGameData;
     private static volatile String directNewGameLastNullMarker;
     private static volatile long lastDirectNewGameCreateInvokeAt = 0L;
+    private static volatile String bootProgressMarker = "startup";
     private static long autoCampaignDirectCreateSettleLogAt = 0L;
     private static long autoCampaignDirectCreateLeaseLogAt = 0L;
     private static volatile long lastCampaignStateCreateInvokeAt = 0L;
@@ -199,6 +205,10 @@ public class Fixer {
     private static Object resourceManagerInstance;
     private static Method resourceManagerOpenResource;
     private static final Set<String> mirroredSpecPaths = new LinkedHashSet<String>();
+    private static final Object DIRECT_NEW_GAME_TEMP_PLANET_SPECS_LOCK = new Object();
+    private static final Map<String, Object> directNewGameTemporaryPlanetSpecs =
+            new LinkedHashMap<String, Object>();
+    private static boolean coreNativeLibrariesLoaded = false;
     private static final class DriverContext {
         final Object driver;
         final Class<?> driverClass;
@@ -227,7 +237,10 @@ public class Fixer {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("jdk.includeInExceptions", "false");
+        System.setProperty("jdk.includeInExceptions", "true");
+        System.setProperty(
+                "java.awt.headless",
+                System.getProperty("starsector.awt.headless", "false"));
         System.out.println("Fixer: build marker synthdiag-20260215-1");
         String resolvedUserDir = resolveRuntimeUserDir();
         System.setProperty("user.dir", resolvedUserDir);
@@ -278,6 +291,16 @@ public class Fixer {
         String bootMode = System.getProperty(BOOT_MODE_PROPERTY, "launcher");
         maybeDisableShipHullSpreadsheetPostPass();
         maybeStartAutoCampaignWatcher();
+        ensureStarfarerSettingsLoaded();
+        ensureStarfarerSettingsDefaultsPresent();
+        ensureGlobalSettingsApiReady();
+        installTextureLoaderCleanupFallback();
+        runMiscSettingsApiPreflight();
+        runDisplaySmokeProbe();
+        runCombatIconSmokeProbe();
+        runGraphicsModeProbe();
+        runGraphicsInitProbe();
+        runGraphicsPostInitProbe();
 
         System.out.println(
                 "Fixer: Launch config direct="
@@ -301,25 +324,1136 @@ public class Fixer {
 
         if ("combat".equalsIgnoreCase(bootMode)) {
             try {
+                updateBootProgressMarker("combat-main-enter");
+                startBootWatchdog("combat-main", 45000L);
                 System.out.println("Fixer: boot mode combat -> calling CombatMain.main directly");
                 com.fs.starfarer.combat.CombatMain.main(new String[0]);
                 return;
             } catch (Throwable t) {
                 System.out.println("Fixer: direct CombatMain boot failed, falling back: " + t);
+                System.out.println(stackTraceToString(t));
             }
         }
 
         if (directLaunch) {
             try {
+                updateBootProgressMarker("direct-launch-enter");
+                startBootWatchdog("direct-launch", 45000L);
                 com.fs.starfarer.StarfarerLauncher.o00000(startFS, startSound, resX, resY);
                 return;
             } catch (Throwable t) {
                 System.out.println("Fixer: direct launch failed, falling back to launcher UI: " + t);
+                System.out.println(stackTraceToString(t));
             }
         }
 
         System.out.println("Fixer: Launching StarfarerLauncher UI path.");
+        updateBootProgressMarker("launcher-ui-enter");
+        startBootWatchdog("launcher-ui", 45000L);
         com.fs.starfarer.StarfarerLauncher.main(args == null ? new String[0] : args);
+    }
+
+    private static void ensureStarfarerSettingsLoaded() {
+        try {
+            Class<?> settingsClass = Class.forName("com.fs.starfarer.settings.StarfarerSettings");
+            org.json.JSONObject existingRoot = resolveStarfarerSettingsRootJson(settingsClass);
+            if (existingRoot != null) {
+                ensureStarfarerSettingsJsonCachesReady(settingsClass, existingRoot);
+                System.out.println(
+                        "Fixer: StarfarerSettings already available. rootKeys="
+                                + safeJsonObjectKeyCount(existingRoot));
+                return;
+            }
+            Method loader = findStarfarerSettingsLoader(settingsClass);
+            if (loader == null) {
+                System.out.println("Fixer: StarfarerSettings preload skipped; loader method not found.");
+                return;
+            }
+            loader.setAccessible(true);
+            loader.invoke(null);
+            org.json.JSONObject loadedRoot = resolveStarfarerSettingsRootJson(settingsClass);
+            ensureStarfarerSettingsJsonCachesReady(settingsClass, loadedRoot);
+            System.out.println(
+                    "Fixer: StarfarerSettings preload invoked via "
+                            + loader.getName()
+                            + ", rootReady="
+                            + (loadedRoot != null));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: StarfarerSettings preload failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static Method findStarfarerSettingsLoader(Class<?> settingsClass) {
+        if (settingsClass == null) {
+            return null;
+        }
+        try {
+            for (Method m : settingsClass.getDeclaredMethods()) {
+                if (m == null || !Modifier.isStatic(m.getModifiers())) {
+                    continue;
+                }
+                if (m.getParameterTypes().length != 0 || m.getReturnType() != Void.TYPE) {
+                    continue;
+                }
+                Class<?>[] exceptionTypes = m.getExceptionTypes();
+                boolean hasIo = false;
+                boolean hasJson = false;
+                for (Class<?> exceptionType : exceptionTypes) {
+                    if (exceptionType == null) {
+                        continue;
+                    }
+                    String name = exceptionType.getName();
+                    if ("java.io.IOException".equals(name)) {
+                        hasIo = true;
+                    } else if ("org.json.JSONException".equals(name)) {
+                        hasJson = true;
+                    }
+                }
+                if (hasIo && hasJson) {
+                    return m;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private static void ensureStarfarerSettingsDefaultsPresent() {
+        try {
+            Class<?> settingsClass = Class.forName("com.fs.starfarer.settings.StarfarerSettings");
+            org.json.JSONObject runtimeSettings = resolveStarfarerSettingsRootJson(settingsClass);
+            if (runtimeSettings == null) {
+                System.out.println("Fixer: StarfarerSettings defaults skipped; root json unavailable.");
+                return;
+            }
+            String text = readFirstAvailableResourceText(
+                    "data/config/settings.json",
+                    "/data/config/settings.json",
+                    APP_ROOT + "/data/config/settings.json",
+                    FILES_ROOT + "/data/config/settings.json");
+            if (text == null || text.trim().isEmpty()) {
+                System.out.println("Fixer: StarfarerSettings defaults skipped; source settings.json unavailable.");
+                return;
+            }
+            org.json.JSONObject sourceSettings =
+                    new org.json.JSONObject(stripHashJsonComments(text));
+            int injected = mergeMissingJsonEntries(runtimeSettings, sourceSettings);
+            ensureStarfarerSettingsJsonCachesReady(settingsClass, runtimeSettings);
+            org.json.JSONObject graphicsSettings =
+                    resolveStarfarerSettingsGraphicsJson(settingsClass, runtimeSettings);
+            org.json.JSONObject bonusXpSettings =
+                    resolveStarfarerSettingsBonusXpJson(settingsClass, runtimeSettings);
+            System.out.println(
+                    "Fixer: StarfarerSettings defaults merged injected="
+                            + injected
+                            + " source=data/config/settings.json"
+                            + " graphicsKeys="
+                            + safeJsonObjectKeyCount(graphicsSettings)
+                            + " bonusXpKeys="
+                            + safeJsonObjectKeyCount(bonusXpSettings));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: StarfarerSettings defaults merge failed: "
+                            + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static void ensureGlobalSettingsApiReady() {
+        try {
+            Class<?> settingsClass = Class.forName("com.fs.starfarer.settings.StarfarerSettings");
+            Method settingsApiProvider = findStarfarerSettingsApiProvider(settingsClass);
+            if (settingsApiProvider == null) {
+                System.out.println(
+                        "Fixer: Global settings wiring skipped; SettingsAPI provider unavailable.");
+                return;
+            }
+            settingsApiProvider.setAccessible(true);
+            Object settingsApi = settingsApiProvider.invoke(null);
+            if (settingsApi == null) {
+                System.out.println(
+                        "Fixer: Global settings wiring skipped; SettingsAPI provider returned null.");
+                return;
+            }
+
+            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method setSettings = findGlobalSetSettingsMethod(globalClass);
+            if (setSettings != null) {
+                setSettings.setAccessible(true);
+                setSettings.invoke(null, settingsApi);
+            } else {
+                Field settingsField = findFieldRecursive(globalClass, "settingsAPI");
+                if (settingsField == null) {
+                    System.out.println(
+                            "Fixer: Global settings wiring skipped; Global.settingsAPI field unavailable.");
+                    return;
+                }
+                settingsField.setAccessible(true);
+                settingsField.set(null, settingsApi);
+            }
+
+            Object activeSettings = null;
+            Method getSettings = findMethodRecursive(globalClass, "getSettings");
+            if (getSettings != null) {
+                getSettings.setAccessible(true);
+                activeSettings = getSettings.invoke(null);
+            }
+            System.out.println(
+                    "Fixer: Global settings api wired via "
+                            + settingsApiProvider.getName()
+                            + " active="
+                            + (activeSettings != null)
+                            + " class="
+                            + (activeSettings == null
+                                    ? "null"
+                                    : activeSettings.getClass().getName()));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: Global settings wiring failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static Method findStarfarerSettingsApiProvider(Class<?> settingsClass) {
+        if (settingsClass == null) {
+            return null;
+        }
+        try {
+            for (Method method : settingsClass.getDeclaredMethods()) {
+                if (method == null || !Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+                if (method.getParameterTypes().length != 0) {
+                    continue;
+                }
+                Class<?> returnType = method.getReturnType();
+                if (returnType != null
+                        && "com.fs.starfarer.api.SettingsAPI".equals(returnType.getName())) {
+                    return method;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private static Method findGlobalSetSettingsMethod(Class<?> globalClass) {
+        if (globalClass == null) {
+            return null;
+        }
+        try {
+            for (Method method : globalClass.getDeclaredMethods()) {
+                if (method == null
+                        || !Modifier.isStatic(method.getModifiers())
+                        || !"setSettings".equals(method.getName())) {
+                    continue;
+                }
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 1
+                        && params[0] != null
+                        && "com.fs.starfarer.api.SettingsAPI".equals(params[0].getName())) {
+                    return method;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private static void runMiscSettingsApiPreflight() {
+        try {
+            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method getSettings = findMethodRecursive(globalClass, "getSettings");
+            if (getSettings == null) {
+                System.out.println(
+                        "Fixer: Misc settings preflight skipped; Global.getSettings unavailable.");
+                return;
+            }
+            getSettings.setAccessible(true);
+            Object settings = getSettings.invoke(null);
+            if (settings == null) {
+                System.out.println(
+                        "Fixer: Misc settings preflight skipped; Global.getSettings returned null.");
+                return;
+            }
+
+            ArrayList<String> probes = new ArrayList<String>();
+            appendSettingsProbe(probes, settings, "getFloat", "fluxPerCapacitor");
+            appendSettingsProbe(probes, settings, "getFloat", "dissipationPerVent");
+            appendSettingsProbe(probes, settings, "getFloat", "gateTransitFuelCostMult");
+            appendSettingsProbe(probes, settings, "getFloat", "officerMaxLevel");
+            appendSettingsProbe(probes, settings, "getFloat", "impactSoundVolumeMult");
+            appendSettingsProbe(probes, settings, "getInt", "maxColonySize");
+            appendSettingsProbe(probes, settings, "getInt", "overMaxIndustriesPenalty");
+            appendSettingsProbe(probes, settings, "getInt", "maxPermanentHullmods");
+            appendSettingsProbe(probes, settings, "getBoolean", "colorblindMode");
+            appendSettingsProbe(probes, settings, "getColor", "mountYellowColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountGreenColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountBlueColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountGrayColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountOrangeColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountCyanColor");
+            appendSettingsProbe(probes, settings, "getColor", "mountCompositeColor");
+            System.out.println("Fixer: Misc settings preflight " + String.join(" | ", probes));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: Misc settings preflight failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static void appendSettingsProbe(
+            List<String> probes, Object settings, String methodName, String key) {
+        if (probes == null || settings == null || methodName == null || key == null) {
+            return;
+        }
+        try {
+            Method method = findMethodRecursive(settings.getClass(), methodName, String.class);
+            if (method == null) {
+                probes.add(key + "=unavailable(" + methodName + ")");
+                return;
+            }
+            method.setAccessible(true);
+            Object value = method.invoke(settings, key);
+            probes.add(key + "=" + formatSettingsProbeValue(value));
+        } catch (Throwable t) {
+            probes.add(key + "=ERR(" + describeThrowableChain(t) + ")");
+        }
+    }
+
+    private static String formatSettingsProbeValue(Object value) {
+        if (value instanceof java.awt.Color) {
+            java.awt.Color color = (java.awt.Color) value;
+            return "rgba("
+                    + color.getRed()
+                    + ","
+                    + color.getGreen()
+                    + ","
+                    + color.getBlue()
+                    + ","
+                    + color.getAlpha()
+                    + ")";
+        }
+        return String.valueOf(value);
+    }
+
+    private static void warmupKnownBootContent() {
+        ArrayList<String> issues = new ArrayList<String>();
+        recordWarmupIssue(issues, "hull:flare", ensureSingleHullSpecPresentForWarmup("flare"));
+        recordWarmupIssue(
+                issues,
+                "hull:module_hightech_decor",
+                ensureSingleHullSpecPresentForWarmup("module_hightech_decor"));
+        recordWarmupIssue(
+                issues,
+                "weapon:lightmortar_fighter",
+                ensureWeaponSpreadsheetSpecPresent("lightmortar_fighter"));
+        if (issues.isEmpty()) {
+            System.out.println("Fixer: boot content warmup ready.");
+            updateBootProgressMarker("boot-content-warmup-ready");
+            return;
+        }
+        System.out.println(
+                "Fixer: boot content warmup issues: " + String.join(" | ", issues));
+        updateBootProgressMarker("boot-content-warmup-issues");
+    }
+
+    private static void recordWarmupIssue(List<String> issues, String label, String issue) {
+        if (issues == null || label == null || issue == null || issue.trim().isEmpty()) {
+            return;
+        }
+        issues.add(label + "=" + issue);
+    }
+
+    private static String ensureWeaponSpreadsheetSpecPresent(String weaponId) {
+        if (weaponId == null || weaponId.trim().isEmpty()) {
+            return "invalid-weapon-id";
+        }
+        String trimmedId = weaponId.trim();
+        try {
+            Class<?> specStoreClass = Class.forName("com.fs.starfarer.loading.SpecStore");
+            List<Class<?>> weaponSpecClasses = new ArrayList<Class<?>>();
+            try {
+                weaponSpecClasses.add(Class.forName("com.fs.starfarer.loading.specs.N"));
+            } catch (Throwable ignored) {
+            }
+            try {
+                Class<?> fallback = Class.forName("com.fs.starfarer.loading.specs.WeaponSpec");
+                if (!weaponSpecClasses.contains(fallback)) {
+                    weaponSpecClasses.add(fallback);
+                }
+            } catch (Throwable ignored) {
+            }
+            if (!weaponSpecClasses.isEmpty()
+                    && lookupSpecByIdAcrossClasses(specStoreClass, weaponSpecClasses, trimmedId)
+                            != null) {
+                return null;
+            }
+
+            Class<?> loaderClass = Class.forName("com.fs.starfarer.loading.WeaponSpreadsheetLoader");
+            String loaderIssue = null;
+            int invoked = 0;
+            for (Method method : loaderClass.getDeclaredMethods()) {
+                if (method == null || !Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+                if (method.getParameterTypes().length != 0 || method.getReturnType() != Void.TYPE) {
+                    continue;
+                }
+                invoked++;
+                String issue = invokeNoArgMethodWithTolerance(loaderClass, method, 15000L);
+                if (issue != null && loaderIssue == null) {
+                    loaderIssue = method.getName() + ":" + issue;
+                }
+            }
+            if (invoked == 0) {
+                return "no-static-weapon-spreadsheet-loaders";
+            }
+            if (weaponSpecClasses.isEmpty()) {
+                return loaderIssue;
+            }
+            Object loaded = lookupSpecByIdAcrossClasses(specStoreClass, weaponSpecClasses, trimmedId);
+            if (loaded == null) {
+                return loaderIssue == null
+                        ? "weapon-still-missing-after-spreadsheet-loader"
+                        : loaderIssue;
+            }
+            System.out.println(
+                    "Fixer: boot warmup confirmed weapon spreadsheet spec " + trimmedId + ".");
+            return null;
+        } catch (Throwable t) {
+            return describeThrowableChain(t);
+        }
+    }
+
+    private static void updateBootProgressMarker(String marker) {
+        if (marker == null || marker.trim().isEmpty()) {
+            return;
+        }
+        bootProgressMarker = marker.trim();
+    }
+
+    private static void startBootWatchdog(final String label, final long delayMs) {
+        if (!Boolean.parseBoolean(System.getProperty(BOOT_WATCHDOG_PROPERTY, "true"))) {
+            return;
+        }
+        final Thread targetThread = Thread.currentThread();
+        final String safeLabel =
+                (label == null || label.trim().isEmpty()) ? "boot" : label.trim();
+        Thread watchdog =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Thread.sleep(delayMs <= 0L ? 45000L : delayMs);
+                                } catch (InterruptedException ignored) {
+                                    return;
+                                }
+                                if (targetThread == null || !targetThread.isAlive()) {
+                                    return;
+                                }
+                                dumpBootThreadSnapshot(
+                                        safeLabel,
+                                        targetThread,
+                                        bootProgressMarker,
+                                        10);
+                            }
+                        },
+                        "FixerBootWatchdog-" + safeLabel);
+        watchdog.setDaemon(true);
+        watchdog.start();
+    }
+
+    private static void dumpBootThreadSnapshot(
+            String label, Thread targetThread, String progressMarker, int maxFrames) {
+        try {
+            System.out.println(
+                    "Fixer: boot watchdog snapshot label="
+                            + label
+                            + " progress="
+                            + progressMarker
+                            + " targetThread="
+                            + (targetThread == null
+                                    ? "null"
+                                    : (targetThread.getName()
+                                            + "#"
+                                            + targetThread.getId()
+                                            + " state="
+                                            + targetThread.getState())));
+            Map<Thread, StackTraceElement[]> traces = Thread.getAllStackTraces();
+            for (Map.Entry<Thread, StackTraceElement[]> entry : traces.entrySet()) {
+                Thread thread = entry.getKey();
+                if (thread == null) {
+                    continue;
+                }
+                StackTraceElement[] trace = entry.getValue();
+                System.out.println(
+                        "Fixer: boot watchdog thread "
+                                + thread.getName()
+                                + "#"
+                                + thread.getId()
+                                + " state="
+                                + thread.getState()
+                                + " daemon="
+                                + thread.isDaemon()
+                                + " frames="
+                                + (trace == null ? 0 : trace.length));
+                if (trace == null || trace.length == 0) {
+                    continue;
+                }
+                int limit = Math.min(Math.max(maxFrames, 1), trace.length);
+                for (int i = 0; i < limit; i++) {
+                    System.out.println("Fixer: boot watchdog    at " + trace[i]);
+                }
+            }
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: boot watchdog snapshot failed: " + describeThrowableChain(t));
+        }
+    }
+
+    private static void installTextureLoaderCleanupFallback() {
+        try {
+            Class<?> textureLoaderClass = Class.forName("com.fs.graphics.TextureLoader");
+            Field cleanerMapField = null;
+            Field cleanMapField = null;
+            for (Field f : textureLoaderClass.getDeclaredFields()) {
+                if (f == null
+                        || !Modifier.isStatic(f.getModifiers())
+                        || !Map.class.isAssignableFrom(f.getType())) {
+                    continue;
+                }
+                if ("float".equals(f.getName())) {
+                    cleanerMapField = f;
+                } else if (cleanMapField == null) {
+                    cleanMapField = f;
+                }
+            }
+            if (cleanerMapField == null || cleanMapField == null) {
+                System.out.println(
+                        "Fixer: TextureLoader cleanup fallback unavailable (map fields not found).");
+                return;
+            }
+
+            cleanerMapField.setAccessible(true);
+            cleanMapField.setAccessible(true);
+
+            Map cleanerMap = (Map) cleanerMapField.get(null);
+            if (cleanerMap == null) {
+                cleanerMap = new LinkedHashMap();
+                cleanerMapField.set(null, cleanerMap);
+            }
+            Map cleanMap = (Map) cleanMapField.get(null);
+            if (cleanMap == null) {
+                cleanMap = new LinkedHashMap();
+                cleanMapField.set(null, cleanMap);
+            }
+
+            ByteBuffer sample = org.lwjgl.BufferUtils.createByteBuffer(1);
+            Class<?> bufferClass = sample.getClass();
+            Class<?> duplicateClass = sample.duplicate().getClass();
+            Method duplicateMethod = ByteBuffer.class.getMethod("duplicate");
+            Method clearMethod = Buffer.class.getMethod("clear");
+
+            cleanerMap.put(bufferClass, duplicateMethod);
+            cleanMap.put(duplicateClass, clearMethod);
+
+            System.out.println(
+                    "Fixer: TextureLoader cleanup fallback installed bufferClass="
+                            + bufferClass.getName()
+                            + " duplicateClass="
+                            + duplicateClass.getName()
+                            + " cleanerMapField="
+                            + cleanerMapField.getName()
+                            + " cleanMapField="
+                            + cleanMapField.getName());
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: unable to install TextureLoader cleanup fallback: "
+                            + describeThrowableChain(t));
+        }
+    }
+
+    private static int mergeMissingJsonEntries(
+            org.json.JSONObject runtimeSettings, org.json.JSONObject sourceSettings)
+            throws org.json.JSONException {
+        if (runtimeSettings == null || sourceSettings == null) {
+            return 0;
+        }
+        int injected = 0;
+        for (Iterator keys = sourceSettings.keys(); keys.hasNext(); ) {
+            Object next = keys.next();
+            if (!(next instanceof String)) {
+                continue;
+            }
+            String key = (String) next;
+            Object sourceValue = sourceSettings.get(key);
+            if (!runtimeSettings.has(key)) {
+                runtimeSettings.put(key, sourceValue);
+                injected++;
+                continue;
+            }
+            Object existingValue = runtimeSettings.opt(key);
+            if (existingValue instanceof org.json.JSONObject
+                    && sourceValue instanceof org.json.JSONObject) {
+                injected +=
+                        mergeMissingJsonEntries(
+                                (org.json.JSONObject) existingValue,
+                                (org.json.JSONObject) sourceValue);
+            }
+        }
+        return injected;
+    }
+
+    private static void ensureStarfarerSettingsJsonCachesReady(
+            Class<?> settingsClass, org.json.JSONObject rootSettings) {
+        if (settingsClass == null || rootSettings == null) {
+            return;
+        }
+        try {
+            List<Field> jsonFields = findStaticJsonObjectFields(settingsClass);
+            if (jsonFields.isEmpty()) {
+                return;
+            }
+
+            org.json.JSONObject graphicsSettings =
+                    getOrCreateChildJsonObject(rootSettings, "graphics");
+            org.json.JSONObject bonusXpSettings =
+                    getOrCreateChildJsonObject(rootSettings, "bonusXP");
+
+            Field rootField = null;
+            Field graphicsField = null;
+            Field bonusXpField = null;
+            List<Field> remaining = new ArrayList<Field>();
+            for (Field f : jsonFields) {
+                Object candidate = null;
+                try {
+                    candidate = f.get(null);
+                } catch (Throwable ignored) {
+                }
+                if (rootField == null
+                        && (candidate == rootSettings
+                                || jsonObjectHasKey(candidate, "graphics")
+                                || jsonObjectHasKey(candidate, "bonusXP")
+                                || jsonObjectHasKey(candidate, "vsync"))) {
+                    rootField = f;
+                    continue;
+                }
+                if (graphicsField == null
+                        && (candidate == graphicsSettings
+                                || jsonObjectHasKey(candidate, "ui")
+                                || jsonObjectHasKey(candidate, "misc")
+                                || jsonObjectHasKey(candidate, "newGame"))) {
+                    graphicsField = f;
+                    continue;
+                }
+                if (bonusXpField == null
+                        && (candidate == bonusXpSettings
+                                || jsonObjectHasKey(candidate, "permModCapital")
+                                || jsonObjectHasKey(candidate, "mentorOfficer"))) {
+                    bonusXpField = f;
+                    continue;
+                }
+                remaining.add(f);
+            }
+
+            if (rootField == null && !remaining.isEmpty()) {
+                rootField = remaining.remove(0);
+            }
+            if (graphicsField == null && !remaining.isEmpty()) {
+                graphicsField = remaining.remove(0);
+            }
+            if (bonusXpField == null && !remaining.isEmpty()) {
+                bonusXpField = remaining.remove(0);
+            }
+
+            if (rootField != null) {
+                rootField.set(null, rootSettings);
+            }
+            if (graphicsField != null) {
+                graphicsField.set(null, graphicsSettings);
+            }
+            if (bonusXpField != null) {
+                bonusXpField.set(null, bonusXpSettings);
+            }
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: StarfarerSettings json cache sync failed: "
+                            + describeThrowableChain(t));
+        }
+    }
+
+    private static org.json.JSONObject resolveStarfarerSettingsRootJson(Class<?> settingsClass) {
+        if (settingsClass == null) {
+            return null;
+        }
+        org.json.JSONObject firstNonNull = null;
+        try {
+            for (Field f : findStaticJsonObjectFields(settingsClass)) {
+                Object candidate = f.get(null);
+                if (!(candidate instanceof org.json.JSONObject)) {
+                    continue;
+                }
+                org.json.JSONObject json = (org.json.JSONObject) candidate;
+                if (firstNonNull == null) {
+                    firstNonNull = json;
+                }
+                if (json.has("graphics") || json.has("bonusXP") || json.has("vsync")) {
+                    return json;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return firstNonNull;
+    }
+
+    private static org.json.JSONObject resolveStarfarerSettingsGraphicsJson(
+            Class<?> settingsClass, org.json.JSONObject rootSettings) {
+        try {
+            for (Field f : findStaticJsonObjectFields(settingsClass)) {
+                Object candidate = f.get(null);
+                if (!(candidate instanceof org.json.JSONObject)) {
+                    continue;
+                }
+                org.json.JSONObject json = (org.json.JSONObject) candidate;
+                if (json.has("ui") || json.has("misc") || json.has("newGame")) {
+                    return json;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            return getOrCreateChildJsonObject(rootSettings, "graphics");
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static org.json.JSONObject resolveStarfarerSettingsBonusXpJson(
+            Class<?> settingsClass, org.json.JSONObject rootSettings) {
+        try {
+            for (Field f : findStaticJsonObjectFields(settingsClass)) {
+                Object candidate = f.get(null);
+                if (!(candidate instanceof org.json.JSONObject)) {
+                    continue;
+                }
+                org.json.JSONObject json = (org.json.JSONObject) candidate;
+                if (json.has("permModCapital") || json.has("mentorOfficer")) {
+                    return json;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            return getOrCreateChildJsonObject(rootSettings, "bonusXP");
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static List<Field> findStaticJsonObjectFields(Class<?> settingsClass) {
+        List<Field> jsonFields = new ArrayList<Field>();
+        if (settingsClass == null) {
+            return jsonFields;
+        }
+        try {
+            for (Field f : settingsClass.getDeclaredFields()) {
+                if (f == null || !Modifier.isStatic(f.getModifiers())) {
+                    continue;
+                }
+                Class<?> t = f.getType();
+                if (t != null && "org.json.JSONObject".equals(t.getName())) {
+                    f.setAccessible(true);
+                    jsonFields.add(f);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return jsonFields;
+    }
+
+    private static boolean jsonObjectHasKey(Object candidate, String key) {
+        if (!(candidate instanceof org.json.JSONObject) || key == null) {
+            return false;
+        }
+        try {
+            return ((org.json.JSONObject) candidate).has(key);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static org.json.JSONObject getOrCreateChildJsonObject(
+            org.json.JSONObject parent, String key) throws org.json.JSONException {
+        if (parent == null || key == null) {
+            return null;
+        }
+        org.json.JSONObject child = parent.optJSONObject(key);
+        if (child != null) {
+            return child;
+        }
+        child = new org.json.JSONObject();
+        parent.put(key, child);
+        return child;
+    }
+
+    private static int safeJsonObjectKeyCount(org.json.JSONObject json) {
+        if (json == null) {
+            return -1;
+        }
+        try {
+            String[] names = org.json.JSONObject.getNames(json);
+            return names == null ? 0 : names.length;
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    private static void runDisplaySmokeProbe() {
+        try {
+            Method setLocation =
+                    org.lwjgl.opengl.Display.class.getDeclaredMethod(
+                            "setLocation", Integer.TYPE, Integer.TYPE);
+            System.out.println(
+                    "Fixer: Display.setLocation reflected=" + (setLocation != null));
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: Display.setLocation reflection failed: "
+                            + describeThrowableChain(t));
+        }
+        try {
+            org.lwjgl.opengl.Display.setLocation(0, 0);
+            System.out.println("Fixer: Display.setLocation direct call ok");
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: Display.setLocation direct call failed: "
+                            + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static void runCombatIconSmokeProbe() {
+        InputStream in = null;
+        try {
+            Class<?> loadingUtilsClass = Class.forName("com.fs.starfarer.loading.LoadingUtils");
+            Method open = findMethodRecursive(loadingUtilsClass, "void", String.class);
+            if (open == null) {
+                System.out.println("Fixer: icon smoke probe skipped; LoadingUtils.void not found.");
+                return;
+            }
+            open.setAccessible(true);
+            Object streamObj = open.invoke(null, "graphics/ui/s_icon16.png");
+            if (!(streamObj instanceof InputStream)) {
+                System.out.println(
+                        "Fixer: icon smoke probe failed; resource stream missing for graphics/ui/s_icon16.png");
+                return;
+            }
+            in = (InputStream) streamObj;
+            java.awt.image.BufferedImage image = ImageIO.read(in);
+            System.out.println(
+                    "Fixer: icon smoke image="
+                            + (image == null ? "null" : (image.getWidth() + "x" + image.getHeight())));
+            if (image == null) {
+                return;
+            }
+            ByteBuffer iconBuffer = com.fs.starfarer.combat.CombatMain.convertImageData(image);
+            System.out.println(
+                    "Fixer: icon smoke buffer="
+                            + (iconBuffer == null ? "null" : iconBuffer.capacity()));
+            org.lwjgl.opengl.Display.setIcon(new ByteBuffer[] {iconBuffer});
+            System.out.println("Fixer: icon smoke Display.setIcon ok");
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: icon smoke probe failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
+
+    private static void runGraphicsModeProbe() {
+        try {
+            Class<?> graphicsClass = Class.forName("com.fs.graphics.float");
+            Object graphics = graphicsClass.getDeclaredConstructor().newInstance();
+            Method probe = null;
+            for (Method m : graphicsClass.getDeclaredMethods()) {
+                Class<?>[] params = m.getParameterTypes();
+                if (m.getReturnType() == Boolean.TYPE
+                        && params.length == 3
+                        && params[0] == Boolean.TYPE
+                        && params[1] == Integer.TYPE
+                        && params[2] == Integer.TYPE) {
+                    probe = m;
+                    break;
+                }
+            }
+            if (probe == null) {
+                System.out.println("Fixer: graphics mode probe skipped; target method not found.");
+                return;
+            }
+            probe.setAccessible(true);
+            Object result = probe.invoke(graphics, Boolean.FALSE, Integer.valueOf(1024), Integer.valueOf(768));
+            System.out.println("Fixer: graphics mode probe result=" + result);
+        } catch (Throwable t) {
+            System.out.println("Fixer: graphics mode probe failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        }
+    }
+
+    private static void runGraphicsInitProbe() {
+        try {
+            Class<?> graphicsClass = Class.forName("com.fs.graphics.float");
+            Object graphics = graphicsClass.getDeclaredConstructor().newInstance();
+            Method init = null;
+            for (Method m : graphicsClass.getDeclaredMethods()) {
+                Class<?>[] params = m.getParameterTypes();
+                if (m.getReturnType() == Void.TYPE
+                        && params.length == 3
+                        && params[0] == Boolean.TYPE
+                        && params[1] == Integer.TYPE
+                        && params[2] == Integer.TYPE) {
+                    init = m;
+                    break;
+                }
+            }
+            if (init == null) {
+                System.out.println("Fixer: graphics init probe skipped; target method not found.");
+                return;
+            }
+            init.setAccessible(true);
+            init.invoke(graphics, Boolean.FALSE, Integer.valueOf(1024), Integer.valueOf(768));
+            System.out.println("Fixer: graphics init probe completed");
+        } catch (Throwable t) {
+            System.out.println("Fixer: graphics init probe failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        } finally {
+            try {
+                org.lwjgl.opengl.Display.destroy();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static void runGraphicsPostInitProbe() {
+        try {
+            org.lwjgl.input.Keyboard.enableRepeatEvents(true);
+            int width = org.lwjgl.opengl.Display.getWidth();
+            int height = org.lwjgl.opengl.Display.getHeight();
+            float scale = org.lwjgl.opengl.Display.getPixelScaleFactor();
+            int viewportWidth = Math.max(1, Math.round(width * scale));
+            int viewportHeight = Math.max(1, Math.round(height * scale));
+            System.out.println(
+                    "Fixer: graphics post-init width="
+                            + width
+                            + " height="
+                            + height
+                            + " scale="
+                            + scale);
+            org.lwjgl.opengl.GL11.glViewport(0, 0, viewportWidth, viewportHeight);
+            System.out.println("Fixer: graphics post-init viewport ok");
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: graphics post-init probe failed: " + describeThrowableChain(t));
+            System.out.println(stackTraceToString(t));
+        } finally {
+            try {
+                org.lwjgl.opengl.Display.destroy();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private static String readFirstAvailableResourceText(String... paths) {
+        if (paths == null) {
+            return null;
+        }
+        for (String path : paths) {
+            String text = readResourceTextForRepair(path);
+            if (text != null && text.trim().length() > 0) {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    private static String stripHashJsonComments(String text) {
+        if (text == null || text.length() == 0) {
+            return text;
+        }
+        StringBuilder out = new StringBuilder(text.length());
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (escaped) {
+                out.append(ch);
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\') {
+                out.append(ch);
+                if (inString) {
+                    escaped = true;
+                }
+                continue;
+            }
+            if (ch == '"') {
+                inString = !inString;
+                out.append(ch);
+                continue;
+            }
+            if (!inString && ch == '#') {
+                while (i < text.length() && text.charAt(i) != '\n' && text.charAt(i) != '\r') {
+                    i++;
+                }
+                if (i < text.length()) {
+                    out.append(text.charAt(i));
+                }
+                continue;
+            }
+            out.append(ch);
+        }
+        return out.toString();
+    }
+
+    private static void ensureCoreNativeLibrariesLoaded() {
+        if (coreNativeLibrariesLoaded) {
+            return;
+        }
+        synchronized (Fixer.class) {
+            if (coreNativeLibrariesLoaded) {
+                return;
+            }
+            loadNativeLibraryWithFallbacks(
+                    "lwjgl",
+                    new String[] {
+                        "/app/build/final/wasm-modules/liblwjgl.so",
+                        "/app/starsectorquick/build/final/wasm-modules/liblwjgl.so",
+                        "/app/starsector/starsector/build/final/wasm-modules/liblwjgl.so",
+                        "/files/liblwjgl.so"
+                    },
+                    true);
+            loadNativeLibraryWithFallbacks(
+                    "jawt",
+                    new String[] {
+                        "/app/build/final/wasm-modules/libjawt.so",
+                        "/app/starsectorquick/build/final/wasm-modules/libjawt.so",
+                        "/app/starsector/starsector/build/final/wasm-modules/libjawt.so",
+                        "/files/libjawt.so"
+                    },
+                    false);
+            coreNativeLibrariesLoaded = true;
+        }
+    }
+
+    private static boolean loadNativeLibraryWithFallbacks(
+            String logicalName, String[] explicitCandidates, boolean required) {
+        List<String> failures = new ArrayList<String>();
+        try {
+            System.loadLibrary(logicalName);
+            System.out.println(
+                    "Fixer: native library "
+                            + logicalName
+                            + " loaded via System.loadLibrary.");
+            return true;
+        } catch (Throwable t) {
+            failures.add("loadLibrary(" + logicalName + "): " + t);
+        }
+
+        LinkedHashSet<String> candidates = new LinkedHashSet<String>();
+        if (explicitCandidates != null) {
+            for (String candidate : explicitCandidates) {
+                if (candidate != null && candidate.length() > 0) {
+                    candidates.add(candidate);
+                }
+            }
+        }
+
+        LinkedHashSet<String> mappedNames = new LinkedHashSet<String>();
+        String mappedName = System.mapLibraryName(logicalName);
+        if (mappedName != null && mappedName.length() > 0) {
+            mappedNames.add(mappedName);
+        }
+        mappedNames.add("lib" + logicalName + ".so");
+
+        String javaLibraryPath = System.getProperty("java.library.path", "");
+        if (javaLibraryPath != null && javaLibraryPath.length() > 0) {
+            String[] entries = javaLibraryPath.split(File.pathSeparator);
+            for (String entry : entries) {
+                if (entry == null) {
+                    continue;
+                }
+                String trimmed = entry.trim();
+                if (trimmed.length() == 0) {
+                    continue;
+                }
+                for (String nativeFileName : mappedNames) {
+                    if (nativeFileName == null || nativeFileName.length() == 0) {
+                        continue;
+                    }
+                    if (trimmed.endsWith("/") || trimmed.endsWith("\\")) {
+                        candidates.add(trimmed + nativeFileName);
+                    } else {
+                        candidates.add(trimmed + "/" + nativeFileName);
+                    }
+                }
+            }
+        }
+
+        for (String candidate : candidates) {
+            try {
+                File f = new File(candidate);
+                if (!f.exists()) {
+                    failures.add(candidate + ": missing");
+                    continue;
+                }
+                System.load(f.getAbsolutePath());
+                System.out.println(
+                        "Fixer: native library "
+                                + logicalName
+                                + " loaded via System.load path "
+                                + f.getAbsolutePath()
+                                + ".");
+                return true;
+            } catch (Throwable t) {
+                failures.add(candidate + ": " + t);
+            }
+        }
+
+        System.out.println(
+                "Fixer: "
+                        + (required ? "required" : "optional")
+                        + " native library "
+                        + logicalName
+                        + " unavailable after all load attempts.");
+        int max = Math.min(12, failures.size());
+        for (int i = 0; i < max; i++) {
+            System.out.println(
+                    "Fixer: native "
+                            + logicalName
+                            + " attempt "
+                            + (i + 1)
+                            + "/"
+                            + failures.size()
+                            + " -> "
+                            + failures.get(i));
+        }
+        if (failures.size() > max) {
+            System.out.println(
+                    "Fixer: native "
+                            + logicalName
+                            + " additional failures suppressed: "
+                            + (failures.size() - max));
+        }
+        return false;
     }
 
     private static void loadNpeFixNativeLibrary() {
@@ -705,6 +1839,10 @@ public class Fixer {
         final boolean directLaunchMode =
                 Boolean.parseBoolean(
                         System.getProperty(DIRECT_LAUNCH_PROPERTY, "false"));
+        final boolean preferDirectNewGameBeforeContinue =
+                directLaunchMode
+                        && normalizedMode.indexOf("continue") >= 0
+                        && normalizedMode.indexOf("direct") >= 0;
         final String immediatePlayerFleetNullDefault = visitColonyMode ? "true" : "false";
         final boolean allowImmediatePlayerFleetNullTransition =
                 Boolean.parseBoolean(
@@ -736,6 +1874,10 @@ public class Fixer {
                         + normalizedMode
                         + " leaseOwner="
                         + watcherLeaseOwner);
+        if (preferDirectNewGameBeforeContinue) {
+            System.out.println(
+                    "Fixer: auto campaign skipping Continue menu path on direct-launch mode; preferring direct new-game path first.");
+        }
         String lastStateId = null;
         String lastLoaderName = null;
         long lastNoStateLogAt = 0L;
@@ -1257,6 +2399,7 @@ public class Fixer {
                                 || normalizedMode.indexOf("none") >= 0;
                 boolean allowContinue =
                         !observeOnly
+                                && !preferDirectNewGameBeforeContinue
                                 && !passiveCampaignStateTransitions
                                 && (normalizedMode.indexOf("continue") >= 0
                                         || normalizedMode.indexOf("new") < 0)
@@ -2177,16 +3320,24 @@ public class Fixer {
                                     + zigguratIssue);
                 }
                 if (!shouldSkipFactionPreflight()) {
+                    boolean allowMutatingFactionWarmup = allowMutatingSpecPreflight();
                     String factionIssue =
                             ensureFactionSpecsReadyForDirectNewGame(
-                                    allowMutatingSpecPreflight());
+                                    allowMutatingFactionWarmup);
                     if (factionIssue != null) {
-                        String warmupResult = maybeWarmupFactionSpecsForNewGame(factionIssue);
-                        if (warmupResult != null) {
-                            maybeLogNewGamePreflightIssue(
-                                    factionIssue + " [warmup:" + warmupResult + "]");
-                            warmupTitleRenderTicks(titleState, 6);
-                            return "new-game preflight pending";
+                        if (!allowMutatingFactionWarmup) {
+                            maybeLogNewGamePreflightIssue(factionIssue);
+                            System.out.println(
+                                    "Fixer: auto campaign skipping New Game faction warmup in non-mutating mode to avoid pre-loader SpecStore pollution: "
+                                            + factionIssue);
+                        } else {
+                            String warmupResult = maybeWarmupFactionSpecsForNewGame(factionIssue);
+                            if (warmupResult != null) {
+                                maybeLogNewGamePreflightIssue(
+                                        factionIssue + " [warmup:" + warmupResult + "]");
+                                warmupTitleRenderTicks(titleState, 6);
+                                return "new-game preflight pending";
+                            }
                         }
                     }
                 } else {
@@ -2689,74 +3840,12 @@ public class Fixer {
                 autoCampaignCoreSpecBaselinePendingSince = now;
             }
             autoCampaignCoreSpecBaselinePendingCount++;
-
-            long pendingMs = Math.max(0L, now - autoCampaignCoreSpecBaselinePendingSince);
-            long nonMutatingWaitMs =
-                    Math.max(
-                            15000L,
-                            parseLongProperty(
-                                    "starsector.autoCampaignCoreSpecBaselineNonMutatingWaitMs",
-                                    120000L));
-            boolean coreFactionMissing = hasMissingCoreFactionSpecIssue(baselineIssue);
-            if (coreFactionMissing && !shouldSkipFactionPreflight()) {
-                String warmupOutcome =
-                        maybeWarmupFactionSpecsForNewGame("core-spec-baseline:" + baselineIssue);
-                if (warmupOutcome == null) {
-                    String afterWarmupIssue = checkCoreSpecStoreBaselineForDirectNewGame();
-                    if (afterWarmupIssue == null) {
-                        System.out.println(
-                                "Fixer: direct-new-game core spec baseline recovered in non-mutating mode after warmup.");
-                        autoCampaignCoreSpecBaselinePendingSince = 0L;
-                        autoCampaignCoreSpecBaselinePendingCount = 0;
-                        return null;
-                    }
-                    baselineIssue = afterWarmupIssue;
-                    coreFactionMissing = hasMissingCoreFactionSpecIssue(baselineIssue);
-                } else if (!"cooldown".equals(warmupOutcome)
-                        && !"attempt-limit".equals(warmupOutcome)) {
-                    System.out.println(
-                            "Fixer: direct-new-game core baseline warmup issue in non-mutating mode: "
-                                    + warmupOutcome);
-                }
-            } else if (coreFactionMissing) {
-                if (autoCampaignCoreSpecBaselinePendingCount == 1
-                        || autoCampaignCoreSpecBaselinePendingCount % 30 == 0) {
-                    System.out.println(
-                            "Fixer: direct-new-game core baseline missing factions in skip mode; skipping warmup mutations and waiting for create path.");
-                }
+            if (autoCampaignCoreSpecBaselinePendingCount == 1
+                    || autoCampaignCoreSpecBaselinePendingCount % 30 == 0) {
+                System.out.println(
+                        "Fixer: direct-new-game non-mutating mode defers core spec baseline to ResourceLoaderState.init; proceeding without pre-loader SpecStore warmup: "
+                                + baselineIssue);
             }
-
-            boolean shouldKeepWaiting = pendingMs < nonMutatingWaitMs;
-            if (shouldKeepWaiting) {
-                if (autoCampaignCoreSpecBaselinePendingCount == 1
-                        || autoCampaignCoreSpecBaselinePendingCount % 30 == 0) {
-                    System.out.println(
-                            "Fixer: direct-new-game core spec baseline unresolved in non-mutating mode (waiting, coreFactionMissing="
-                                    + coreFactionMissing
-                                    + ", pendingMs="
-                                    + pendingMs
-                                    + "/"
-                                    + nonMutatingWaitMs
-                                    + "): "
-                                    + baselineIssue);
-                }
-                return "core spec baseline pending in non-mutating mode (coreFactionMissing="
-                        + coreFactionMissing
-                        + ", pending="
-                        + pendingMs
-                        + "ms/"
-                        + nonMutatingWaitMs
-                        + "ms, attempt "
-                        + autoCampaignCoreSpecBaselinePendingCount
-                        + "): "
-                        + baselineIssue;
-            }
-
-            System.out.println(
-                    "Fixer: direct-new-game core spec baseline unresolved after non-mutating wait window; proceeding cautiously: "
-                            + baselineIssue);
-            autoCampaignCoreSpecBaselinePendingSince = 0L;
-            autoCampaignCoreSpecBaselinePendingCount = 0;
             return null;
         }
 
@@ -4475,6 +5564,23 @@ public class Fixer {
             directNewGameLastNullMarker = "after-create-method";
 
             boolean mutatingSpecPreflight = allowMutatingSpecPreflight();
+            boolean clearTemporaryFactionPreload = false;
+            boolean clearTemporaryPlanetPreload = false;
+            boolean clearTemporaryCustomEntityPreload = false;
+            boolean clearTemporaryTerrainPreload = false;
+            boolean clearTemporaryMarketConditionPreload = false;
+            boolean clearTemporaryIndustryPreload = false;
+            boolean clearTemporaryCommodityPreload = false;
+            boolean clearTemporarySubmarketPreload = false;
+            Class<?> factionSpecClassForCleanup = null;
+            Class<?> planetSpecClassForCleanup = null;
+            Class<?> terrainSpecClassForCleanup = null;
+            Class<?> customEntitySpecClassForCleanup = null;
+            Class<?> marketConditionSpecClassForCleanup = null;
+            Class<?> industrySpecClassForCleanup = null;
+            Class<?> commoditySpecClassForCleanup = null;
+            Class<?> submarketSpecClassForCleanup = null;
+            Class<?> specStoreClassForCleanup = null;
             System.out.println(
                     "Fixer: direct-new-game preflight flags mutatingSpecPreflight="
                             + mutatingSpecPreflight
@@ -4482,6 +5588,19 @@ public class Fixer {
                             + shouldSkipFactionPreflight());
             System.out.println("Fixer: direct-new-game stage=faction-preflight");
             if (!shouldSkipFactionPreflight()) {
+                int factionCountBefore = -1;
+                boolean skipFactionWarmup = false;
+                if (!mutatingSpecPreflight) {
+                    try {
+                        specStoreClassForCleanup = Class.forName("com.fs.starfarer.loading.SpecStore");
+                        factionSpecClassForCleanup = Class.forName("com.fs.starfarer.loading.if");
+                        factionCountBefore =
+                                countSpecsForClass(
+                                        specStoreClassForCleanup, factionSpecClassForCleanup);
+                    } catch (Throwable ignored) {
+                        factionSpecClassForCleanup = null;
+                    }
+                }
                 String factionPreflight =
                         ensureFactionSpecsReadyForDirectNewGame(mutatingSpecPreflight);
                 System.out.println(
@@ -4492,9 +5611,55 @@ public class Fixer {
                     boolean specStoreNotReady =
                             !mutatingSpecPreflight
                                     && factionPreflightLower.indexOf("spec store not ready") >= 0;
+                    boolean coreFactionMissing = hasMissingCoreFactionSpecIssue(factionPreflight);
+                    if (specStoreNotReady && coreFactionMissing) {
+                        skipFactionWarmup = true;
+                        String forcedRepairIssue =
+                                ensureFactionSpecsReadyForDirectNewGame(true, true);
+                        System.out.println(
+                                "Fixer: direct-new-game faction-preflight forced core repair result="
+                                        + String.valueOf(forcedRepairIssue));
+                        if (specStoreClassForCleanup != null && factionSpecClassForCleanup != null) {
+                            int factionCountAfter =
+                                    countSpecsForClass(
+                                            specStoreClassForCleanup, factionSpecClassForCleanup);
+                            if (factionCountBefore == 0 && factionCountAfter > 0) {
+                                clearTemporaryFactionPreload = true;
+                                System.out.println(
+                                        "Fixer: direct-new-game temporary faction preload armed for post-create cleanup (before="
+                                                + factionCountBefore
+                                                + ", after="
+                                                + factionCountAfter
+                                                + ").");
+                            }
+                        }
+                        factionPreflight = forcedRepairIssue;
+                        if (factionPreflight != null) {
+                            factionPreflightLower = factionPreflight.toLowerCase();
+                            specStoreNotReady =
+                                    factionPreflightLower.indexOf("spec store not ready") >= 0;
+                            coreFactionMissing =
+                                    hasMissingCoreFactionSpecIssue(factionPreflight);
+                            System.out.println(
+                                    "Fixer: direct-new-game faction-preflight residual issue after forced core repair="
+                                            + factionPreflight);
+                            if (coreFactionMissing) {
+                                maybeLogNewGamePreflightIssue(
+                                        "core faction preflight unresolved in non-mutating mode: "
+                                                + factionPreflight
+                                                + " [forced-repair]");
+                                return "direct new-game preflight pending";
+                            }
+                        } else {
+                            specStoreNotReady = false;
+                        }
+                    }
                     if (specStoreNotReady) {
                         System.out.println(
                                 "Fixer: direct-new-game faction-preflight spec store not ready in non-mutating mode; continuing without faction warmup.");
+                    } else if (skipFactionWarmup) {
+                        System.out.println(
+                                "Fixer: direct-new-game skipping faction warmup after non-mutating core repair to avoid pre-loader hull/variant pollution.");
                     } else {
                         String warmupResult = maybeWarmupFactionSpecsForNewGame(factionPreflight);
                         System.out.println(
@@ -4586,21 +5751,6 @@ public class Fixer {
                             + runBroadSpecPreflight
                             + " allowTemporarySpecInjection="
                             + allowTemporarySpecInjection);
-            boolean clearTemporaryPlanetPreload = false;
-            boolean clearTemporaryCustomEntityPreload = false;
-            boolean clearTemporaryTerrainPreload = false;
-            boolean clearTemporaryMarketConditionPreload = false;
-            boolean clearTemporaryIndustryPreload = false;
-            boolean clearTemporaryCommodityPreload = false;
-            boolean clearTemporarySubmarketPreload = false;
-            Class<?> planetSpecClassForCleanup = null;
-            Class<?> terrainSpecClassForCleanup = null;
-            Class<?> customEntitySpecClassForCleanup = null;
-            Class<?> marketConditionSpecClassForCleanup = null;
-            Class<?> industrySpecClassForCleanup = null;
-            Class<?> commoditySpecClassForCleanup = null;
-            Class<?> submarketSpecClassForCleanup = null;
-            Class<?> specStoreClassForCleanup = null;
             if (allowTemporarySpecInjection) {
                 System.out.println("Fixer: direct-new-game stage=planet-preflight");
                 int planetCountBefore = -1;
@@ -5074,20 +6224,25 @@ public class Fixer {
                         "Fixer: direct new-game starmap preflight warning (continuing): "
                                 + starMapPreflight);
             }
-            System.out.println("Fixer: direct-new-game stage=salvage-preflight");
-            String salvagePreflight = ensureSalvageEntityGenSpecsReadyForDirectNewGame();
-            if (salvagePreflight != null) {
-                boolean strictSalvagePreflight =
-                        Boolean.parseBoolean(
-                                System.getProperty(
-                                        "starsector.autoCampaignStrictSalvageSpecPreflight",
-                                        "false"));
-                if (strictSalvagePreflight) {
-                    return "salvage spec preflight failed: " + salvagePreflight;
+            if (mutatingSpecPreflight) {
+                System.out.println("Fixer: direct-new-game stage=salvage-preflight");
+                String salvagePreflight = ensureSalvageEntityGenSpecsReadyForDirectNewGame();
+                if (salvagePreflight != null) {
+                    boolean strictSalvagePreflight =
+                            Boolean.parseBoolean(
+                                    System.getProperty(
+                                            "starsector.autoCampaignStrictSalvageSpecPreflight",
+                                            "false"));
+                    if (strictSalvagePreflight) {
+                        return "salvage spec preflight failed: " + salvagePreflight;
+                    }
+                    System.out.println(
+                            "Fixer: direct new-game salvage-spec preflight warning (continuing): "
+                                    + salvagePreflight);
                 }
+            } else {
                 System.out.println(
-                        "Fixer: direct new-game salvage-spec preflight warning (continuing): "
-                                + salvagePreflight);
+                        "Fixer: direct-new-game non-mutating mode; skipping salvage spec preload until ResourceLoaderState.init.");
             }
             System.out.println("Fixer: direct-new-game stage=ui-preflight");
             String uiFontPreflight = ensureUiFontStateReadyForDirectNewGame();
@@ -5332,14 +6487,6 @@ public class Fixer {
                         startOrbitalJunkSpecWatchdog(
                                 orbitalSpecWatchdogStop, mutatingSpecPreflight);
             }
-            if (Boolean.parseBoolean(
-                    System.getProperty("starsector.autoCampaignInvokeCreateWatchdog", "true"))) {
-                invokeCreateWatchdogThread =
-                        startInvokeCreateWatchdog(
-                                Thread.currentThread(),
-                                invokeCreateWatchdogStop,
-                                "direct-new-game invoke-create");
-            }
             boolean retainInvokeCreateLease = false;
             try {
                 long invokeCallTimeoutMs =
@@ -5370,6 +6517,14 @@ public class Fixer {
                 invokeCreateThread.setDaemon(true);
                 try {
                     invokeCreateThread.start();
+                    if (Boolean.parseBoolean(
+                            System.getProperty("starsector.autoCampaignInvokeCreateWatchdog", "true"))) {
+                        invokeCreateWatchdogThread =
+                                startInvokeCreateWatchdog(
+                                        invokeCreateThread,
+                                        invokeCreateWatchdogStop,
+                                        "direct-new-game invoke-create");
+                    }
                     invokeCreateThread.join(invokeCallTimeoutMs);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
@@ -5411,7 +6566,10 @@ public class Fixer {
                             }
                             maybeLogNewGamePreflightIssue(
                                     "post-init campaign runtime still player-fleet-null after settle window.");
-                            return "direct new-game preflight pending";
+                            directNewGameLastNullMarker = "post-invoke-player-fleet-null";
+                            System.out.println(
+                                    "Fixer: direct-new-game return-null marker=post-invoke-player-fleet-null");
+                            return null;
                         }
                         maybeLogNewGamePreflightIssue(
                                 "post-init campaign runtime not ready: " + runtimeReadyIssue);
@@ -5448,6 +6606,17 @@ public class Fixer {
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
+                }
+                if (clearTemporaryFactionPreload
+                        && specStoreClassForCleanup != null
+                        && factionSpecClassForCleanup != null) {
+                    clearSpecsForClass(specStoreClassForCleanup, factionSpecClassForCleanup);
+                    int remainingFaction =
+                            countSpecsForClass(specStoreClassForCleanup, factionSpecClassForCleanup);
+                    System.out.println(
+                            "Fixer: direct-new-game temporary faction preload cleanup complete (remaining="
+                                    + remainingFaction
+                                    + ").");
                 }
                 if (clearTemporarySubmarketPreload
                         && specStoreClassForCleanup != null
@@ -5533,18 +6702,76 @@ public class Fixer {
             if (isOrbitalJunkSpecResolutionNpe(t)) {
                 System.out.println(
                         "Fixer: orbital_junk resolution exception detail: " + stackTraceToString(t));
-                boolean allowOrbitalJunkRepair = allowMutatingSpecPreflight();
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame("orbital-junk-resolution");
+                    String specStoreProbe = probeOrbitalJunkSpecStoreAvailability();
+                    boolean specStoreReady =
+                            specStoreProbe != null && specStoreProbe.startsWith("resolved:");
+                    if (specStoreReady) {
+                        String repairIssue = ensureOrbitalJunkCustomEntitySpecFallback(false);
+                        String runtimeFactionIssue =
+                                ensureRuntimeFactionsPresentForDirectNewGame(
+                                        new String[] {"neutral", "player"}, true);
+                        boolean runtimeOk =
+                                runtimeFactionIssue == null
+                                        || isNonFatalFactionPreflightIssue(runtimeFactionIssue);
+                        String entityProbeIssue = probeOrbitalJunkEntityInstantiation();
+                        if (repairIssue == null
+                                && runtimeOk
+                                && entityProbeIssue == null
+                                && tempPlanetCleanupIssue == null) {
+                            maybeLogNewGamePreflightIssue(
+                                    "orbital_junk runtime repair succeeded in non-mutating mode; retry pending.");
+                            return "direct new-game preflight pending";
+                        }
+                        maybeLogNewGamePreflightIssue(
+                                "orbital_junk runtime repair issue in non-mutating mode: specStore="
+                                        + String.valueOf(specStoreProbe)
+                                        + ", fallback="
+                                        + String.valueOf(repairIssue)
+                                        + ", runtimeFaction="
+                                        + String.valueOf(runtimeFactionIssue)
+                                        + ", entityProbe="
+                                        + String.valueOf(entityProbeIssue)
+                                        + ", tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                        return "direct new-game preflight pending";
+                    }
+                    maybeLogNewGamePreflightIssue(
+                            "orbital_junk resolution observed in non-mutating mode; deferring custom-entity preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
+                boolean allowOrbitalJunkRepair =
+                        allowMutatingSpecPreflight()
+                                || allowOrbitalJunkFallbackWhenNonMutating();
                 if (allowOrbitalJunkRepair) {
+                    String customEntityIssue = ensureCustomEntitySpecsReadyForDirectNewGame();
                     String repairIssue = ensureOrbitalJunkCustomEntitySpecFallback();
-                    if (repairIssue == null && allowOrbitalJunkImmediateRetry) {
+                    String runtimeFactionIssue =
+                            ensureRuntimeFactionsPresentForDirectNewGame(
+                                    new String[] {"neutral", "player"}, true);
+                    boolean runtimeOk =
+                            runtimeFactionIssue == null
+                                    || isNonFatalFactionPreflightIssue(runtimeFactionIssue);
+                    if (customEntityIssue == null
+                            && repairIssue == null
+                            && runtimeOk
+                            && allowOrbitalJunkImmediateRetry) {
                         System.out.println(
                                 "Fixer: orbital_junk custom-entity spec repaired; deferring direct new-game retry to next watcher tick.");
                         return "direct new-game preflight pending";
                     }
                     maybeLogNewGamePreflightIssue(
-                            repairIssue == null
+                            customEntityIssue == null && repairIssue == null && runtimeOk
                                     ? "orbital_junk custom-entity spec repaired; retrying direct new-game."
-                                    : "orbital_junk custom-entity spec repair issue: " + repairIssue);
+                                    : "orbital_junk custom-entity spec repair issue: customEntity="
+                                            + String.valueOf(customEntityIssue)
+                                            + ", fallback="
+                                            + String.valueOf(repairIssue)
+                                            + ", runtimeFaction="
+                                            + String.valueOf(runtimeFactionIssue));
                     return "direct new-game preflight pending";
                 }
                 if (allowOrbitalJunkImmediateRetry) {
@@ -5590,6 +6817,18 @@ public class Fixer {
             if (isProcgenCampaignPlanetInitNpe(t)) {
                 System.out.println(
                         "Fixer: procgen CampaignPlanet init NPE detail: " + stackTraceToString(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String runtimePlanetIssue = repairCriticalPlanetSpecsInPlaceForDirectNewGame();
+                    if (runtimePlanetIssue == null) {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen CampaignPlanet runtime repair succeeded in non-mutating mode; retry pending.");
+                    } else {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen CampaignPlanet init observed in non-mutating mode; deferring planet/procgen preload to ResourceLoaderState.init. planetRuntime="
+                                        + String.valueOf(runtimePlanetIssue));
+                    }
+                    return "direct new-game preflight pending";
+                }
                 String planetIssue = ensurePlanetSpecsReadyForDirectNewGame();
                 String planetGenIssue = ensurePlanetGenSpecsReadyForDirectNewGame();
                 String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
@@ -5602,6 +6841,13 @@ public class Fixer {
                         && ageIssue == null
                         && terrainIssue == null
                         && pickerIssue == null) {
+                    clearTemporarySpecClassesByName(
+                            "procgen-campaignplanet-init",
+                            "com.fs.starfarer.loading.specs.PlanetSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.PlanetGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.AgeGenDataSpec",
+                            "com.fs.starfarer.loading.specs.Stringsuper");
                     maybeLogNewGamePreflightIssue(
                             "procgen CampaignPlanet init repair succeeded; retry pending.");
                     return "direct new-game preflight pending";
@@ -5621,10 +6867,75 @@ public class Fixer {
                                 + String.valueOf(pickerIssue));
                 return "direct new-game preflight pending";
             }
+            if (isProcgenCampaignTerrainInitNpe(t)) {
+                System.out.println(
+                        "Fixer: procgen CampaignTerrain init NPE detail: " + stackTraceToString(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "procgen-campaignterrain-init");
+                    maybeLogNewGamePreflightIssue(
+                            "procgen CampaignTerrain init observed in non-mutating mode; deferring terrain-spec preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
+                String terrainIssue = ensureTerrainSpecsReadyForDirectNewGame();
+                if (terrainIssue == null) {
+                    maybeLogNewGamePreflightIssue(
+                            "procgen CampaignTerrain init repair succeeded; retry pending.");
+                    return "direct new-game preflight pending";
+                }
+                maybeLogNewGamePreflightIssue(
+                        "procgen CampaignTerrain init repair issue: terrain="
+                                + String.valueOf(terrainIssue));
+                return "direct new-game preflight pending";
+            }
             if (isGalatiaCustomEntityReadResolveNpe(t)) {
                 System.out.println(
                         "Fixer: Galatia custom-entity readResolve NPE detail: "
                                 + stackTraceToString(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "galatia-custom-entity-readresolve");
+                    String specStoreProbe = probeOrbitalJunkSpecStoreAvailability();
+                    boolean specStoreReady =
+                            specStoreProbe != null && specStoreProbe.startsWith("resolved:");
+                    if (specStoreReady) {
+                        String fallbackIssue = ensureOrbitalJunkCustomEntitySpecFallback(false);
+                        String runtimeFactionIssue =
+                                ensureRuntimeFactionsPresentForDirectNewGame(
+                                        new String[] {"neutral", "player"}, true);
+                        boolean runtimeOk =
+                                runtimeFactionIssue == null
+                                        || isNonFatalFactionPreflightIssue(runtimeFactionIssue);
+                        String entityProbeIssue = probeOrbitalJunkEntityInstantiation();
+                        if (fallbackIssue == null
+                                && runtimeOk
+                                && entityProbeIssue == null
+                                && tempPlanetCleanupIssue == null) {
+                            maybeLogNewGamePreflightIssue(
+                                    "galatia custom-entity runtime repair succeeded in non-mutating mode; retry pending.");
+                            return "direct new-game preflight pending";
+                        }
+                        maybeLogNewGamePreflightIssue(
+                                "galatia custom-entity runtime repair issue in non-mutating mode: specStore="
+                                        + String.valueOf(specStoreProbe)
+                                        + ", fallback="
+                                        + String.valueOf(fallbackIssue)
+                                        + ", runtimeFaction="
+                                        + String.valueOf(runtimeFactionIssue)
+                                        + ", entityProbe="
+                                        + String.valueOf(entityProbeIssue)
+                                        + ", tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                        return "direct new-game preflight pending";
+                    }
+                    maybeLogNewGamePreflightIssue(
+                            "galatia custom-entity readResolve observed in non-mutating mode; deferring custom-entity preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
                 String customEntityIssue = ensureCustomEntitySpecsReadyForDirectNewGame();
                 String fallbackIssue = ensureOrbitalJunkCustomEntitySpecFallback();
                 String runtimeFactionIssue =
@@ -5650,10 +6961,23 @@ public class Fixer {
             if (isProcgenNebulaBackgroundNpe(t)) {
                 System.out.println(
                         "Fixer: procgen nebula/background NPE detail: " + describeThrowableChain(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "procgen-nebula-background");
+                    maybeLogNewGamePreflightIssue(
+                            "procgen nebula/background observed in non-mutating mode; deferring procgen preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
                 String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
                 String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
                 String pickerIssue = refreshProcgenBackgroundPickersForDirectNewGame();
                 if (ageIssue == null && starIssue == null && pickerIssue == null) {
+                    clearTemporarySpecClassesByName(
+                            "procgen-nebula-background",
+                            "com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.AgeGenDataSpec");
                     if (allowOrbitalJunkImmediateRetry) {
                         System.out.println(
                                 "Fixer: procgen nebula/background repair succeeded; deferring retry to next watcher tick.");
@@ -5675,10 +6999,23 @@ public class Fixer {
             if (isProcgenNameAssignerNpe(t)) {
                 System.out.println(
                         "Fixer: procgen NameAssigner NPE detail: " + describeThrowableChain(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame("procgen-nameassigner");
+                    maybeLogNewGamePreflightIssue(
+                            "procgen NameAssigner observed in non-mutating mode; deferring procgen preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
                 String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
                 String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
                 String nameIssue = ensureNameGenSpecsReadyForDirectNewGame();
                 if (ageIssue == null && starIssue == null && nameIssue == null) {
+                    clearTemporarySpecClassesByName(
+                            "procgen-nameassigner",
+                            "com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.AgeGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.NameGenData");
                     if (allowOrbitalJunkImmediateRetry) {
                         System.out.println(
                                 "Fixer: procgen NameAssigner repair succeeded; deferring retry to next watcher tick.");
@@ -5701,10 +7038,24 @@ public class Fixer {
                 System.out.println(
                         "Fixer: procgen PlanetGenDataSpec missing detail: "
                                 + describeThrowableChain(t));
+                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "procgen-planetgen-missing");
+                    maybeLogNewGamePreflightIssue(
+                            "procgen PlanetGenDataSpec missing in non-mutating mode; deferring procgen preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
                 String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
                 String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
                 String planetGenIssue = ensurePlanetGenSpecsReadyForDirectNewGame();
                 if (ageIssue == null && starIssue == null && planetGenIssue == null) {
+                    clearTemporarySpecClassesByName(
+                            "procgen-planetgen-missing",
+                            "com.fs.starfarer.api.impl.campaign.procgen.PlanetGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.StarGenDataSpec",
+                            "com.fs.starfarer.api.impl.campaign.procgen.AgeGenDataSpec");
                     if (allowOrbitalJunkImmediateRetry) {
                         System.out.println(
                                 "Fixer: procgen PlanetGenDataSpec repair succeeded; deferring retry to next watcher tick.");
@@ -6274,63 +7625,12 @@ public class Fixer {
     }
 
     private static Object resolveSettingsSpriteRootJson(Class<?> settingsClass) {
-        if (settingsClass == null) {
-            return null;
+        org.json.JSONObject root = resolveStarfarerSettingsRootJson(settingsClass);
+        org.json.JSONObject graphics = resolveStarfarerSettingsGraphicsJson(settingsClass, root);
+        if (graphics != null) {
+            return graphics;
         }
-        List<Field> jsonFields = new ArrayList<Field>();
-        try {
-            for (Field f : settingsClass.getDeclaredFields()) {
-                if (f == null || !Modifier.isStatic(f.getModifiers())) {
-                    continue;
-                }
-                Class<?> t = f.getType();
-                if (t != null && "org.json.JSONObject".equals(t.getName())) {
-                    f.setAccessible(true);
-                    jsonFields.add(f);
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        if (jsonFields.isEmpty()) {
-            return null;
-        }
-        for (Field f : jsonFields) {
-            try {
-                Object candidate = f.get(null);
-                if (candidate == null) {
-                    continue;
-                }
-                Class<?> jsonClass = candidate.getClass();
-                Method has = findMethodRecursive(jsonClass, "has", String.class);
-                Method getJSONObject = findMethodRecursive(jsonClass, "getJSONObject", String.class);
-                if (has == null || getJSONObject == null) {
-                    continue;
-                }
-                has.setAccessible(true);
-                boolean hasUi = ((Boolean) has.invoke(candidate, "ui")).booleanValue();
-                if (hasUi) {
-                    return candidate;
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-        for (Field f : jsonFields) {
-            try {
-                Object candidate = f.get(null);
-                if (candidate != null) {
-                    return candidate;
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-        try {
-            Class<?> jsonClass = Class.forName("org.json.JSONObject");
-            Object created = jsonClass.getDeclaredConstructor().newInstance();
-            jsonFields.get(0).set(null, created);
-            return created;
-        } catch (Throwable ignored) {
-        }
-        return null;
+        return root;
     }
 
     private static String tryStartDirectNewGameWithTimeout(
@@ -6705,6 +8005,22 @@ public class Fixer {
                 && lower.indexOf("data.scripts.world.systems.galatia.generate") >= 0;
     }
 
+    private static boolean isProcgenCampaignTerrainInitNpe(Throwable t) {
+        if (t == null) {
+            return false;
+        }
+        String trace = stackTraceToString(t);
+        if (trace == null || trace.length() == 0) {
+            return false;
+        }
+        String lower = trace.toLowerCase();
+        return lower.indexOf("nullpointerexception") >= 0
+                && lower.indexOf("campaignterrain.<init>") >= 0
+                && lower.indexOf("starsystem.initstar") >= 0
+                && (lower.indexOf("baselocation.addterrain") >= 0
+                        || lower.indexOf("baselocation.addcorona") >= 0);
+    }
+
     private static boolean isProcgenNameAssignerNpe(Throwable t) {
         if (t == null) {
             return false;
@@ -6766,11 +8082,210 @@ public class Fixer {
         }
     }
 
+    private static String repairCriticalPlanetSpecsInPlaceForDirectNewGame() {
+        try {
+            final String[] criticalIds =
+                    new String[] {
+                        "star_yellow", "star_orange", "star_red_dwarf", "arid", "gas_giant", "barren"
+                    };
+            boolean anyBroken = false;
+            for (String id : criticalIds) {
+                if (probePlanetCtorForType(id) != null) {
+                    anyBroken = true;
+                    break;
+                }
+            }
+            if (!anyBroken) {
+                return null;
+            }
+
+            Class<?> specStoreClass = Class.forName("com.fs.starfarer.loading.SpecStore");
+            Class<?> planetSpecClass = Class.forName("com.fs.starfarer.loading.specs.PlanetSpec");
+            Method registerSpec =
+                    findMethodRecursive(specStoreClass, "o00000", Class.class, String.class, Object.class);
+            if (registerSpec == null) {
+                return "planet runtime repair register method unavailable";
+            }
+            registerSpec.setAccessible(true);
+            Object root = loadConfigJsonViaLoadingUtils("data/config/planets.json");
+            if (root == null) {
+                return "planets.json unavailable";
+            }
+
+            Class<?> jsonObjectClass = root.getClass();
+            Method getJSONObject = findMethodRecursive(jsonObjectClass, "getJSONObject", String.class);
+            if (getJSONObject == null) {
+                return "planet runtime repair JSON access methods unavailable";
+            }
+            getJSONObject.setAccessible(true);
+
+            java.lang.reflect.Constructor<?> specCtor = null;
+            try {
+                specCtor = planetSpecClass.getDeclaredConstructor(String.class, jsonObjectClass);
+            } catch (Throwable ignored) {
+            }
+            if (specCtor == null) {
+                try {
+                    specCtor =
+                            planetSpecClass.getDeclaredConstructor(
+                                    String.class, Class.forName("org.json.JSONObject"));
+                } catch (Throwable ignored) {
+                }
+            }
+            if (specCtor == null) {
+                return "planet runtime repair constructor unavailable";
+            }
+            specCtor.setAccessible(true);
+
+            Method createDiff = findMethodRecursive(planetSpecClass, "createDiff", String.class, planetSpecClass);
+            if (createDiff == null) {
+                return "planet runtime repair createDiff unavailable";
+            }
+            createDiff.setAccessible(true);
+            Class<?> diffClass = createDiff.getReturnType();
+            Method updateFromDiff = findMethodRecursive(planetSpecClass, "updateFromDiff", planetSpecClass, diffClass);
+            if (updateFromDiff == null) {
+                return "planet runtime repair updateFromDiff unavailable";
+            }
+            updateFromDiff.setAccessible(true);
+
+            int repaired = 0;
+            int inserted = 0;
+            int alreadyOk = 0;
+            List<String> unresolved = new ArrayList<String>();
+            for (String id : criticalIds) {
+                if (id == null || id.trim().isEmpty()) {
+                    continue;
+                }
+                String cleanId = id.trim();
+                String issueBefore = probePlanetCtorForType(cleanId);
+                if (issueBefore == null) {
+                    alreadyOk++;
+                    continue;
+                }
+                Object specJson = getJSONObject.invoke(root, cleanId);
+                if (specJson == null) {
+                    unresolved.add(cleanId + "(json-null:" + issueBefore + ")");
+                    continue;
+                }
+                Object existing = lookupSpecById(specStoreClass, planetSpecClass, cleanId);
+                if (existing == null) {
+                    try {
+                        Object created = specCtor.newInstance(cleanId, specJson);
+                        registerSpec.invoke(null, planetSpecClass, cleanId, created);
+                        existing = lookupSpecById(specStoreClass, planetSpecClass, cleanId);
+                        if (existing == null) {
+                            unresolved.add(cleanId + "(insert-verify-failed:" + issueBefore + ")");
+                            continue;
+                        }
+                        inserted++;
+                        trackTemporaryDirectNewGamePlanetSpec(cleanId, existing);
+                    } catch (Throwable insertErr) {
+                        unresolved.add(
+                                cleanId
+                                        + "(insert:"
+                                        + describeThrowableChain(insertErr)
+                                        + " before="
+                                        + issueBefore
+                                        + ")");
+                        continue;
+                    }
+                }
+                try {
+                    Object fallback = specCtor.newInstance(cleanId, specJson);
+                    Object diff = createDiff.invoke(null, cleanId, fallback);
+                    updateFromDiff.invoke(null, existing, diff);
+                } catch (Throwable patchErr) {
+                    unresolved.add(cleanId + "(" + describeThrowableChain(patchErr) + ")");
+                    continue;
+                }
+
+                String issueAfter = probePlanetCtorForType(cleanId);
+                if (issueAfter == null) {
+                    repaired++;
+                } else {
+                    unresolved.add(cleanId + "(" + issueAfter + ")");
+                }
+            }
+
+            if (repaired > 0 || !unresolved.isEmpty()) {
+                System.out.println(
+                        "Fixer: planet runtime in-place repair repaired="
+                                + repaired
+                                + " inserted="
+                                + inserted
+                                + " alreadyOk="
+                                + alreadyOk
+                                + " unresolved="
+                                + unresolved.size());
+            }
+            if (!unresolved.isEmpty()) {
+                int limit = Math.min(6, unresolved.size());
+                return "planet-runtime:"
+                        + String.join(", ", unresolved.subList(0, limit))
+                        + (unresolved.size() > limit ? " ... +" + (unresolved.size() - limit) : "");
+            }
+            return null;
+        } catch (Throwable t) {
+            return "planet-runtime:" + describeThrowableChain(t);
+        }
+    }
+
+    private static String probePlanetCtorForType(String typeId) {
+        if (typeId == null || typeId.trim().isEmpty()) {
+            return "type-empty";
+        }
+        Object planet = null;
+        try {
+            Class<?> vector2fClass = Class.forName("org.lwjgl.util.vector.Vector2f");
+            java.lang.reflect.Constructor<?> vectorCtor = vector2fClass.getDeclaredConstructor();
+            vectorCtor.setAccessible(true);
+            Object loc = vectorCtor.newInstance();
+
+            Class<?> planetClass = Class.forName("com.fs.starfarer.combat.entities.terrain.Planet");
+            java.lang.reflect.Constructor<?> ctor =
+                    planetClass.getDeclaredConstructor(String.class, Float.TYPE, Float.TYPE, vector2fClass);
+            ctor.setAccessible(true);
+            planet =
+                    ctor.newInstance(
+                            typeId.trim(), Float.valueOf(128f), Float.valueOf(0f), loc);
+            if (planet == null) {
+                return "planet-ctor-null";
+            }
+            Method getSpec = findMethodRecursive(planetClass, "getSpec");
+            if (getSpec != null) {
+                getSpec.setAccessible(true);
+                if (getSpec.invoke(planet) == null) {
+                    return "planet-spec-null";
+                }
+            }
+            return null;
+        } catch (Throwable t) {
+            return describeThrowableChain(t);
+        } finally {
+            if (planet != null) {
+                try {
+                    Method cleanup = findMethodRecursive(planet.getClass(), "cleanup");
+                    if (cleanup != null) {
+                        cleanup.setAccessible(true);
+                        cleanup.invoke(planet);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
+
     private static String ensureFactionSpecsReadyForDirectNewGame() {
         return ensureFactionSpecsReadyForDirectNewGame(allowMutatingSpecPreflight());
     }
 
     private static String ensureFactionSpecsReadyForDirectNewGame(boolean allowRepair) {
+        return ensureFactionSpecsReadyForDirectNewGame(allowRepair, false);
+    }
+
+    private static String ensureFactionSpecsReadyForDirectNewGame(
+            boolean allowRepair, boolean lightweightRepair) {
         try {
             Class<?> specStoreClass = Class.forName("com.fs.starfarer.loading.SpecStore");
             List<Class<?>> factionSpecClasses = new ArrayList<Class<?>>();
@@ -6857,7 +8372,7 @@ public class Fixer {
             if (hasMissingFactionSpecs && allowRepair) {
                 String repairIssue =
                         tryRepairMissingFactionSpecsForDirectNewGame(
-                                specStoreClass, factionSpecClasses, missing);
+                                specStoreClass, factionSpecClasses, missing, lightweightRepair);
                 if (repairIssue != null) {
                     System.out.println(
                             "Fixer: faction preflight repair warning: " + repairIssue);
@@ -6918,9 +8433,15 @@ public class Fixer {
                         "luddic_path",
                         "persean_league"
                     };
-            String runtimeFactionIssue =
-                    ensureRuntimeFactionsPresentForDirectNewGame(
-                            runtimeRequiredFactionIds, allowRepair);
+            String runtimeFactionIssue = null;
+            if (lightweightRepair) {
+                System.out.println(
+                        "Fixer: lightweight faction preflight skipping runtime faction-manager bootstrap.");
+            } else {
+                runtimeFactionIssue =
+                        ensureRuntimeFactionsPresentForDirectNewGame(
+                                runtimeRequiredFactionIds, allowRepair);
+            }
             if (runtimeFactionIssue != null) {
                 missing.add(runtimeFactionIssue);
             }
@@ -7020,9 +8541,6 @@ public class Fixer {
             }
 
             List<String> missing = collectMissingRuntimeFactionIds(manager, requiredFactionIds);
-            if (missing.isEmpty()) {
-                return null;
-            }
 
             if (allowRepair && isRuntimeFactionManagerRepairReady(manager)) {
                 invokeRuntimeFactionManagerReadResolve(manager);
@@ -7038,7 +8556,20 @@ public class Fixer {
                 invokeRuntimeFactionManagerReadResolve(manager);
                 missing = collectMissingRuntimeFactionIds(manager, requiredFactionIds);
             }
+            String runtimeUiIssue = null;
+            if (allowRepair && missing.isEmpty()) {
+                // Existing runtime factions can still be incomplete enough to crash
+                // CustomCampaignEntity.readResolve; keep validating UI colors here.
+                runtimeUiIssue = ensureRuntimeFactionUiColorsPresent(manager, requiredFactionIds);
+                if (runtimeUiIssue != null) {
+                    System.out.println(
+                            "Fixer: runtime faction UI repair warning: " + runtimeUiIssue);
+                }
+            }
             if (missing.isEmpty()) {
+                if (runtimeUiIssue != null) {
+                    return runtimeUiIssue;
+                }
                 if (runtimeRepairIssue != null) {
                     return "runtime-faction-manager-repair:" + runtimeRepairIssue;
                 }
@@ -7049,6 +8580,104 @@ public class Fixer {
             return "runtime-faction-manager:missing=" + String.join(", ", missing);
         } catch (Throwable t) {
             return "runtime-faction-manager:" + describeThrowableChain(t);
+        }
+    }
+
+    private static String ensureRuntimeFactionUiColorsPresent(
+            Object manager, String[] requiredFactionIds) {
+        if (manager == null || requiredFactionIds == null || requiredFactionIds.length == 0) {
+            return null;
+        }
+        try {
+            Method getFaction = findMethodRecursive(manager.getClass(), "getFaction", String.class);
+            if (getFaction == null) {
+                return "runtime-faction-ui:getFaction-missing";
+            }
+            getFaction.setAccessible(true);
+            List<String> unresolved = new ArrayList<String>();
+            int repaired = 0;
+            for (String factionId : requiredFactionIds) {
+                if (factionId == null || factionId.trim().isEmpty()) {
+                    continue;
+                }
+                String cleanId = factionId.trim();
+                Object faction = getFaction.invoke(manager, cleanId);
+                String issue = ensureRuntimeFactionUiColorsPresentForFaction(faction);
+                if (issue == null) {
+                    repaired++;
+                } else {
+                    unresolved.add(cleanId + ":" + issue);
+                }
+            }
+            if (repaired > 0) {
+                System.out.println(
+                        "Fixer: runtime faction UI colors verified/repaired count=" + repaired + ".");
+            }
+            if (unresolved.isEmpty()) {
+                return null;
+            }
+            return "runtime-faction-ui:" + String.join(", ", unresolved);
+        } catch (Throwable t) {
+            return "runtime-faction-ui:" + describeThrowableChain(t);
+        }
+    }
+
+    private static String ensureRuntimeFactionUiColorsPresentForFaction(Object faction) {
+        if (faction == null) {
+            return "faction-null";
+        }
+        String specIssue = ensureFactionSpecInitialized(faction.getClass(), faction);
+        if (specIssue != null) {
+            return specIssue;
+        }
+        try {
+            Method getSecondaryUIColor =
+                    findMethodRecursive(faction.getClass(), "getSecondaryUIColor");
+            if (getSecondaryUIColor != null) {
+                getSecondaryUIColor.setAccessible(true);
+                Object currentSecondary = getSecondaryUIColor.invoke(faction);
+                if (currentSecondary != null) {
+                    return null;
+                }
+            }
+
+            java.awt.Color baseColor = null;
+            Method getBaseUIColor = findMethodRecursive(faction.getClass(), "getBaseUIColor");
+            if (getBaseUIColor != null) {
+                getBaseUIColor.setAccessible(true);
+                Object baseObj = getBaseUIColor.invoke(faction);
+                if (baseObj instanceof java.awt.Color) {
+                    baseColor = (java.awt.Color) baseObj;
+                }
+            }
+            if (baseColor == null) {
+                Method getColor = findMethodRecursive(faction.getClass(), "getColor");
+                if (getColor != null) {
+                    getColor.setAccessible(true);
+                    Object colorObj = getColor.invoke(faction);
+                    if (colorObj instanceof java.awt.Color) {
+                        baseColor = (java.awt.Color) colorObj;
+                    }
+                }
+            }
+            if (baseColor == null) {
+                return "base-ui-color-null";
+            }
+
+            invokeInstanceMethodIfPresent(
+                    faction, "setSecondaryColorOverride", java.awt.Color.class, baseColor);
+            invokeInstanceMethodIfPresent(
+                    faction, "setSecondaryColorSegmentsOverride", Integer.TYPE, Integer.valueOf(8));
+
+            if (getSecondaryUIColor != null) {
+                Object repairedSecondary = getSecondaryUIColor.invoke(faction);
+                if (repairedSecondary != null) {
+                    return null;
+                }
+            }
+            return "secondary-ui-color-null";
+        } catch (Throwable t) {
+            return describeThrowableChain(t);
         }
     }
 
@@ -7232,7 +8861,10 @@ public class Fixer {
     }
 
     private static String tryRepairMissingFactionSpecsForDirectNewGame(
-            Class<?> specStoreClass, List<Class<?>> factionSpecClasses, List<String> missingItems) {
+            Class<?> specStoreClass,
+            List<Class<?>> factionSpecClasses,
+            List<String> missingItems,
+            boolean lightweightRepair) {
         if (missingItems == null || missingItems.isEmpty()) {
             return null;
         }
@@ -7260,7 +8892,13 @@ public class Fixer {
             }
             registerSpec.setAccessible(true);
 
-            String defaultsIssue = ensureFactionDefaultsForRepair();
+            String defaultsIssue = null;
+            if (lightweightRepair) {
+                System.out.println(
+                        "Fixer: faction repair using lightweight fallback path; skipping static faction default warmup.");
+            } else {
+                defaultsIssue = ensureFactionDefaultsForRepair();
+            }
             float defaultTariff = resolveFactionDefaultTariffForRepair();
 
             int inserted = 0;
@@ -7281,7 +8919,11 @@ public class Fixer {
                 Object factionJson = loadFactionJsonForRepair(factionId);
                 Object fallbackSpec =
                         createFallbackFactionSpecForDirectNewGame(
-                                factionSpecClass, factionId, factionJson, defaultTariff);
+                                factionSpecClass,
+                                factionId,
+                                factionJson,
+                                defaultTariff,
+                                lightweightRepair);
                 if (fallbackSpec == null) {
                     failed.add(factionId + "(build-null)");
                     continue;
@@ -7425,7 +9067,11 @@ public class Fixer {
     }
 
     private static Object createFallbackFactionSpecForDirectNewGame(
-            Class<?> factionSpecClass, String factionId, Object factionJson, float defaultTariff) {
+            Class<?> factionSpecClass,
+            String factionId,
+            Object factionJson,
+            float defaultTariff,
+            boolean lightweightRepair) {
         try {
             java.lang.reflect.Constructor<?> ctor = factionSpecClass.getDeclaredConstructor();
             ctor.setAccessible(true);
@@ -7526,33 +9172,38 @@ public class Fixer {
             invokeInstanceMethodIfPresent(spec, "setSecondaryUIColor", java.awt.Color.class, baseColor);
             invokeInstanceMethodIfPresent(spec, "setSecondarySegments", Integer.TYPE, Integer.valueOf(8));
 
-            Object shipRolesJson = optJsonObjectForRepair(factionJson, "shipRoles");
-            if (shipRolesJson != null) {
-                Object doctrineJsonForRoles = optJsonObjectForRepair(factionJson, "doctrine");
-                if (doctrineJsonForRoles != null) {
+            if (!lightweightRepair) {
+                Object shipRolesJson = optJsonObjectForRepair(factionJson, "shipRoles");
+                if (shipRolesJson != null) {
+                    Object doctrineJsonForRoles = optJsonObjectForRepair(factionJson, "doctrine");
+                    if (doctrineJsonForRoles != null) {
+                        try {
+                            Method putMethod =
+                                    findMethodRecursive(
+                                            shipRolesJson.getClass(),
+                                            "put",
+                                            String.class,
+                                            Object.class);
+                            if (putMethod != null) {
+                                putMethod.setAccessible(true);
+                                putMethod.invoke(shipRolesJson, "doctrine", doctrineJsonForRoles);
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                    }
                     try {
-                        Method putMethod =
-                                findMethodRecursive(
-                                        shipRolesJson.getClass(), "put", String.class, Object.class);
-                        if (putMethod != null) {
-                            putMethod.setAccessible(true);
-                            putMethod.invoke(shipRolesJson, "doctrine", doctrineJsonForRoles);
+                        Class<?> rolesClass = Class.forName("com.fs.starfarer.loading.V");
+                        java.lang.reflect.Constructor<?> rolesCtor =
+                                findJsonConstructorForRepair(rolesClass, shipRolesJson);
+                        Method setShipRoles =
+                                findMethodRecursive(factionSpecClass, "setShipRoles", rolesClass);
+                        if (rolesCtor != null && setShipRoles != null) {
+                            rolesCtor.setAccessible(true);
+                            setShipRoles.setAccessible(true);
+                            setShipRoles.invoke(spec, rolesCtor.newInstance(shipRolesJson));
                         }
                     } catch (Throwable ignored) {
                     }
-                }
-                try {
-                    Class<?> rolesClass = Class.forName("com.fs.starfarer.loading.V");
-                    java.lang.reflect.Constructor<?> rolesCtor =
-                            findJsonConstructorForRepair(rolesClass, shipRolesJson);
-                    Method setShipRoles =
-                            findMethodRecursive(factionSpecClass, "setShipRoles", rolesClass);
-                    if (rolesCtor != null && setShipRoles != null) {
-                        rolesCtor.setAccessible(true);
-                        setShipRoles.setAccessible(true);
-                        setShipRoles.invoke(spec, rolesCtor.newInstance(shipRolesJson));
-                    }
-                } catch (Throwable ignored) {
                 }
             }
 
@@ -7590,25 +9241,28 @@ public class Fixer {
                 }
             }
 
-            Object factionDoctrineJson = optJsonObjectForRepair(factionJson, "factionDoctrine");
-            if (factionDoctrineJson != null) {
-                try {
-                    Class<?> doctrineClass = Class.forName("com.fs.starfarer.loading.specs.FactionDoctrine");
-                    java.lang.reflect.Constructor<?> doctrineCtor =
-                            findJsonConstructorForRepair(doctrineClass, factionDoctrineJson);
-                    Method getDoctrine = findMethodRecursive(factionSpecClass, "getDoctrine");
-                    Method copyTo = findMethodRecursive(doctrineClass, "copyTo", doctrineClass);
-                    if (doctrineCtor != null && getDoctrine != null && copyTo != null) {
-                        doctrineCtor.setAccessible(true);
-                        getDoctrine.setAccessible(true);
-                        copyTo.setAccessible(true);
-                        Object doctrine = doctrineCtor.newInstance(factionDoctrineJson);
-                        Object targetDoctrine = getDoctrine.invoke(spec);
-                        if (targetDoctrine != null) {
-                            copyTo.invoke(doctrine, targetDoctrine);
+            if (!lightweightRepair) {
+                Object factionDoctrineJson = optJsonObjectForRepair(factionJson, "factionDoctrine");
+                if (factionDoctrineJson != null) {
+                    try {
+                        Class<?> doctrineClass =
+                                Class.forName("com.fs.starfarer.loading.specs.FactionDoctrine");
+                        java.lang.reflect.Constructor<?> doctrineCtor =
+                                findJsonConstructorForRepair(doctrineClass, factionDoctrineJson);
+                        Method getDoctrine = findMethodRecursive(factionSpecClass, "getDoctrine");
+                        Method copyTo = findMethodRecursive(doctrineClass, "copyTo", doctrineClass);
+                        if (doctrineCtor != null && getDoctrine != null && copyTo != null) {
+                            doctrineCtor.setAccessible(true);
+                            getDoctrine.setAccessible(true);
+                            copyTo.setAccessible(true);
+                            Object doctrine = doctrineCtor.newInstance(factionDoctrineJson);
+                            Object targetDoctrine = getDoctrine.invoke(spec);
+                            if (targetDoctrine != null) {
+                                copyTo.invoke(doctrine, targetDoctrine);
+                            }
                         }
+                    } catch (Throwable ignored) {
                     }
-                } catch (Throwable ignored) {
                 }
             }
 
@@ -10087,6 +11741,24 @@ public class Fixer {
             return "probe faction is null";
         }
         try {
+            Method getFactionColor = findMethodRecursive(faction.getClass(), "getColor");
+            if (getFactionColor != null) {
+                getFactionColor.setAccessible(true);
+                Object factionColor = getFactionColor.invoke(faction);
+                if (factionColor == null) {
+                    return "probe faction color is null";
+                }
+            }
+            Method getFactionSecondaryUIColor =
+                    findMethodRecursive(faction.getClass(), "getSecondaryUIColor");
+            if (getFactionSecondaryUIColor != null) {
+                getFactionSecondaryUIColor.setAccessible(true);
+                Object factionUi = getFactionSecondaryUIColor.invoke(faction);
+                if (factionUi == null) {
+                    return "probe faction secondary UI color is null";
+                }
+                return null;
+            }
             Method getSpec = findMethodRecursive(faction.getClass(), "getSpec");
             if (getSpec == null) {
                 return null;
@@ -11885,6 +13557,131 @@ public class Fixer {
         return null;
     }
 
+    private static void trackTemporaryDirectNewGamePlanetSpec(String id, Object spec) {
+        if (id == null || spec == null) {
+            return;
+        }
+        String cleanId = id.trim();
+        if (cleanId.length() == 0) {
+            return;
+        }
+        synchronized (DIRECT_NEW_GAME_TEMP_PLANET_SPECS_LOCK) {
+            directNewGameTemporaryPlanetSpecs.put(cleanId, spec);
+        }
+    }
+
+    private static Map<String, Object> snapshotTemporaryDirectNewGamePlanetSpecs() {
+        synchronized (DIRECT_NEW_GAME_TEMP_PLANET_SPECS_LOCK) {
+            return new LinkedHashMap<String, Object>(directNewGameTemporaryPlanetSpecs);
+        }
+    }
+
+    private static void clearTrackedTemporaryDirectNewGamePlanetSpecs(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        synchronized (DIRECT_NEW_GAME_TEMP_PLANET_SPECS_LOCK) {
+            for (String id : ids) {
+                if (id != null) {
+                    directNewGameTemporaryPlanetSpecs.remove(id);
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings({"rawtypes"})
+    private static boolean removeSpecForClassIfCurrentMatches(
+            Class<?> specStoreClass, Class<?> specClass, String id, Object expectedSpec) {
+        if (specStoreClass == null || specClass == null || id == null || id.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            Field classToSpecsField = findFieldRecursive(specStoreClass, "int");
+            if (classToSpecsField == null) {
+                return false;
+            }
+            classToSpecsField.setAccessible(true);
+            Object classToSpecsObj = classToSpecsField.get(null);
+            if (!(classToSpecsObj instanceof Map)) {
+                return false;
+            }
+            Object perClassObj = ((Map) classToSpecsObj).get(specClass);
+            if (!(perClassObj instanceof Map)) {
+                return false;
+            }
+            Map perClassMap = (Map) perClassObj;
+            Object current = perClassMap.get(id);
+            if (current == null) {
+                return true;
+            }
+            if (expectedSpec != null && current != expectedSpec) {
+                return false;
+            }
+            perClassMap.remove(id);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static String cleanupTemporaryPlanetSpecsForDirectNewGame(String reason) {
+        Map<String, Object> tracked = snapshotTemporaryDirectNewGamePlanetSpecs();
+        if (tracked.isEmpty()) {
+            return null;
+        }
+        try {
+            Class<?> specStoreClass = Class.forName("com.fs.starfarer.loading.SpecStore");
+            Class<?> planetSpecClass = Class.forName("com.fs.starfarer.loading.specs.PlanetSpec");
+            List<String> resolved = new ArrayList<String>();
+            List<String> unresolved = new ArrayList<String>();
+            int removed = 0;
+            int alreadyReplaced = 0;
+            for (Map.Entry<String, Object> entry : tracked.entrySet()) {
+                String id = entry.getKey();
+                Object expected = entry.getValue();
+                Object current = lookupSpecById(specStoreClass, planetSpecClass, id);
+                if (current == null) {
+                    resolved.add(id);
+                    continue;
+                }
+                if (current != expected) {
+                    alreadyReplaced++;
+                    resolved.add(id);
+                    continue;
+                }
+                boolean removedNow =
+                        removeSpecForClassIfCurrentMatches(specStoreClass, planetSpecClass, id, expected);
+                Object after = lookupSpecById(specStoreClass, planetSpecClass, id);
+                if (removedNow && after == null) {
+                    removed++;
+                    resolved.add(id);
+                } else {
+                    unresolved.add(id);
+                }
+            }
+            if (!resolved.isEmpty()) {
+                clearTrackedTemporaryDirectNewGamePlanetSpecs(resolved);
+            }
+            if (removed > 0 || alreadyReplaced > 0 || !unresolved.isEmpty()) {
+                System.out.println(
+                        "Fixer: temporary direct-new-game planet cleanup after "
+                                + String.valueOf(reason)
+                                + " removed="
+                                + removed
+                                + " replaced="
+                                + alreadyReplaced
+                                + " unresolved="
+                                + unresolved.size());
+            }
+            if (!unresolved.isEmpty()) {
+                return "planet-temp-cleanup:" + String.join(", ", unresolved);
+            }
+            return null;
+        } catch (Throwable t) {
+            return "planet-temp-cleanup:" + describeThrowableChain(t);
+        }
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static boolean upsertSpecForClass(
             Class<?> specStoreClass,
@@ -11963,6 +13760,52 @@ public class Fixer {
             clearMethod.invoke(null, specClass);
         } catch (Throwable t) {
             System.out.println("Fixer: unable to clear spec map for " + specClass.getName() + ": " + t);
+        }
+    }
+
+    private static void clearTemporarySpecClassesByName(String reason, String... classNames) {
+        if (classNames == null || classNames.length == 0) {
+            return;
+        }
+        boolean allowCleanup =
+                Boolean.parseBoolean(
+                        System.getProperty(
+                                "starsector.autoCampaignClearTemporarySpecClasses", "false"));
+        if (!allowCleanup) {
+            System.out.println(
+                    "Fixer: retaining temporary spec classes after "
+                            + String.valueOf(reason)
+                            + " (cleanup disabled by default).");
+            return;
+        }
+        try {
+            Class<?> specStoreClass = Class.forName("com.fs.starfarer.loading.SpecStore");
+            int cleared = 0;
+            for (String className : classNames) {
+                if (className == null || className.trim().isEmpty()) {
+                    continue;
+                }
+                try {
+                    Class<?> specClass = Class.forName(className.trim());
+                    clearSpecsForClass(specStoreClass, specClass);
+                    cleared++;
+                } catch (Throwable ignored) {
+                }
+            }
+            if (cleared > 0) {
+                System.out.println(
+                        "Fixer: cleared temporary spec classes after "
+                                + String.valueOf(reason)
+                                + " count="
+                                + cleared
+                                + ".");
+            }
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: unable to clear temporary spec classes after "
+                            + String.valueOf(reason)
+                            + ": "
+                            + describeThrowableChain(t));
         }
     }
 
@@ -17264,6 +19107,7 @@ public class Fixer {
             }
 
             Set<String> roots = new LinkedHashSet<String>();
+            roots.add("data/config");
             roots.add("data/weapons");
             roots.add("data/shipsystems");
             roots.add("data/hulls");
@@ -17329,6 +19173,8 @@ public class Fixer {
                         || "system".equals(ext)
                         || "skin".equals(ext)
                         || "variant".equals(ext)
+                        || "json".equals(ext)
+                        || "csv".equals(ext)
                         || "skill".equals(ext)) {
                     outFiles.add(rel);
                 }
@@ -17496,12 +19342,43 @@ public class Fixer {
             controlsVersion = controlsVersion.trim();
         }
 
+        String startupResolution = System.getProperty("startRes", "1280x768");
+        if (startupResolution == null || startupResolution.trim().isEmpty()) {
+            startupResolution = "1280x768";
+        } else {
+            startupResolution = startupResolution.trim();
+        }
+
+        String startupScreenScale = System.getProperty(FORCE_SCREEN_SCALE_PROPERTY, "1.0");
+        if (startupScreenScale == null || startupScreenScale.trim().isEmpty()) {
+            startupScreenScale = "1.0";
+        } else {
+            startupScreenScale = startupScreenScale.trim();
+        }
+
+        boolean startupFullscreen = Boolean.parseBoolean(System.getProperty("startFS", "false"));
+        boolean startupSound = !"false".equalsIgnoreCase(System.getProperty("startSound", "true"));
+
         try {
             Preferences prefs = Preferences.userRoot().node(SERIAL_PREF_NODE);
             prefs.putBoolean("firstGameRun", false);
             prefs.put("controlsVersion", controlsVersion);
+            prefs.put("resolution", startupResolution);
+            prefs.put("screenScale", startupScreenScale);
+            prefs.put("numAASamples", "0");
+            prefs.putBoolean("fullscreen", startupFullscreen);
+            prefs.putBoolean("sound", startupSound);
             System.out.println(
-                    "Fixer: startup prefs updated firstGameRun=false controlsVersion=" + controlsVersion);
+                    "Fixer: startup prefs updated firstGameRun=false controlsVersion="
+                            + controlsVersion
+                            + " resolution="
+                            + startupResolution
+                            + " screenScale="
+                            + startupScreenScale
+                            + " fullscreen="
+                            + startupFullscreen
+                            + " sound="
+                            + startupSound);
         } catch (Throwable t) {
             System.out.println("Fixer: unable to persist startup prefs: " + t);
         }

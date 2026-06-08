@@ -2,20 +2,30 @@ package org.lwjgl.input;
 
 public class Keyboard {
     public static final int KEY_ESCAPE = 1;
-    public static native void create();
-    public static native void destroy();
-    public static native void poll();
-    public static native boolean isCreated();
-    public static native boolean isKeyDown(int key);
-    public static native String getKeyName(int key);
-    public static native int getKeyIndex(String keyName);
-    public static native int getNumKeys();
-    public static native boolean next();
-    public static native int getEventKey();
-    public static native boolean getEventKeyState();
-    public static native char getEventCharacter();
-    public static native long getEventNanoseconds();
-    public static native boolean isRepeatEvent();
-    public static native void enableRepeatEvents(boolean enable);
-    public static native boolean areRepeatEventsEnabled();
+    private static boolean created = false;
+    private static boolean repeatEvents = false;
+    private static boolean repeatLogPrinted = false;
+
+    public static void create() { created = true; }
+    public static void destroy() { created = false; repeatEvents = false; }
+    public static void poll() {}
+    public static boolean isCreated() { return created; }
+    public static boolean isKeyDown(int key) { return false; }
+    public static String getKeyName(int key) { return "KEY_" + key; }
+    public static int getKeyIndex(String keyName) { return KEY_ESCAPE; }
+    public static int getNumKeys() { return 256; }
+    public static boolean next() { return false; }
+    public static int getEventKey() { return 0; }
+    public static boolean getEventKeyState() { return false; }
+    public static char getEventCharacter() { return 0; }
+    public static long getEventNanoseconds() { return System.nanoTime(); }
+    public static boolean isRepeatEvent() { return false; }
+    public static void enableRepeatEvents(boolean enable) {
+        if (!repeatLogPrinted) {
+            repeatLogPrinted = true;
+            System.out.println("Bridge Keyboard.enableRepeatEvents(" + enable + ")");
+        }
+        repeatEvents = enable;
+    }
+    public static boolean areRepeatEventsEnabled() { return repeatEvents; }
 }
