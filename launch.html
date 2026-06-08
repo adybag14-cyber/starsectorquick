@@ -496,7 +496,7 @@
                 const origin = isLocal ? window.location.origin + '/' : 'https://adybag14-cyber.github.io/';
                 const projectPath = isLocal ? '' : 'starsectorquick/';
                 const siteRootUrl = origin + projectPath;
-                const fullAppPath = '/app/';
+                const fullAppPath = isLocal ? '/app/' : `/app/${projectPath}`;
 
                 log(`Environment: ${isLocal ? 'LOCAL' : 'REMOTE'}`, '#888');
                 log(`Origin: ${origin}`, '#888');
