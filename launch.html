@@ -510,7 +510,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260608-config-classpath-v1';
+                    const aliasWorkerVersion = '20260608-range-normalize-v2';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
