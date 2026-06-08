@@ -510,7 +510,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260608-jar-range-proxy-v1';
+                    const aliasWorkerVersion = '20260608-storage-reset-v1';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -546,6 +546,77 @@
                         log(`Project path alias worker unavailable: ${err && err.message ? err.message : err}`, '#ffaa00');
                     }
                 };
+                const maybeResetCheerpJPersistentStorage = async () => {
+                    if (isLocal && window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ !== true) return;
+                    if (window.__STARSECTOR_SKIP_CHEERPJ_STORAGE_RESET__ === true) {
+                        log('CheerpJ persistent storage reset skipped by override.', '#ffaa00');
+                        return;
+                    }
+
+                    const resetVersion = '20260608-cheerpj-storage-reset-v1';
+                    const resetKey = 'starsectorquickCheerpJStorageReset';
+                    const params = new URLSearchParams(window.location.search);
+                    const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');
+                    try {
+                        if (!forceReset && window.localStorage && window.localStorage.getItem(resetKey) === resetVersion) {
+                            return;
+                        }
+                    } catch (err) {
+                        // Storage access can be disabled; continue and let CheerpJ attempt startup.
+                    }
+
+                    const isCheerpJStorageName = name => /cheerpj|cheerpx|leaningtech|cjfs|cjrtnc/i.test(name || '');
+                    let dbDeleted = 0;
+                    let dbFailed = 0;
+                    let cacheDeleted = 0;
+                    let cacheFailed = 0;
+
+                    try {
+                        if (window.indexedDB && typeof indexedDB.databases === 'function') {
+                            const databases = await indexedDB.databases();
+                            const names = [...new Set(databases.map(db => db && db.name).filter(isCheerpJStorageName))];
+                            for (const name of names) {
+                                const ok = await new Promise(resolve => {
+                                    let settled = false;
+                                    const done = result => {
+                                        if (!settled) {
+                                            settled = true;
+                                            resolve(result);
+                                        }
+                                    };
+                                    const request = indexedDB.deleteDatabase(name);
+                                    request.onsuccess = () => done(true);
+                                    request.onerror = () => done(false);
+                                    request.onblocked = () => done(false);
+                                    setTimeout(() => done(false), 2500);
+                                });
+                                if (ok) dbDeleted += 1;
+                                else dbFailed += 1;
+                            }
+                        } else {
+                            log('CheerpJ IndexedDB reset unavailable in this browser; continuing.', '#ffaa00');
+                        }
+
+                        if (window.caches && typeof caches.keys === 'function') {
+                            const cacheNames = (await caches.keys()).filter(isCheerpJStorageName);
+                            for (const name of cacheNames) {
+                                if (await caches.delete(name)) cacheDeleted += 1;
+                                else cacheFailed += 1;
+                            }
+                        }
+
+                        try {
+                            if (window.localStorage) window.localStorage.setItem(resetKey, resetVersion);
+                        } catch (err) {
+                            // Non-fatal; the reset may run again next load if localStorage is unavailable.
+                        }
+                        log(`CheerpJ persistent storage reset ${resetVersion}: indexedDB deleted=${dbDeleted} failed=${dbFailed}, caches deleted=${cacheDeleted} failed=${cacheFailed}.`, '#888');
+                    } catch (err) {
+                        log(`CheerpJ persistent storage reset failed: ${err && err.message ? err.message : err}`, '#ffaa00');
+                    }
+                };
+
+                await maybeResetCheerpJPersistentStorage();
                 await ensureRemotePathAliasWorker();
 
                 const dataUrl = siteRootUrl + 'starsector/starsector/';
