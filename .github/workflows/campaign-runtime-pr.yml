@@ -1,0 +1,54 @@
+name: Campaign runtime PR matrix
+
+on:
+  pull_request:
+    branches:
+      - feature/starsector-webgl-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: raf-no-java-sleep
+            swap_mode: raf
+            patch_sleep: 'true'
+          - name: timeout0-no-java-sleep
+            swap_mode: timeout0
+            patch_sleep: 'true'
+          - name: timeout16-no-java-sleep
+            swap_mode: timeout16
+            patch_sleep: 'true'
+          - name: raf-stock-java-sleep
+            swap_mode: raf
+            patch_sleep: 'false'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Build and verify ${{ matrix.name }}
+        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' '${{ matrix.swap_mode }}' '${{ matrix.patch_sleep }}'
+      - name: Upload ${{ matrix.name }} evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-runtime-${{ matrix.name }}
+          path: test_output/${{ matrix.name }}
+          if-no-files-found: warn
