@@ -42,6 +42,83 @@ new_false_ready = '''            String preInvokeReadiness = checkDirectNewGameR
             if ("player-fleet-null".equals(preInvokeReadiness)) {'''
 fixer = replace_exact(fixer, old_false_ready, new_false_ready, 'false-ready early return')
 
+# StarfarerSettings exposes an anonymous SettingsAPI implementation before the
+# AppDriver has a current state. Its isInCampaignState() method dereferences that
+# missing state and kills BaseGameState.traverse during launcher startup. Keep the
+# real provider for every method, but make that single readiness query null-safe
+# until the driver has finished initialising.
+old_settings_install = '''            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method setSettings = findGlobalSetSettingsMethod(globalClass);'''
+new_settings_install = '''            settingsApi = wrapSettingsApiNullSafe(settingsApi);
+
+            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method setSettings = findGlobalSetSettingsMethod(globalClass);'''
+fixer = replace_exact(
+    fixer,
+    old_settings_install,
+    new_settings_install,
+    'null-safe SettingsAPI installation',
+)
+
+settings_helper_anchor = '''    private static Method findGlobalSetSettingsMethod(Class<?> globalClass) {'''
+settings_helper = '''    private static Object wrapSettingsApiNullSafe(final Object delegate) {
+        if (delegate == null) {
+            return null;
+        }
+        try {
+            final Class<?> settingsApiInterface =
+                    Class.forName("com.fs.starfarer.api.SettingsAPI");
+            if (!settingsApiInterface.isInstance(delegate)) {
+                return delegate;
+            }
+            ClassLoader loader = settingsApiInterface.getClassLoader();
+            if (loader == null) {
+                loader = delegate.getClass().getClassLoader();
+            }
+            if (loader == null) {
+                loader = Fixer.class.getClassLoader();
+            }
+            final boolean[] campaignStateNullLogged = new boolean[] {false};
+            return java.lang.reflect.Proxy.newProxyInstance(
+                    loader,
+                    new Class<?>[] {settingsApiInterface},
+                    new java.lang.reflect.InvocationHandler() {
+                        @Override
+                        public Object invoke(Object proxy, Method method, Object[] args)
+                                throws Throwable {
+                            try {
+                                return method.invoke(delegate, args);
+                            } catch (java.lang.reflect.InvocationTargetException invokeError) {
+                                Throwable cause = invokeError.getCause();
+                                if ("isInCampaignState".equals(method.getName())
+                                        && cause instanceof NullPointerException) {
+                                    if (!campaignStateNullLogged[0]) {
+                                        campaignStateNullLogged[0] = true;
+                                        System.out.println(
+                                                "Fixer: SettingsAPI.isInCampaignState returned false while AppDriver state was not yet initialized.");
+                                    }
+                                    return Boolean.FALSE;
+                                }
+                                throw cause == null ? invokeError : cause;
+                            }
+                        }
+                    });
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: unable to install null-safe SettingsAPI proxy; using original provider: "
+                            + describeThrowableChain(t));
+            return delegate;
+        }
+    }
+
+'''
+fixer = replace_exact(
+    fixer,
+    settings_helper_anchor,
+    settings_helper + settings_helper_anchor,
+    'null-safe SettingsAPI helper',
+)
+
 if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
     driver_pattern = re.compile(
         r'''                    forceStateFaderOut\(resolvedTitleState\);\n'''
