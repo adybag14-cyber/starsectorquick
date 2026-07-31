@@ -810,15 +810,14 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
 	frameCount++;
-	if(frameCount == frameLimit)
+	if(frameLimit && frameCount >= frameLimit)
 	{
-		console.warn("Stopping");
-		return new Promise(function(){});
+		console.warn("Frame limit reached");
+		return;
 	}
-	return new Promise(function(f, r)
-	{
-		requestAnimationFrame(f);
-	});
+	// CheerpJ custom JNI calls must not keep the Java VM suspended on a browser
+	// animation-frame Promise. The framebuffer has already been blitted above.
+	return;
 }
 
 function Java_org_lwjgl_opengl_LinuxEvent_getPending()
