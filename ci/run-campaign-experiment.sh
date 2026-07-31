@@ -4,6 +4,8 @@ set -euo pipefail
 NAME=${1:?experiment name required}
 SWAP_MODE=${2:?swap mode required}
 PATCH_SLEEP=${3:?patch sleep flag required}
+EXPECT_STATE=${4:-campaign}
+WINDOW_CONFIG=${5:-'{}'}
 OUT="test_output/${NAME}"
 mkdir -p "$OUT" .ci-build/fixer
 
@@ -57,6 +59,9 @@ done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=360000 \
+STARSECTOR_TEST_TIMEOUT_MS=240000 \
+STARSECTOR_FRAME_SETTLE_MS=15000 \
+STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
+STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
