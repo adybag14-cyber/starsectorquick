@@ -125,8 +125,6 @@ public class FieldDictionary implements Caching {
                     // Keep the metadata entry. Java 17 module encapsulation blocks
                     // eager accessibility for java.base fields, but alias lookup
                     // itself does not require reflective access to the value.
-                } catch (final SecurityException inaccessibleByPolicy) {
-                    // Same behavior for a SecurityManager-restricted field.
                 }
             }
             final FieldKey fieldKey =
