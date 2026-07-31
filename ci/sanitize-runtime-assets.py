@@ -7,6 +7,11 @@ URLs such as ``%EF%BB%BFproj/index.list`` or
 ``%EF%BB%BFlasher_Assault.variant``. Those requests 404, leaving weapon and
 projectile specs partially initialized and causing ResourceLoaderState to
 abort before the render loop can run.
+
+The curated browser asset tree also omits a small number of skin-specific
+textures that the vanilla settings map still references. These are cosmetic
+variants, so map them to the corresponding retained vanilla texture instead
+of allowing ResourceLoaderState to terminate the game.
 """
 
 from __future__ import annotations
@@ -87,6 +92,17 @@ def main() -> int:
 
     aliases = [
         ("graphics/fx/particlealpha32sq.png", "graphics/particlealpha32sq.png"),
+        # Cosmetic weapon-skin variants referenced by settings.json but absent
+        # from the curated Pages asset tree. Retain the correct mount/turret
+        # geometry by falling back to the matching vanilla texture.
+        (
+            "graphics/weapons/blaster2_turret_base.png",
+            "graphics/weapons/blaster2ht_turret_base.png",
+        ),
+        (
+            "graphics/weapons/mining_laser_hardpoint_glow.png",
+            "graphics/weapons/mining_laser_hightech_hardpoint_glow.png",
+        ),
     ]
     alias_changes: list[str] = []
     for source, destination in aliases:
