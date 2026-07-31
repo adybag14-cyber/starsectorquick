@@ -40,6 +40,7 @@ grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 python3 ci/harden-settings-api-proxy.py
+python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer jars/Fixer.java
