@@ -15,7 +15,7 @@ permissions:
 jobs:
   campaign-render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,27 +34,11 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Start local web server
-        run: |
-          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/starsector-http.log 2>&1 &
-          echo $! > /tmp/starsector-http.pid
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8000/launch.html >/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/starsector-http.log
-          exit 1
-
-      - name: Verify campaign renders and advances
+      - name: Verify deployed campaign renders and advances
         env:
-          STARSECTOR_TEST_TIMEOUT_MS: '360000'
+          STARSECTOR_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
+          STARSECTOR_TEST_TIMEOUT_MS: '300000'
         run: node ci/campaign-render-test.js
-
-      - name: Show server log
-        if: always()
-        run: cat /tmp/starsector-http.log || true
 
       - name: Upload campaign evidence
         if: always()
