@@ -12,12 +12,24 @@ mkdir -p "$OUT" .ci-build/fixer
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js > "$OUT/candidate.patch" || true
+  git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
   sha256sum jars/fixer_patch.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 git lfs pull --include='jars/resources.jar' --exclude=''
 test "$(wc -c < jars/resources.jar)" -gt 100000
+
+python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
+if grep -RIl $'\xEF\xBB\xBF' starsector/starsector --include='index.list' > "$OUT/index-bom-files.txt"; then
+  echo 'UTF-8 BOM remains in runtime index files:' >&2
+  cat "$OUT/index-bom-files.txt" >&2
+  exit 1
+fi
+
+test -s starsector/starsector/graphics/particlealpha32sq.png
+cmp starsector/starsector/graphics/fx/particlealpha32sq.png \
+    starsector/starsector/graphics/particlealpha32sq.png
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
