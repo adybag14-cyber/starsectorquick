@@ -1,122 +1,13 @@
 name: Campaign runtime experiment
 
 on:
-  push:
-    branches:
-      - fix/campaign-render-main-thread
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  experiment:
-    name: ${{ matrix.name }}
+  note:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: raf-no-java-sleep
-            swap_mode: raf
-            patch_sleep: 'true'
-          - name: timeout0-no-java-sleep
-            swap_mode: timeout0
-            patch_sleep: 'true'
-          - name: timeout16-no-java-sleep
-            swap_mode: timeout16
-            patch_sleep: 'true'
-          - name: raf-stock-java-sleep
-            swap_mode: raf
-            patch_sleep: 'false'
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          lfs: false
-
-      - name: Restore LFS runtime archive
-        run: |
-          git lfs pull --include='jars/resources.jar' --exclude=''
-          test "$(wc -c < jars/resources.jar)" -gt 100000
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-
-      - name: Apply candidate runtime fix
-        env:
-          SWAP_YIELD_MODE: ${{ matrix.swap_mode }}
-          KEEP_UNSAFE_FORCE_ACTIVATION: '0'
-        run: python3 ci/apply-campaign-runtime-fix.py
-
-      - name: Rebuild Fixer for Java 8
-        shell: bash
-        run: |
-          rm -rf .ci-build/fixer
-          mkdir -p .ci-build/fixer
-          CP=$(find jars -maxdepth 1 -type f -name '*.jar' ! -name 'fixer.jar' -printf '%p:' | sed 's/:$//')
-          javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer jars/Fixer.java
-          jar uf jars/fixer.jar -C .ci-build/fixer .
-          javap -verbose -classpath jars/fixer.jar Fixer | grep 'major version: 52'
-
-      - name: Patch BaseGameState browser scheduling
-        if: matrix.patch_sleep == 'true'
-        shell: bash
-        run: |
-          mkdir -p .ci-build/asm .ci-build/transform
-          curl -fsSL -o .ci-build/asm/asm.jar https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar
-          javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
-          java -cp .ci-build/asm/asm.jar:.ci-build/transform PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer_obf.jar
-          mv .ci-build/starfarer_obf.jar jars/starfarer_obf.jar
-
-      - name: Install browser dependencies
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-
-      - name: Start branch web server
-        shell: bash
-        run: |
-          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/starsector-http.log 2>&1 &
-          echo $! > /tmp/starsector-http.pid
-          for i in {1..30}; do
-            curl -fsS http://127.0.0.1:8000/launch.html >/dev/null && exit 0
-            sleep 1
-          done
-          cat /tmp/starsector-http.log
-          exit 1
-
-      - name: Verify real campaign pixels and frame progress
-        env:
-          STARSECTOR_TEST_URL: http://127.0.0.1:8000/launch.html
-          STARSECTOR_TEST_TIMEOUT_MS: '360000'
-          STARSECTOR_TEST_OUTPUT_DIR: test_output/${{ matrix.name }}
-        run: node ci/campaign-render-test.js
-
-      - name: Preserve server and source diagnostics
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p test_output/${{ matrix.name }}
-          cp /tmp/starsector-http.log test_output/${{ matrix.name }}/http.log || true
-          git diff -- jars/Fixer.java launch.html build/final/wasm-modules/lwjgl.js > test_output/${{ matrix.name }}/candidate.patch || true
-          sha256sum jars/fixer.jar jars/starfarer_obf.jar > test_output/${{ matrix.name }}/runtime-sha256.txt || true
-
-      - name: Upload experiment evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: campaign-runtime-${{ matrix.name }}
-          path: test_output/${{ matrix.name }}
-          if-no-files-found: warn
+      - run: echo 'Use the Campaign runtime PR matrix workflow for active experiments.'
