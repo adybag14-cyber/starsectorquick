@@ -9,8 +9,8 @@ mkdir -p "$OUT" .ci-build/fixer
 
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
-  git diff -- jars/Fixer.java launch.html build/final/wasm-modules/lwjgl.js > "$OUT/candidate.patch" || true
-  sha256sum jars/fixer.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js > "$OUT/candidate.patch" || true
+  sha256sum jars/fixer_patch.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -20,10 +20,18 @@ test "$(wc -c < jars/resources.jar)" -gt 100000
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 
-CP=$(find jars -maxdepth 1 -type f -name '*.jar' ! -name 'fixer.jar' -printf '%p:' | sed 's/:$//')
+CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer jars/Fixer.java
-jar uf jars/fixer.jar -C .ci-build/fixer .
-javap -verbose -classpath jars/fixer.jar Fixer | grep 'major version: 52'
+jar cf jars/fixer_patch.jar -C .ci-build/fixer .
+javap -verbose -classpath jars/fixer_patch.jar Fixer | grep 'major version: 52'
+python3 - <<'PY'
+from pathlib import Path
+p = Path('jars/index.list')
+lines = [line for line in p.read_text(encoding='utf-8').splitlines() if line and not line.startswith('fixer_patch.jar')]
+size = Path('jars/fixer_patch.jar').stat().st_size
+lines.insert(0, f'fixer_patch.jar\t{size}')
+p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+PY
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   mkdir -p .ci-build/asm .ci-build/transform
