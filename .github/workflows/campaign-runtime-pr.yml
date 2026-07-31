@@ -17,25 +17,25 @@ jobs:
   experiment:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: title-sync-java8
-            java_version: '8'
+          - name: title-sync-java17
+            java_version: '17'
             swap_mode: sync
             patch_sleep: 'false'
             expect_state: title
             window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":false,"__STARSECTOR_DIRECT_LAUNCH__":false}'
-          - name: campaign-direct-sync-java8
-            java_version: '8'
+          - name: campaign-direct-sync-java17
+            java_version: '17'
             swap_mode: sync
             patch_sleep: 'false'
             expect_state: campaign
             window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":true,"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_direct","__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__":5000,"__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__":false}'
-          - name: campaign-menu-sync-java8
-            java_version: '8'
+          - name: campaign-menu-sync-java17
+            java_version: '17'
             swap_mode: sync
             patch_sleep: 'false'
             expect_state: campaign
