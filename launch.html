@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Starsector 2 - GitHub Pages Deployment (v65 - Java 8)</title>
+    <title>Starsector Web - Campaign Launcher</title>
     <script src='https://cjrtnc.leaningtech.com/4.3/loader.js'></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
@@ -16,11 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>Ã°Å¸Å¡â‚¬ Starsector 2 Web (JAVA 8)</h1>
-        <p>Running Java via CheerpJ & WebAssembly on GitHub Pages</p>
+        <h1>Starsector Web</h1>
+        <p>Running Starsector via CheerpJ 4.3 and WebAssembly on GitHub Pages</p>
 
         <div style="margin: 20px 0;">
-            <button id='startBtn' class="btn">Ã°Å¸Å¡â‚¬ LAUNCH STARSECTOR</button>
+            <button id='startBtn' class="btn">LAUNCH STARSECTOR</button>
         </div>
         <div id='runtime-status' style="margin: 10px 0; color: #888; font-family: monospace;">STATE: waiting</div>
 
@@ -32,16 +32,71 @@
     </div>
 
     <script>
-        function log(m, color = '#fff') {
+        const __STARSECTOR_ORIGINAL_CONSOLE__ = {
+            log: console.log.bind(console),
+            warn: console.warn.bind(console),
+            error: console.error.bind(console)
+        };
+
+        function appendRuntimeLog(message, color = '#fff') {
             const l = document.getElementById('log');
-            if (l) {
-                const entry = document.createElement('div');
-                entry.style.color = color;
-                entry.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
-                l.appendChild(entry);
-                l.scrollTop = l.scrollHeight;
+            if (!l) return;
+            const entry = document.createElement('div');
+            entry.style.color = color;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            l.appendChild(entry);
+            while (l.childElementCount > 300) l.removeChild(l.firstElementChild);
+            l.scrollTop = l.scrollHeight;
+        }
+
+        function log(m, color = '#fff') {
+            appendRuntimeLog(m, color);
+            __STARSECTOR_ORIGINAL_CONSOLE__.log(m);
+        }
+
+        function observeRuntimeConsole(message, level = 'log') {
+            const text = String(message || '');
+            const btn = document.getElementById('startBtn');
+
+            if (/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i.test(text)) {
+                updateRuntimeState('campaign', 'Main campaign view');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'CAMPAIGN RUNNING';
+                }
+            } else if (/direct new-game init succeeded|campaign transition UI preflight ready/i.test(text)) {
+                updateRuntimeState('campaign-loading', 'Entering campaign');
+                if (btn) btn.textContent = 'ENTERING CAMPAIGN...';
+            } else if (/direct new-game attempt|synthetic player fleet|minimal fallback market/i.test(text)) {
+                updateRuntimeState('campaign-initializing', 'Building campaign');
+                if (btn) btn.textContent = 'BUILDING CAMPAIGN...';
+            } else if (/watcher state=Title Screen State|reached Title Screen State/i.test(text)) {
+                updateRuntimeState('title', 'Preparing campaign');
+                if (btn) btn.textContent = 'PREPARING CAMPAIGN...';
+            } else if (/Fixer: auto campaign aborting|Fixer: exhausted all new-game|Fatal campaign bootstrap failure/i.test(text)) {
+                updateRuntimeState('failed', text.slice(0, 240));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'RETRY STARSECTOR';
+                }
             }
-            console.log(m);
+
+            const important =
+                /^Fixer: (auto campaign|direct new-game|Campaign State|created synthetic|.*fallback market)/i.test(text) ||
+                /^Bridge Display\.update count=/i.test(text);
+            if (important) appendRuntimeLog(text, level === 'error' ? '#ff6666' : level === 'warn' ? '#ffaa00' : '#b7f7ff');
+        }
+
+        for (const level of ['log', 'warn', 'error']) {
+            console[level] = (...args) => {
+                __STARSECTOR_ORIGINAL_CONSOLE__[level](...args);
+                try {
+                    const text = args.map(value => value instanceof Error ? (value.stack || value.message) : String(value)).join(' ');
+                    observeRuntimeConsole(text, level);
+                } catch (observerError) {
+                    __STARSECTOR_ORIGINAL_CONSOLE__.warn('Runtime console observer failed:', observerError);
+                }
+            };
         }
 
         function updateRuntimeState(state, detail = '') {
@@ -139,8 +194,7 @@
             n.Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval = () => {};
             n.Java_org_lwjgl_opengl_LinuxContextImplementation_nMakeCurrent = () => {};
             n.Java_org_lwjgl_opengl_LinuxContextImplementation_nIsCurrent = () => true;
-            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers = () =>
-                new Promise((resolve) => requestAnimationFrame(() => resolve()));
+            n.Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers = () => undefined;
 
             n.Java_org_lwjgl_opengl_GL11_nglGetString = noThrow((env, cls, name) => {
                 const p = toNumber(name);
@@ -486,10 +540,10 @@
             window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
-            btn.textContent = 'Ã¢Å’â€º INITIALIZING...';
+            btn.textContent = 'INITIALIZING...';
             updateRuntimeState('initializing', 'CheerpJ bootstrap');
 
-            log('Initializing CheerpJ 4.3 Runtime (Java 8)...', '#00d9ff');
+            log('Initializing CheerpJ 4.3 Runtime (Java 17 compatibility mode)...', '#00d9ff');
 
             try {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -510,7 +564,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260608-sw-version-reload-v1';
+                    const aliasWorkerVersion = '20260731-campaign-load-v1';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -572,7 +626,7 @@
                         return;
                     }
 
-                    const resetVersion = '20260608-cheerpj-storage-reset-v1';
+                    const resetVersion = '20260731-campaign-load-v1';
                     const resetKey = 'starsectorquickCheerpJStorageReset';
                     const params = new URLSearchParams(window.location.search);
                     const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');
@@ -931,7 +985,7 @@
                 const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
                 const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
                 const autoCampaignMode = (
-                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'continue_then_new_direct_visit_colony'
+                    window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'new_direct'
                 ).toString().trim().toLowerCase();
                 const autoCampaignVariant = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
@@ -941,7 +995,7 @@
                 ).toString().trim().toLowerCase() || 'small';
                 const autoCampaignTitleSettleMs = Math.max(
                     0,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ || 25000) || 25000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
                 );
                 const autoCampaignFallbackMs = Math.max(
                     1500,
@@ -953,7 +1007,7 @@
                 );
                 const autoCampaignDirectAttemptTimeoutMs = Math.max(
                     2000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__ || 20000) || 20000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__ || 45000) || 45000
                 );
                 const autoCampaignDirectPostInitWaitMs = Math.max(
                     8000,
@@ -1001,33 +1055,33 @@
                     ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
                     : true;
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ !== false;
                 const autoCampaignInvokeCreateInCampaignState =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false;
                 const autoCampaignAllowImmediatePlayerFleetNullTransition =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false;
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false;
                 const autoCampaignSyntheticFleetTimeoutMs = Math.max(
                     3000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__ || 12000)
-                        || 12000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__ || 30000)
+                        || 30000
                 );
                 const autoCampaignAllowDialogWithoutPlayerFleet =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIALOG_WITHOUT_PLAYER_FLEET__ !== false;
                 const autoCampaignAllowNullCampaignUiEngine =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_NULL_CAMPAIGN_UI_ENGINE__ !== false;
                 const autoCampaignInvokeCreateCallTimeoutMs = Math.max(
                     5000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_CALL_TIMEOUT_MS__ || 45000)
-                        || 45000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_CALL_TIMEOUT_MS__ || 90000)
+                        || 90000
                 );
                 const autoCampaignBootstrapSectorGenOnNoMarkets =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTORGEN_ON_NO_MARKETS__ === true;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_BOOTSTRAP_SECTORGEN_ON_NO_MARKETS__ !== false;
                 const autoCampaignPlayerFleetNullTransitionForceAfterMs = Math.max(
                     30000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__ || 120000)
-                        || 120000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_PLAYER_FLEET_NULL_FORCE_AFTER_MS__ || 30000)
+                        || 30000
                 );
                 const hasDirectLaunchOverride =
                     typeof window.__STARSECTOR_DIRECT_LAUNCH__ === 'boolean';
@@ -1374,9 +1428,11 @@
             void startGame();
         });
 
-        if (new URLSearchParams(window.location.search).get('autostart')) {
+        const launchParams = new URLSearchParams(window.location.search);
+        const shouldAutostart = launchParams.get('manual') !== '1' && launchParams.get('autostart') !== '0';
+        if (shouldAutostart) {
             setTimeout(() => {
-                log('Autostart requested via query parameter.', '#888');
+                log('Autostarting campaign launcher.', '#888');
                 void startGame();
             }, 50);
         }
