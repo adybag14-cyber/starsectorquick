@@ -45,15 +45,16 @@ fi
 
 npm ci
 npx playwright install --with-deps chromium
-python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/starsector-http.log 2>&1 &
+STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
+  node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
 echo $! > /tmp/starsector-http.pid
 for _ in {1..30}; do
-  if curl -fsS http://127.0.0.1:8000/launch.html >/dev/null; then
+  if curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null; then
     break
   fi
   sleep 1
 done
-curl -fsS http://127.0.0.1:8000/launch.html >/dev/null
+curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
 STARSECTOR_TEST_TIMEOUT_MS=360000 \
