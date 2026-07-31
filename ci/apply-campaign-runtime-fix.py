@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+import os
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+fixer_path = ROOT / 'jars' / 'Fixer.java'
+lwjgl_path = ROOT / 'build' / 'final' / 'wasm-modules' / 'lwjgl.js'
+launch_path = ROOT / 'launch.html'
+
+
+def replace_exact(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count != 1:
+        raise RuntimeError(f'{label}: expected exactly one match, found {count}')
+    return text.replace(old, new, 1)
+
+
+fixer = fixer_path.read_text(encoding='utf-8-sig')
+old_false_ready = '''            String preInvokeReadiness = checkDirectNewGameRuntimeReadiness();
+            if (preInvokeReadiness == null) {
+                System.out.println(
+                        "Fixer: direct-new-game pre-invoke readiness="
+                                + String.valueOf(preInvokeReadiness)
+                                + "; skipping invoke-create and continuing transition flow.");
+                directNewGameLastNullMarker = "pre-invoke-ready";
+                System.out.println("Fixer: direct-new-game return-null marker=pre-invoke-ready");
+                return null;
+            }
+            if ("player-fleet-null".equals(preInvokeReadiness)) {'''
+new_false_ready = '''            String preInvokeReadiness = checkDirectNewGameRuntimeReadiness();
+            if (preInvokeReadiness == null) {
+                // A synthetic fleet/market can satisfy the lightweight readiness probe before
+                // CampaignGameManager has actually run create(). Treat that as partial runtime
+                // state, not a completed new game, or the driver enters an uninitialized black
+                // CampaignState that never owns the render loop.
+                System.out.println(
+                        "Fixer: direct-new-game pre-invoke readiness is superficially ready; "
+                                + "requiring the real campaign create() path before transition.");
+                directNewGameLastNullMarker = "pre-invoke-partial-runtime-require-create";
+            }
+            if ("player-fleet-null".equals(preInvokeReadiness)) {'''
+fixer = replace_exact(fixer, old_false_ready, new_false_ready, 'false-ready early return')
+
+if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
+    driver_pattern = re.compile(
+        r'''                    forceStateFaderOut\(resolvedTitleState\);\n'''
+        r'''                    if \(!didCampaignTransitionAdvance\(ctx, resolvedTitleState, beforeState\)\) \{.*?'''
+        r'''                    System\.out\.println\(\n'''
+        r'''                            "Fixer: requested transition to Campaign State \(driver\.goToState\)\."\);\n'''
+        r'''                    return true;''',
+        re.S,
+    )
+    driver_replacement = '''                    forceStateFaderOut(resolvedTitleState);
+                    System.out.println(
+                            "Fixer: requested Campaign State via driver.goToState; "
+                                    + "leaving state ownership on the AppDriver render thread.");
+                    return true;'''
+    fixer, count = driver_pattern.subn(driver_replacement, fixer, count=1)
+    if count != 1:
+        raise RuntimeError(f'driver transition block: expected one match, found {count}')
+
+    title_pattern = re.compile(
+        r'''            forceStateFaderOut\(resolvedTitleState\);\n'''
+        r'''            if \(!didCampaignTransitionAdvance\(ctx, resolvedTitleState, beforeState\)\) \{.*?'''
+        r'''            System\.out\.println\("Fixer: requested transition to Campaign State \(titleState\.goToState\)\."\);\n'''
+        r'''            return true;''',
+        re.S,
+    )
+    title_replacement = '''            forceStateFaderOut(resolvedTitleState);
+            System.out.println(
+                    "Fixer: requested Campaign State via titleState.goToState; "
+                            + "leaving state ownership on the AppDriver render thread.");
+            return true;'''
+    fixer, count = title_pattern.subn(title_replacement, fixer, count=1)
+    if count != 1:
+        raise RuntimeError(f'title transition block: expected one match, found {count}')
+
+fixer_path.write_text(fixer, encoding='utf-8', newline='\n')
+
+launch = launch_path.read_text(encoding='utf-8')
+launch = launch.replace(
+    '/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i',
+    '/watcher state=Campaign State|reached Campaign State/i',
+)
+launch_path.write_text(launch, encoding='utf-8', newline='\n')
+
+swap_mode = os.environ.get('SWAP_YIELD_MODE', 'raf').strip().lower()
+lwjgl = lwjgl_path.read_text(encoding='utf-8')
+old_swap_tail = '''\t// CheerpJ custom JNI calls must not keep the Java VM suspended on a browser
+\t// animation-frame Promise. The framebuffer has already been blitted above.
+\treturn;'''
+if swap_mode == 'sync':
+    new_swap_tail = old_swap_tail
+elif swap_mode == 'raf':
+    new_swap_tail = '''\t// Yield the CheerpJ Java render thread to the browser and resume on the next frame.
+\treturn new Promise(function(resolve) { requestAnimationFrame(resolve); });'''
+elif swap_mode == 'timeout0':
+    new_swap_tail = '''\t// Yield the CheerpJ Java render thread without imposing a frame-rate delay.
+\treturn new Promise(function(resolve) { setTimeout(resolve, 0); });'''
+elif swap_mode == 'timeout16':
+    new_swap_tail = '''\t// Yield the CheerpJ Java render thread at approximately 60 Hz.
+\treturn new Promise(function(resolve) { setTimeout(resolve, 16); });'''
+else:
+    raise RuntimeError(f'unsupported SWAP_YIELD_MODE={swap_mode!r}')
+if swap_mode != 'sync':
+    lwjgl = replace_exact(lwjgl, old_swap_tail, new_swap_tail, f'LWJGL swap mode {swap_mode}')
+lwjgl_path.write_text(lwjgl, encoding='utf-8', newline='\n')
+
+print(f'Applied campaign runtime fix; swap mode={swap_mode}, unsafe force activation={os.environ.get("KEEP_UNSAFE_FORCE_ACTIVATION", "0")}')
