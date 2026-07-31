@@ -31,6 +31,12 @@ test -s starsector/starsector/graphics/particlealpha32sq.png
 cmp starsector/starsector/graphics/fx/particlealpha32sq.png \
     starsector/starsector/graphics/particlealpha32sq.png
 
+# glPopMatrix must never remove the base identity matrix. Without this guard the
+# next glPushMatrix clones undefined and CheerpJ stops the Java VM.
+python3 ci/patch-lwjgl-matrix-stack.py
+
+grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
+
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 
