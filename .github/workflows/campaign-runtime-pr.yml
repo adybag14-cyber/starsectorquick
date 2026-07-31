@@ -13,23 +13,31 @@ jobs:
   experiment:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: raf-no-java-sleep
-            swap_mode: raf
-            patch_sleep: 'true'
-          - name: timeout0-no-java-sleep
-            swap_mode: timeout0
-            patch_sleep: 'true'
-          - name: timeout16-no-java-sleep
-            swap_mode: timeout16
-            patch_sleep: 'true'
-          - name: raf-stock-java-sleep
-            swap_mode: raf
+          - name: title-sync-stock
+            swap_mode: sync
             patch_sleep: 'false'
+            expect_state: title
+            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":false,"__STARSECTOR_DIRECT_LAUNCH__":false}'
+          - name: title-raf-no-java-sleep
+            swap_mode: raf
+            patch_sleep: 'true'
+            expect_state: title
+            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":false,"__STARSECTOR_DIRECT_LAUNCH__":false}'
+          - name: campaign-ui-delayed
+            swap_mode: raf
+            patch_sleep: 'true'
+            expect_state: campaign
+            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":true,"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_direct","__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__":20000,"__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__":false}'
+          - name: campaign-menu-ui
+            swap_mode: raf
+            patch_sleep: 'true'
+            expect_state: campaign
+            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":true,"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_menu_only","__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__":5000,"__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__":true}'
 
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +52,9 @@ jobs:
           node-version: '20'
           cache: npm
       - name: Build and verify ${{ matrix.name }}
-        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' '${{ matrix.swap_mode }}' '${{ matrix.patch_sleep }}'
+        env:
+          EXPERIMENT_CONFIG: ${{ matrix.window_config }}
+        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' '${{ matrix.swap_mode }}' '${{ matrix.patch_sleep }}' '${{ matrix.expect_state }}' "$EXPERIMENT_CONFIG"
       - name: Upload ${{ matrix.name }} evidence
         if: always()
         uses: actions/upload-artifact@v4
