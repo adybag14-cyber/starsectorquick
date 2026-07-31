@@ -43,9 +43,13 @@ python3 ci/harden-settings-api-proxy.py
 python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
-javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer jars/Fixer.java
+mapfile -t COMPAT_SOURCES < <(find ci/java17-xstream -type f -name '*.java' -print | sort)
+javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
+  jars/Fixer.java "${COMPAT_SOURCES[@]}"
 jar cf jars/fixer_patch.jar -C .ci-build/fixer .
 javap -verbose -classpath jars/fixer_patch.jar Fixer | grep 'major version: 52'
+javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Fields \
+  | grep 'public class com.thoughtworks.xstream.core.util.Fields'
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
