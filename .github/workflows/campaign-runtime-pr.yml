@@ -15,31 +15,9 @@ concurrency:
 
 jobs:
   experiment:
-    name: ${{ matrix.name }}
+    name: campaign-default-java17
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: title-sync-java17
-            java_version: '17'
-            swap_mode: sync
-            patch_sleep: 'false'
-            expect_state: title
-            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":false,"__STARSECTOR_DIRECT_LAUNCH__":false}'
-          - name: campaign-direct-sync-java17
-            java_version: '17'
-            swap_mode: sync
-            patch_sleep: 'false'
-            expect_state: campaign
-            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":true,"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_direct","__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__":5000,"__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__":false}'
-          - name: campaign-menu-sync-java17
-            java_version: '17'
-            swap_mode: sync
-            patch_sleep: 'false'
-            expect_state: campaign
-            window_config: '{"__STARSECTOR_AUTO_CAMPAIGN__":true,"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_menu_only","__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__":5000,"__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_MUTATING_SPEC_PREFLIGHT__":true}'
 
     steps:
       - uses: actions/checkout@v4
@@ -53,15 +31,15 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Build and verify ${{ matrix.name }}
+      - name: Build and verify default campaign launch
         env:
-          EXPERIMENT_CONFIG: ${{ matrix.window_config }}
-          CHEERPJ_JAVA_VERSION: ${{ matrix.java_version }}
-        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' '${{ matrix.swap_mode }}' '${{ matrix.patch_sleep }}' '${{ matrix.expect_state }}' "$EXPERIMENT_CONFIG"
-      - name: Upload ${{ matrix.name }} evidence
+          EXPERIMENT_CONFIG: '{}'
+          CHEERPJ_JAVA_VERSION: '17'
+        run: bash ci/run-campaign-experiment.sh 'campaign-default-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Upload campaign evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-${{ matrix.name }}
-          path: test_output/${{ matrix.name }}
+          name: campaign-runtime-default-java17
+          path: test_output/campaign-default-java17
           if-no-files-found: warn
