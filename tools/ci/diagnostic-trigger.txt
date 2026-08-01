@@ -1,1 +1,1 @@
-campaign-render-diagnostic-2026-08-01-bom-resource-fix-r1
+campaign-render-diagnostic-2026-08-01-skip-spec-mirror-r1
