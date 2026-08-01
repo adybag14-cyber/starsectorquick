@@ -1,1 +1,1 @@
-campaign-render-diagnostic-2026-08-01-r2
+campaign-render-diagnostic-2026-08-01-resource-loader
