@@ -13,7 +13,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -76,8 +76,9 @@ p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 PY
 
 # Decorative orbital junk is not gameplay state and its entity readResolve path
-# is incompatible with CheerpJ during sector construction. Remove only that
-# cosmetic market hook, leaving markets/economy/system generation intact.
+# is incompatible with CheerpJ during sector construction. CoreLifecyclePluginImpl
+# lives in starfarer.api.jar (not starfarer_obf.jar), so patch the jar that actually
+# owns the method loaded by the runtime.
 mkdir -p .ci-build/asm .ci-build/transform
 if [[ ! -s .ci-build/asm/asm.jar ]]; then
   curl -fsSL -o .ci-build/asm/asm.jar \
@@ -86,8 +87,8 @@ fi
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  PatchCampaignOrbitalJunk jars/starfarer_obf.jar .ci-build/starfarer-no-junk.jar
-mv .ci-build/starfarer-no-junk.jar jars/starfarer_obf.jar
+  PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
+mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
