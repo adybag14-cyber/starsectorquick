@@ -1,23 +1,20 @@
 package com.fs.starfarer;
 
+import com.fs.starfarer.api.campaign.SectorGenProgress;
+import com.fs.starfarer.api.campaign.SectorProcGenPlugin;
+import com.fs.starfarer.api.characters.CharacterCreationData;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
-/** Null-safe accessors for launcher/spec objects that may be absent in direct browser boot. */
+/** Null-safe/lightweight accessors for direct browser campaign boot. */
 public final class CampaignInitCompat {
     private static boolean sectorConfigNullLogged;
     private static boolean sectorConfigFailureLogged;
+    private static boolean procGenSkippedLogged;
 
     private CampaignInitCompat() {}
 
-    /**
-     * CampaignGameManager normally receives the built-in sectorConfig spec from the desktop
-     * resource-loader path and immediately calls its obfuscated `super()` list accessor.
-     * CheerpJ direct launch can legitimately have no sectorConfig entry. The built-in sector
-     * generator has already run at this point, so an absent optional generator list is an empty
-     * list rather than a reason to abort the entire new game.
-     */
     public static List getAdditionalSectorGenerators(Object sectorConfig) {
         if (sectorConfig == null) {
             if (!sectorConfigNullLogged) {
@@ -39,15 +36,7 @@ public final class CampaignInitCompat {
             }
             accessor.setAccessible(true);
             Object value = accessor.invoke(sectorConfig);
-            if (value instanceof List) {
-                return (List) value;
-            }
-            if (!sectorConfigFailureLogged) {
-                sectorConfigFailureLogged = true;
-                System.out.println(
-                        "Fixer: sectorConfig additional-generator accessor returned no list; continuing with no additional sector generators.");
-            }
-            return Collections.emptyList();
+            return value instanceof List ? (List) value : Collections.emptyList();
         } catch (Throwable t) {
             if (!sectorConfigFailureLogged) {
                 sectorConfigFailureLogged = true;
@@ -57,6 +46,24 @@ public final class CampaignInitCompat {
                                 + (t.getMessage() == null ? "" : ": " + t.getMessage()));
             }
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * The desktop procedural sector pass constructs many stars, planets and nebulae.
+     * On CheerpJ that pass can monopolize the VM for minutes and uses terrain/planet
+     * constructors that are not yet browser-safe. The lightweight browser SectorGen
+     * already establishes the campaign runtime; defer optional procgen so creation can
+     * return to CampaignState and the game can render/respond.
+     */
+    public static void generateSectorProcGen(
+            SectorProcGenPlugin plugin,
+            CharacterCreationData data,
+            SectorGenProgress progress) {
+        if (!procGenSkippedLogged) {
+            procGenSkippedLogged = true;
+            System.out.println(
+                    "Fixer: skipping desktop procedural sector generation during CheerpJ bootstrap; entering lightweight campaign world.");
         }
     }
 
