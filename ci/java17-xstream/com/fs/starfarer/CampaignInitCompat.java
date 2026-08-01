@@ -60,7 +60,7 @@ public final class CampaignInitCompat {
         }
     }
 
-    private static Method findNoArgMethod(Class<?> type, String name) {
+    private static Method findNoArgMethod(Class<?> type, java.lang.String name) {
         Class<?> current = type;
         while (current != null) {
             try {
