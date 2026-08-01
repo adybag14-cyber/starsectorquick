@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+import argparse
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+import zipfile
+
+
+def run(cmd, cwd=None):
+    print('+', ' '.join(str(x) for x in cmd), flush=True)
+    subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def replace_exact(text, old, new, label):
+    if old not in text:
+        raise RuntimeError(f'expected {label} block was not found')
+    return text.replace(old, new, 1)
+
+
+def patch_fixer(root: Path):
+    fixer = root / 'jars' / 'Fixer.java'
+    text = fixer.read_text(encoding='utf-8-sig')
+
+    old_driver = '''                    if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
+                        if (forceCampaignStateActivation(ctx, resolvedTitleState, beforeState)) {
+                            System.out.println(
+                                    "Fixer: Campaign State transition fallback succeeded via direct state activation after driver.goToState no-advance.");
+                            return true;
+                        }
+                        System.out.println(
+                                "Fixer: requested Campaign State via driver.goToState; awaiting asynchronous state advance.");
+                        return true;
+                    }'''
+    new_driver = '''                    if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
+                        System.out.println(
+                                "Fixer: requested Campaign State via driver.goToState; allowing AppDriver main loop to complete the transition.");
+                        return true;
+                    }'''
+    text = replace_exact(text, old_driver, new_driver, 'driver transition')
+
+    old_title = '''            if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
+                if (forceCampaignStateActivation(ctx, resolvedTitleState, beforeState)) {
+                    System.out.println(
+                            "Fixer: Campaign State transition fallback succeeded via direct state activation after titleState.goToState no-advance.");
+                    return true;
+                }
+                System.out.println(
+                        "Fixer: requested Campaign State via titleState.goToState; awaiting asynchronous state advance.");
+                return true;
+            }'''
+    new_title = '''            if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
+                System.out.println(
+                        "Fixer: requested Campaign State via titleState.goToState; allowing AppDriver main loop to complete the transition.");
+                return true;
+            }'''
+    text = replace_exact(text, old_title, new_title, 'title transition')
+    fixer.write_text(text, encoding='utf-8')
+
+    names = []
+    for line in (root / 'jars' / 'index.list').read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line:
+            names.append(line.split()[0])
+    cp = os.pathsep.join(str(root / 'jars' / name) for name in names)
+    out = root / 'build' / 'ci' / 'fixer'
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True, exist_ok=True)
+    run(['javac', '-encoding', 'UTF-8', '-source', '8', '-target', '8', '-cp', cp, '-d', str(out), str(fixer)])
+
+    classes = sorted(out.glob('Fixer*.class'))
+    if not classes:
+        raise RuntimeError('Fixer compilation produced no classes')
+    for cls in classes:
+        run(['jar', 'uf', str(root / 'jars' / 'fixer.jar'), '-C', str(out), cls.name])
+    print(f'prepare_candidate: updated fixer.jar with {len(classes)} Fixer classes')
+
+
+def replace_zip_entries(jar_path: Path, replacements):
+    tmp = jar_path.with_suffix(jar_path.suffix + '.tmp')
+    with zipfile.ZipFile(jar_path, 'r') as zin, zipfile.ZipFile(tmp, 'w') as zout:
+        for info in zin.infolist():
+            data = zin.read(info.filename)
+            if info.filename in replacements:
+                data = replacements.pop(info.filename)
+            zout.writestr(info, data)
+        for name, data in replacements.items():
+            zout.writestr(name, data, compress_type=zipfile.ZIP_DEFLATED)
+    tmp.replace(jar_path)
+
+
+def patch_base_game_state(root: Path):
+    target = 'com/fs/starfarer/BaseGameState.class'
+    ordered = [root / 'jars' / 'starfarer.api.jar', root / 'jars' / 'starfarer_obf.jar']
+    containing = []
+    for jar_path in ordered:
+        with zipfile.ZipFile(jar_path, 'r') as zf:
+            if target in zf.namelist():
+                containing.append(jar_path)
+    if not containing:
+        raise RuntimeError('BaseGameState.class was not found in starfarer jars')
+    print('prepare_candidate: BaseGameState providers in classpath order:', ', '.join(p.name for p in containing))
+    jar_path = containing[0]
+    print('prepare_candidate: patching runtime provider', jar_path.name)
+
+    build = root / 'build' / 'ci' / 'basegame'
+    shutil.rmtree(build, ignore_errors=True)
+    build.mkdir(parents=True, exist_ok=True)
+
+    helper_src = root / 'tools' / 'ci' / 'WebRuntimeCompat.java'
+    helper_out = build / 'helper'
+    helper_out.mkdir(parents=True, exist_ok=True)
+    run(['javac', '-encoding', 'UTF-8', '-source', '8', '-target', '8', '-d', str(helper_out), str(helper_src)])
+    helper_cls = helper_out / 'com' / 'fs' / 'starfarer' / 'WebRuntimeCompat.class'
+
+    patcher_src = root / 'tools' / 'ci' / 'PatchBaseGameState.java'
+    patcher_out = build / 'patcher'
+    patcher_out.mkdir(parents=True, exist_ok=True)
+    exports = 'java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED'
+    run(['javac', '--add-exports', exports, '-d', str(patcher_out), str(patcher_src)])
+
+    with zipfile.ZipFile(jar_path, 'r') as zf:
+        original = zf.read(target)
+    original_path = build / 'BaseGameState.class'
+    patched_path = build / 'BaseGameState.patched.class'
+    original_path.write_bytes(original)
+    run(['java', '--add-exports', exports, '-cp', str(patcher_out), 'PatchBaseGameState', str(original_path), str(patched_path)])
+
+    replacements = {
+        target: patched_path.read_bytes(),
+        'com/fs/starfarer/WebRuntimeCompat.class': helper_cls.read_bytes(),
+    }
+    replace_zip_entries(jar_path, replacements)
+
+
+def swap_source(mode: str):
+    if mode == 'sync':
+        return '''function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()\n{\n\tframeCount++;\n\tvar __swapNo = frameCount;\n\tif(__swapNo <= 4) console.log("[SWAP] sync begin count=" + __swapNo);\n\tensureFramebufferSize();\n\tglCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);\n\tglCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);\n\tglCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);\n\tglCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);\n\tglCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);\n\tif(__swapNo <= 4) console.log("[SWAP] sync end count=" + __swapNo);\n\tif(frameLimit && frameCount >= frameLimit) console.warn("Frame limit reached");\n\treturn;\n}\n'''
+    if mode == 'noop':
+        return '''function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()\n{\n\tframeCount++;\n\tif(frameCount <= 4) console.log("[SWAP] noop count=" + frameCount);\n\treturn;\n}\n'''
+    if mode == 'async':
+        return '''var __starsectorPresentScheduled = false;\nvar __starsectorPresentCount = 0;\nfunction Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()\n{\n\tframeCount++;\n\tif(frameCount <= 4) console.log("[SWAP] async request count=" + frameCount);\n\tif(!__starsectorPresentScheduled)\n\t{\n\t\t__starsectorPresentScheduled = true;\n\t\trequestAnimationFrame(function()\n\t\t{\n\t\t\t__starsectorPresentScheduled = false;\n\t\t\t__starsectorPresentCount++;\n\t\t\ttry\n\t\t\t{\n\t\t\t\tensureFramebufferSize();\n\t\t\t\tglCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);\n\t\t\t\tglCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);\n\t\t\t\tglCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);\n\t\t\t\tglCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);\n\t\t\t\tglCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);\n\t\t\t\tif(__starsectorPresentCount <= 4) console.log("[SWAP] async present count=" + __starsectorPresentCount);\n\t\t\t}\n\t\t\tcatch(e)\n\t\t\t{\n\t\t\t\tconsole.error("[SWAP] async present failed", e);\n\t\t\t}\n\t\t});\n\t}\n\treturn;\n}\n'''
+    raise ValueError(mode)
+
+
+def patch_swap(root: Path, mode: str):
+    path = root / 'build' / 'final' / 'wasm-modules' / 'lwjgl.js'
+    text = path.read_text(encoding='utf-8')
+    pattern = re.compile(
+        r'function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers\(\)\s*\{.*?\n\}\n\n(?=function Java_org_lwjgl_opengl_LinuxEvent_getPending\(\))',
+        re.S,
+    )
+    text2, count = pattern.subn(swap_source(mode) + '\n', text, count=1)
+    if count != 1:
+        raise RuntimeError(f'could not replace nSwapBuffers function; matches={count}')
+    path.write_text(text2, encoding='utf-8')
+    print('prepare_candidate: swap mode', mode)
+
+
+def refresh_index(root: Path):
+    index = root / 'jars' / 'index.list'
+    lines = []
+    for line in index.read_text(encoding='utf-8').splitlines():
+        if not line.strip():
+            continue
+        name = line.split()[0]
+        path = root / 'jars' / name
+        lines.append(f'{name}\t{path.stat().st_size}')
+    index.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--root', required=True)
+    ap.add_argument('--swap', choices=['sync', 'noop', 'async'], required=True)
+    args = ap.parse_args()
+    root = Path(args.root).resolve()
+    patch_fixer(root)
+    patch_base_game_state(root)
+    patch_swap(root, args.swap)
+    refresh_index(root)
+    print('prepare_candidate: complete', root, args.swap)
+
+
+if __name__ == '__main__':
+    main()
