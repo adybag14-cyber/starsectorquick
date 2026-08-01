@@ -106,6 +106,18 @@ def patch_fixer(root: Path):
                 return true;
             }'''
     text = replace_exact(text, old_title, new_title, 'title transition')
+
+    old_mirror = '''        initializeResourceManager();
+        mirrorCoreSpecDirectoriesToFiles();
+        installUncaughtExceptionLogging();'''
+    new_mirror = '''        initializeResourceManager();
+        if (Boolean.parseBoolean(System.getProperty("starsector.mirrorCoreSpecs", "false"))) {
+            mirrorCoreSpecDirectoriesToFiles();
+        } else {
+            System.out.println("Fixer: skipping redundant core spec mirror; using /app resource manager directly.");
+        }
+        installUncaughtExceptionLogging();'''
+    text = replace_exact(text, old_mirror, new_mirror, 'core spec mirror startup')
     fixer.write_text(text, encoding='utf-8')
 
     cp = os.pathsep.join(str(root / 'jars' / name) for name in classpath_names(root))
