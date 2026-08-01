@@ -14,21 +14,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  asset-audit:
-    name: static asset audit
+  prepare:
+    name: prepare runtime diagnostics
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Sanitize and report missing static graphics
         run: |
-          mkdir -p test_output/asset-audit
+          mkdir -p test_output/asset-audit test_output/bytecode .ci-cache
           python3 ci/sanitize-runtime-assets.py | tee test_output/asset-audit/asset-sanitation.log
-      - name: Inspect resources jar for omitted graphics
+      - name: Inspect runtime jars and campaign bytecode
         run: |
           git lfs pull --include='jars/resources.jar' --exclude=''
+          bash ci/dump-campaign-bytecode.sh test_output/bytecode
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
@@ -45,19 +50,43 @@ jobs:
           )
           print((out / 'resources-jar-summary.txt').read_text(), end='')
           PY
-      - name: Upload asset audit
+      - name: Download official 0.98a-RC8 release
+        run: |
+          curl -fL --retry 3 --retry-delay 3 --connect-timeout 30 --max-time 900 \
+            -o .ci-cache/starsector_linux-0.98a-RC8.zip \
+            https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip
+          unzip -tq .ci-cache/starsector_linux-0.98a-RC8.zip
+          test "$(wc -c < .ci-cache/starsector_linux-0.98a-RC8.zip)" -gt 200000000
+      - name: Save official release cache
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+      - name: Upload preparation evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-static-asset-audit
-          path: test_output/asset-audit
+          name: campaign-preparation-evidence
+          path: |
+            test_output/asset-audit
+            test_output/bytecode
           if-no-files-found: warn
 
   experiment:
-    name: campaign-default-java17
-    needs: asset-audit
+    name: ${{ matrix.name }}
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: campaign-direct-worker-java17
+            config: '{}'
+          - name: campaign-direct-main-thread-java17
+            config: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
+          - name: campaign-menu-main-thread-java17
+            config: '{"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_menu_only","__STARSECTOR_DIRECT_LAUNCH__":false,"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
 
     steps:
       - uses: actions/checkout@v4
@@ -71,15 +100,21 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Build and verify default campaign launch
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Build and verify ${{ matrix.name }}
         env:
-          EXPERIMENT_CONFIG: '{}'
+          EXPERIMENT_CONFIG: ${{ matrix.config }}
           CHEERPJ_JAVA_VERSION: '17'
-        run: bash ci/run-campaign-experiment.sh 'campaign-default-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Upload campaign evidence
+        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Upload ${{ matrix.name }} evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-default-java17
-          path: test_output/campaign-default-java17
+          name: campaign-runtime-${{ matrix.name }}
+          path: test_output/${{ matrix.name }}
           if-no-files-found: warn
