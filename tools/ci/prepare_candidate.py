@@ -21,13 +21,52 @@ def replace_exact(text, old, new, label):
 
 def classpath_names(root: Path):
     names = []
-    for line in (root / 'jars' / 'index.list').read_text(encoding='utf-8').splitlines():
+    for line in (root / 'jars' / 'index.list').read_text(encoding='utf-8-sig').splitlines():
         line = line.strip()
         if line:
             name = line.split()[0]
             if name not in ('fixer-runtime.jar', 'basegame-runtime.jar'):
                 names.append(name)
     return names
+
+
+def patch_resource_indices(root: Path):
+    """Repair static resource manifests for CheerpJ's HTTP-backed filesystem.
+
+    Many generated index.list files were committed with a UTF-8 BOM. The
+    browser VFS treats that BOM as part of the *first child name*, producing
+    requests such as `%EF%BB%BFproj/index.list` and `%EF%BB%BFlasher_Assault.variant`.
+    That silently drops the first file/directory from every affected resource
+    directory and is fatal for projectile/weapon spec loading.
+    """
+    bom = b'\xef\xbb\xbf'
+    stripped = []
+    for path in root.rglob('index.list'):
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        if data.startswith(bom):
+            path.write_bytes(data[len(bom):])
+            stripped.append(path)
+    print(f'prepare_candidate: stripped UTF-8 BOM from {len(stripped)} index.list files')
+    if stripped:
+        for path in stripped[:12]:
+            print('prepare_candidate: BOM repaired', path.relative_to(root))
+        if len(stripped) > 12:
+            print(f'prepare_candidate: ... plus {len(stripped) - 12} more BOM repairs')
+
+    # Some legacy Starsector code asks for graphics/particlealpha32sq.png,
+    # while the shipped asset is under graphics/fx/. Keep a real static alias
+    # so the resource manager does not fail during early campaign/variant init.
+    src = root / 'starsector' / 'starsector' / 'graphics' / 'fx' / 'particlealpha32sq.png'
+    dst = root / 'starsector' / 'starsector' / 'graphics' / 'particlealpha32sq.png'
+    if src.exists():
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        print('prepare_candidate: restored legacy particle alias', dst.relative_to(root))
+    else:
+        raise RuntimeError(f'missing particle alias source: {src}')
 
 
 def patch_fixer(root: Path):
@@ -175,6 +214,7 @@ def main():
     ap.add_argument('--swap', choices=['sync', 'noop', 'async'], required=True)
     args = ap.parse_args()
     root = Path(args.root).resolve()
+    patch_resource_indices(root)
     patch_fixer(root)
     patch_base_game_state(root)
     patch_swap(root, args.swap)
