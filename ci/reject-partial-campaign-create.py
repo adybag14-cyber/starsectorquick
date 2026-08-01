@@ -30,5 +30,56 @@ new = '''            if (isCampaignGameManagerNpe(t) && isSyntheticPlayerFleetFa
 count = text.count(old)
 if count != 1:
     raise RuntimeError(f'campaign-manager synthetic recovery block: expected exactly one match, found {count}')
-fixer_path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+text = text.replace(old, new, 1)
+
+# ResourceLoaderState reaches the title/render loop before the procgen age/star
+# tables are necessarily registered in SpecStore under CheerpJ. If the *real*
+# CampaignGameManager.create() reaches StarSystemGenerator.pickNebulaAndBackground,
+# repair just those two procgen tables in place. This is narrower than enabling
+# the old broad/mutating preflight and avoids the hull/variant pollution that the
+# non-mutating mode was introduced to prevent.
+old_procgen = '''                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "procgen-nebula-background");
+                    maybeLogNewGamePreflightIssue(
+                            "procgen nebula/background observed in non-mutating mode; deferring procgen preload to ResourceLoaderState.init. tempPlanetCleanup="
+                                    + String.valueOf(tempPlanetCleanupIssue));
+                    return "direct new-game preflight pending";
+                }
+                String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
+'''
+new_procgen = '''                if (!allowMutatingSpecPreflight()) {
+                    String tempPlanetCleanupIssue =
+                            cleanupTemporaryPlanetSpecsForDirectNewGame(
+                                    "procgen-nebula-background");
+                    String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
+                    String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
+                    String pickerIssue = refreshProcgenBackgroundPickersForDirectNewGame();
+                    if (ageIssue == null && starIssue == null && pickerIssue == null) {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen nebula/background targeted runtime repair succeeded in non-mutating mode; preserving repaired age/star tables for retry. tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                    } else {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen nebula/background targeted runtime repair issues in non-mutating mode: age="
+                                        + String.valueOf(ageIssue)
+                                        + ", star="
+                                        + String.valueOf(starIssue)
+                                        + ", picker="
+                                        + String.valueOf(pickerIssue)
+                                        + ", tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                    }
+                    return "direct new-game preflight pending";
+                }
+                String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
+'''
+count = text.count(old_procgen)
+if count != 1:
+    raise RuntimeError(f'procgen targeted-repair block: expected exactly one match, found {count}')
+text = text.replace(old_procgen, new_procgen, 1)
+
+fixer_path.write_text(text, encoding='utf-8', newline='\n')
 print('Disabled synthetic-success recovery for CampaignGameManager.create() NPEs')
+print('Enabled targeted age/star procgen repair for non-mutating browser campaign retries')
