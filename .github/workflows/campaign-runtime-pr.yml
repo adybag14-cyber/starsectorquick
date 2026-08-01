@@ -97,7 +97,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Build and verify campaign-direct-main-thread-java17
         env:
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false}'
           CHEERPJ_JAVA_VERSION: '17'
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Upload campaign-direct-main-thread-java17 evidence
