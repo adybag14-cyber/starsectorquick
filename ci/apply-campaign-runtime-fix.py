@@ -119,6 +119,33 @@ fixer = replace_exact(
     'null-safe SettingsAPI helper',
 )
 
+# Do not invent an active Title Screen State merely because the state object is
+# present in AppDriver.states. During ResourceLoaderState the real current state
+# is still null, but the old watcher substituted states["Title Screen State"] and
+# started campaign creation while the loader thread was still populating SpecStore.
+# That race is the root cause behind missing variants/conditions/procgen tables.
+old_state_fallback = '''            if (currentState == null && states != null && startState instanceof String) {
+                try {
+                    Object titleState = states.get(TITLE_STATE_ID);
+                    if (titleState != null) {
+                        currentState = titleState;
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+
+'''
+new_state_fallback = '''            // currentState intentionally remains null until AppDriver itself enters a state.
+            // Presence in the states map is construction/registration, not state ownership.
+
+'''
+fixer = replace_exact(
+    fixer,
+    old_state_fallback,
+    new_state_fallback,
+    'premature title-state fallback',
+)
+
 if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
     driver_pattern = re.compile(
         r'''                    forceStateFaderOut\(resolvedTitleState\);\n'''
@@ -160,11 +187,8 @@ launch = launch.replace(
     '/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i',
     '/watcher state=Campaign State|reached Campaign State/i',
 )
-# The AppDriver publishes/constructs the Title Screen object before ResourceLoaderState.init
-# has necessarily finished loading hulls, variants, weapons, factions, fonts and plugins.
-# Starting direct-new-game mutation one second after seeing the title races the loader and
-# leaves SpecStore half-empty (ShipHullSpecLoader NPE). Match Fixer's safe 25s default so
-# the official loader owns SpecStore until its initial pass has completed.
+# Even after AppDriver genuinely enters Title Screen State, leave a short settle
+# window for late loader/render initialization before starting the direct campaign.
 old_title_settle = '''                const autoCampaignTitleSettleMs = Math.max(
                     0,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
