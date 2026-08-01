@@ -55,11 +55,9 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
+# Also queues watcher-requested campaign transitions into a system property.
+# A BaseGameState bytecode hook below drains that request from the render thread.
 python3 ci/harden-settings-api-proxy.py
-# The watcher may discover readiness, but only BaseGameState.traverse owns a safe
-# state transition. Queue that request here; a bytecode hook below drains it from
-# the render thread immediately before Display.update().
-python3 ci/queue-main-thread-transition.py
 python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
