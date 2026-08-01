@@ -8,6 +8,9 @@ on:
     paths:
       - '.github/workflows/diagnose-campaign-render.yml'
       - 'tools/ci/**'
+  pull_request:
+    branches:
+      - feature/starsector-webgl-integration
 
 permissions:
   contents: read
