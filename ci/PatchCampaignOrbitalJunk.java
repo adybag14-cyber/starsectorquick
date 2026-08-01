@@ -22,9 +22,9 @@ import org.objectweb.asm.Opcodes;
  * 2. Campaign state requests are drained by BaseGameState.traverse immediately
  *    before Display.update(), which guarantees goToState() runs on the render /
  *    AppDriver thread rather than on Fixer's watcher thread.
- * 3. CampaignGameManager's launcher mod-list lookups are made null-safe. The
- *    direct browser launch does not construct the desktop ModManager singleton;
- *    for a vanilla game that correctly means an empty mod/plugin list.
+ * 3. CampaignGameManager launcher/spec lookups are made null-safe for the
+ *    direct browser path, where the desktop ModManager and optional sectorConfig
+ *    spec can be absent. Vanilla boot therefore sees empty optional hook lists.
  */
 public final class PatchCampaignOrbitalJunk {
     private static final String JUNK_TARGET =
@@ -40,9 +40,15 @@ public final class PatchCampaignOrbitalJunk {
             "com/fs/starfarer/launcher/ModManager";
     private static final String MOD_MANAGER_COMPAT_OWNER =
             "com/fs/starfarer/ModManagerCompat";
+    private static final String SECTOR_CONFIG_OWNER =
+            "com/fs/starfarer/loading/private";
+    private static final String CAMPAIGN_INIT_COMPAT_OWNER =
+            "com/fs/starfarer/CampaignInitCompat";
     private static final String LIST_DESCRIPTOR = "()Ljava/util/List;";
     private static final String SAFE_LIST_DESCRIPTOR =
             "(Lcom/fs/starfarer/launcher/ModManager;)Ljava/util/List;";
+    private static final String SAFE_SECTOR_CONFIG_DESCRIPTOR =
+            "(Ljava/lang/Object;)Ljava/util/List;";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -53,7 +59,7 @@ public final class PatchCampaignOrbitalJunk {
         Path output = Path.of(args[1]);
         int[] replacements = new int[] {0};
 
-        rewriteJar(input, output, replacements, null, null);
+        rewriteJar(input, output, replacements, null, null, null);
         if (replacements[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
@@ -68,7 +74,14 @@ public final class PatchCampaignOrbitalJunk {
         Path obfPatched = obf.resolveSibling("starfarer_obf.jar.main-thread.tmp");
         int[] transitionInjections = new int[] {0};
         int[] modManagerGuards = new int[] {0};
-        rewriteJar(obf, obfPatched, null, transitionInjections, modManagerGuards);
+        int[] sectorConfigGuards = new int[] {0};
+        rewriteJar(
+                obf,
+                obfPatched,
+                null,
+                transitionInjections,
+                modManagerGuards,
+                sectorConfigGuards);
         if (transitionInjections[0] < 1) {
             Files.deleteIfExists(obfPatched);
             throw new IllegalStateException(
@@ -78,6 +91,11 @@ public final class PatchCampaignOrbitalJunk {
             Files.deleteIfExists(obfPatched);
             throw new IllegalStateException(
                     "no CampaignGameManager ModManager list lookups were patched");
+        }
+        if (sectorConfigGuards[0] < 1) {
+            Files.deleteIfExists(obfPatched);
+            throw new IllegalStateException(
+                    "no CampaignGameManager sectorConfig list lookup was patched");
         }
         Files.move(obfPatched, obf, StandardCopyOption.REPLACE_EXISTING);
 
@@ -90,6 +108,9 @@ public final class PatchCampaignOrbitalJunk {
         System.out.println(
                 "Patched CampaignGameManager null-safe ModManager list lookups="
                         + modManagerGuards[0]);
+        System.out.println(
+                "Patched CampaignGameManager null-safe sectorConfig list lookups="
+                        + sectorConfigGuards[0]);
     }
 
     private static void rewriteJar(
@@ -97,7 +118,8 @@ public final class PatchCampaignOrbitalJunk {
             Path output,
             int[] junkReplacements,
             int[] transitionInjections,
-            int[] modManagerGuards) throws Exception {
+            int[] modManagerGuards,
+            int[] sectorConfigGuards) throws Exception {
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
             Enumeration<JarEntry> entries = jar.entries();
@@ -117,9 +139,10 @@ public final class PatchCampaignOrbitalJunk {
                         && BASE_GAME_STATE_TARGET.equals(entry.getName())) {
                     bytes = patchBaseGameState(bytes, transitionInjections);
                 }
-                if (modManagerGuards != null
+                if ((modManagerGuards != null || sectorConfigGuards != null)
                         && CAMPAIGN_GAME_MANAGER_TARGET.equals(entry.getName())) {
-                    bytes = patchCampaignGameManager(bytes, modManagerGuards);
+                    bytes = patchCampaignGameManager(
+                            bytes, modManagerGuards, sectorConfigGuards);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -193,7 +216,8 @@ public final class PatchCampaignOrbitalJunk {
         return writer.toByteArray();
     }
 
-    private static byte[] patchCampaignGameManager(byte[] input, int[] guards) {
+    private static byte[] patchCampaignGameManager(
+            byte[] input, int[] modManagerGuards, int[] sectorConfigGuards) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -206,7 +230,8 @@ public final class PatchCampaignOrbitalJunk {
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String methodName,
                                                 String methodDescriptor, boolean isInterface) {
-                        if (opcode == Opcodes.INVOKEVIRTUAL
+                        if (modManagerGuards != null
+                                && opcode == Opcodes.INVOKEVIRTUAL
                                 && MOD_MANAGER_OWNER.equals(owner)
                                 && LIST_DESCRIPTOR.equals(methodDescriptor)
                                 && ("getEnabledModPlugins".equals(methodName)
@@ -220,7 +245,24 @@ public final class PatchCampaignOrbitalJunk {
                                     methodName,
                                     SAFE_LIST_DESCRIPTOR,
                                     false);
-                            guards[0]++;
+                            modManagerGuards[0]++;
+                            return;
+                        }
+                        if (sectorConfigGuards != null
+                                && opcode == Opcodes.INVOKEVIRTUAL
+                                && SECTOR_CONFIG_OWNER.equals(owner)
+                                && "super".equals(methodName)
+                                && LIST_DESCRIPTOR.equals(methodDescriptor)) {
+                            // The sectorConfig reference is already on the stack. The helper takes
+                            // Object so no Java source has to name the obfuscated class `private`,
+                            // and returns an empty list when the optional spec was not loaded.
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    CAMPAIGN_INIT_COMPAT_OWNER,
+                                    "getAdditionalSectorGenerators",
+                                    SAFE_SECTOR_CONFIG_DESCRIPTOR,
+                                    false);
+                            sectorConfigGuards[0]++;
                             return;
                         }
                         super.visitMethodInsn(
