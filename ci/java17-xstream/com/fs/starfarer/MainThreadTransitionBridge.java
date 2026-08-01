@@ -5,20 +5,23 @@ import java.lang.reflect.Method;
 /**
  * Moves watcher-requested state changes onto BaseGameState.traverse(), i.e. the
  * thread that owns rendering and AppDriver state progression.
+ *
+ * This package contains an obfuscated com.fs.starfarer.String class, so all
+ * references to the JDK string type are explicitly java.lang.String.
  */
 public final class MainThreadTransitionBridge {
-    private static final String KEY = "starsector.pendingStateTransition";
-    private static final String CONSUMED = "__consumed__";
+    private static final java.lang.String KEY = "starsector.pendingStateTransition";
+    private static final java.lang.String CONSUMED = "__consumed__";
     private static boolean successLogged;
 
     private MainThreadTransitionBridge() {}
 
     public static void drain(Object state) {
-        String next = System.getProperty(KEY);
+        java.lang.String next = System.getProperty(KEY);
         if (next == null || next.length() == 0 || CONSUMED.equals(next) || state == null) {
             return;
         }
-        Method transition = findMethod(state.getClass(), "goToState", String.class);
+        Method transition = findMethod(state.getClass(), "goToState", java.lang.String.class);
         if (transition == null) {
             return;
         }
@@ -40,7 +43,8 @@ public final class MainThreadTransitionBridge {
         }
     }
 
-    private static Method findMethod(Class<?> type, String name, Class<?> arg) {
+    private static Method findMethod(
+            Class<?> type, java.lang.String name, Class<?> arg) {
         Class<?> c = type;
         while (c != null) {
             try {
