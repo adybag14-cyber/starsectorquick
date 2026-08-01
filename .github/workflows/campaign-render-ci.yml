@@ -1,12 +1,10 @@
 name: Campaign render verification
 
+# The live Pages check is intentionally manual. Running it on every PR commit
+# verifies the previous gh-pages deployment, not the candidate being built, and
+# used to consume the only Actions runner while the real local campaign matrix
+# waited in the queue. The deployment workflow runs this verifier after publish.
 on:
-  pull_request:
-    branches:
-      - feature/starsector-webgl-integration
-  push:
-    branches:
-      - fix/campaign-render-main-thread
   workflow_dispatch:
 
 permissions:
