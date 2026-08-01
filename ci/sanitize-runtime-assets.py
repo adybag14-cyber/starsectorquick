@@ -93,15 +93,27 @@ def main() -> int:
     aliases = [
         ("graphics/fx/particlealpha32sq.png", "graphics/particlealpha32sq.png"),
         # Cosmetic weapon-skin variants referenced by settings.json but absent
-        # from the curated Pages asset tree. Retain the correct mount/turret
-        # geometry by falling back to the matching vanilla texture.
+        # from the curated Pages asset tree. Retain the matching mount/turret
+        # geometry and glow instead of allowing ResourceLoaderState to abort.
         (
             "graphics/weapons/blaster2_turret_base.png",
             "graphics/weapons/blaster2ht_turret_base.png",
         ),
         (
+            "graphics/weapons/mining_laser_hardpoint_base.png",
+            "graphics/weapons/mining_laser_hightech_hardpoint_base.png",
+        ),
+        (
             "graphics/weapons/mining_laser_hardpoint_glow.png",
             "graphics/weapons/mining_laser_hightech_hardpoint_glow.png",
+        ),
+        (
+            "graphics/weapons/mining_laser_turret_base.png",
+            "graphics/weapons/mining_laser_hightech_turret_base.png",
+        ),
+        (
+            "graphics/weapons/mining_laser_turret_glow.png",
+            "graphics/weapons/mining_laser_hightech_turret_glow.png",
         ),
     ]
     alias_changes: list[str] = []
