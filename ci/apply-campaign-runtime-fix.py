@@ -160,6 +160,25 @@ launch = launch.replace(
     '/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i',
     '/watcher state=Campaign State|reached Campaign State/i',
 )
+# The AppDriver publishes/constructs the Title Screen object before ResourceLoaderState.init
+# has necessarily finished loading hulls, variants, weapons, factions, fonts and plugins.
+# Starting direct-new-game mutation one second after seeing the title races the loader and
+# leaves SpecStore half-empty (ShipHullSpecLoader NPE). Match Fixer's safe 25s default so
+# the official loader owns SpecStore until its initial pass has completed.
+old_title_settle = '''                const autoCampaignTitleSettleMs = Math.max(
+                    0,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
+                );'''
+new_title_settle = '''                const autoCampaignTitleSettleMs = Math.max(
+                    0,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 25000) || 25000
+                );'''
+launch = replace_exact(
+    launch,
+    old_title_settle,
+    new_title_settle,
+    'title/resource-loader settle window',
+)
 launch_path.write_text(launch, encoding='utf-8', newline='\n')
 
 swap_mode = os.environ.get('SWAP_YIELD_MODE', 'raf').strip().lower()
