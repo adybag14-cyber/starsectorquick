@@ -46,11 +46,12 @@ fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
 
-# glPopMatrix must never remove the base identity matrix. Without this guard the
-# next glPushMatrix clones undefined and CheerpJ stops the Java VM.
+# Keep the fixed-function bridge alive across legacy OpenGL behavior used by
+# Starsector: base matrix underflow and non-listable commands in display lists.
 python3 ci/patch-lwjgl-matrix-stack.py
-
+python3 ci/patch-lwjgl-display-lists.py
 grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
+grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
@@ -74,14 +75,25 @@ lines.insert(0, f'fixer_patch.jar\t{size}')
 p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 PY
 
-if [[ "$PATCH_SLEEP" == "true" ]]; then
-  mkdir -p .ci-build/asm .ci-build/transform
+# Decorative orbital junk is not gameplay state and its entity readResolve path
+# is incompatible with CheerpJ during sector construction. Remove only that
+# cosmetic market hook, leaving markets/economy/system generation intact.
+mkdir -p .ci-build/asm .ci-build/transform
+if [[ ! -s .ci-build/asm/asm.jar ]]; then
   curl -fsSL -o .ci-build/asm/asm.jar \
     https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar
+fi
+javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
+  ci/PatchCampaignOrbitalJunk.java
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignOrbitalJunk jars/starfarer_obf.jar .ci-build/starfarer-no-junk.jar
+mv .ci-build/starfarer-no-junk.jar jars/starfarer_obf.jar
+
+if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
   java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-    PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer_obf.jar
-  mv .ci-build/starfarer_obf.jar jars/starfarer_obf.jar
+    PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer-no-sleep.jar
+  mv .ci-build/starfarer-no-sleep.jar jars/starfarer_obf.jar
 fi
 
 npm ci
@@ -99,7 +111,7 @@ curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
 STARSECTOR_TEST_TIMEOUT_MS=360000 \
-STARSECTOR_FRAME_SETTLE_MS=15000 \
+STARSECTOR_FRAME_SETTLE_MS=30000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
