@@ -1,0 +1,16 @@
+name: Diagnose campaign render
+
+# Manual-only: the active PR matrix already performs the authoritative campaign
+# browser run. Keeping this legacy diagnostic on every PR update only serializes
+# the same expensive CheerpJ launch on repositories with one Actions runner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Use Campaign runtime PR matrix for active campaign diagnostics.'
