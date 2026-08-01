@@ -11,7 +11,7 @@ mkdir -p "$OUT" .ci-build/fixer .ci-cache
 
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
-  git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js > "$OUT/candidate.patch" || true
+  git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
   sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
@@ -43,6 +43,11 @@ fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
 
+# Keep browser bootstrap bounded. Full desktop world generation monopolizes the
+# CheerpJ VM before CampaignState can ever render; the campaign can start in
+# hyperspace and later gain richer world-generation compatibility separately.
+python3 ci/patch-browser-sector-gen.py
+
 python3 ci/patch-lwjgl-matrix-stack.py
 python3 ci/patch-lwjgl-display-lists.py
 grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
@@ -50,10 +55,6 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
-# A registered Title Screen object is not enough: only AppDriver.currentState owns
-# the render loop. Once that real state is observed, start bootstrap in the same
-# watcher timeslice so CheerpJ's synchronous render loop cannot starve the watcher
-# during a post-title sleep.
 python3 ci/require-owned-title-state.py
 python3 ci/enable-direct-ui-preflight.py
 python3 ci/reject-partial-campaign-create.py
@@ -85,13 +86,16 @@ if [[ ! -s .ci-build/asm/asm.jar ]]; then
     https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar
 fi
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
-  ci/PatchCampaignOrbitalJunk.java ci/PatchCoreLifecycleBrowserWorld.java
+  ci/PatchCampaignOrbitalJunk.java ci/PatchCoreLifecycleBrowserWorld.java ci/PatchCampaignProcGen.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCoreLifecycleBrowserWorld jars/starfarer.api.jar .ci-build/starfarer-api-browser-world.jar
 mv .ci-build/starfarer-api-browser-world.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignProcGen jars/starfarer_obf.jar .ci-build/starfarer-no-procgen.jar
+mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
@@ -119,7 +123,7 @@ done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=360000 \
+STARSECTOR_TEST_TIMEOUT_MS=240000 \
 STARSECTOR_FRAME_SETTLE_MS=30000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
