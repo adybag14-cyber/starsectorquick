@@ -17,8 +17,25 @@ of allowing ResourceLoaderState to terminate the game.
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 from pathlib import Path
+
+
+GRAPHICS_PATH_RE = re.compile(
+    r"graphics/[A-Za-z0-9_./@+-]+\.(?:png|jpg|jpeg)",
+    re.IGNORECASE,
+)
+TEXT_ASSET_EXTENSIONS = {
+    ".csv",
+    ".json",
+    ".proj",
+    ".ship",
+    ".skin",
+    ".system",
+    ".variant",
+    ".wpn",
+}
 
 
 def sanitize_index(path: Path) -> tuple[bool, int]:
@@ -53,6 +70,33 @@ def copy_alias(root: Path, source: str, destination: str) -> bool:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dst)
     return True
+
+
+def discover_missing_static_graphics(root: Path) -> dict[str, list[str]]:
+    """Return missing literal graphics paths and a few files referencing each.
+
+    This is diagnostic rather than a hard gate: a handful of scripts use
+    generated or optional paths. Printing the complete set lets CI expose the
+    next curated-asset omission in one run instead of one fatal startup at a
+    time.
+    """
+
+    missing: dict[str, list[str]] = {}
+    for source in root.rglob("*"):
+        if not source.is_file() or source.suffix.lower() not in TEXT_ASSET_EXTENSIONS:
+            continue
+        try:
+            text = source.read_text(encoding="utf-8-sig", errors="ignore")
+        except OSError:
+            continue
+        for match in GRAPHICS_PATH_RE.finditer(text):
+            asset = match.group(0).replace("\\", "/")
+            if (root / asset).is_file():
+                continue
+            refs = missing.setdefault(asset, [])
+            if len(refs) < 3:
+                refs.append(source.relative_to(root).as_posix())
+    return dict(sorted(missing.items()))
 
 
 def main() -> int:
@@ -126,10 +170,12 @@ def main() -> int:
             if not args.check:
                 copy_alias(root, source, destination)
 
+    missing_graphics = discover_missing_static_graphics(root)
     print(
         "runtime asset sanitation: "
         f"indexes={len(index_files)} changed={len(changed)} "
-        f"embeddedBomEntries={embedded_bom_entries} aliases={len(alias_changes)}"
+        f"embeddedBomEntries={embedded_bom_entries} aliases={len(alias_changes)} "
+        f"missingStaticGraphics={len(missing_graphics)}"
     )
     for path in changed[:80]:
         print(f"  normalized {path.as_posix()}")
@@ -137,6 +183,10 @@ def main() -> int:
         print(f"  ... and {len(changed) - 80} more index files")
     for destination in alias_changes:
         print(f"  aliased {destination}")
+    for asset, refs in list(missing_graphics.items())[:200]:
+        print(f"  missing-static {asset} <- {', '.join(refs)}")
+    if len(missing_graphics) > 200:
+        print(f"  ... and {len(missing_graphics) - 200} more missing static graphics paths")
 
     if args.check and (changed or alias_changes):
         return 1
