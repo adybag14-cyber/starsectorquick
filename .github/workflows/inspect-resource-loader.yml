@@ -1,45 +1,15 @@
 name: Inspect resource loader
 
+# Kept for manual bytecode investigation only. The active campaign PR matrix
+# now collects the relevant loader/campaign disassembly in its prepare job.
 on:
-  pull_request:
-    branches:
-      - feature/starsector-webgl-integration
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  note:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: false
-          fetch-depth: 1
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Disassemble loader classes
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p inspect
-          CP='jars/starfarer.api.jar:jars/starfarer_obf.jar:jars/bridge.jar:jars/fs.common_obf.jar'
-          for cls in \
-            com.fs.starfarer.loading.WeaponSpecLoader \
-            com.fs.starfarer.loading.specs.N \
-            com.fs.starfarer.loading.SpecStore \
-            com.fs.starfarer.loading.ResourceLoaderState; do
-            out="inspect/${cls##*.}.javap.txt"
-            javap -classpath "$CP" -c -p -s -verbose "$cls" > "$out" || true
-          done
-          grep -Rni -A30 -B30 -E 'setProjectileSpec|projectile|WeaponSpecLoader|particlealpha|loadProjectile|\.proj' inspect || true
-      - name: Upload inspection
-        uses: actions/upload-artifact@v4
-        with:
-          name: resource-loader-inspection
-          path: inspect
-          retention-days: 7
+      - run: echo 'Campaign runtime PR matrix now owns automated bytecode diagnostics.'
