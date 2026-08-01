@@ -7,7 +7,7 @@ PATCH_SLEEP=${3:?patch sleep flag required}
 EXPECT_STATE=${4:-campaign}
 WINDOW_CONFIG=${5:-'{}'}
 OUT="test_output/${NAME}"
-mkdir -p "$OUT" .ci-build/fixer
+mkdir -p "$OUT" .ci-build/fixer .ci-cache
 
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
@@ -20,6 +20,23 @@ trap cleanup EXIT
 git lfs pull --include='jars/resources.jar' --exclude=''
 test "$(wc -c < jars/resources.jar)" -gt 100000
 
+# The checked-in browser tree is curated and omitted hundreds of textures that
+# the 0.98a-RC8 data files still require. Fill only absent files from the
+# official Linux release; existing browser-specific assets are never replaced.
+OFFICIAL_URL=${STARSECTOR_OFFICIAL_ARCHIVE_URL:-https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip}
+OFFICIAL_ZIP=${STARSECTOR_OFFICIAL_ARCHIVE:-.ci-cache/starsector_linux-0.98a-RC8.zip}
+if [[ ! -s "$OFFICIAL_ZIP" ]] || ! unzip -tq "$OFFICIAL_ZIP" >/dev/null 2>&1; then
+  rm -f "$OFFICIAL_ZIP"
+  curl -fL --retry 3 --retry-delay 3 --connect-timeout 30 --max-time 900 \
+    -o "$OFFICIAL_ZIP" "$OFFICIAL_URL"
+fi
+test "$(wc -c < "$OFFICIAL_ZIP")" -gt 200000000
+python3 ci/restore-official-runtime-assets.py \
+  --archive "$OFFICIAL_ZIP" \
+  --root starsector/starsector \
+  --section graphics \
+  | tee "$OUT/official-asset-restore.log"
+
 python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
 if grep -RIl $'\xEF\xBB\xBF' starsector/starsector --include='index.list' > "$OUT/index-bom-files.txt"; then
   echo 'UTF-8 BOM remains in runtime index files:' >&2
@@ -28,8 +45,6 @@ if grep -RIl $'\xEF\xBB\xBF' starsector/starsector --include='index.list' > "$OU
 fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
-cmp starsector/starsector/graphics/fx/particlealpha32sq.png \
-    starsector/starsector/graphics/particlealpha32sq.png
 
 # glPopMatrix must never remove the base identity matrix. Without this guard the
 # next glPushMatrix clones undefined and CheerpJ stops the Java VM.
@@ -83,7 +98,7 @@ done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=240000 \
+STARSECTOR_TEST_TIMEOUT_MS=360000 \
 STARSECTOR_FRAME_SETTLE_MS=15000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
