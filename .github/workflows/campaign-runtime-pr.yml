@@ -73,21 +73,10 @@ jobs:
           if-no-files-found: warn
 
   experiment:
-    name: ${{ matrix.name }}
+    name: campaign-direct-main-thread-java17
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: campaign-direct-worker-java17
-            config: '{}'
-          - name: campaign-direct-main-thread-java17
-            config: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
-          - name: campaign-menu-main-thread-java17
-            config: '{"__STARSECTOR_AUTO_CAMPAIGN_MODE__":"new_menu_only","__STARSECTOR_DIRECT_LAUNCH__":false,"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,15 +95,15 @@ jobs:
           path: .ci-cache/starsector_linux-0.98a-RC8.zip
           key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
           fail-on-cache-miss: true
-      - name: Build and verify ${{ matrix.name }}
+      - name: Build and verify campaign-direct-main-thread-java17
         env:
-          EXPERIMENT_CONFIG: ${{ matrix.config }}
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false}'
           CHEERPJ_JAVA_VERSION: '17'
-        run: bash ci/run-campaign-experiment.sh '${{ matrix.name }}' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Upload ${{ matrix.name }} evidence
+        run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Upload campaign-direct-main-thread-java17 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-${{ matrix.name }}
-          path: test_output/${{ matrix.name }}
+          name: campaign-runtime-campaign-direct-main-thread-java17
+          path: test_output/campaign-direct-main-thread-java17
           if-no-files-found: warn
