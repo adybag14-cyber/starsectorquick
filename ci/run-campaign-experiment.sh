@@ -55,6 +55,9 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
+# A CampaignGameManager.create() NPE must not be promoted into a successful
+# campaign merely because synthetic readiness probes can manufacture a fleet.
+python3 ci/reject-partial-campaign-create.py
 # Also queues watcher-requested campaign transitions into a system property.
 # A BaseGameState bytecode hook below drains that request from the render thread.
 python3 ci/harden-settings-api-proxy.py
