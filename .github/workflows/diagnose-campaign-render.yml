@@ -1,0 +1,141 @@
+name: Diagnose campaign render
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/starsector-webgl-integration
+    paths:
+      - '.github/workflows/diagnose-campaign-render.yml'
+      - 'tools/ci/**'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Show BaseGameState providers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for jar in jars/starfarer.api.jar jars/starfarer_obf.jar; do
+            echo "=== $jar ==="
+            jar tf "$jar" | grep -E '^com/fs/starfarer/(BaseGameState|AppDriver)\.class$' || true
+          done
+          javap -classpath jars/starfarer.api.jar:jars/starfarer_obf.jar:jars/bridge.jar -c -p com.fs.starfarer.BaseGameState > /tmp/BaseGameState.javap.txt
+          grep -n -A8 -B8 'Thread.sleep' /tmp/BaseGameState.javap.txt || true
+
+      - name: Build sync, noop, and async candidates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for mode in sync noop async; do
+            dst="/tmp/starsector-$mode"
+            rm -rf "$dst"
+            mkdir -p "$dst"
+            cp -a "$GITHUB_WORKSPACE/." "$dst/"
+            python3 "$GITHUB_WORKSPACE/tools/ci/prepare_candidate.py" --root "$dst" --swap "$mode" | tee "/tmp/prepare-$mode.log"
+          done
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright Chromium and Pillow
+        shell: bash
+        run: |
+          set -euxo pipefail
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+          python3 -m pip install --user pillow
+
+      - name: Run browser diagnostics
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$GITHUB_WORKSPACE/ci-results"
+          i=0
+          for mode in sync noop async; do
+            port=$((4173 + i))
+            out="$GITHUB_WORKSPACE/ci-results/$mode"
+            mkdir -p "$out"
+            echo "=== TEST $mode on port $port ==="
+            python3 "$GITHUB_WORKSPACE/tools/ci/range_server.py" --root "/tmp/starsector-$mode" --port "$port" >"$out/server.log" 2>&1 &
+            server_pid=$!
+            sleep 2
+            timeout 190s node "$GITHUB_WORKSPACE/tools/ci/verify_campaign.mjs" "http://127.0.0.1:$port/launch.html?autostart=1" "$out" 150000 >"$out/runner.log" 2>&1
+            rc=$?
+            echo "node exit=$rc" | tee -a "$out/runner.log"
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+            echo "--- $mode result ---"
+            cat "$out/result.json" 2>/dev/null || true
+            echo "--- $mode key logs ---"
+            grep -E 'WebRuntimeCompat|Bridge Display\.update|\[SWAP\]|Campaign State|direct new-game|RESULT_JSON|pageerror|Runtime failure' "$out/console.log" 2>/dev/null | tail -n 160 || true
+            i=$((i + 1))
+          done
+          exit 0
+
+      - name: Measure game screenshots
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+          root = Path('ci-results')
+          summary = {}
+          for mode in ('sync', 'noop', 'async'):
+              result_path = root / mode / 'result.json'
+              result = json.loads(result_path.read_text()) if result_path.exists() else {}
+              image_path = root / mode / 'game.png'
+              image_stats = None
+              if image_path.exists():
+                  im = Image.open(image_path).convert('RGB')
+                  if im.width > 8 and im.height > 8:
+                      im = im.crop((4, 4, im.width - 4, im.height - 4))
+                  pixels = list(im.getdata())
+                  total = max(1, len(pixels))
+                  nonblack = sum(1 for r, g, b in pixels if max(r, g, b) > 8)
+                  bright = sum(1 for r, g, b in pixels if max(r, g, b) > 32)
+                  image_stats = {
+                      'width': im.width,
+                      'height': im.height,
+                      'nonblack_ratio': nonblack / total,
+                      'bright_ratio': bright / total,
+                      'extrema': im.getextrema(),
+                  }
+              result['image'] = image_stats
+              summary[mode] = result
+          Path('ci-results/summary.json').write_text(json.dumps(summary, indent=2))
+          print(json.dumps(summary, indent=2))
+          PY
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-render-diagnostics
+          path: |
+            ci-results
+            /tmp/BaseGameState.javap.txt
+            /tmp/prepare-sync.log
+            /tmp/prepare-noop.log
+            /tmp/prepare-async.log
+          if-no-files-found: warn
+          retention-days: 7
