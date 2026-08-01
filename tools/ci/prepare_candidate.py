@@ -5,7 +5,6 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import tempfile
 import zipfile
 
 
@@ -18,6 +17,17 @@ def replace_exact(text, old, new, label):
     if old not in text:
         raise RuntimeError(f'expected {label} block was not found')
     return text.replace(old, new, 1)
+
+
+def classpath_names(root: Path):
+    names = []
+    for line in (root / 'jars' / 'index.list').read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line:
+            name = line.split()[0]
+            if name not in ('fixer-runtime.jar', 'basegame-runtime.jar'):
+                names.append(name)
+    return names
 
 
 def patch_fixer(root: Path):
@@ -59,12 +69,7 @@ def patch_fixer(root: Path):
     text = replace_exact(text, old_title, new_title, 'title transition')
     fixer.write_text(text, encoding='utf-8')
 
-    names = []
-    for line in (root / 'jars' / 'index.list').read_text(encoding='utf-8').splitlines():
-        line = line.strip()
-        if line:
-            names.append(line.split()[0])
-    cp = os.pathsep.join(str(root / 'jars' / name) for name in names)
+    cp = os.pathsep.join(str(root / 'jars' / name) for name in classpath_names(root))
     out = root / 'build' / 'ci' / 'fixer'
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True, exist_ok=True)
@@ -73,22 +78,10 @@ def patch_fixer(root: Path):
     classes = sorted(out.glob('Fixer*.class'))
     if not classes:
         raise RuntimeError('Fixer compilation produced no classes')
-    for cls in classes:
-        run(['jar', 'uf', str(root / 'jars' / 'fixer.jar'), '-C', str(out), cls.name])
-    print(f'prepare_candidate: updated fixer.jar with {len(classes)} Fixer classes')
-
-
-def replace_zip_entries(jar_path: Path, replacements):
-    tmp = jar_path.with_suffix(jar_path.suffix + '.tmp')
-    with zipfile.ZipFile(jar_path, 'r') as zin, zipfile.ZipFile(tmp, 'w') as zout:
-        for info in zin.infolist():
-            data = zin.read(info.filename)
-            if info.filename in replacements:
-                data = replacements.pop(info.filename)
-            zout.writestr(info, data)
-        for name, data in replacements.items():
-            zout.writestr(name, data, compress_type=zipfile.ZIP_DEFLATED)
-    tmp.replace(jar_path)
+    runtime_jar = root / 'jars' / 'fixer-runtime.jar'
+    runtime_jar.unlink(missing_ok=True)
+    run(['jar', 'cf', str(runtime_jar), '-C', str(out), '.'])
+    print(f'prepare_candidate: built fixer-runtime.jar with {len(classes)} Fixer classes')
 
 
 def patch_base_game_state(root: Path):
@@ -102,8 +95,8 @@ def patch_base_game_state(root: Path):
     if not containing:
         raise RuntimeError('BaseGameState.class was not found in starfarer jars')
     print('prepare_candidate: BaseGameState providers in classpath order:', ', '.join(p.name for p in containing))
-    jar_path = containing[0]
-    print('prepare_candidate: patching runtime provider', jar_path.name)
+    provider = containing[0]
+    print('prepare_candidate: reading runtime provider', provider.name)
 
     build = root / 'build' / 'ci' / 'basegame'
     shutil.rmtree(build, ignore_errors=True)
@@ -121,18 +114,23 @@ def patch_base_game_state(root: Path):
     exports = 'java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED'
     run(['javac', '--add-exports', exports, '-d', str(patcher_out), str(patcher_src)])
 
-    with zipfile.ZipFile(jar_path, 'r') as zf:
+    with zipfile.ZipFile(provider, 'r') as zf:
         original = zf.read(target)
     original_path = build / 'BaseGameState.class'
     patched_path = build / 'BaseGameState.patched.class'
     original_path.write_bytes(original)
     run(['java', '--add-exports', exports, '-cp', str(patcher_out), 'PatchBaseGameState', str(original_path), str(patched_path)])
 
-    replacements = {
-        target: patched_path.read_bytes(),
-        'com/fs/starfarer/WebRuntimeCompat.class': helper_cls.read_bytes(),
-    }
-    replace_zip_entries(jar_path, replacements)
+    overlay = build / 'overlay'
+    target_path = overlay / 'com' / 'fs' / 'starfarer' / 'BaseGameState.class'
+    helper_path = overlay / 'com' / 'fs' / 'starfarer' / 'WebRuntimeCompat.class'
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(patched_path.read_bytes())
+    helper_path.write_bytes(helper_cls.read_bytes())
+    runtime_jar = root / 'jars' / 'basegame-runtime.jar'
+    runtime_jar.unlink(missing_ok=True)
+    run(['jar', 'cf', str(runtime_jar), '-C', str(overlay), '.'])
+    print('prepare_candidate: built basegame-runtime.jar overlay')
 
 
 def swap_source(mode: str):
@@ -160,15 +158,15 @@ def patch_swap(root: Path, mode: str):
 
 
 def refresh_index(root: Path):
-    index = root / 'jars' / 'index.list'
+    original_names = classpath_names(root)
+    names = ['fixer-runtime.jar', 'basegame-runtime.jar'] + original_names
     lines = []
-    for line in index.read_text(encoding='utf-8').splitlines():
-        if not line.strip():
-            continue
-        name = line.split()[0]
+    for name in names:
         path = root / 'jars' / name
+        if not path.exists():
+            raise RuntimeError(f'missing classpath jar {name}')
         lines.append(f'{name}\t{path.stat().st_size}')
-    index.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    (root / 'jars' / 'index.list').write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
 def main():
