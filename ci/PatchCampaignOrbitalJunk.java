@@ -22,6 +22,9 @@ import org.objectweb.asm.Opcodes;
  * 2. Campaign state requests are drained by BaseGameState.traverse immediately
  *    before Display.update(), which guarantees goToState() runs on the render /
  *    AppDriver thread rather than on Fixer's watcher thread.
+ * 3. CampaignGameManager's launcher mod-list lookups are made null-safe. The
+ *    direct browser launch does not construct the desktop ModManager singleton;
+ *    for a vanilla game that correctly means an empty mod/plugin list.
  */
 public final class PatchCampaignOrbitalJunk {
     private static final String JUNK_TARGET =
@@ -31,6 +34,15 @@ public final class PatchCampaignOrbitalJunk {
             "(Lcom/fs/starfarer/api/campaign/econ/MarketAPI;)V";
     private static final String BASE_GAME_STATE_TARGET =
             "com/fs/starfarer/BaseGameState.class";
+    private static final String CAMPAIGN_GAME_MANAGER_TARGET =
+            "com/fs/starfarer/campaign/save/CampaignGameManager.class";
+    private static final String MOD_MANAGER_OWNER =
+            "com/fs/starfarer/launcher/ModManager";
+    private static final String MOD_MANAGER_COMPAT_OWNER =
+            "com/fs/starfarer/ModManagerCompat";
+    private static final String LIST_DESCRIPTOR = "()Ljava/util/List;";
+    private static final String SAFE_LIST_DESCRIPTOR =
+            "(Lcom/fs/starfarer/launcher/ModManager;)Ljava/util/List;";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -41,7 +53,7 @@ public final class PatchCampaignOrbitalJunk {
         Path output = Path.of(args[1]);
         int[] replacements = new int[] {0};
 
-        rewriteJar(input, output, replacements, null);
+        rewriteJar(input, output, replacements, null, null);
         if (replacements[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
@@ -55,11 +67,17 @@ public final class PatchCampaignOrbitalJunk {
         }
         Path obfPatched = obf.resolveSibling("starfarer_obf.jar.main-thread.tmp");
         int[] transitionInjections = new int[] {0};
-        rewriteJar(obf, obfPatched, null, transitionInjections);
+        int[] modManagerGuards = new int[] {0};
+        rewriteJar(obf, obfPatched, null, transitionInjections, modManagerGuards);
         if (transitionInjections[0] < 1) {
             Files.deleteIfExists(obfPatched);
             throw new IllegalStateException(
                     "no Display.update call found in BaseGameState.traverse");
+        }
+        if (modManagerGuards[0] < 1) {
+            Files.deleteIfExists(obfPatched);
+            throw new IllegalStateException(
+                    "no CampaignGameManager ModManager list lookups were patched");
         }
         Files.move(obfPatched, obf, StandardCopyOption.REPLACE_EXISTING);
 
@@ -69,13 +87,17 @@ public final class PatchCampaignOrbitalJunk {
         System.out.println(
                 "Patched BaseGameState render-thread transition drains="
                         + transitionInjections[0]);
+        System.out.println(
+                "Patched CampaignGameManager null-safe ModManager list lookups="
+                        + modManagerGuards[0]);
     }
 
     private static void rewriteJar(
             Path input,
             Path output,
             int[] junkReplacements,
-            int[] transitionInjections) throws Exception {
+            int[] transitionInjections,
+            int[] modManagerGuards) throws Exception {
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
             Enumeration<JarEntry> entries = jar.entries();
@@ -94,6 +116,10 @@ public final class PatchCampaignOrbitalJunk {
                 if (transitionInjections != null
                         && BASE_GAME_STATE_TARGET.equals(entry.getName())) {
                     bytes = patchBaseGameState(bytes, transitionInjections);
+                }
+                if (modManagerGuards != null
+                        && CAMPAIGN_GAME_MANAGER_TARGET.equals(entry.getName())) {
+                    bytes = patchCampaignGameManager(bytes, modManagerGuards);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -156,6 +182,46 @@ public final class PatchCampaignOrbitalJunk {
                                     "(Ljava/lang/Object;)V",
                                     false);
                             injections[0]++;
+                        }
+                        super.visitMethodInsn(
+                                opcode, owner, methodName, methodDescriptor, isInterface);
+                    }
+                };
+            }
+        };
+        reader.accept(visitor, 0);
+        return writer.toByteArray();
+    }
+
+    private static byte[] patchCampaignGameManager(byte[] input, int[] guards) {
+        ClassReader reader = new ClassReader(input);
+        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+        ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor,
+                                             String signature, String[] exceptions) {
+                MethodVisitor delegate = super.visitMethod(
+                        access, name, descriptor, signature, exceptions);
+                return new MethodVisitor(Opcodes.ASM9, delegate) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                String methodDescriptor, boolean isInterface) {
+                        if (opcode == Opcodes.INVOKEVIRTUAL
+                                && MOD_MANAGER_OWNER.equals(owner)
+                                && LIST_DESCRIPTOR.equals(methodDescriptor)
+                                && ("getEnabledModPlugins".equals(methodName)
+                                        || "getEnabledMods".equals(methodName))) {
+                            // The ModManager reference is already on the operand stack. A static
+                            // compatibility method consumes the same reference and can therefore
+                            // handle null without changing the surrounding iterator bytecode.
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    MOD_MANAGER_COMPAT_OWNER,
+                                    methodName,
+                                    SAFE_LIST_DESCRIPTOR,
+                                    false);
+                            guards[0]++;
+                            return;
                         }
                         super.visitMethodInsn(
                                 opcode, owner, methodName, methodDescriptor, isInterface);
