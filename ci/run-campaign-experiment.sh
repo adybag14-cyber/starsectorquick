@@ -85,20 +85,22 @@ lines.insert(0, f'fixer_patch.jar\t{size}')
 p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 PY
 
-# Decorative orbital junk is not gameplay state and its entity readResolve path
-# is incompatible with CheerpJ during sector construction. CoreLifecyclePluginImpl
-# lives in starfarer.api.jar (not starfarer_obf.jar), so patch the jar that actually
-# owns the method loaded by the runtime.
+# Patch API-jar lifecycle hooks that assume a fully desktop-generated sector.
+# The browser compatibility path may intentionally omit those optional world
+# objects, but campaign state ownership and rendering stay on AppDriver.
 mkdir -p .ci-build/asm .ci-build/transform
 if [[ ! -s .ci-build/asm/asm.jar ]]; then
   curl -fsSL -o .ci-build/asm/asm.jar \
     https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar
 fi
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
-  ci/PatchCampaignOrbitalJunk.java
+  ci/PatchCampaignOrbitalJunk.java ci/PatchCoreLifecycleBrowserWorld.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCoreLifecycleBrowserWorld jars/starfarer.api.jar .ci-build/starfarer-api-browser-world.jar
+mv .ci-build/starfarer-api-browser-world.jar jars/starfarer.api.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
