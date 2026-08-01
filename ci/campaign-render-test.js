@@ -13,7 +13,20 @@ const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   : {};
 fs.mkdirSync(outputDir, { recursive: true });
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    })
+  ]);
+}
+
 function pixelStats(buffer) {
+  if (!buffer) return null;
   const png = PNG.sync.read(buffer);
   let nonBlack = 0;
   let opaque = 0;
@@ -49,14 +62,25 @@ function pixelStats(buffer) {
   const logs = [];
   const errors = [];
   const httpErrors = [];
+  const screenshotErrors = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
   let fatalSeenAt = 0;
   let updateMax = 0;
   let swapMax = 0;
-  const browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
+  let browser;
+
+  const flushLogs = () => {
+    try {
+      fs.writeFileSync(`${outputDir}/browser-live.log`, logs.join('\n'));
+    } catch (_) {}
+  };
+
+  browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
   const page = await context.newPage();
+  page.setDefaultTimeout(10000);
+  page.setDefaultNavigationTimeout(60000);
 
   const defaultConfig = {
     __STARSECTOR_AUTO_CAMPAIGN__: true,
@@ -90,8 +114,12 @@ function pixelStats(buffer) {
     if (/Fatal:|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
       fatalSeenAt = Date.now();
     }
+    if (logs.length % 25 === 0 || fatalSeenAt || campaignSeenAt) flushLogs();
   });
-  page.on('pageerror', error => errors.push(String(error && (error.stack || error.message) || error)));
+  page.on('pageerror', error => {
+    errors.push(String(error && (error.stack || error.message) || error));
+    flushLogs();
+  });
   page.on('requestfailed', request => {
     const failure = request.failure();
     logs.push(`[requestfailed] ${request.url()} :: ${failure ? failure.errorText : 'unknown'}`);
@@ -111,19 +139,38 @@ function pixelStats(buffer) {
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline && errors.length === 0 && !fatalSeenAt) {
-    const state = await page.evaluate(() => document.body.dataset.runtimeState || '').catch(() => '');
+    const state = await withTimeout(
+      page.evaluate(() => document.body.dataset.runtimeState || ''),
+      5000,
+      'runtime-state evaluate'
+    ).catch(error => {
+      logs.push(`[diagnostic] ${error.message}`);
+      return '';
+    });
     if (['main-returned', 'failed', 'fatal'].includes(state)) break;
     if (expectedState === 'campaign' && campaignSeenAt) break;
     if (expectedState === 'title' && titleSeenAt && Date.now() - titleSeenAt >= settleMs) break;
-    await page.waitForTimeout(1000);
+    await sleep(1000);
   }
 
+  flushLogs();
   const game = page.locator('#game-container');
-  const first = await game.screenshot({ path: `${outputDir}/frame-first.png` });
-  await page.waitForTimeout(settleMs);
-  const second = await game.screenshot({ path: `${outputDir}/frame-second.png` });
+  const safeScreenshot = async (path, label) => {
+    try {
+      return await withTimeout(game.screenshot({ path, timeout: 10000 }), 12000, label);
+    } catch (error) {
+      screenshotErrors.push(String(error && (error.stack || error.message) || error));
+      logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
+      flushLogs();
+      return null;
+    }
+  };
 
-  const state = await page.evaluate(() => ({
+  const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
+  await sleep(settleMs);
+  const second = await safeScreenshot(`${outputDir}/frame-second.png`, 'second frame screenshot');
+
+  const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',
     bodyDetail: document.body.dataset.runtimeDetail || '',
@@ -135,18 +182,29 @@ function pixelStats(buffer) {
       clientWidth: c.clientWidth,
       clientHeight: c.clientHeight
     }))
-  }));
+  })), 10000, 'final state evaluate').catch(error => {
+    errors.push(String(error && (error.stack || error.message) || error));
+    return {
+      runtime: null,
+      bodyState: 'unresponsive',
+      bodyDetail: error.message || String(error),
+      button: '',
+      nativeStats: null,
+      canvases: []
+    };
+  });
 
   const firstStats = pixelStats(first);
   const secondStats = pixelStats(second);
-  const frameChanged = firstStats.sha256 !== secondStats.sha256;
-  const rendered = secondStats.nonBlackRatio > 0.01 && secondStats.variance > 2;
+  const frameChanged = Boolean(firstStats && secondStats && firstStats.sha256 !== secondStats.sha256);
+  const rendered = Boolean(secondStats && secondStats.nonBlackRatio > 0.01 && secondStats.variance > 2);
   const campaign = Boolean(campaignSeenAt) || state.bodyState === 'campaign';
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
   const ok = reachedExpected && rendered && progressing && errors.length === 0 && !fatalSeenAt
-    && !['main-returned', 'failed', 'fatal'].includes(state.bodyState);
+    && screenshotErrors.length === 0
+    && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(state.bodyState);
 
   const result = {
     ok,
@@ -166,6 +224,7 @@ function pixelStats(buffer) {
     firstStats,
     secondStats,
     errors,
+    screenshotErrors,
     httpErrors: [...new Set(httpErrors)],
     state,
     logTail: logs.slice(-500)
@@ -173,7 +232,9 @@ function pixelStats(buffer) {
   fs.writeFileSync(`${outputDir}/result.json`, JSON.stringify(result, null, 2));
   fs.writeFileSync(`${outputDir}/browser.log`, logs.join('\n'));
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  await withTimeout(browser.close(), 10000, 'browser close').catch(error => {
+    console.error(error.message || error);
+  });
   process.exit(ok ? 0 : 1);
 })().catch(error => {
   console.error(error && (error.stack || error.message) || error);
