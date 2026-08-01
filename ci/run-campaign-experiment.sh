@@ -20,9 +20,6 @@ trap cleanup EXIT
 git lfs pull --include='jars/resources.jar' --exclude=''
 test "$(wc -c < jars/resources.jar)" -gt 100000
 
-# The checked-in browser tree is curated and omitted hundreds of textures that
-# the 0.98a-RC8 data files still require. Fill only absent files from the
-# official Linux release; existing browser-specific assets are never replaced.
 OFFICIAL_URL=${STARSECTOR_OFFICIAL_ARCHIVE_URL:-https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip}
 OFFICIAL_ZIP=${STARSECTOR_OFFICIAL_ARCHIVE:-.ci-cache/starsector_linux-0.98a-RC8.zip}
 if [[ ! -s "$OFFICIAL_ZIP" ]] || ! unzip -tq "$OFFICIAL_ZIP" >/dev/null 2>&1; then
@@ -46,8 +43,6 @@ fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
 
-# Keep the fixed-function bridge alive across legacy OpenGL behavior used by
-# Starsector: base matrix underflow and non-listable commands in display lists.
 python3 ci/patch-lwjgl-matrix-stack.py
 python3 ci/patch-lwjgl-display-lists.py
 grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
@@ -55,14 +50,13 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
-# The CampaignGameManager progress panel is the first code reached by create().
-# Prime its fonts/textures instead of waiting for repeated constructor NPEs.
+# A registered Title Screen object is not enough: only AppDriver.currentState owns
+# the render loop. Once that real state is observed, start bootstrap in the same
+# watcher timeslice so CheerpJ's synchronous render loop cannot starve the watcher
+# during a post-title sleep.
+python3 ci/require-owned-title-state.py
 python3 ci/enable-direct-ui-preflight.py
-# A CampaignGameManager.create() NPE must not be promoted into a successful
-# campaign merely because synthetic readiness probes can manufacture a fleet.
 python3 ci/reject-partial-campaign-create.py
-# Also queues watcher-requested campaign transitions into a system property.
-# A BaseGameState bytecode hook below drains that request from the render thread.
 python3 ci/harden-settings-api-proxy.py
 python3 ci/set-cheerpj-version.py
 
@@ -85,9 +79,6 @@ lines.insert(0, f'fixer_patch.jar\t{size}')
 p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 PY
 
-# Patch API-jar lifecycle hooks that assume a fully desktop-generated sector.
-# The browser compatibility path may intentionally omit those optional world
-# objects, but campaign state ownership and rendering stay on AppDriver.
 mkdir -p .ci-build/asm .ci-build/transform
 if [[ ! -s .ci-build/asm/asm.jar ]]; then
   curl -fsSL -o .ci-build/asm/asm.jar \
@@ -109,7 +100,6 @@ if [[ "$PATCH_SLEEP" == "true" ]]; then
   mv .ci-build/starfarer-no-sleep.jar jars/starfarer_obf.jar
 fi
 
-# Drain watcher-requested state changes from the actual game/render thread.
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTransition.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
