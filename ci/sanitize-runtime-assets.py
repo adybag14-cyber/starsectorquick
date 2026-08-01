@@ -8,10 +8,9 @@ URLs such as ``%EF%BB%BFproj/index.list`` or
 projectile specs partially initialized and causing ResourceLoaderState to
 abort before the render loop can run.
 
-The curated browser asset tree also omits a small number of skin-specific
-textures that the vanilla settings map still references. These are cosmetic
-variants, so map them to the corresponding retained vanilla texture instead
-of allowing ResourceLoaderState to terminate the game.
+A few cosmetic aliases remain as a fallback for deliberately curated trees.
+They are only created when the exact destination is absent, so assets restored
+from the official release are never overwritten.
 """
 
 from __future__ import annotations
@@ -65,7 +64,7 @@ def copy_alias(root: Path, source: str, destination: str) -> bool:
     dst = root / destination
     if not src.is_file():
         raise FileNotFoundError(f"required alias source is missing: {src}")
-    if dst.is_file() and dst.read_bytes() == src.read_bytes():
+    if dst.is_file():
         return False
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dst)
@@ -136,9 +135,8 @@ def main() -> int:
 
     aliases = [
         ("graphics/fx/particlealpha32sq.png", "graphics/particlealpha32sq.png"),
-        # Cosmetic weapon-skin variants referenced by settings.json but absent
-        # from the curated Pages asset tree. Retain the matching mount/turret
-        # geometry and glow instead of allowing ResourceLoaderState to abort.
+        # Cosmetic weapon-skin fallbacks for reduced asset trees. Exact official
+        # variants win whenever they are present.
         (
             "graphics/weapons/blaster2_turret_base.png",
             "graphics/weapons/blaster2ht_turret_base.png",
@@ -162,9 +160,8 @@ def main() -> int:
     ]
     alias_changes: list[str] = []
     for source, destination in aliases:
-        src = root / source
         dst = root / destination
-        needs_copy = not dst.is_file() or dst.read_bytes() != src.read_bytes()
+        needs_copy = not dst.is_file()
         if needs_copy:
             alias_changes.append(destination)
             if not args.check:
