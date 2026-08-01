@@ -56,6 +56,10 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 python3 ci/harden-settings-api-proxy.py
+# The watcher may discover readiness, but only BaseGameState.traverse owns a safe
+# state transition. Queue that request here; a bytecode hook below drains it from
+# the render thread immediately before Display.update().
+python3 ci/queue-main-thread-transition.py
 python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
@@ -66,6 +70,8 @@ jar cf jars/fixer_patch.jar -C .ci-build/fixer .
 javap -verbose -classpath jars/fixer_patch.jar Fixer | grep 'major version: 52'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Fields \
   | grep 'public class com.thoughtworks.xstream.core.util.Fields'
+javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
+  | grep 'public static void drain(java.lang.Object)'
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
@@ -96,6 +102,12 @@ if [[ "$PATCH_SLEEP" == "true" ]]; then
     PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer-no-sleep.jar
   mv .ci-build/starfarer-no-sleep.jar jars/starfarer_obf.jar
 fi
+
+# Drain watcher-requested state changes from the actual game/render thread.
+javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTransition.java
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
+mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
 
 npm ci
 npx playwright install --with-deps chromium
