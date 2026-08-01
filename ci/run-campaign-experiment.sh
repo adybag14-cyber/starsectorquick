@@ -55,6 +55,9 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
+# The CampaignGameManager progress panel is the first code reached by create().
+# Prime its fonts/textures instead of waiting for repeated constructor NPEs.
+python3 ci/enable-direct-ui-preflight.py
 # A CampaignGameManager.create() NPE must not be promoted into a successful
 # campaign merely because synthetic readiness probes can manufacture a fleet.
 python3 ci/reject-partial-campaign-create.py
