@@ -10,6 +10,11 @@ classes=(
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl
   com.fs.starfarer.campaign.econ.Economy
   com.fs.starfarer.campaign.save.CampaignGameManager
+  com.fs.starfarer.campaign.CampaignEngine
+  com.fs.starfarer.campaign.CampaignState
+  com.fs.starfarer.campaign.F
+  com.fs.starfarer.BaseGameState
+  com.fs.state.AppDriver
   com.fs.starfarer.api.Global
 )
 for class_name in "${classes[@]}"; do
