@@ -123,7 +123,6 @@ fixer = replace_exact(
 # present in AppDriver.states. During ResourceLoaderState the real current state
 # is still null, but the old watcher substituted states["Title Screen State"] and
 # started campaign creation while the loader thread was still populating SpecStore.
-# That race is the root cause behind missing variants/conditions/procgen tables.
 old_state_fallback = '''            if (currentState == null && states != null && startState instanceof String) {
                 try {
                     Object titleState = states.get(TITLE_STATE_ID);
@@ -146,42 +145,50 @@ fixer = replace_exact(
     'premature title-state fallback',
 )
 
-# CampaignGameManager.create() mutates global campaign state. Running it on a
-# daemon worker while TitleScreenState.advance() continues on AppDriver races the
-# title combat engine and currently crashes CombatEngine.recreateAiGridsIfNeeded.
-# Submit the create call to the existing BaseGameState render-thread drain instead.
-invoke_thread_pattern = re.compile(
-    r'''                final Object\[\] invokeResultHolder = new Object\[1\];\n'''
-    r'''                final Throwable\[\] invokeErrorHolder = new Throwable\[1\];\n'''
-    r'''                Thread invokeCreateThread =\n'''
-    r'''.*?'''
-    r'''                Object result = invokeResultHolder\[0\];''',
-    re.S,
+# CampaignGameManager.create() is intentionally kept off the AppDriver thread so
+# CheerpJ can continue servicing browser JS and Display.update(). The title-screen
+# background combat is separately guarded while this property is true, preventing
+# the race that crashed CombatEngine.recreateAiGridsIfNeeded in the prior worker run.
+old_worker_body = '''                                    public void run() {
+                                        try {
+                                            invokeResultHolder[0] =
+                                                    invokeCreateMethod.invoke(
+                                                            null,
+                                                            invokeCreateData,
+                                                            invokeCreateCampaignState);
+                                        } catch (Throwable t) {
+                                            invokeErrorHolder[0] = t;
+                                        }
+                                    }'''
+new_worker_body = '''                                    public void run() {
+                                        try {
+                                            System.setProperty(
+                                                    "starsector.campaignCreateInProgress", "true");
+                                            System.out.println(
+                                                    "Fixer: campaign create worker armed title-screen advance guard.");
+                                            invokeResultHolder[0] =
+                                                    invokeCreateMethod.invoke(
+                                                            null,
+                                                            invokeCreateData,
+                                                            invokeCreateCampaignState);
+                                        } catch (Throwable t) {
+                                            invokeErrorHolder[0] = t;
+                                        } finally {
+                                            try {
+                                                System.clearProperty(
+                                                        "starsector.campaignCreateInProgress");
+                                            } catch (Throwable ignored) {
+                                            }
+                                            System.out.println(
+                                                    "Fixer: campaign create worker released title-screen advance guard.");
+                                        }
+                                    }'''
+fixer = replace_exact(
+    fixer,
+    old_worker_body,
+    new_worker_body,
+    'campaign create title-screen guard property',
 )
-invoke_thread_replacement = '''                Object result;
-                try {
-                    result = com.fs.starfarer.MainThreadTransitionBridge.invokeOnRenderThread(
-                            invokeCreateMethod,
-                            invokeCreateData,
-                            invokeCreateCampaignState,
-                            invokeCallTimeoutMs);
-                } catch (java.util.concurrent.TimeoutException timeout) {
-                    retainInvokeCreateLease = true;
-                    maybeLogNewGamePreflightIssue(
-                            "render-thread invoke-create pickup timed out after "
-                                    + invokeCallTimeoutMs
-                                    + "ms; retaining create lease.");
-                    return "direct new-game preflight pending: render-thread-invoke-create-timeout("
-                            + invokeCallTimeoutMs
-                            + "ms)";
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    retainInvokeCreateLease = true;
-                    return "direct new-game preflight pending: render-thread-invoke-create-interrupted";
-                }'''
-fixer, count = invoke_thread_pattern.subn(invoke_thread_replacement, fixer, count=1)
-if count != 1:
-    raise RuntimeError(f'render-thread campaign create block: expected one match, found {count}')
 
 if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
     driver_pattern = re.compile(
