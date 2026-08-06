@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - fix/campaign-render-main-thread
+  pull_request:
+    branches:
+      - feature/starsector-webgl-integration
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: campaign-runtime-no-actions-${{ github.ref }}
+  group: campaign-runtime-no-actions-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
