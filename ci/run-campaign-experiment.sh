@@ -122,8 +122,12 @@ for _ in {1..30}; do
 done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
+# The stock ResourceLoaderState can legitimately take several minutes under
+# headless CheerpJ while Java source/rules and restored graphics are decoded.
+# Do not terminate the run before the lightweight campaign bootstrap patches
+# have had a chance to execute.
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=240000 \
+STARSECTOR_TEST_TIMEOUT_MS=720000 \
 STARSECTOR_FRAME_SETTLE_MS=30000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
