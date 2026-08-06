@@ -63,9 +63,11 @@ function pixelStats(buffer) {
   const errors = [];
   const httpErrors = [];
   const screenshotErrors = [];
+  const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
   let fatalSeenAt = 0;
+  let disallowedRecoverySeenAt = 0;
   let updateMax = 0;
   let swapMax = 0;
   let browser;
@@ -114,7 +116,15 @@ function pixelStats(buffer) {
     if (/Fatal:|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
       fatalSeenAt = Date.now();
     }
-    if (logs.length % 25 === 0 || fatalSeenAt || campaignSeenAt) flushLogs();
+    const recoveryUsed =
+      /synthetic player fleet create success|auto campaign synthesized player fleet/i.test(text)
+      || /synthetic readiness fleet fallback result=(?!null\b)/i.test(text)
+      || /(?:created|seeded) minimal fallback market/i.test(text);
+    if (recoveryUsed) {
+      disallowedRecovery.push(text);
+      if (!disallowedRecoverySeenAt) disallowedRecoverySeenAt = Date.now();
+    }
+    if (logs.length % 25 === 0 || fatalSeenAt || disallowedRecoverySeenAt || campaignSeenAt) flushLogs();
   });
   page.on('pageerror', error => {
     errors.push(String(error && (error.stack || error.message) || error));
@@ -138,7 +148,7 @@ function pixelStats(buffer) {
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline && errors.length === 0 && !fatalSeenAt) {
+  while (Date.now() < deadline && errors.length === 0 && !fatalSeenAt && !disallowedRecoverySeenAt) {
     const state = await withTimeout(
       page.evaluate(() => document.body.dataset.runtimeState || ''),
       5000,
@@ -203,6 +213,7 @@ function pixelStats(buffer) {
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
   const ok = reachedExpected && rendered && progressing && errors.length === 0 && !fatalSeenAt
+    && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
     && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(state.bodyState);
 
@@ -216,6 +227,8 @@ function pixelStats(buffer) {
     title,
     titleSeenAt,
     fatalSeenAt,
+    disallowedRecoverySeenAt,
+    disallowedRecovery,
     rendered,
     progressing,
     frameChanged,
