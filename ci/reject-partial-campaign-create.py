@@ -32,6 +32,43 @@ if count != 1:
     raise RuntimeError(f'campaign-manager synthetic recovery block: expected exactly one match, found {count}')
 text = text.replace(old, new, 1)
 
+# Runtime readiness is a validator in the strict campaign path. It must not
+# create the state it is supposed to validate. Leave the recovery helpers in
+# Fixer for explicitly requested interactive diagnostics, but make this strict
+# readiness call observational: a missing real fleet stays missing.
+old_runtime_fleet = '''            if (playerFleet == null && isSyntheticPlayerFleetFallbackEnabled()) {
+                Object synthesizedFleet =
+                        tryCreateSyntheticPlayerFleetForReadiness(sector, "runtime-readiness");
+                if (synthesizedFleet != null) {
+                    playerFleet = synthesizedFleet;
+                }
+            }
+'''
+new_runtime_fleet = '''            if (playerFleet == null && isSyntheticPlayerFleetFallbackEnabled()) {
+                System.out.println(
+                        "Fixer: strict runtime readiness observed player-fleet-null; synthetic fleet recovery suppressed.");
+            }
+'''
+count = text.count(old_runtime_fleet)
+if count != 1:
+    raise RuntimeError(f'runtime-readiness synthetic fleet block: expected exactly one match, found {count}')
+text = text.replace(old_runtime_fleet, new_runtime_fleet, 1)
+
+# Likewise, do not seed a fallback market merely to make an empty lightweight
+# world look ready. Report the real campaign-world population state and let the
+# caller decide whether creation is genuinely complete.
+old_runtime_world = '''            String worldPopulationIssue =
+                    ensureCampaignWorldPopulatedForReadiness(
+                            sector, economy, "runtime-readiness");
+'''
+new_runtime_world = '''            String worldPopulationIssue =
+                    checkCampaignWorldPopulationForPlayerFleetNullTransition(null);
+'''
+count = text.count(old_runtime_world)
+if count != 1:
+    raise RuntimeError(f'runtime-readiness fallback market block: expected exactly one match, found {count}')
+text = text.replace(old_runtime_world, new_runtime_world, 1)
+
 # Title Screen State becomes renderable while ResourceLoaderState is still filling
 # SpecStore on a background loader thread. Starting CampaignGameManager.create()
 # at that moment races the loader and produces a half-built sector. In
@@ -126,5 +163,6 @@ text = text.replace(old_procgen, new_procgen, 1)
 
 fixer_path.write_text(text, encoding='utf-8', newline='\n')
 print('Disabled synthetic-success recovery for CampaignGameManager.create() NPEs')
+print('Made strict direct-new-game runtime readiness observation-only')
 print('Made official ResourceLoaderState core-spec baseline mandatory before direct create()')
 print('Enabled targeted age/star procgen repair for non-mutating browser campaign retries')
