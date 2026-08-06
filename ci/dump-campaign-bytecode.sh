@@ -10,9 +10,13 @@ classes=(
   com.fs.starfarer.campaign.BaseLocation
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl
   com.fs.starfarer.campaign.econ.Economy
+  com.fs.starfarer.campaign.econ.oOOO
   com.fs.starfarer.campaign.save.CampaignGameManager
   com.fs.starfarer.campaign.CampaignEngine
   com.fs.starfarer.campaign.CampaignState
+  com.fs.starfarer.campaign.fleet.CampaignFleet
+  com.fs.starfarer.campaign.fleet.FleetMember
+  com.fs.starfarer.campaign.fleet.FleetData
   com.fs.starfarer.campaign.F
   com.fs.starfarer.BaseGameState
   com.fs.state.AppDriver
