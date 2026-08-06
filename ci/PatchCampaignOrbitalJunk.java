@@ -19,12 +19,13 @@ import org.objectweb.asm.Opcodes;
  *
  * 1. Decorative orbital junk is skipped because its readResolve path is not
  *    compatible with CheerpJ during sector construction.
- * 2. Campaign state requests are drained by BaseGameState.traverse immediately
- *    before Display.update(), which guarantees goToState() runs on the render /
- *    AppDriver thread rather than on Fixer's watcher thread.
- * 3. CampaignGameManager launcher/spec lookups are made null-safe for the
+ * 2. CampaignGameManager launcher/spec lookups are made null-safe for the
  *    direct browser path, where the desktop ModManager and optional sectorConfig
  *    spec can be absent. Vanilla boot therefore sees empty optional hook lists.
+ *
+ * BaseGameState traversal/state-transition ownership is intentionally handled
+ * only by PatchBaseGameStateTransition. Keeping it out of this transformer
+ * avoids injecting MainThreadTransitionBridge.drain() twice.
  */
 public final class PatchCampaignOrbitalJunk {
     private static final String JUNK_TARGET =
@@ -32,8 +33,6 @@ public final class PatchCampaignOrbitalJunk {
     private static final String JUNK_METHOD = "addJunk";
     private static final String JUNK_DESCRIPTOR =
             "(Lcom/fs/starfarer/api/campaign/econ/MarketAPI;)V";
-    private static final String BASE_GAME_STATE_TARGET =
-            "com/fs/starfarer/BaseGameState.class";
     private static final String CAMPAIGN_GAME_MANAGER_TARGET =
             "com/fs/starfarer/campaign/save/CampaignGameManager.class";
     private static final String MOD_MANAGER_OWNER =
@@ -59,7 +58,7 @@ public final class PatchCampaignOrbitalJunk {
         Path output = Path.of(args[1]);
         int[] replacements = new int[] {0};
 
-        rewriteJar(input, output, replacements, null, null, null);
+        rewriteJar(input, output, replacements, null, null);
         if (replacements[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
@@ -71,22 +70,15 @@ public final class PatchCampaignOrbitalJunk {
         if (!Files.isRegularFile(obf)) {
             throw new IllegalStateException("missing " + obf);
         }
-        Path obfPatched = obf.resolveSibling("starfarer_obf.jar.main-thread.tmp");
-        int[] transitionInjections = new int[] {0};
+        Path obfPatched = obf.resolveSibling("starfarer_obf.jar.spec-guards.tmp");
         int[] modManagerGuards = new int[] {0};
         int[] sectorConfigGuards = new int[] {0};
         rewriteJar(
                 obf,
                 obfPatched,
                 null,
-                transitionInjections,
                 modManagerGuards,
                 sectorConfigGuards);
-        if (transitionInjections[0] < 1) {
-            Files.deleteIfExists(obfPatched);
-            throw new IllegalStateException(
-                    "no Display.update call found in BaseGameState.traverse");
-        }
         if (modManagerGuards[0] < 1) {
             Files.deleteIfExists(obfPatched);
             throw new IllegalStateException(
@@ -103,9 +95,6 @@ public final class PatchCampaignOrbitalJunk {
                 "Patched cosmetic campaign orbital-junk generation methods="
                         + replacements[0]);
         System.out.println(
-                "Patched BaseGameState render-thread transition drains="
-                        + transitionInjections[0]);
-        System.out.println(
                 "Patched CampaignGameManager null-safe ModManager list lookups="
                         + modManagerGuards[0]);
         System.out.println(
@@ -117,7 +106,6 @@ public final class PatchCampaignOrbitalJunk {
             Path input,
             Path output,
             int[] junkReplacements,
-            int[] transitionInjections,
             int[] modManagerGuards,
             int[] sectorConfigGuards) throws Exception {
         try (JarFile jar = new JarFile(input.toFile());
@@ -134,10 +122,6 @@ public final class PatchCampaignOrbitalJunk {
                 }
                 if (junkReplacements != null && JUNK_TARGET.equals(entry.getName())) {
                     bytes = patchJunk(bytes, junkReplacements);
-                }
-                if (transitionInjections != null
-                        && BASE_GAME_STATE_TARGET.equals(entry.getName())) {
-                    bytes = patchBaseGameState(bytes, transitionInjections);
                 }
                 if ((modManagerGuards != null || sectorConfigGuards != null)
                         && CAMPAIGN_GAME_MANAGER_TARGET.equals(entry.getName())) {
@@ -170,44 +154,6 @@ public final class PatchCampaignOrbitalJunk {
                         output.visitInsn(Opcodes.RETURN);
                         output.visitMaxs(0, 1);
                         output.visitEnd();
-                    }
-                };
-            }
-        };
-        reader.accept(visitor, 0);
-        return writer.toByteArray();
-    }
-
-    private static byte[] patchBaseGameState(byte[] input, int[] injections) {
-        ClassReader reader = new ClassReader(input);
-        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
-        ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
-            @Override
-            public MethodVisitor visitMethod(int access, String name, String descriptor,
-                                             String signature, String[] exceptions) {
-                MethodVisitor delegate = super.visitMethod(
-                        access, name, descriptor, signature, exceptions);
-                if (!"traverse".equals(name) || !"()Ljava/lang/String;".equals(descriptor)) {
-                    return delegate;
-                }
-                return new MethodVisitor(Opcodes.ASM9, delegate) {
-                    @Override
-                    public void visitMethodInsn(int opcode, String owner, String methodName,
-                                                String methodDescriptor, boolean isInterface) {
-                        if (opcode == Opcodes.INVOKESTATIC
-                                && "org/lwjgl/opengl/Display".equals(owner)
-                                && "update".equals(methodName)) {
-                            super.visitVarInsn(Opcodes.ALOAD, 0);
-                            super.visitMethodInsn(
-                                    Opcodes.INVOKESTATIC,
-                                    "com/fs/starfarer/MainThreadTransitionBridge",
-                                    "drain",
-                                    "(Ljava/lang/Object;)V",
-                                    false);
-                            injections[0]++;
-                        }
-                        super.visitMethodInsn(
-                                opcode, owner, methodName, methodDescriptor, isInterface);
                     }
                 };
             }
