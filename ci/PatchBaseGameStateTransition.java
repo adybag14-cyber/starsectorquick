@@ -24,11 +24,15 @@ import org.objectweb.asm.Opcodes;
  * the Title Screen State's background-combat advance. render(), fader.advance(),
  * and Display.update() continue, so CheerpJ/browser event processing stays live
  * without allowing TitleScreenState's CombatEngine to race CampaignGameManager.
+ *
+ * Existing stack-map frames are preserved verbatim. Only max-stack values are
+ * recomputed, and the one branch target in the injected helper gets an explicit
+ * F_SAME frame. This avoids asking ASM to reconstruct frames for the whole
+ * obfuscated Starsector class hierarchy.
  */
 public final class PatchBaseGameStateTransition {
     private static final String TARGET = "com/fs/starfarer/BaseGameState.class";
     private static final String BASE = "com/fs/starfarer/BaseGameState";
-    private static final String INPUT = "com/fs/starfarer/util/super/B";
     private static final String ADVANCE_DESC = "(FLcom/fs/starfarer/util/super/B;)V";
     private static final String GUARDED_ADVANCE = "cheerpj$guardedAdvance";
     private static final String GUARDED_ADVANCE_DESC =
@@ -84,8 +88,7 @@ public final class PatchBaseGameStateTransition {
 
     private static byte[] patch(byte[] input, int[] drains, int[] advanceGuards) {
         ClassReader reader = new ClassReader(input);
-        ClassWriter writer = new SafeClassWriter(
-                reader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
             private boolean helperExists;
 
@@ -146,7 +149,7 @@ public final class PatchBaseGameStateTransition {
                 super.visitEnd();
             }
         };
-        reader.accept(visitor, ClassReader.EXPAND_FRAMES);
+        reader.accept(visitor, 0);
         return writer.toByteArray();
     }
 
@@ -186,6 +189,7 @@ public final class PatchBaseGameStateTransition {
         mv.visitInsn(Opcodes.RETURN);
 
         mv.visitLabel(invokeAdvance);
+        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         mv.visitVarInsn(Opcodes.ALOAD, 0);
         mv.visitVarInsn(Opcodes.FLOAD, 1);
         mv.visitVarInsn(Opcodes.ALOAD, 2);
@@ -198,17 +202,6 @@ public final class PatchBaseGameStateTransition {
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
-    }
-
-    private static final class SafeClassWriter extends ClassWriter {
-        SafeClassWriter(ClassReader reader, int flags) {
-            super(reader, flags);
-        }
-
-        @Override
-        protected String getCommonSuperClass(String type1, String type2) {
-            return "java/lang/Object";
-        }
     }
 
     private static byte[] readAll(InputStream in) throws IOException {
