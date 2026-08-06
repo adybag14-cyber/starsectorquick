@@ -9,14 +9,28 @@ CANDIDATES = [
 
 signature = 'public void generate(SectorAPI sector) {'
 replacement = '''public void generate(SectorAPI sector) {
-        // Browser compatibility sector. The desktop SectorGen eagerly constructs
-        // two dozen star systems, planets, terrain maps and hyperspace nebulae.
-        // Those constructors are both extremely expensive under CheerpJ and some
-        // rely on desktop-only GL/resource state. CampaignGameManager already
-        // creates Hyperspace and the player fleet; keeping this entry point small
-        // lets the actual CampaignState own the render loop instead of freezing
-        // the browser inside new-game world generation.
+        // Browser compatibility sector. Match the authoritative precompiled
+        // diagnostic path: preserve the stock Corvus shell/current/respawn
+        // skeleton, faction relationships and core plugin/scripts, while
+        // deferring heavyweight system population.
         System.out.println("BrowserSectorGenDiag: begin lightweight SectorGen.generate");
+        try {
+            System.out.println("BrowserSectorGenDiag: before Corvus shell bootstrap");
+            StarSystemAPI system = sector.createStarSystem("Corvus");
+            system.setBackgroundTextureFilename("graphics/backgrounds/background4.jpg");
+            sector.setCurrentLocation(system);
+            sector.setRespawnLocation(system);
+            sector.getRespawnCoordinates().set(-2500, -3500);
+            System.out.println("BrowserSectorGenDiag: after Corvus shell bootstrap");
+        } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: Corvus shell bootstrap partial: " + t);
+            try {
+                Global.getLogger(SectorGen.class).warn(
+                        "SectorGen: browser Corvus shell bootstrap was partial", t);
+            } catch (Throwable ignored) {
+            }
+        }
+
         try {
             System.out.println("BrowserSectorGenDiag: before initFactionRelationships");
             initFactionRelationships(sector);
