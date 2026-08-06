@@ -18,9 +18,8 @@ import org.objectweb.asm.Opcodes;
 
 /**
  * Skips optional vanilla world-population calls from CoreLifecyclePluginImpl
- * that require stock star systems to exist, and makes the stock shrine-tagging
- * pass tolerate markets that are intentionally absent from a partial browser
- * world.
+ * that require stock star systems to exist, and makes stock market-tagging
+ * helpers tolerate markets intentionally absent from a partial browser world.
  *
  * The CheerpJ bootstrap deliberately creates a minimal sector so campaign state
  * can become interactive before desktop-only world generation is supported. The
@@ -50,10 +49,14 @@ public final class PatchCoreLifecycleBrowserWorld {
             "com/fs/starfarer/api/impl/campaign/fleets/CustomFleets";
     private static final String MARKET_API =
             "com/fs/starfarer/api/campaign/econ/MarketAPI";
+    private static final String MISC =
+            "com/fs/starfarer/api/util/Misc";
     private static final String CORE_LIFECYCLE_COMPAT =
             "com/fs/starfarer/CoreLifecycleCompat";
     private static final String SAFE_MARKET_TAG_DESC =
             "(Lcom/fs/starfarer/api/campaign/econ/MarketAPI;Ljava/lang/String;)V";
+    private static final String STORY_CRITICAL_DESC =
+            "(Ljava/lang/String;Ljava/lang/String;)V";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -66,6 +69,7 @@ public final class PatchCoreLifecycleBrowserWorld {
         int[] afterTimePassSkipped = new int[] {0};
         int[] onGameLoadSkipped = new int[] {0};
         int[] shrineMarketGuards = new int[] {0};
+        int[] storyCriticalGuards = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -85,7 +89,8 @@ public final class PatchCoreLifecycleBrowserWorld {
                             onNewGameSkipped,
                             afterTimePassSkipped,
                             onGameLoadSkipped,
-                            shrineMarketGuards);
+                            shrineMarketGuards,
+                            storyCriticalGuards);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -116,6 +121,12 @@ public final class PatchCoreLifecycleBrowserWorld {
                     "expected exactly 4 tagLuddicShrines market-tag guards, found "
                             + shrineMarketGuards[0]);
         }
+        if (storyCriticalGuards[0] != 36) {
+            Files.deleteIfExists(output);
+            throw new IllegalStateException(
+                    "expected exactly 36 markStoryCriticalMarketsEtc guards, found "
+                            + storyCriticalGuards[0]);
+        }
         System.out.println(
                 "Patched CoreLifecyclePluginImpl optional browser world generators="
                         + onNewGameSkipped[0]
@@ -124,7 +135,9 @@ public final class PatchCoreLifecycleBrowserWorld {
                         + " game-load world operations="
                         + onGameLoadSkipped[0]
                         + " shrine-market guards="
-                        + shrineMarketGuards[0]);
+                        + shrineMarketGuards[0]
+                        + " story-critical guards="
+                        + storyCriticalGuards[0]);
     }
 
     private static byte[] patch(
@@ -132,7 +145,8 @@ public final class PatchCoreLifecycleBrowserWorld {
             int[] onNewGameSkipped,
             int[] afterTimePassSkipped,
             int[] onGameLoadSkipped,
-            int[] shrineMarketGuards) {
+            int[] shrineMarketGuards,
+            int[] storyCriticalGuards) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -212,6 +226,32 @@ public final class PatchCoreLifecycleBrowserWorld {
                                 // With those systems intentionally deferred there is nothing
                                 // for it to normalize during browser bootstrap.
                                 onGameLoadSkipped[0]++;
+                                return;
+                            }
+                            super.visitMethodInsn(
+                                    opcode, owner, methodName, methodDescriptor, isInterface);
+                        }
+                    };
+                }
+                if ("markStoryCriticalMarketsEtc".equals(name) && "()V".equals(descriptor)) {
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                    String methodDescriptor, boolean isInterface) {
+                            if (opcode == Opcodes.INVOKESTATIC
+                                    && MISC.equals(owner)
+                                    && "makeStoryCritical".equals(methodName)
+                                    && STORY_CRITICAL_DESC.equals(methodDescriptor)) {
+                                // Stack is [marketId, reason]. The compatibility helper performs
+                                // the same stock operation when that market exists and otherwise
+                                // leaves the intentionally partial world unchanged.
+                                super.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        CORE_LIFECYCLE_COMPAT,
+                                        "makeStoryCriticalIfMarketPresent",
+                                        STORY_CRITICAL_DESC,
+                                        false);
+                                storyCriticalGuards[0]++;
                                 return;
                             }
                             super.visitMethodInsn(
