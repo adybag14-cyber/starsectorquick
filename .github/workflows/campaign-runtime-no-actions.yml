@@ -41,7 +41,7 @@ jobs:
 
       - name: Run strict CheerpJ campaign diagnostic
         env:
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__":false,"__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__":true}'
           CHEERPJ_JAVA_VERSION: '17'
         run: |
           set +e
@@ -69,7 +69,7 @@ jobs:
               sleep 1
             done
             tail -n +1 -F test_output/campaign-direct-main-thread-java17/browser-live.log 2>/dev/null \
-              | grep --line-buffered -E 'CampaignCreateDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease'
+              | grep --line-buffered -E 'CampaignCreateDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market'
           ) &
           stream_pid=$!
 
@@ -88,7 +88,7 @@ jobs:
           cat test_output/campaign-direct-main-thread-java17/result.json 2>/dev/null || true
           echo '=== campaign create / state chronology ==='
           grep -nE \
-            'CampaignCreateDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease' \
+            'CampaignCreateDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market' \
             test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 800 || true
           echo '=== browser log tail ==='
           tail -n 300 test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null || true
