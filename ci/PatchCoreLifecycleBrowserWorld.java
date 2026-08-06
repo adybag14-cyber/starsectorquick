@@ -35,6 +35,13 @@ public final class PatchCoreLifecycleBrowserWorld {
                     "com/fs/starfarer/api/impl/campaign/world/TTBlackSite",
                     "com/fs/starfarer/api/impl/campaign/world/Limbo",
                     "com/fs/starfarer/api/impl/campaign/world/GateHaulerLocation"));
+    private static final Set<String> ON_GAME_LOAD_WORLD_GENERATORS = new HashSet<String>(
+            Arrays.asList(
+                    "com/fs/starfarer/api/impl/campaign/world/Limbo",
+                    "com/fs/starfarer/api/impl/campaign/world/GateHaulerLocation",
+                    "com/fs/starfarer/api/impl/campaign/world/NamelessRock"));
+    private static final String SECTOR_PROC_GEN =
+            "com/fs/starfarer/api/impl/campaign/procgen/SectorProcGen";
     private static final String NAMELESS_ROCK =
             "com/fs/starfarer/api/impl/campaign/world/NamelessRock";
     private static final String CUSTOM_FLEETS =
@@ -49,6 +56,7 @@ public final class PatchCoreLifecycleBrowserWorld {
         Path output = Path.of(args[1]);
         int[] onNewGameSkipped = new int[] {0};
         int[] afterTimePassSkipped = new int[] {0};
+        int[] onGameLoadSkipped = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -63,7 +71,11 @@ public final class PatchCoreLifecycleBrowserWorld {
                     bytes = readAll(in);
                 }
                 if (TARGET.equals(entry.getName())) {
-                    bytes = patch(bytes, onNewGameSkipped, afterTimePassSkipped);
+                    bytes = patch(
+                            bytes,
+                            onNewGameSkipped,
+                            afterTimePassSkipped,
+                            onGameLoadSkipped);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -82,15 +94,26 @@ public final class PatchCoreLifecycleBrowserWorld {
                     "expected exactly 2 optional onNewGameAfterTimePass world-population calls, found "
                             + afterTimePassSkipped[0]);
         }
+        if (onGameLoadSkipped[0] != 4) {
+            Files.deleteIfExists(output);
+            throw new IllegalStateException(
+                    "expected exactly 4 optional onGameLoad world operations, found "
+                            + onGameLoadSkipped[0]);
+        }
         System.out.println(
                 "Patched CoreLifecyclePluginImpl optional browser world generators="
                         + onNewGameSkipped[0]
                         + " post-new-game world population="
-                        + afterTimePassSkipped[0]);
+                        + afterTimePassSkipped[0]
+                        + " game-load world operations="
+                        + onGameLoadSkipped[0]);
     }
 
     private static byte[] patch(
-            byte[] input, int[] onNewGameSkipped, int[] afterTimePassSkipped) {
+            byte[] input,
+            int[] onNewGameSkipped,
+            int[] afterTimePassSkipped,
+            int[] onGameLoadSkipped) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -139,6 +162,37 @@ public final class PatchCoreLifecycleBrowserWorld {
                                 // Stack contains the CustomFleets receiver only.
                                 super.visitInsn(Opcodes.POP);
                                 afterTimePassSkipped[0]++;
+                                return;
+                            }
+                            super.visitMethodInsn(
+                                    opcode, owner, methodName, methodDescriptor, isInterface);
+                        }
+                    };
+                }
+                if ("onGameLoad".equals(name) && "(Z)V".equals(descriptor)) {
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                    String methodDescriptor, boolean isInterface) {
+                            if (opcode == Opcodes.INVOKEVIRTUAL
+                                    && ON_GAME_LOAD_WORLD_GENERATORS.contains(owner)
+                                    && "generate".equals(methodName)
+                                    && GENERATE_DESC.equals(methodDescriptor)) {
+                                // Stack contains [generator, sector]. These are the same
+                                // deferred world constructors already removed from new-game
+                                // lifecycle callbacks.
+                                super.visitInsn(Opcodes.POP2);
+                                onGameLoadSkipped[0]++;
+                                return;
+                            }
+                            if (opcode == Opcodes.INVOKESTATIC
+                                    && SECTOR_PROC_GEN.equals(owner)
+                                    && "clearAbyssalHyperspaceAndSetSystemTags".equals(methodName)
+                                    && "()V".equals(methodDescriptor)) {
+                                // This cleanup belongs to the Limbo/Gate generation block.
+                                // With those systems intentionally deferred there is nothing
+                                // for it to normalize during browser bootstrap.
+                                onGameLoadSkipped[0]++;
                                 return;
                             }
                             super.visitMethodInsn(
