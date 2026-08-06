@@ -28,10 +28,10 @@ import org.objectweb.asm.Opcodes;
  * rewrite authoritative.
  *
  * By default all 24 heavyweight vanilla system-generator calls are removed. A
- * third optional argument may name specific steps to retain (comma-separated),
- * e.g. "Corvus". This keeps the current skip-all isolation test unchanged while
- * allowing evidence-driven restoration of one real system at a time without a
- * new source patch for every experiment.
+ * third optional argument, or STARSECTOR_RETAIN_WORLD_STEPS, may name specific
+ * steps to retain (comma-separated), e.g. "Corvus". This keeps the current
+ * skip-all isolation test unchanged while allowing evidence-driven restoration
+ * of one real system at a time without another source patch for every experiment.
  */
 public final class PatchPrecompiledSectorGen {
     private static final String TARGET_ENTRY = "data/scripts/world/SectorGen.class";
@@ -74,7 +74,9 @@ public final class PatchPrecompiledSectorGen {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
-        Set<String> retained = parseRetainedSteps(args.length == 3 ? args[2] : "");
+        String retainedRaw =
+                args.length == 3 ? args[2] : System.getenv("STARSECTOR_RETAIN_WORLD_STEPS");
+        Set<String> retained = parseRetainedSteps(retainedRaw);
         int[] classSeen = new int[] {0};
         int[] generateSeen = new int[] {0};
         int[] encounteredSteps = new int[] {0};
