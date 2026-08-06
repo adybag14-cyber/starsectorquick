@@ -17,25 +17,28 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Skips the three optional special-location generators run by
- * CoreLifecyclePluginImpl.onNewGame(). The browser compatibility SectorGen can
- * intentionally finish with no vanilla star systems when Planet construction is
- * unavailable; these add-on generators assume those systems exist and otherwise
- * abort campaign creation (first observed in TTBlackSite.generate()).
+ * Skips optional vanilla world-population calls from CoreLifecyclePluginImpl
+ * that require stock star systems to exist.
  *
- * The lifecycle callback itself is preserved; only the three generate(SectorAPI)
- * calls are removed. This keeps AppDriver/game state ownership untouched.
+ * The CheerpJ bootstrap deliberately creates a minimal sector so campaign state
+ * can become interactive before desktop-only world generation is supported. The
+ * lifecycle callbacks themselves are preserved; only calls that populate or
+ * assume the deferred vanilla world are removed.
  */
 public final class PatchCoreLifecycleBrowserWorld {
     private static final String TARGET =
             "com/fs/starfarer/api/impl/campaign/CoreLifecyclePluginImpl.class";
     private static final String GENERATE_DESC =
             "(Lcom/fs/starfarer/api/campaign/SectorAPI;)V";
-    private static final Set<String> OPTIONAL_WORLD_GENERATORS = new HashSet<String>(
+    private static final Set<String> ON_NEW_GAME_WORLD_GENERATORS = new HashSet<String>(
             Arrays.asList(
                     "com/fs/starfarer/api/impl/campaign/world/TTBlackSite",
                     "com/fs/starfarer/api/impl/campaign/world/Limbo",
                     "com/fs/starfarer/api/impl/campaign/world/GateHaulerLocation"));
+    private static final String NAMELESS_ROCK =
+            "com/fs/starfarer/api/impl/campaign/world/NamelessRock";
+    private static final String CUSTOM_FLEETS =
+            "com/fs/starfarer/api/impl/campaign/fleets/CustomFleets";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -44,7 +47,8 @@ public final class PatchCoreLifecycleBrowserWorld {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
-        int[] skipped = new int[] {0};
+        int[] onNewGameSkipped = new int[] {0};
+        int[] afterTimePassSkipped = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -59,24 +63,34 @@ public final class PatchCoreLifecycleBrowserWorld {
                     bytes = readAll(in);
                 }
                 if (TARGET.equals(entry.getName())) {
-                    bytes = patch(bytes, skipped);
+                    bytes = patch(bytes, onNewGameSkipped, afterTimePassSkipped);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        if (skipped[0] != 3) {
+        if (onNewGameSkipped[0] != 3) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "expected exactly 3 optional onNewGame world-generator calls, found "
-                            + skipped[0]);
+                            + onNewGameSkipped[0]);
+        }
+        if (afterTimePassSkipped[0] != 2) {
+            Files.deleteIfExists(output);
+            throw new IllegalStateException(
+                    "expected exactly 2 optional onNewGameAfterTimePass world-population calls, found "
+                            + afterTimePassSkipped[0]);
         }
         System.out.println(
-                "Patched CoreLifecyclePluginImpl optional browser world generators=" + skipped[0]);
+                "Patched CoreLifecyclePluginImpl optional browser world generators="
+                        + onNewGameSkipped[0]
+                        + " post-new-game world population="
+                        + afterTimePassSkipped[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] skipped) {
+    private static byte[] patch(
+            byte[] input, int[] onNewGameSkipped, int[] afterTimePassSkipped) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -85,26 +99,54 @@ public final class PatchCoreLifecycleBrowserWorld {
                                              String signature, String[] exceptions) {
                 MethodVisitor delegate = super.visitMethod(
                         access, name, descriptor, signature, exceptions);
-                if (!"onNewGame".equals(name) || !"()V".equals(descriptor)) {
-                    return delegate;
-                }
-                return new MethodVisitor(Opcodes.ASM9, delegate) {
-                    @Override
-                    public void visitMethodInsn(int opcode, String owner, String methodName,
-                                                String methodDescriptor, boolean isInterface) {
-                        if (opcode == Opcodes.INVOKEVIRTUAL
-                                && OPTIONAL_WORLD_GENERATORS.contains(owner)
-                                && "generate".equals(methodName)
-                                && GENERATE_DESC.equals(methodDescriptor)) {
-                            // Stack contains [generator, sector]. Both are category-1 refs.
-                            super.visitInsn(Opcodes.POP2);
-                            skipped[0]++;
-                            return;
+                if ("onNewGame".equals(name) && "()V".equals(descriptor)) {
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                    String methodDescriptor, boolean isInterface) {
+                            if (opcode == Opcodes.INVOKEVIRTUAL
+                                    && ON_NEW_GAME_WORLD_GENERATORS.contains(owner)
+                                    && "generate".equals(methodName)
+                                    && GENERATE_DESC.equals(methodDescriptor)) {
+                                // Stack contains [generator, sector]. Both are category-1 refs.
+                                super.visitInsn(Opcodes.POP2);
+                                onNewGameSkipped[0]++;
+                                return;
+                            }
+                            super.visitMethodInsn(
+                                    opcode, owner, methodName, methodDescriptor, isInterface);
                         }
-                        super.visitMethodInsn(
-                                opcode, owner, methodName, methodDescriptor, isInterface);
-                    }
-                };
+                    };
+                }
+                if ("onNewGameAfterTimePass".equals(name) && "()V".equals(descriptor)) {
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                    String methodDescriptor, boolean isInterface) {
+                            if (opcode == Opcodes.INVOKEVIRTUAL
+                                    && NAMELESS_ROCK.equals(owner)
+                                    && "generate".equals(methodName)
+                                    && GENERATE_DESC.equals(methodDescriptor)) {
+                                // Stack contains [NamelessRock, sector].
+                                super.visitInsn(Opcodes.POP2);
+                                afterTimePassSkipped[0]++;
+                                return;
+                            }
+                            if (opcode == Opcodes.INVOKEVIRTUAL
+                                    && CUSTOM_FLEETS.equals(owner)
+                                    && "spawn".equals(methodName)
+                                    && "()V".equals(methodDescriptor)) {
+                                // Stack contains the CustomFleets receiver only.
+                                super.visitInsn(Opcodes.POP);
+                                afterTimePassSkipped[0]++;
+                                return;
+                            }
+                            super.visitMethodInsn(
+                                    opcode, owner, methodName, methodDescriptor, isInterface);
+                        }
+                    };
+                }
+                return delegate;
             }
         };
         reader.accept(visitor, 0);
