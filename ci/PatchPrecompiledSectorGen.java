@@ -32,6 +32,12 @@ import org.objectweb.asm.Opcodes;
  * steps to retain (comma-separated), e.g. "Corvus". This keeps the current
  * skip-all isolation test unchanged while allowing evidence-driven restoration
  * of one real system at a time without another source patch for every experiment.
+ *
+ * STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR=true is a second, independent diagnostic
+ * knob. It keeps all selected system-step behavior above, but before generate()
+ * returns it asks BrowserSectorWorldCompat to create only the normal Corvus star
+ * and Asharu planet entities. The helper never creates a market; Economy.load()
+ * must still build Asharu's stock market from corvus.json.
  */
 public final class PatchPrecompiledSectorGen {
     private static final String TARGET_ENTRY = "data/scripts/world/SectorGen.class";
@@ -40,6 +46,7 @@ public final class PatchPrecompiledSectorGen {
             "(Lcom/fs/starfarer/api/campaign/SectorAPI;)V";
     private static final String RUN_STEP_DESC =
             "(Ljava/lang/String;ZLdata/scripts/world/SectorGen$SectorStep;)V";
+    private static final String WORLD_COMPAT = "com/fs/starfarer/BrowserSectorWorldCompat";
     private static final List<String> STEP_ORDER = Collections.unmodifiableList(Arrays.asList(
             "Galatia",
             "Askonia",
@@ -77,11 +84,14 @@ public final class PatchPrecompiledSectorGen {
         String retainedRaw =
                 args.length == 3 ? args[2] : System.getenv("STARSECTOR_RETAIN_WORLD_STEPS");
         Set<String> retained = parseRetainedSteps(retainedRaw);
+        boolean minimalAsharuAnchor =
+                Boolean.parseBoolean(System.getenv("STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR"));
         int[] classSeen = new int[] {0};
         int[] generateSeen = new int[] {0};
         int[] encounteredSteps = new int[] {0};
         int[] skippedSteps = new int[] {0};
         int[] retainedSteps = new int[] {0};
+        int[] anchorInjections = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -100,21 +110,25 @@ public final class PatchPrecompiledSectorGen {
                     bytes = patch(
                             bytes,
                             retained,
+                            minimalAsharuAnchor,
                             generateSeen,
                             encounteredSteps,
                             skippedSteps,
-                            retainedSteps);
+                            retainedSteps,
+                            anchorInjections);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
+        int expectedAnchorInjections = minimalAsharuAnchor ? 1 : 0;
         if (classSeen[0] != 1
                 || generateSeen[0] != 1
                 || encounteredSteps[0] != EXPECTED_STEPS
                 || retainedSteps[0] != retained.size()
-                || skippedSteps[0] + retainedSteps[0] != EXPECTED_STEPS) {
+                || skippedSteps[0] + retainedSteps[0] != EXPECTED_STEPS
+                || anchorInjections[0] != expectedAnchorInjections) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "precompiled SectorGen patch incomplete: classSeen="
@@ -129,6 +143,10 @@ public final class PatchPrecompiledSectorGen {
                             + retainedSteps[0]
                             + " requestedRetained="
                             + retained
+                            + " anchorInjections="
+                            + anchorInjections[0]
+                            + " expectedAnchorInjections="
+                            + expectedAnchorInjections
                             + " expectedSteps="
                             + EXPECTED_STEPS);
         }
@@ -138,7 +156,9 @@ public final class PatchPrecompiledSectorGen {
                         + " skipped="
                         + skippedSteps[0]
                         + " retained="
-                        + retained);
+                        + retained
+                        + " minimalAsharuAnchor="
+                        + minimalAsharuAnchor);
     }
 
     private static Set<String> parseRetainedSteps(String raw) {
@@ -170,10 +190,12 @@ public final class PatchPrecompiledSectorGen {
     private static byte[] patch(
             byte[] input,
             Set<String> retained,
+            boolean minimalAsharuAnchor,
             int[] generateSeen,
             int[] encounteredSteps,
             int[] skippedSteps,
-            int[] retainedSteps) {
+            int[] retainedSteps,
+            int[] anchorInjections) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -201,7 +223,9 @@ public final class PatchPrecompiledSectorGen {
                                 "Ljava/io/PrintStream;");
                         super.visitLdcInsn(
                                 "BrowserSectorGenDiag: executing patched scripts-precompiled SectorGen.generate retained="
-                                        + retained);
+                                        + retained
+                                        + " minimalAsharuAnchor="
+                                        + minimalAsharuAnchor);
                         super.visitMethodInsn(
                                 Opcodes.INVOKEVIRTUAL,
                                 "java/io/PrintStream",
@@ -244,6 +268,20 @@ public final class PatchPrecompiledSectorGen {
                         }
                         super.visitMethodInsn(
                                 opcode, owner, methodName, methodDescriptor, isInterface);
+                    }
+
+                    @Override
+                    public void visitInsn(int opcode) {
+                        if (opcode == Opcodes.RETURN && minimalAsharuAnchor) {
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    WORLD_COMPAT,
+                                    "ensureMinimalCorvusAsharuAnchor",
+                                    "()V",
+                                    false);
+                            anchorInjections[0]++;
+                        }
+                        super.visitInsn(opcode);
                     }
                 };
             }
