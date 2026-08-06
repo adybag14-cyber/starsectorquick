@@ -125,6 +125,10 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
 mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
 
+# Every transformed JAR must advertise its post-transform size to the HTTP mount.
+# This avoids stale directory metadata causing CheerpJ range/read mismatches.
+python3 ci/refresh-runtime-jar-index.py
+
 npm ci
 npx playwright install --with-deps chromium
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
