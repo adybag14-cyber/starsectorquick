@@ -1,9 +1,6 @@
 name: Campaign runtime no-actions diagnostic
 
 on:
-  push:
-    branches:
-      - fix/campaign-render-main-thread
   pull_request:
     branches:
       - feature/starsector-webgl-integration
