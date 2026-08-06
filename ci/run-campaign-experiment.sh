@@ -88,6 +88,7 @@ fi
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
   ci/PatchCoreLifecycleBrowserWorld.java \
+  ci/PatchCoreLifecycleDiagnostics.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
@@ -98,6 +99,9 @@ mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCoreLifecycleBrowserWorld jars/starfarer.api.jar .ci-build/starfarer-api-browser-world.jar
 mv .ci-build/starfarer-api-browser-world.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCoreLifecycleDiagnostics jars/starfarer.api.jar .ci-build/starfarer-api-lifecycle-diag.jar
+mv .ci-build/starfarer-api-lifecycle-diag.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignProcGen jars/starfarer_obf.jar .ci-build/starfarer-no-procgen.jar
 mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
