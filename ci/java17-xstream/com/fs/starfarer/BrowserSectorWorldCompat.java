@@ -82,7 +82,13 @@ public final class BrowserSectorWorldCompat {
                     "BrowserSectorAnchorDiag: failed="
                             + t.getClass().getName()
                             + (t.getMessage() == null ? "" : ": " + t.getMessage()));
-            throw t;
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new RuntimeException(t);
         }
     }
 }
