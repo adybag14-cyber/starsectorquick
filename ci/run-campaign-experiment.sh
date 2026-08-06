@@ -11,9 +11,9 @@ mkdir -p "$OUT" .ci-build/fixer .ci-cache
 
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
-  git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
+  git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -43,9 +43,9 @@ fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
 
-# Keep browser bootstrap bounded. Full desktop world generation monopolizes the
-# CheerpJ VM before CampaignState can ever render; the campaign can start in
-# hyperspace and later gain richer world-generation compatibility separately.
+# Keep the loose browser source copies lightweight as a Janino fallback. The
+# class actually used by the current launcher is also patched directly in
+# scripts-precompiled.jar below.
 python3 ci/patch-browser-sector-gen.py
 
 python3 ci/patch-lwjgl-matrix-stack.py
@@ -90,6 +90,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCoreLifecycleBrowserWorld.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -103,6 +104,11 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
+mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
+javap -classpath jars/scripts-precompiled.jar -c data.scripts.world.SectorGen \
+  | grep -q 'BrowserSectorGenDiag: executing patched scripts-precompiled SectorGen.generate'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleScreenCampaignCreateGuard jars/starfarer.api.jar .ci-build/starfarer-title-create-guard.jar
 mv .ci-build/starfarer-title-create-guard.jar jars/starfarer.api.jar
