@@ -15,11 +15,13 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Stops the title-screen background combat simulation while a direct campaign
- * create is mutating Starsector's global campaign/combat state on a worker.
+ * Legacy direct TitleScreenState guard probe.
  *
- * Rendering and Display.update() continue, so CheerpJ/the browser remains alive;
- * only TitleScreenState.advance(float) is suppressed during the critical window.
+ * Some Starsector distributions expose a literal TitleScreenState.class and can
+ * be patched here. The current 0.98a browser runtime does not expose that class
+ * under its stack-trace name, so absence is intentionally non-fatal: the
+ * authoritative campaign-create guard is injected into BaseGameState.traverse()
+ * by PatchBaseGameStateTransition.
  */
 public final class PatchTitleScreenCampaignCreateGuard {
     private static final String TARGET = "com/fs/starfarer/TitleScreenState.class";
@@ -56,16 +58,21 @@ public final class PatchTitleScreenCampaignCreateGuard {
             }
         }
 
+        if (classSeen[0] == 0) {
+            System.out.println(
+                    "TitleScreenState literal class not present; using BaseGameState title-advance guard.");
+            return;
+        }
         if (classSeen[0] != 1 || patched[0] < 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
-                    "TitleScreenState guard not applied: classSeen="
+                    "TitleScreenState class was present but advance guard was not applied: classSeen="
                             + classSeen[0]
                             + " advanceMethods="
                             + patched[0]);
         }
         System.out.println(
-                "Patched TitleScreenState campaign-create advance guards=" + patched[0]);
+                "Patched literal TitleScreenState campaign-create advance guards=" + patched[0]);
     }
 
     private static byte[] patch(byte[] input, int[] patched) {
