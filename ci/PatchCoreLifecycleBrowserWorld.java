@@ -18,12 +18,14 @@ import org.objectweb.asm.Opcodes;
 
 /**
  * Skips optional vanilla world-population calls from CoreLifecyclePluginImpl
- * that require stock star systems to exist.
+ * that require stock star systems to exist, and makes the stock shrine-tagging
+ * pass tolerate markets that are intentionally absent from a partial browser
+ * world.
  *
  * The CheerpJ bootstrap deliberately creates a minimal sector so campaign state
  * can become interactive before desktop-only world generation is supported. The
  * lifecycle callbacks themselves are preserved; only calls that populate or
- * assume the deferred vanilla world are removed.
+ * assume the deferred vanilla world are changed.
  */
 public final class PatchCoreLifecycleBrowserWorld {
     private static final String TARGET =
@@ -46,6 +48,12 @@ public final class PatchCoreLifecycleBrowserWorld {
             "com/fs/starfarer/api/impl/campaign/world/NamelessRock";
     private static final String CUSTOM_FLEETS =
             "com/fs/starfarer/api/impl/campaign/fleets/CustomFleets";
+    private static final String MARKET_API =
+            "com/fs/starfarer/api/campaign/econ/MarketAPI";
+    private static final String CORE_LIFECYCLE_COMPAT =
+            "com/fs/starfarer/CoreLifecycleCompat";
+    private static final String SAFE_MARKET_TAG_DESC =
+            "(Lcom/fs/starfarer/api/campaign/econ/MarketAPI;Ljava/lang/String;)V";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -57,6 +65,7 @@ public final class PatchCoreLifecycleBrowserWorld {
         int[] onNewGameSkipped = new int[] {0};
         int[] afterTimePassSkipped = new int[] {0};
         int[] onGameLoadSkipped = new int[] {0};
+        int[] shrineMarketGuards = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -75,7 +84,8 @@ public final class PatchCoreLifecycleBrowserWorld {
                             bytes,
                             onNewGameSkipped,
                             afterTimePassSkipped,
-                            onGameLoadSkipped);
+                            onGameLoadSkipped,
+                            shrineMarketGuards);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -100,20 +110,29 @@ public final class PatchCoreLifecycleBrowserWorld {
                     "expected exactly 4 optional onGameLoad world operations, found "
                             + onGameLoadSkipped[0]);
         }
+        if (shrineMarketGuards[0] != 4) {
+            Files.deleteIfExists(output);
+            throw new IllegalStateException(
+                    "expected exactly 4 tagLuddicShrines market-tag guards, found "
+                            + shrineMarketGuards[0]);
+        }
         System.out.println(
                 "Patched CoreLifecyclePluginImpl optional browser world generators="
                         + onNewGameSkipped[0]
                         + " post-new-game world population="
                         + afterTimePassSkipped[0]
                         + " game-load world operations="
-                        + onGameLoadSkipped[0]);
+                        + onGameLoadSkipped[0]
+                        + " shrine-market guards="
+                        + shrineMarketGuards[0]);
     }
 
     private static byte[] patch(
             byte[] input,
             int[] onNewGameSkipped,
             int[] afterTimePassSkipped,
-            int[] onGameLoadSkipped) {
+            int[] onGameLoadSkipped,
+            int[] shrineMarketGuards) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -193,6 +212,32 @@ public final class PatchCoreLifecycleBrowserWorld {
                                 // With those systems intentionally deferred there is nothing
                                 // for it to normalize during browser bootstrap.
                                 onGameLoadSkipped[0]++;
+                                return;
+                            }
+                            super.visitMethodInsn(
+                                    opcode, owner, methodName, methodDescriptor, isInterface);
+                        }
+                    };
+                }
+                if ("tagLuddicShrines".equals(name) && "()V".equals(descriptor)) {
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                    String methodDescriptor, boolean isInterface) {
+                            if (opcode == Opcodes.INVOKEINTERFACE
+                                    && MARKET_API.equals(owner)
+                                    && "addTag".equals(methodName)
+                                    && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                                // Stack is [market-or-null, tag]. The static helper consumes
+                                // the exact same operands and only suppresses the call when the
+                                // named stock market does not exist in the partial browser world.
+                                super.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        CORE_LIFECYCLE_COMPAT,
+                                        "addMarketTagIfPresent",
+                                        SAFE_MARKET_TAG_DESC,
+                                        false);
+                                shrineMarketGuards[0]++;
                                 return;
                             }
                             super.visitMethodInsn(
