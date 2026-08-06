@@ -58,25 +58,6 @@ jobs:
             fi
           done
           echo "diagnostic TitleScreenState owner=${TITLE_JAR:-not-found}"
-          if [ -n "$TITLE_JAR" ] && [ "$TITLE_JAR" != 'jars/starfarer_obf.jar' ]; then
-            python3 - "$TITLE_JAR" <<'PY'
-          import sys
-          from pathlib import Path
-          owner = sys.argv[1]
-          p = Path('ci/run-campaign-experiment.sh')
-          text = p.read_text(encoding='utf-8')
-          old = '''java -cp .ci-build/asm/asm.jar:.ci-build/transform \\
-            PatchTitleScreenCampaignCreateGuard jars/starfarer_obf.jar .ci-build/starfarer-title-create-guard.jar
-          mv .ci-build/starfarer-title-create-guard.jar jars/starfarer_obf.jar'''
-          new = f'''java -cp .ci-build/asm/asm.jar:.ci-build/transform \\
-            PatchTitleScreenCampaignCreateGuard {owner} .ci-build/starfarer-title-create-guard.jar
-          mv .ci-build/starfarer-title-create-guard.jar {owner}'''
-          if old not in text:
-              raise SystemExit('guard invocation pattern not found')
-          p.write_text(text.replace(old, new, 1), encoding='utf-8')
-          print(f'diagnostic rewired TitleScreenState guard to {owner}')
-          PY
-          fi
 
           bash ci/run-campaign-experiment.sh \
             'campaign-direct-main-thread-java17' \
