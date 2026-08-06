@@ -9,6 +9,8 @@ classes=(
   com.fs.starfarer.campaign.CustomCampaignEntity
   com.fs.starfarer.campaign.BaseLocation
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl
+  com.fs.starfarer.api.impl.campaign.ids.People
+  com.fs.starfarer.api.util.Misc
   com.fs.starfarer.campaign.econ.Economy
   com.fs.starfarer.campaign.econ.oOOO
   com.fs.starfarer.campaign.save.CampaignGameManager
