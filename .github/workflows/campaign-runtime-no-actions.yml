@@ -56,6 +56,23 @@ jobs:
           done
           echo "diagnostic TitleScreenState owner=${TITLE_JAR:-not-found}"
 
+          # This diagnostic runner has repeatedly been externally cancelled around
+          # ten minutes. Keep the strict state/render checks intact, but force the
+          # diagnostic snapshot to complete before that boundary. Prior evidence
+          # reaches Title Screen at ~396s, leaving roughly two minutes for create().
+          sed -i 's/STARSECTOR_TEST_TIMEOUT_MS=720000/STARSECTOR_TEST_TIMEOUT_MS=540000/' ci/run-campaign-experiment.sh
+          sed -i 's/STARSECTOR_FRAME_SETTLE_MS=30000/STARSECTOR_FRAME_SETTLE_MS=5000/' ci/run-campaign-experiment.sh
+
+          mkdir -p test_output/campaign-direct-main-thread-java17
+          (
+            while [[ ! -f test_output/campaign-direct-main-thread-java17/browser-live.log ]]; do
+              sleep 1
+            done
+            tail -n +1 -F test_output/campaign-direct-main-thread-java17/browser-live.log 2>/dev/null \
+              | grep --line-buffered -E 'CampaignCreateDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease'
+          ) &
+          stream_pid=$!
+
           bash ci/run-campaign-experiment.sh \
             'campaign-direct-main-thread-java17' \
             'sync' \
@@ -64,12 +81,15 @@ jobs:
             "$EXPERIMENT_CONFIG"
           status=$?
 
+          kill "$stream_pid" 2>/dev/null || true
+          wait "$stream_pid" 2>/dev/null || true
+
           echo '=== strict result.json ==='
           cat test_output/campaign-direct-main-thread-java17/result.json 2>/dev/null || true
           echo '=== campaign create / state chronology ==='
           grep -nE \
-            'CampaignCreateDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|invoke-create call timed out' \
-            test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 500 || true
+            'CampaignCreateDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease' \
+            test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 800 || true
           echo '=== browser log tail ==='
           tail -n 300 test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null || true
           echo "strict_campaign_exit_status=${status}"
