@@ -1,0 +1,65 @@
+name: Campaign runtime no-actions diagnostic
+
+on:
+  push:
+    branches:
+      - fix/campaign-render-main-thread
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-runtime-no-actions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  experiment:
+    name: campaign worker/title-guard diagnostic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout without Marketplace actions
+        env:
+          REPO_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${REPO_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --prune --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
+          git lfs install --local
+
+      - name: Verify preinstalled toolchain
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          node --version
+          npm --version
+          git lfs version
+
+      - name: Run strict CheerpJ campaign diagnostic
+        env:
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false}'
+          CHEERPJ_JAVA_VERSION: '17'
+        run: |
+          set +e
+          bash ci/run-campaign-experiment.sh \
+            'campaign-direct-main-thread-java17' \
+            'sync' \
+            'false' \
+            'campaign' \
+            "$EXPERIMENT_CONFIG"
+          status=$?
+
+          echo '=== strict result.json ==='
+          cat test_output/campaign-direct-main-thread-java17/result.json 2>/dev/null || true
+          echo '=== campaign create / state chronology ==='
+          grep -nE \
+            'CampaignCreateDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|invoke-create call timed out' \
+            test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 500 || true
+          echo '=== browser log tail ==='
+          tail -n 300 test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null || true
+          echo "strict_campaign_exit_status=${status}"
+          exit "$status"
