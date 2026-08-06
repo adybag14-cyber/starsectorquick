@@ -133,6 +133,18 @@ mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
 # This avoids stale directory metadata causing CheerpJ range/read mismatches.
 python3 ci/refresh-runtime-jar-index.py
 
+# Fail before the expensive browser launch if ASM produced bytecode rejected by
+# the stock JVM verifier. Static initialization remains disabled so native/GL
+# startup does not run here.
+mkdir -p .ci-build/verify
+javac -encoding UTF-8 -d .ci-build/verify ci/VerifyPatchedRuntimeClasses.java
+java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
+  VerifyPatchedRuntimeClasses \
+  data.scripts.world.SectorGen \
+  com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl \
+  com.fs.starfarer.campaign.save.CampaignGameManager \
+  com.fs.starfarer.BaseGameState
+
 npm ci
 npx playwright install --with-deps chromium
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
