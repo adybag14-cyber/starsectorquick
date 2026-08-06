@@ -35,9 +35,13 @@ replacement = '''public void generate(SectorAPI sector) {
         // creates Hyperspace and the player fleet; keeping this entry point small
         // lets the actual CampaignState own the render loop instead of freezing
         // the browser inside new-game world generation.
+        System.out.println("BrowserSectorGenDiag: begin lightweight SectorGen.generate");
         try {
+            System.out.println("BrowserSectorGenDiag: before initFactionRelationships");
             initFactionRelationships(sector);
+            System.out.println("BrowserSectorGenDiag: after initFactionRelationships");
         } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: initFactionRelationships partial: " + t);
             try {
                 Global.getLogger(SectorGen.class).warn(
                         "SectorGen: browser relationship initialization was partial", t);
@@ -46,8 +50,11 @@ replacement = '''public void generate(SectorAPI sector) {
         }
 
         try {
+            System.out.println("BrowserSectorGenDiag: before CoreCampaignPluginImpl registration");
             sector.registerPlugin(new CoreCampaignPluginImpl());
+            System.out.println("BrowserSectorGenDiag: after CoreCampaignPluginImpl registration");
         } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: CoreCampaignPluginImpl registration skipped: " + t);
             try {
                 Global.getLogger(SectorGen.class).warn(
                         "SectorGen: browser core campaign plugin registration skipped", t);
@@ -55,9 +62,12 @@ replacement = '''public void generate(SectorAPI sector) {
             }
         }
         try {
+            System.out.println("BrowserSectorGenDiag: before core script registration");
             sector.addScript(new CoreScript());
             sector.addScript(new CoreEventProbabilityManager());
+            System.out.println("BrowserSectorGenDiag: after core script registration");
         } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: core script registration partial: " + t);
             try {
                 Global.getLogger(SectorGen.class).warn(
                         "SectorGen: browser core script registration was partial", t);
@@ -65,6 +75,7 @@ replacement = '''public void generate(SectorAPI sector) {
             }
         }
 
+        System.out.println("BrowserSectorGenDiag: end lightweight SectorGen.generate");
         try {
             Global.getLogger(SectorGen.class).warn(
                     "SectorGen: using lightweight CheerpJ browser sector; desktop core-system generation deferred.");
