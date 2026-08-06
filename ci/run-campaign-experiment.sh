@@ -104,8 +104,8 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  PatchTitleScreenCampaignCreateGuard jars/starfarer_obf.jar .ci-build/starfarer-title-create-guard.jar
-mv .ci-build/starfarer-title-create-guard.jar jars/starfarer_obf.jar
+  PatchTitleScreenCampaignCreateGuard jars/starfarer.api.jar .ci-build/starfarer-title-create-guard.jar
+mv .ci-build/starfarer-title-create-guard.jar jars/starfarer.api.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
@@ -140,5 +140,5 @@ STARSECTOR_TEST_TIMEOUT_MS=720000 \
 STARSECTOR_FRAME_SETTLE_MS=30000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
-  STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
+STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
