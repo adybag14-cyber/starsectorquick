@@ -146,6 +146,43 @@ fixer = replace_exact(
     'premature title-state fallback',
 )
 
+# CampaignGameManager.create() mutates global campaign state. Running it on a
+# daemon worker while TitleScreenState.advance() continues on AppDriver races the
+# title combat engine and currently crashes CombatEngine.recreateAiGridsIfNeeded.
+# Submit the create call to the existing BaseGameState render-thread drain instead.
+invoke_thread_pattern = re.compile(
+    r'''                final Object\[\] invokeResultHolder = new Object\[1\];\n'''
+    r'''                final Throwable\[\] invokeErrorHolder = new Throwable\[1\];\n'''
+    r'''                Thread invokeCreateThread =\n'''
+    r'''.*?'''
+    r'''                Object result = invokeResultHolder\[0\];''',
+    re.S,
+)
+invoke_thread_replacement = '''                Object result;
+                try {
+                    result = com.fs.starfarer.MainThreadTransitionBridge.invokeOnRenderThread(
+                            invokeCreateMethod,
+                            invokeCreateData,
+                            invokeCreateCampaignState,
+                            invokeCallTimeoutMs);
+                } catch (java.util.concurrent.TimeoutException timeout) {
+                    retainInvokeCreateLease = true;
+                    maybeLogNewGamePreflightIssue(
+                            "render-thread invoke-create pickup timed out after "
+                                    + invokeCallTimeoutMs
+                                    + "ms; retaining create lease.");
+                    return "direct new-game preflight pending: render-thread-invoke-create-timeout("
+                            + invokeCallTimeoutMs
+                            + "ms)";
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    retainInvokeCreateLease = true;
+                    return "direct new-game preflight pending: render-thread-invoke-create-interrupted";
+                }'''
+fixer, count = invoke_thread_pattern.subn(invoke_thread_replacement, fixer, count=1)
+if count != 1:
+    raise RuntimeError(f'render-thread campaign create block: expected one match, found {count}')
+
 if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
     driver_pattern = re.compile(
         r'''                    forceStateFaderOut\(resolvedTitleState\);\n'''
