@@ -1,7 +1,11 @@
 package com.fs.starfarer;
 
+import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.campaign.SectorGenProgress;
 import com.fs.starfarer.api.campaign.SectorProcGenPlugin;
+import com.fs.starfarer.api.campaign.econ.EconomyAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.characters.CharacterCreationData;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -64,6 +68,54 @@ public final class CampaignInitCompat {
             procGenSkippedLogged = true;
             System.out.println(
                     "Fixer: skipping desktop procedural sector generation during CheerpJ bootstrap; entering lightweight campaign world.");
+        }
+    }
+
+    /** Observational diagnostic only: never creates or repairs markets/entities. */
+    public static void logEconomyState() {
+        try {
+            SectorAPI sector = Global.getSector();
+            if (sector == null) {
+                System.out.println("CampaignEconomyDiag: sector=null");
+                return;
+            }
+            EconomyAPI economy = sector.getEconomy();
+            if (economy == null) {
+                System.out.println("CampaignEconomyDiag: economy=null");
+                return;
+            }
+            List<MarketAPI> markets = economy.getMarketsCopy();
+            int marketCount = markets == null ? 0 : markets.size();
+            int withPrimaryEntity = 0;
+            int withContainingLocation = 0;
+            if (markets != null) {
+                for (MarketAPI market : markets) {
+                    if (market == null) {
+                        continue;
+                    }
+                    if (market.getPrimaryEntity() != null) {
+                        withPrimaryEntity++;
+                    }
+                    if (market.getContainingLocation() != null) {
+                        withContainingLocation++;
+                    }
+                }
+            }
+            int starSystems = sector.getStarSystems() == null ? 0 : sector.getStarSystems().size();
+            System.out.println(
+                    "CampaignEconomyDiag: markets="
+                            + marketCount
+                            + " primaryEntities="
+                            + withPrimaryEntity
+                            + " containingLocations="
+                            + withContainingLocation
+                            + " starSystems="
+                            + starSystems);
+        } catch (Throwable t) {
+            System.out.println(
+                    "CampaignEconomyDiag: probe-error="
+                            + t.getClass().getName()
+                            + (t.getMessage() == null ? "" : ": " + t.getMessage()));
         }
     }
 
