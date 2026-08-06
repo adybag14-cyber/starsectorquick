@@ -69,7 +69,7 @@ jobs:
               sleep 1
             done
             tail -n +1 -F test_output/campaign-direct-main-thread-java17/browser-live.log 2>/dev/null \
-              | grep --line-buffered -E 'CampaignCreateDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market'
+              | grep --line-buffered -E 'CampaignCreateDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|BrowserSectorAnchorDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market'
           ) &
           stream_pid=$!
 
@@ -88,7 +88,7 @@ jobs:
           cat test_output/campaign-direct-main-thread-java17/result.json 2>/dev/null || true
           echo '=== campaign create / state chronology ==='
           grep -nE \
-            'CampaignCreateDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market' \
+            'CampaignCreateDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|BrowserSectorAnchorDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market' \
             test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 900 || true
           echo '=== browser log tail ==='
           tail -n 300 test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null || true
