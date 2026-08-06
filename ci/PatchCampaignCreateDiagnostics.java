@@ -151,6 +151,50 @@ public final class PatchCampaignCreateDiagnostics {
                 && "setPlayerFleet".equals(name)) {
             return "CampaignEngine.setPlayerFleet";
         }
+
+        // The first half of create() is already well covered above. These exact
+        // calls cover the previously opaque tail that constructs the real player
+        // fleet, resolves the starting variant, spawns it into hyperspace, syncs
+        // fleet data, and finally initializes CampaignState UI state.
+        if ("com/fs/starfarer/campaign/fleet/CampaignFleet".equals(owner)
+                && "<init>".equals(name)
+                && "(Lcom/fs/starfarer/campaign/Faction;)V".equals(descriptor)) {
+            return "CampaignFleet.<init>";
+        }
+        if ("com/fs/starfarer/campaign/fleet/FleetMember".equals(owner)
+                && "<init>".equals(name)
+                && "(ILjava/lang/String;Lcom/fs/starfarer/api/fleet/FleetMemberType;)V".equals(descriptor)) {
+            return "FleetMember.<init>";
+        }
+        if ("com/fs/starfarer/campaign/fleet/FleetData".equals(owner)
+                && "syncIfNeeded".equals(name)
+                && "()V".equals(descriptor)) {
+            return "FleetData.syncIfNeeded";
+        }
+        if ("com/fs/starfarer/api/campaign/LocationAPI".equals(owner)
+                && "spawnFleet".equals(name)) {
+            return "LocationAPI.spawnFleet";
+        }
+        if ("com/fs/starfarer/campaign/fleet/FleetMember".equals(owner)
+                && "updateStats".equals(name)
+                && "()V".equals(descriptor)) {
+            return "FleetMember.updateStats";
+        }
+        if ("com/fs/starfarer/loading/SpecStore".equals(owner)
+                && "Ô00000".equals(name)
+                && "(Ljava/lang/Class;)Ljava/util/Collection;".equals(descriptor)) {
+            return "SpecStore.getAllSpecs";
+        }
+        if ("com/fs/starfarer/campaign/CampaignState".equals(owner)
+                && "clearMessages".equals(name)
+                && "()V".equals(descriptor)) {
+            return "CampaignState.clearMessages";
+        }
+        if ("com/fs/starfarer/campaign/CampaignState".equals(owner)
+                && "resetViewOffset".equals(name)
+                && "()V".equals(descriptor)) {
+            return "CampaignState.resetViewOffset";
+        }
         return null;
     }
 
