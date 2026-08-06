@@ -5,6 +5,7 @@ OUT=${1:-test_output/bytecode}
 mkdir -p "$OUT"
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
 classes=(
+  data.scripts.world.SectorGen
   com.fs.starfarer.campaign.CustomCampaignEntity
   com.fs.starfarer.campaign.BaseLocation
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl
