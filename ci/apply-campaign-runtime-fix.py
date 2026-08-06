@@ -146,9 +146,10 @@ fixer = replace_exact(
 )
 
 # CampaignGameManager.create() is intentionally kept off the AppDriver thread so
-# CheerpJ can continue servicing browser JS and Display.update(). The title-screen
-# background combat is separately guarded while this property is true, preventing
-# the race that crashed CombatEngine.recreateAiGridsIfNeeded in the prior worker run.
+# CheerpJ can continue servicing browser JS and Display.update(). BaseGameState's
+# traverse() suppresses only the title state's background-combat advance while
+# this property is true, preventing the CombatEngine race seen in the earlier
+# worker experiment.
 old_worker_body = '''                                    public void run() {
                                         try {
                                             invokeResultHolder[0] =
@@ -165,7 +166,7 @@ new_worker_body = '''                                    public void run() {
                                             System.setProperty(
                                                     "starsector.campaignCreateInProgress", "true");
                                             System.out.println(
-                                                    "Fixer: campaign create worker armed title-screen advance guard.");
+                                                    "Fixer: campaign create worker armed BaseGameState title-advance guard.");
                                             invokeResultHolder[0] =
                                                     invokeCreateMethod.invoke(
                                                             null,
@@ -180,14 +181,30 @@ new_worker_body = '''                                    public void run() {
                                             } catch (Throwable ignored) {
                                             }
                                             System.out.println(
-                                                    "Fixer: campaign create worker released title-screen advance guard.");
+                                                    "Fixer: campaign create worker released BaseGameState title-advance guard.");
                                         }
                                     }'''
 fixer = replace_exact(
     fixer,
     old_worker_body,
     new_worker_body,
-    'campaign create title-screen guard property',
+    'campaign create BaseGameState guard property',
+)
+
+# A timed join is unsafe here: when it expires, Fixer unwinds its outer finally
+# and removes temporary campaign specs even though CampaignGameManager.create()
+# may still be running on the daemon worker. It also discards that worker's
+# eventual result and allows a later lease expiry to start a second create in the
+# same JVM. Keep one owner for the full create call instead. The browser-side
+# Playwright timeout remains the external deadlock guard and the create watchdog
+# continues emitting phase diagnostics while this watcher thread waits.
+fixer = replace_exact(
+    fixer,
+    '                    invokeCreateThread.join(invokeCallTimeoutMs);',
+    '''                    System.out.println(
+                            "Fixer: waiting for the single campaign create worker to finish; browser timeout is the outer guard.");
+                    invokeCreateThread.join();''',
+    'single-owner campaign create join',
 )
 
 if os.environ.get('KEEP_UNSAFE_FORCE_ACTIVATION', '0') != '1':
