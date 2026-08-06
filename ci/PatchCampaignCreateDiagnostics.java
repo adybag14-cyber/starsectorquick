@@ -27,6 +27,7 @@ public final class PatchCampaignCreateDiagnostics {
         Path output = Path.of(args[1]);
         int[] classSeen = new int[] {0};
         int[] checkpoints = new int[] {0};
+        int[] economyProbes = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -42,26 +43,31 @@ public final class PatchCampaignCreateDiagnostics {
                 }
                 if (TARGET.equals(entry.getName())) {
                     classSeen[0]++;
-                    bytes = patch(bytes, checkpoints);
+                    bytes = patch(bytes, checkpoints, economyProbes);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        if (classSeen[0] != 1 || checkpoints[0] < 1) {
+        if (classSeen[0] != 1 || checkpoints[0] < 1 || economyProbes[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "CampaignGameManager diagnostics not applied: classSeen="
                             + classSeen[0]
                             + " checkpoints="
-                            + checkpoints[0]);
+                            + checkpoints[0]
+                            + " economyProbes="
+                            + economyProbes[0]);
         }
         System.out.println(
-                "Patched CampaignGameManager create diagnostics checkpoints=" + checkpoints[0]);
+                "Patched CampaignGameManager create diagnostics checkpoints="
+                        + checkpoints[0]
+                        + " economyProbes="
+                        + economyProbes[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] checkpoints) {
+    private static byte[] patch(byte[] input, int[] checkpoints, int[] economyProbes) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -92,6 +98,15 @@ public final class PatchCampaignCreateDiagnostics {
                         if (phase != null) {
                             emit("after " + phase);
                             checkpoints[0]++;
+                            if ("Economy.load".equals(phase)) {
+                                super.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        "com/fs/starfarer/CampaignInitCompat",
+                                        "logEconomyState",
+                                        "()V",
+                                        false);
+                                economyProbes[0]++;
+                            }
                         }
                     }
 
