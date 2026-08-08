@@ -1,4 +1,5 @@
 name: Campaign runtime no-actions diagnostic
+# Retrigger marker after the resolved August 2026 GitHub Actions webhook incident.
 
 on:
   pull_request:
