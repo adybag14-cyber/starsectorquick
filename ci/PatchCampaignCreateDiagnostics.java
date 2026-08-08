@@ -13,10 +13,15 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-/** Adds low-volume checkpoints around the expensive phases of CampaignGameManager.create(). */
+/** Adds low-volume checkpoints around CampaignGameManager.create() and CampaignFleet(Faction). */
 public final class PatchCampaignCreateDiagnostics {
-    private static final String TARGET =
+    private static final String CREATE_TARGET =
             "com/fs/starfarer/campaign/save/CampaignGameManager.class";
+    private static final String FLEET_TARGET =
+            "com/fs/starfarer/campaign/fleet/CampaignFleet.class";
+    private static final String FLEET_CTOR_DESC =
+            "(Lcom/fs/starfarer/campaign/Faction;)V";
+    private static final int EXPECTED_FLEET_CTOR_CALLS = 24;
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -25,9 +30,12 @@ public final class PatchCampaignCreateDiagnostics {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
-        int[] classSeen = new int[] {0};
+        int[] createClassSeen = new int[] {0};
+        int[] fleetClassSeen = new int[] {0};
         int[] checkpoints = new int[] {0};
         int[] economyProbes = new int[] {0};
+        int[] fleetCtorSeen = new int[] {0};
+        int[] fleetCtorCalls = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -41,33 +49,51 @@ public final class PatchCampaignCreateDiagnostics {
                 try (InputStream in = jar.getInputStream(entry)) {
                     bytes = readAll(in);
                 }
-                if (TARGET.equals(entry.getName())) {
-                    classSeen[0]++;
-                    bytes = patch(bytes, checkpoints, economyProbes);
+                if (CREATE_TARGET.equals(entry.getName())) {
+                    createClassSeen[0]++;
+                    bytes = patchCreate(bytes, checkpoints, economyProbes);
+                } else if (FLEET_TARGET.equals(entry.getName())) {
+                    fleetClassSeen[0]++;
+                    bytes = patchFleetConstructor(bytes, fleetCtorSeen, fleetCtorCalls);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        if (classSeen[0] != 1 || checkpoints[0] < 1 || economyProbes[0] != 1) {
+        if (createClassSeen[0] != 1
+                || fleetClassSeen[0] != 1
+                || checkpoints[0] < 1
+                || economyProbes[0] != 1
+                || fleetCtorSeen[0] != 1
+                || fleetCtorCalls[0] != EXPECTED_FLEET_CTOR_CALLS) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
-                    "CampaignGameManager diagnostics not applied: classSeen="
-                            + classSeen[0]
+                    "Campaign create diagnostics not applied: createClassSeen="
+                            + createClassSeen[0]
+                            + " fleetClassSeen="
+                            + fleetClassSeen[0]
                             + " checkpoints="
                             + checkpoints[0]
                             + " economyProbes="
-                            + economyProbes[0]);
+                            + economyProbes[0]
+                            + " fleetCtorSeen="
+                            + fleetCtorSeen[0]
+                            + " fleetCtorCalls="
+                            + fleetCtorCalls[0]
+                            + " expectedFleetCtorCalls="
+                            + EXPECTED_FLEET_CTOR_CALLS);
         }
         System.out.println(
                 "Patched CampaignGameManager create diagnostics checkpoints="
                         + checkpoints[0]
                         + " economyProbes="
-                        + economyProbes[0]);
+                        + economyProbes[0]
+                        + " CampaignFleetCtorCalls="
+                        + fleetCtorCalls[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] checkpoints, int[] economyProbes) {
+    private static byte[] patchCreate(byte[] input, int[] checkpoints, int[] economyProbes) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -131,6 +157,85 @@ public final class PatchCampaignCreateDiagnostics {
         return writer.toByteArray();
     }
 
+    private static byte[] patchFleetConstructor(
+            byte[] input, int[] fleetCtorSeen, int[] fleetCtorCalls) {
+        ClassReader reader = new ClassReader(input);
+        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+        ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
+            @Override
+            public MethodVisitor visitMethod(
+                    int access,
+                    String name,
+                    String descriptor,
+                    String signature,
+                    String[] exceptions) {
+                MethodVisitor delegate =
+                        super.visitMethod(access, name, descriptor, signature, exceptions);
+                if (!"<init>".equals(name) || !FLEET_CTOR_DESC.equals(descriptor)) {
+                    return delegate;
+                }
+                fleetCtorSeen[0]++;
+                return new MethodVisitor(Opcodes.ASM9, delegate) {
+                    private int ordinal;
+
+                    @Override
+                    public void visitCode() {
+                        super.visitCode();
+                        emit("enter CampaignFleet(Faction)");
+                    }
+
+                    @Override
+                    public void visitMethodInsn(
+                            int opcode,
+                            String owner,
+                            String methodName,
+                            String methodDescriptor,
+                            boolean isInterface) {
+                        ordinal++;
+                        fleetCtorCalls[0]++;
+                        String label =
+                                "call#"
+                                        + ordinal
+                                        + " "
+                                        + owner
+                                        + "."
+                                        + methodName
+                                        + methodDescriptor;
+
+                        boolean superCtor =
+                                ordinal == 1
+                                        && opcode == Opcodes.INVOKESPECIAL
+                                        && "com/fs/starfarer/campaign/BaseCampaignEntity".equals(owner)
+                                        && "<init>".equals(methodName);
+                        if (!superCtor) {
+                            emit("before " + label);
+                        }
+                        super.visitMethodInsn(
+                                opcode, owner, methodName, methodDescriptor, isInterface);
+                        emit("after " + label);
+                    }
+
+                    private void emit(String message) {
+                        super.visitFieldInsn(
+                                Opcodes.GETSTATIC,
+                                "java/lang/System",
+                                "out",
+                                "Ljava/io/PrintStream;");
+                        super.visitLdcInsn("CampaignFleetCtorDiag: " + message);
+                        super.visitMethodInsn(
+                                Opcodes.INVOKEVIRTUAL,
+                                "java/io/PrintStream",
+                                "println",
+                                "(Ljava/lang/String;)V",
+                                false);
+                    }
+                };
+            }
+        };
+        reader.accept(visitor, 0);
+        return writer.toByteArray();
+    }
+
     private static String classify(String owner, String name, String descriptor) {
         if ("com/fs/starfarer/api/campaign/SectorGeneratorPlugin".equals(owner)
                 && "generate".equals(name)) {
@@ -166,11 +271,6 @@ public final class PatchCampaignCreateDiagnostics {
                 && "setPlayerFleet".equals(name)) {
             return "CampaignEngine.setPlayerFleet";
         }
-
-        // The first half of create() is already well covered above. These exact
-        // calls cover the previously opaque tail that constructs the real player
-        // fleet, resolves the starting variant, spawns it into hyperspace, syncs
-        // fleet data, and finally initializes CampaignState UI state.
         if ("com/fs/starfarer/campaign/fleet/CampaignFleet".equals(owner)
                 && "<init>".equals(name)
                 && "(Lcom/fs/starfarer/campaign/Faction;)V".equals(descriptor)) {
