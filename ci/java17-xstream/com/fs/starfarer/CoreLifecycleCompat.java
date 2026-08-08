@@ -11,7 +11,7 @@ public final class CoreLifecycleCompat {
     private CoreLifecycleCompat() {}
 
     /** Preserve the stock tag operation when the market exists; absent markets are a no-op. */
-    public static void addMarketTagIfPresent(MarketAPI market, String tag) {
+    public static void addMarketTagIfPresent(MarketAPI market, java.lang.String tag) {
         if (market != null) {
             market.addTag(tag);
         }
@@ -22,7 +22,8 @@ public final class CoreLifecycleCompat {
      * but unlike the stock helper it tolerates a market omitted by the partial
      * browser world bootstrap.
      */
-    public static void makeStoryCriticalIfMarketPresent(String marketId, String reason) {
+    public static void makeStoryCriticalIfMarketPresent(
+            java.lang.String marketId, java.lang.String reason) {
         SectorAPI sector = Global.getSector();
         if (sector == null) {
             return;
