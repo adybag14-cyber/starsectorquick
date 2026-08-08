@@ -1,6 +1,8 @@
 public final class VerifyPatchedRuntimeClasses {
     private static final String CAMPAIGN_GAME_MANAGER =
             "com.fs.starfarer.campaign.save.CampaignGameManager";
+    private static final String BASE_GAME_STATE =
+            "com.fs.starfarer.BaseGameState";
 
     private VerifyPatchedRuntimeClasses() {}
 
@@ -18,18 +20,26 @@ public final class VerifyPatchedRuntimeClasses {
                 cls.getDeclaredMethods();
                 System.out.println("Verified patched runtime class: " + name);
             } catch (ClassFormatError formatError) {
-                // The stock 0.98a-RC8 CampaignGameManager contains the obfuscated
-                // method name `do.new`. HotSpot rejects that identifier before it
-                // can verify the transformed bytecode, while javap/ASM/CheerpJ can
-                // parse the original class. Do not turn this pre-existing stock
-                // incompatibility into a false CI failure. Keep every other class
-                // and every other ClassFormatError strict.
+                // Two stock 0.98a-RC8 obfuscated classes contain identifiers that
+                // HotSpot rejects before it can verify the transformed bytecode.
+                // javap/ASM/CheerpJ can parse the original classes, and the bytecode
+                // transforms themselves have exact-count structural assertions.
+                // Keep this exception list exact; every other class/format error is
+                // still a hard CI failure.
                 String message = formatError.getMessage();
                 if (CAMPAIGN_GAME_MANAGER.equals(name)
                         && message != null
                         && message.contains("Illegal method name \"do.new\"")) {
                     System.out.println(
                             "Skipped HotSpot load verification for stock-obfuscated CampaignGameManager: "
+                                    + message);
+                    continue;
+                }
+                if (BASE_GAME_STATE.equals(name)
+                        && message != null
+                        && message.contains("Illegal field name \"while.return\"")) {
+                    System.out.println(
+                            "Skipped HotSpot load verification for stock-obfuscated BaseGameState: "
                                     + message);
                     continue;
                 }
