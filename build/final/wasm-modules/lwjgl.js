@@ -3,7 +3,7 @@ const { default: glMatrix } = await import("./gl-matrix-loader.js");
 
 const glCanvas = window.lwjglCanvasElement;
 if (!(glCanvas instanceof HTMLCanvasElement)) throw new Error("window.lwjglCanvasElement is not set or is not a canvas");
-const glCtx = glCanvas.getContext("webgl2", {antialias: false, alpha: false});
+const glCtx = glCanvas.getContext("webgl2", {antialias: false, alpha: false, preserveDrawingBuffer: true});
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 

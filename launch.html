@@ -161,8 +161,8 @@
                 if (state.gl) return state.gl;
                 const canvas = document.querySelector('#game-container canvas') || document.querySelector('canvas');
                 if (!canvas) return null;
-                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false }) ||
-                           canvas.getContext('webgl', { alpha: false, antialias: false });
+                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true }) ||
+                           canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true });
                 if (!state.gl) logFn('Inline LWJGL bridge: failed to acquire WebGL context', '#ff8800');
                 return state.gl;
             }

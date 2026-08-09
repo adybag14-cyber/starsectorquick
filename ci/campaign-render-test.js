@@ -200,7 +200,8 @@ function pixelStats(buffer) {
           viewport: Array.from(gl.getParameter(gl.VIEWPORT)),
           colorMask: Array.from(gl.getParameter(gl.COLOR_WRITEMASK)),
           clearColor: Array.from(gl.getParameter(gl.COLOR_CLEAR_VALUE)),
-          framebufferStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+          framebufferStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER),
+          contextAttributes: gl.getContextAttributes()
         };
       } catch (error) {
         return { error: String(error && (error.message || error) || error) };
