@@ -161,8 +161,8 @@
                 if (state.gl) return state.gl;
                 const canvas = document.querySelector('#game-container canvas') || document.querySelector('canvas');
                 if (!canvas) return null;
-                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false }) ||
-                           canvas.getContext('webgl', { alpha: false, antialias: false });
+                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true }) ||
+                           canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true });
                 if (!state.gl) logFn('Inline LWJGL bridge: failed to acquire WebGL context', '#ff8800');
                 return state.gl;
             }
@@ -498,12 +498,14 @@
             console.error = wrap(console.error.bind(console));
         }
 
-        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container')) {
+        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container'), renderWidth = 1024, renderHeight = 768) {
             if (!gameContainer) {
                 throw new Error('Missing #game-container');
             }
             gameContainer.style.position = 'relative';
             gameContainer.style.overflow = 'hidden';
+            gameContainer.style.width = `${renderWidth}px`;
+            gameContainer.style.height = `${renderHeight}px`;
 
             let lwjglCanvas = gameContainer.querySelector('#lwjglCanvas');
             if (!(lwjglCanvas instanceof HTMLCanvasElement)) {
@@ -516,14 +518,14 @@
                 }
             }
 
-            lwjglCanvas.width = 1024;
-            lwjglCanvas.height = 768;
+            lwjglCanvas.width = renderWidth;
+            lwjglCanvas.height = renderHeight;
             lwjglCanvas.id = 'lwjglCanvas';
             lwjglCanvas.style.position = 'absolute';
             lwjglCanvas.style.left = '0';
             lwjglCanvas.style.top = '0';
-            lwjglCanvas.style.width = '1024px';
-            lwjglCanvas.style.height = '768px';
+            lwjglCanvas.style.width = `${renderWidth}px`;
+            lwjglCanvas.style.height = `${renderHeight}px`;
             lwjglCanvas.style.display = 'block';
             lwjglCanvas.style.zIndex = '2';
             lwjglCanvas.style.pointerEvents = 'auto';
@@ -539,6 +541,8 @@
             if (window.__STARSECTOR_STARTING__) return;
             window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
+            const renderWidth = Math.max(1, Number(window.__STARSECTOR_RENDER_WIDTH__ || 1024) || 1024);
+            const renderHeight = Math.max(1, Number(window.__STARSECTOR_RENDER_HEIGHT__ || 768) || 768);
             btn.disabled = true;
             btn.textContent = 'INITIALIZING...';
             updateRuntimeState('initializing', 'CheerpJ bootstrap');
@@ -695,8 +699,8 @@
                 const dataUrl = siteRootUrl + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
-                ensureLwjglCanvas();
-                log('LWJGL canvas bridge ready.', '#888');
+                ensureLwjglCanvas(undefined, renderWidth, renderHeight);
+                log(`LWJGL canvas bridge ready (${renderWidth}x${renderHeight}).`, '#888');
                 const lwjglModuleCandidates = [];
                 if (window.__LWJGL_MODULE__) lwjglModuleCandidates.push(window.__LWJGL_MODULE__);
                 lwjglModuleCandidates.push('lwjgl.js');
@@ -1120,6 +1124,10 @@
                     `starsector.boot=${bootMode}`,
                     `-Dstarsector.directLaunch=${directLaunch}`,
                     `starsector.directLaunch=${directLaunch}`,
+                    `-DstartRes=${renderWidth}x${renderHeight}`,
+                    `startRes=${renderWidth}x${renderHeight}`,
+                    `-DstartFS=false`,
+                    `startFS=false`,
                     `-DstartSound=false`,
                     `startSound=false`,
                     `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
@@ -1289,8 +1297,8 @@
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 const gameContainer = document.getElementById('game-container');
-                cheerpjCreateDisplay(1024, 768, gameContainer);
-                ensureLwjglCanvas(gameContainer);
+                cheerpjCreateDisplay(renderWidth, renderHeight, gameContainer);
+                ensureLwjglCanvas(gameContainer, renderWidth, renderHeight);
 
                 // Use stock LWJGL classes by default; opt into loading_patch explicitly.
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
@@ -1329,6 +1337,7 @@
                         'fs.sound_obf.jar',
                         'fs.common_obf.jar',
                         'xstream-1.4.10.jar',
+                        'txw2-2.3.1.jar',
                         'starfarer.res.jar',
                         'scripts-precompiled.jar'
                     ];

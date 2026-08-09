@@ -1,0 +1,111 @@
+name: Campaign runtime PR matrix
+
+on:
+  pull_request:
+    branches:
+      - feature/starsector-webgl-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-runtime-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: prepare runtime diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Sanitize and report missing static graphics
+        run: |
+          mkdir -p test_output/asset-audit test_output/bytecode .ci-cache
+          python3 ci/sanitize-runtime-assets.py | tee test_output/asset-audit/asset-sanitation.log
+      - name: Inspect runtime jars and campaign bytecode
+        run: |
+          git lfs pull --include='jars/resources.jar' --exclude=''
+          bash ci/dump-campaign-bytecode.sh test_output/bytecode
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          jar = Path('jars/resources.jar')
+          out = Path('test_output/asset-audit')
+          with ZipFile(jar) as zf:
+              names = sorted(zf.namelist())
+          graphics = [name for name in names if 'graphics/' in name.lower()]
+          (out / 'resources-jar-all.txt').write_text('\n'.join(names) + '\n', encoding='utf-8')
+          (out / 'resources-jar-graphics.txt').write_text('\n'.join(graphics) + '\n', encoding='utf-8')
+          (out / 'resources-jar-summary.txt').write_text(
+              f'bytes={jar.stat().st_size}\nentries={len(names)}\ngraphicsEntries={len(graphics)}\n',
+              encoding='utf-8',
+          )
+          print((out / 'resources-jar-summary.txt').read_text(), end='')
+          PY
+      - name: Download official 0.98a-RC8 release
+        run: |
+          curl -fL --retry 3 --retry-delay 3 --connect-timeout 30 --max-time 900 \
+            -o .ci-cache/starsector_linux-0.98a-RC8.zip \
+            https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip
+          unzip -tq .ci-cache/starsector_linux-0.98a-RC8.zip
+          test "$(wc -c < .ci-cache/starsector_linux-0.98a-RC8.zip)" -gt 200000000
+      - name: Save official release cache
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+      - name: Upload preparation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-preparation-evidence
+          path: |
+            test_output/asset-audit
+            test_output/bytecode
+          if-no-files-found: warn
+
+  experiment:
+    name: campaign-direct-main-thread-java17
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Build and verify campaign-direct-main-thread-java17
+        env:
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__":false,"__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__":true}'
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
+          STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
+        run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Upload campaign-direct-main-thread-java17 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-runtime-campaign-direct-main-thread-java17
+          path: test_output/campaign-direct-main-thread-java17
+          if-no-files-found: warn

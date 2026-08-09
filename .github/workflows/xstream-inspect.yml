@@ -1,0 +1,48 @@
+name: Inspect bundled XStream
+
+on:
+  push:
+    branches:
+      - fix/campaign-render-main-thread
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Locate and inspect XStream classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for j in jars/*.jar; do
+            if jar tf "$j" 2>/dev/null | grep -q '^com/thoughtworks/xstream/converters/collections/TreeMapConverter.class$'; then
+              found=1
+              echo "XSTREAM_JAR=$j"
+              echo '=== TreeMapConverter ==='
+              javap -classpath "$j" -p -c -s com.thoughtworks.xstream.converters.collections.TreeMapConverter
+              echo '=== MapConverter ==='
+              javap -classpath "$j" -p -c -s com.thoughtworks.xstream.converters.collections.MapConverter
+              echo '=== AbstractCollectionConverter ==='
+              javap -classpath "$j" -p -s com.thoughtworks.xstream.converters.collections.AbstractCollectionConverter
+              echo '=== Mapper ==='
+              javap -classpath "$j" -p -s com.thoughtworks.xstream.mapper.Mapper
+              echo '=== MarshallingContext ==='
+              javap -classpath "$j" -p -s com.thoughtworks.xstream.converters.MarshallingContext
+              echo '=== UnmarshallingContext ==='
+              javap -classpath "$j" -p -s com.thoughtworks.xstream.converters.UnmarshallingContext
+              break
+            fi
+          done
+          test "$found" = 1

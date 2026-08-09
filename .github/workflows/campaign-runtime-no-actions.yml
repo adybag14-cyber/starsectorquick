@@ -1,0 +1,99 @@
+name: Campaign runtime no-actions diagnostic
+# Retrigger marker after the resolved August 2026 GitHub Actions webhook incident.
+
+on:
+  pull_request:
+    branches:
+      - feature/starsector-webgl-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-runtime-no-actions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  experiment:
+    name: campaign worker/title-guard diagnostic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout without Marketplace actions
+        env:
+          REPO_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${REPO_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --prune --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
+          git lfs install --local
+
+      - name: Verify preinstalled toolchain
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          node --version
+          npm --version
+          git lfs version
+
+      - name: Run strict CheerpJ campaign diagnostic
+        env:
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__":false,"__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__":true}'
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
+          STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
+        run: |
+          set +e
+
+          TITLE_CLASS='com/fs/starfarer/TitleScreenState.class'
+          TITLE_JAR=''
+          for candidate in jars/starfarer_obf.jar jars/starfarer.api.jar; do
+            if jar tf "$candidate" 2>/dev/null | grep -Fxq "$TITLE_CLASS"; then
+              TITLE_JAR="$candidate"
+              break
+            fi
+          done
+          echo "diagnostic TitleScreenState owner=${TITLE_JAR:-not-found}"
+
+          # This diagnostic runner has repeatedly been externally cancelled around
+          # ten minutes. Keep the strict state/render checks intact, but force the
+          # diagnostic snapshot to complete before that boundary. Prior evidence
+          # reaches Title Screen at ~396s, leaving roughly two minutes for create().
+          sed -i 's/STARSECTOR_TEST_TIMEOUT_MS=720000/STARSECTOR_TEST_TIMEOUT_MS=540000/' ci/run-campaign-experiment.sh
+          sed -i 's/STARSECTOR_FRAME_SETTLE_MS=30000/STARSECTOR_FRAME_SETTLE_MS=5000/' ci/run-campaign-experiment.sh
+
+          mkdir -p test_output/campaign-direct-main-thread-java17
+          (
+            while [[ ! -f test_output/campaign-direct-main-thread-java17/browser-live.log ]]; do
+              sleep 1
+            done
+            tail -n +1 -F test_output/campaign-direct-main-thread-java17/browser-live.log 2>/dev/null \
+              | grep --line-buffered -E 'CampaignCreateDiag|CampaignFleetCtorDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|BrowserSectorAnchorDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Title Screen State|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market'
+          ) &
+          stream_pid=$!
+
+          bash ci/run-campaign-experiment.sh \
+            'campaign-direct-main-thread-java17' \
+            'sync' \
+            'false' \
+            'campaign' \
+            "$EXPERIMENT_CONFIG"
+          status=$?
+
+          kill "$stream_pid" 2>/dev/null || true
+          wait "$stream_pid" 2>/dev/null || true
+
+          echo '=== strict result.json ==='
+          cat test_output/campaign-direct-main-thread-java17/result.json 2>/dev/null || true
+          echo '=== campaign create / state chronology ==='
+          grep -nE \
+            'CampaignCreateDiag|CampaignFleetCtorDiag|CampaignEconomyDiag|CoreLifecycleDiag|BrowserSectorGenDiag|BrowserSectorAnchorDiag|campaign create worker|stage=invoke-create|invoke-create-return|watcher state=|Campaign State|NullPointerException|Exception|FATAL|Fatal|direct-new-game|pre-invoke|create lease|synthetic readiness|minimal fallback market' \
+            test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null | tail -n 900 || true
+          echo '=== browser log tail ==='
+          tail -n 300 test_output/campaign-direct-main-thread-java17/browser.log 2>/dev/null || true
+          echo "strict_campaign_exit_status=${status}"
+          exit "$status"

@@ -3827,7 +3827,15 @@ public class Fixer {
                 .append(" state=")
                 .append(target.getState())
                 .append(" stack=");
-        StackTraceElement[] trace = target.getStackTrace();
+        StackTraceElement[] trace;
+        try {
+            trace = target.getStackTrace();
+        } catch (Throwable t) {
+            sb.append("<unavailable:")
+                    .append(t.getClass().getName())
+                    .append(">");
+            return sb.toString();
+        }
         if (trace == null || trace.length == 0) {
             sb.append("<empty>");
             return sb.toString();

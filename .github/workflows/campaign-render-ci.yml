@@ -1,0 +1,47 @@
+name: Campaign render verification
+
+# The live Pages check is intentionally manual. Running it on every PR commit
+# verifies the previous gh-pages deployment, not the candidate being built, and
+# used to consume the only Actions runner while the real local campaign matrix
+# waited in the queue. The deployment workflow runs this verifier after publish.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  campaign-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify deployed campaign renders and advances
+        env:
+          STARSECTOR_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
+          STARSECTOR_TEST_TIMEOUT_MS: '300000'
+        run: node ci/campaign-render-test.js
+
+      - name: Upload campaign evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-render-evidence
+          path: test_output/campaign-render
+          if-no-files-found: warn

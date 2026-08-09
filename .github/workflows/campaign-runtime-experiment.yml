@@ -1,0 +1,13 @@
+name: Campaign runtime experiment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Use the Campaign runtime PR matrix workflow for active experiments.'
