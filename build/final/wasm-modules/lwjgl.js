@@ -274,6 +274,14 @@ var immediateModeData =
 };
 var verboseLog = false;
 var frameCount = 0;
+var presentationStats = {
+	swapCount: 0,
+	samples: [],
+	lastFramebufferStatus: null,
+	lastViewport: null
+};
+if(typeof window !== "undefined")
+	window.__lwjglPresentationStats = presentationStats;
 // Set to a non-zero value to stop after a certain number of frames
 var frameLimit = 0;
 var unsupportedDrawModes = new Set();
@@ -805,6 +813,43 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		console.warn("SwapBuffer");
 	ensureFramebufferSize();
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+	presentationStats.swapCount++;
+	if(presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
+	{
+		try
+		{
+			var sampleWidth = Math.max(1, Math.min(fbWidth, 256));
+			var sampleHeight = Math.max(1, Math.min(fbHeight, 192));
+			var sampleX = Math.max(0, Math.floor((fbWidth - sampleWidth) / 2));
+			var sampleY = Math.max(0, Math.floor((fbHeight - sampleHeight) / 2));
+			var sample = new Uint8Array(sampleWidth * sampleHeight * 4);
+			glCtx.readPixels(sampleX, sampleY, sampleWidth, sampleHeight, glCtx.RGBA, glCtx.UNSIGNED_BYTE, sample);
+			var nonBlack = 0;
+			var sum = 0;
+			for(var i=0;i<sample.length;i+=4)
+			{
+				var r = sample[i], g = sample[i + 1], b = sample[i + 2];
+				if(r > 8 || g > 8 || b > 8) nonBlack++;
+				sum += r + g + b;
+			}
+			presentationStats.lastFramebufferStatus = glCtx.checkFramebufferStatus(glCtx.READ_FRAMEBUFFER);
+			presentationStats.lastViewport = Array.from(glCtx.getParameter(glCtx.VIEWPORT));
+			presentationStats.samples.push({
+				swap: presentationStats.swapCount,
+				fbWidth,
+				fbHeight,
+				nonBlack,
+				pixels: sampleWidth * sampleHeight,
+				meanRgb: sum / Math.max(1, sampleWidth * sampleHeight * 3),
+				framebufferStatus: presentationStats.lastFramebufferStatus,
+				viewport: presentationStats.lastViewport
+			});
+		}
+		catch(err)
+		{
+			presentationStats.samples.push({swap: presentationStats.swapCount, error: String(err)});
+		}
+	}
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
 	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);

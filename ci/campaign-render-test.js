@@ -93,6 +93,8 @@ function pixelStats(buffer) {
     __STARSECTOR_AUTO_CAMPAIGN_TIMEOUT_MS__: 900000,
     __STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__: 45000,
     __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: true,
+    __STARSECTOR_RENDER_WIDTH__: 1024,
+    __STARSECTOR_RENDER_HEIGHT__: 768,
     __LWJGL_FIRST_LOG_LIMIT__: 512
   };
   const windowConfig = { ...defaultConfig, ...configOverrides };
@@ -186,6 +188,24 @@ function pixelStats(buffer) {
     bodyDetail: document.body.dataset.runtimeDetail || '',
     button: document.getElementById('startBtn')?.textContent || '',
     nativeStats: window.__lwjglNativeStats || null,
+    presentationStats: window.__lwjglPresentationStats || null,
+    webglState: (() => {
+      const canvas = document.querySelector('#game-container canvas');
+      const gl = canvas && canvas.getContext('webgl2');
+      if (!gl) return null;
+      try {
+        return {
+          drawingBufferWidth: gl.drawingBufferWidth,
+          drawingBufferHeight: gl.drawingBufferHeight,
+          viewport: Array.from(gl.getParameter(gl.VIEWPORT)),
+          colorMask: Array.from(gl.getParameter(gl.COLOR_WRITEMASK)),
+          clearColor: Array.from(gl.getParameter(gl.COLOR_CLEAR_VALUE)),
+          framebufferStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+        };
+      } catch (error) {
+        return { error: String(error && (error.message || error) || error) };
+      }
+    })(),
     canvases: [...document.querySelectorAll('canvas')].map(c => ({
       width: c.width,
       height: c.height,
