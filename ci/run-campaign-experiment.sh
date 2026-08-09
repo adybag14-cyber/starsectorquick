@@ -149,7 +149,10 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.BaseGameState
 
 npm ci
-npx playwright install --with-deps chromium
+# GitHub-hosted Ubuntu already carries Chromium runtime libraries. Avoid apt here:
+# external Microsoft package feeds have intermittently returned 403 and should not
+# make a browser-runtime diagnostic fail before Playwright launches.
+npx playwright install chromium
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
   node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
 echo $! > /tmp/starsector-http.pid
