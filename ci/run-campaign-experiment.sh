@@ -35,6 +35,9 @@ python3 ci/restore-official-runtime-assets.py \
   | tee "$OUT/official-asset-restore.log"
 
 python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
+if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" ]]; then
+  python3 ci/prepare-browser-minimal-economy.py | tee "$OUT/browser-economy.log"
+fi
 if grep -RIl $'\xEF\xBB\xBF' starsector/starsector --include='index.list' > "$OUT/index-bom-files.txt"; then
   echo 'UTF-8 BOM remains in runtime index files:' >&2
   cat "$OUT/index-bom-files.txt" >&2
