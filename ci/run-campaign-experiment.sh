@@ -13,7 +13,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -65,6 +65,7 @@ python3 ci/harden-settings-api-proxy.py
 python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
+javap -classpath "$CP" com.sun.xml.txw2.output.IndentingXMLStreamWriter >/dev/null
 mapfile -t COMPAT_SOURCES < <(find ci/java17-xstream -type f -name '*.java' -print | sort)
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
