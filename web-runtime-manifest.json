@@ -1,12 +1,23 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "497194f1d70789bf2fa798899e99ae6743c7fde8",
-    "workflowRunId": "hermes-static-hotfix-v4-20260810",
-    "generatedAt": "2026-08-10T20:21:53.189241+00:00",
-    "overlayFiles": 804
+    "sourceSha": "ec6841b38730eb0b98b0e9cff66775516c675772",
+    "workflowRunId": "hermes-static-hotfix-v5-20260810",
+    "generatedAt": "2026-08-10T20:54:00.269997+00:00",
+    "overlayFiles": 807,
+    "dataPack": {
+      "version": 1,
+      "fileCount": 1695,
+      "bytes": 8107810,
+      "sha256": "d5918a6dcc1be26340e625e126388d93bdbc0499b0712c21da689a8a43bf5e30"
+    }
   },
   "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 141,
+      "sha256": "600be6fff490fe9015c7fa3011fb17c4879ff4e50ecde7456b273578dc56b270"
+    },
     {
       "path": ".nojekyll",
       "bytes": 0,
@@ -524,8 +535,18 @@
     },
     {
       "path": "launch.html",
-      "bytes": 84449,
-      "sha256": "1665770149e4ba435013130d703a63910b3644735280497c4327b3d104cd25c0"
+      "bytes": 86211,
+      "sha256": "90605d7ffe996cb568a5b2d4a6d627bccedad022d34bc036edf1f3832090728f"
+    },
+    {
+      "path": "starsector-data-pack-v1.bin",
+      "bytes": 8107810,
+      "sha256": "d5918a6dcc1be26340e625e126388d93bdbc0499b0712c21da689a8a43bf5e30"
+    },
+    {
+      "path": "starsector-data-pack-v1.json",
+      "bytes": 176361,
+      "sha256": "ff3866515b71811e69c0156c4f96524b9e0ceb35d63755c4b2fbc7cae1731c7b"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/corvus.json",
@@ -4024,8 +4045,8 @@
     },
     {
       "path": "starsectorquick-sw.js",
-      "bytes": 9225,
-      "sha256": "3fb11616e99831b10cf9568c0d928c79f2b220a6c398d2b9e8da93886e0a67ca"
+      "bytes": 14143,
+      "sha256": "ce4fdc38fcc88123026fa0242c08650d7b9226325895658fe86ba7b8804c99a2"
     }
   ]
 }

@@ -1,7 +1,13 @@
 {
   "profile": "corvus-asharu-compat",
-  "sourceSha": "497194f1d70789bf2fa798899e99ae6743c7fde8",
-  "workflowRunId": "hermes-static-hotfix-v4-20260810",
-  "generatedAt": "2026-08-10T20:21:53.189241+00:00",
-  "overlayFiles": 804
+  "sourceSha": "ec6841b38730eb0b98b0e9cff66775516c675772",
+  "workflowRunId": "hermes-static-hotfix-v5-20260810",
+  "generatedAt": "2026-08-10T20:54:00.269997+00:00",
+  "overlayFiles": 807,
+  "dataPack": {
+    "version": 1,
+    "fileCount": 1695,
+    "bytes": 8107810,
+    "sha256": "d5918a6dcc1be26340e625e126388d93bdbc0499b0712c21da689a8a43bf5e30"
+  }
 }

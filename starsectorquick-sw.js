@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260810-campaign-render-v4';
+const ALIAS_WORKER_VERSION = '20260810-campaign-render-v5';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -13,7 +13,10 @@ const JAR_FILE = /\.jar$/i;
 const INDEX_LIST_FILE = /(?:^|\/)index\.list$/i;
 const TRANSIENT_FETCH_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const FULL_BODY_RETRY_DELAYS_MS = [100, 300, 800];
+const DATA_PACK_INDEX_URL = `${PROJECT_PREFIX}starsector-data-pack-v1.json?sw=${ALIAS_WORKER_VERSION}`;
+const DATA_PACK_BINARY_URL = `${PROJECT_PREFIX}starsector-data-pack-v1.bin?sw=${ALIAS_WORKER_VERSION}`;
 const rangeBodyCache = new Map();
+let dataPackPromise = null;
 
 self.addEventListener('install', event => {
   event.waitUntil(self.skipWaiting());
@@ -59,6 +62,96 @@ const copyTextHeaders = (upstream, length, retries = 0) => {
 };
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const loadDataPack = () => {
+  if (dataPackPromise) return dataPackPromise;
+  dataPackPromise = Promise.all([
+    fetch(DATA_PACK_INDEX_URL, { cache: 'force-cache', credentials: 'same-origin' }),
+    fetch(DATA_PACK_BINARY_URL, { cache: 'force-cache', credentials: 'same-origin' })
+  ]).then(async ([indexResponse, binaryResponse]) => {
+    if (!indexResponse.ok) throw new Error(`data-pack index HTTP ${indexResponse.status}`);
+    if (!binaryResponse.ok) throw new Error(`data-pack binary HTTP ${binaryResponse.status}`);
+    const [manifest, body] = await Promise.all([indexResponse.json(), binaryResponse.arrayBuffer()]);
+    if (!manifest || manifest.version !== 1 || !manifest.files || typeof manifest.files !== 'object') {
+      throw new Error('invalid data-pack manifest');
+    }
+    if (Number(manifest.bytes) !== body.byteLength) {
+      throw new Error(`data-pack length mismatch manifest=${manifest.bytes} body=${body.byteLength}`);
+    }
+    return { manifest, body };
+  });
+  return dataPackPromise;
+};
+
+const runtimeDataRelativePath = url => {
+  const prefix = RANGE_NORMALIZED_PREFIXES.find(candidate => url.pathname.startsWith(candidate));
+  if (!prefix) return null;
+  try {
+    const relative = decodeURIComponent(url.pathname.slice(prefix.length));
+    if (!relative || relative.startsWith('/') || relative.split('/').includes('..')) return null;
+    return relative;
+  } catch {
+    return null;
+  }
+};
+
+const packedDataHeaders = (entry, length) => {
+  const headers = new Headers();
+  headers.set('accept-ranges', 'bytes');
+  headers.set('cache-control', 'public, max-age=600');
+  headers.set('content-length', String(length));
+  headers.set('content-type', entry.type || 'application/octet-stream');
+  headers.set('x-starsectorquick-sw-version', ALIAS_WORKER_VERSION);
+  headers.set('x-starsectorquick-data-pack', 'v1');
+  return headers;
+};
+
+const respondFromDataPack = async (url, request) => {
+  const relative = runtimeDataRelativePath(url);
+  if (!relative) return null;
+
+  let pack;
+  try {
+    pack = await loadDataPack();
+  } catch {
+    return null;
+  }
+  const entry = pack.manifest.files[relative];
+  if (!entry) return null;
+
+  const offset = Number(entry.offset);
+  const length = Number(entry.length);
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length < 0 || offset + length > pack.body.byteLength) {
+    return null;
+  }
+
+  if (request.method === 'HEAD') {
+    return new Response(null, { status: 200, statusText: 'OK', headers: packedDataHeaders(entry, length) });
+  }
+
+  const rangeHeader = request.headers.get('range');
+  if (rangeHeader) {
+    const range = parseByteRange(rangeHeader, length);
+    if (!range) {
+      return new Response(null, {
+        status: 416,
+        statusText: 'Range Not Satisfiable',
+        headers: {
+          'content-range': `bytes */${length}`,
+          'x-starsectorquick-sw-version': ALIAS_WORKER_VERSION,
+          'x-starsectorquick-data-pack': 'v1'
+        }
+      });
+    }
+    const slice = pack.body.slice(offset + range.start, offset + range.end + 1);
+    const headers = packedDataHeaders(entry, slice.byteLength);
+    headers.set('content-range', `bytes ${range.start}-${range.end}/${length}`);
+    return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+  }
+
+  const body = pack.body.slice(offset, offset + length);
+  return new Response(body, { status: 200, statusText: 'OK', headers: packedDataHeaders(entry, length) });
+};
 
 const fetchFullBody = async requestUrl => {
   const cacheKey = requestUrl.toString();
@@ -214,6 +307,31 @@ const respondWithNormalizedFullIndexList = async (url, request) => {
   });
 };
 
+const fetchRuntimeDataFallback = (url, request) => {
+  if (shouldNormalizeRange(url, request)) return respondWithNormalizedRange(url, request);
+  if (shouldNormalizeFullIndexList(url, request)) return respondWithNormalizedFullIndexList(url, request);
+  return fetch(url.toString(), {
+    method: request.method,
+    headers: request.headers,
+    credentials: request.credentials,
+    cache: request.cache,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    integrity: request.integrity
+  });
+};
+
+const respondWithPackedDataOrFallback = async (url, request) => {
+  const packed = await respondFromDataPack(url, request);
+  return packed || fetchRuntimeDataFallback(url, request);
+};
+
+self.addEventListener('message', event => {
+  if (!event.data || event.data.type !== 'warm-starsector-data-pack') return;
+  event.waitUntil(loadDataPack().catch(() => null));
+});
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' && event.request.method !== 'HEAD') return;
 
@@ -227,6 +345,11 @@ self.addEventListener('fetch', event => {
 
   if (isRuntimeDirectoryProbe(url)) {
     event.respondWith(Promise.resolve(respondWithMissingRuntimeDirectory(event.request)));
+    return;
+  }
+
+  if (runtimeDataRelativePath(url)) {
+    event.respondWith(respondWithPackedDataOrFallback(url, event.request));
     return;
   }
 
@@ -249,6 +372,11 @@ self.addEventListener('fetch', event => {
 
   if (isRuntimeDirectoryProbe(target)) {
     event.respondWith(Promise.resolve(respondWithMissingRuntimeDirectory(event.request)));
+    return;
+  }
+
+  if (runtimeDataRelativePath(target)) {
+    event.respondWith(respondWithPackedDataOrFallback(target, event.request));
     return;
   }
 
