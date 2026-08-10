@@ -72,7 +72,6 @@ jobs:
           rm -rf .pages-worktree
           git worktree add --detach .pages-worktree origin/gh-pages
           cp -a test_output/pages-overlays/deploy/. .pages-worktree/
-          rm -f .pages-worktree/.starsectorquick-pages-overlay
           touch .pages-worktree/.nojekyll
           SOURCE_SHA="${{ steps.source.outputs.sha }}"
           git -C .pages-worktree config user.name 'github-actions[bot]'
