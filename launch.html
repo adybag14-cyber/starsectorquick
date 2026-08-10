@@ -568,7 +568,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260731-campaign-load-v1';
+                    const aliasWorkerVersion = '20260810-campaign-render-v2';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -630,7 +630,7 @@
                         return;
                     }
 
-                    const resetVersion = '20260731-campaign-load-v1';
+                    const resetVersion = '20260810-campaign-render-v2';
                     const resetKey = 'starsectorquickCheerpJStorageReset';
                     const params = new URLSearchParams(window.location.search);
                     const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');
@@ -1022,7 +1022,9 @@
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
                 );
                 const autoCampaignDirectUseWorkerThread =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__
+                        : false;
                 const autoCampaignDirectNonBlockingWorker =
                     window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
                 const autoCampaignSkipDirectUiPreflight =
@@ -1057,15 +1059,19 @@
                     typeof window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__ === 'boolean';
                 const autoCampaignWithTimePass = hasAutoCampaignWithTimePassOverride
                     ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
-                    : true;
+                    : false;
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ !== false;
                 const autoCampaignInvokeCreateInCampaignState =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false;
                 const autoCampaignAllowImmediatePlayerFleetNullTransition =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__
+                        : false;
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__
+                        : false;
                 const autoCampaignSyntheticFleetTimeoutMs = Math.max(
                     3000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__ || 30000)
