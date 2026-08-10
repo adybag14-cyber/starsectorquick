@@ -1,7 +1,7 @@
 {
   "profile": "corvus-asharu-compat",
-  "sourceSha": "502f4ccd936fe777539cfcbb48e8580aeebb7429",
-  "workflowRunId": "31385612498",
-  "generatedAt": "2026-08-10T11:55:41.111504+00:00",
+  "sourceSha": "48199c4fe6b17efd4a3071e9b108d170f95db6ac",
+  "workflowRunId": "hermes-static-hotfix-20260810",
+  "generatedAt": "2026-08-10T19:56:24.812534+00:00",
   "overlayFiles": 804
 }

@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260810-campaign-render-v2';
+const ALIAS_WORKER_VERSION = '20260810-campaign-render-v3';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -10,6 +10,9 @@ const RANGE_NORMALIZED_PREFIXES = [
 const TEXT_LIKE_DATA_FILE = /\.(csv|faction|fnt|json|layout|list|proj|ship|skin|system|txt|variant|wpn)$/i;
 const JAR_RANGE_PREFIX = `${PROJECT_PREFIX}jars/`;
 const JAR_FILE = /\.jar$/i;
+const INDEX_LIST_FILE = /(?:^|\/)index\.list$/i;
+const TRANSIENT_FETCH_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+const FULL_BODY_RETRY_DELAYS_MS = [100, 300, 800];
 const rangeBodyCache = new Map();
 
 self.addEventListener('install', event => {
@@ -42,7 +45,7 @@ const parseByteRange = (rangeHeader, size) => {
   return { start, end: Math.min(end, size - 1) };
 };
 
-const copyTextHeaders = (upstream, length) => {
+const copyTextHeaders = (upstream, length, retries = 0) => {
   const headers = new Headers();
   for (const name of ['cache-control', 'content-type', 'etag', 'expires', 'last-modified']) {
     const value = upstream.headers.get(name);
@@ -51,24 +54,51 @@ const copyTextHeaders = (upstream, length) => {
   headers.set('accept-ranges', 'bytes');
   headers.set('content-length', String(length));
   headers.set('x-starsectorquick-sw-version', ALIAS_WORKER_VERSION);
+  headers.set('x-starsectorquick-sw-retries', String(retries));
   return headers;
 };
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const fetchFullBody = async requestUrl => {
   const cacheKey = requestUrl.toString();
   const cached = rangeBodyCache.get(cacheKey);
   if (cached) return cached;
 
-  const upstream = await fetch(requestUrl.toString(), {
-    method: 'GET',
-    credentials: 'same-origin',
-    cache: 'no-store',
-    redirect: 'follow'
-  });
-  if (!upstream.ok) return { upstream };
+  let upstream = null;
+  let lastError = null;
+  let retries = 0;
+  for (let attempt = 0; attempt <= FULL_BODY_RETRY_DELAYS_MS.length; attempt += 1) {
+    const target = new URL(requestUrl.toString());
+    if (attempt > 0) {
+      retries = attempt;
+      target.searchParams.set('sw-body-retry', `${ALIAS_WORKER_VERSION}-${attempt}-${Date.now()}`);
+    }
+    try {
+      upstream = await fetch(target.toString(), {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        redirect: 'follow'
+      });
+      lastError = null;
+    } catch (error) {
+      upstream = null;
+      lastError = error;
+    }
+
+    if (upstream && upstream.ok) break;
+    if (upstream && !TRANSIENT_FETCH_STATUS.has(upstream.status)) return { upstream, retries };
+    if (attempt < FULL_BODY_RETRY_DELAYS_MS.length) {
+      await sleep(FULL_BODY_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  if (!upstream) throw lastError || new Error(`Unable to fetch ${requestUrl}`);
+  if (!upstream.ok) return { upstream, retries };
 
   const body = await upstream.arrayBuffer();
-  const entry = { upstream, body };
+  const entry = { upstream, body, retries };
   if (body.byteLength < 2 * 1024 * 1024) {
     rangeBodyCache.set(cacheKey, entry);
   }
@@ -79,6 +109,12 @@ const shouldNormalizeRange = (url, request) => {
   if (!request.headers.has('range')) return false;
   if (!RANGE_NORMALIZED_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return false;
   return TEXT_LIKE_DATA_FILE.test(url.pathname);
+};
+
+const shouldNormalizeFullIndexList = (url, request) => {
+  if (request.headers.has('range')) return false;
+  if (!RANGE_NORMALIZED_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return false;
+  return INDEX_LIST_FILE.test(url.pathname);
 };
 
 const shouldProxyJarRange = (url, request) => {
@@ -124,7 +160,7 @@ const respondWithNormalizedRange = async (url, request) => {
     return new Response(null, {
       status: 200,
       statusText: 'OK',
-      headers: copyTextHeaders(full.upstream, full.body.byteLength)
+      headers: copyTextHeaders(full.upstream, full.body.byteLength, full.retries)
     });
   }
 
@@ -138,11 +174,23 @@ const respondWithNormalizedRange = async (url, request) => {
   }
 
   const slice = full.body.slice(range.start, range.end + 1);
-  const headers = copyTextHeaders(full.upstream, slice.byteLength);
+  const headers = copyTextHeaders(full.upstream, slice.byteLength, full.retries);
   headers.set('content-range', `bytes ${range.start}-${range.end}/${full.body.byteLength}`);
   return new Response(slice, {
     status: 206,
     statusText: 'Partial Content',
+    headers
+  });
+};
+
+const respondWithNormalizedFullIndexList = async (url, request) => {
+  const full = await fetchFullBody(url);
+  if (full.upstream && !full.body) return full.upstream;
+
+  const headers = copyTextHeaders(full.upstream, full.body.byteLength, full.retries);
+  return new Response(request.method === 'HEAD' ? null : full.body, {
+    status: 200,
+    statusText: 'OK',
     headers
   });
 };
@@ -163,6 +211,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (shouldNormalizeFullIndexList(url, event.request)) {
+    event.respondWith(respondWithNormalizedFullIndexList(url, event.request));
+    return;
+  }
+
   const rewrite = LEGACY_REWRITES.find(([from]) => url.pathname.startsWith(from));
   if (!rewrite) return;
 
@@ -172,6 +225,11 @@ self.addEventListener('fetch', event => {
 
   if (shouldNormalizeRange(target, event.request)) {
     event.respondWith(respondWithNormalizedRange(target, event.request));
+    return;
+  }
+
+  if (shouldNormalizeFullIndexList(target, event.request)) {
+    event.respondWith(respondWithNormalizedFullIndexList(target, event.request));
     return;
   }
 
