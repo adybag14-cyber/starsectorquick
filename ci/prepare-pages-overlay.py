@@ -22,6 +22,7 @@ GENERATED_OVERLAY_ROOT = (ROOT / "test_output" / "pages-overlays").resolve()
 OVERLAY_MARKER = ".starsectorquick-pages-overlay"
 
 REQUIRED_FILES = {
+    ".gitattributes",
     "index.html",
     "launch.html",
     "starsectorquick-sw.js",
