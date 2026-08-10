@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "48199c4fe6b17efd4a3071e9b108d170f95db6ac",
-    "workflowRunId": "hermes-static-hotfix-20260810",
-    "generatedAt": "2026-08-10T19:56:24.812534+00:00",
+    "sourceSha": "497194f1d70789bf2fa798899e99ae6743c7fde8",
+    "workflowRunId": "hermes-static-hotfix-v4-20260810",
+    "generatedAt": "2026-08-10T20:21:53.189241+00:00",
     "overlayFiles": 804
   },
   "files": [
@@ -525,7 +525,7 @@
     {
       "path": "launch.html",
       "bytes": 84449,
-      "sha256": "c8a6ba60a0c78a6db81df80bc009fd884977d0125eeb7e69f6423fd95374e441"
+      "sha256": "1665770149e4ba435013130d703a63910b3644735280497c4327b3d104cd25c0"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/corvus.json",
@@ -4024,8 +4024,8 @@
     },
     {
       "path": "starsectorquick-sw.js",
-      "bytes": 8167,
-      "sha256": "7e2977a578536c408e0b542e64059f95af84aae7bd9f0c6c4352ac4b54c4238c"
+      "bytes": 9225,
+      "sha256": "3fb11616e99831b10cf9568c0d928c79f2b220a6c398d2b9e8da93886e0a67ca"
     }
   ]
 }
