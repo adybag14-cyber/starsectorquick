@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -105,14 +105,14 @@ jobs:
       - name: Validate Pages overlay from verified candidate
         run: |
           python3 ci/prepare-pages-overlay.py \
-            --output test_output/pages-overlay-check \
+            --output test_output/pages-overlays/pr-check \
             --profile corvus-asharu-compat \
             --source-sha "$GITHUB_SHA"
-          test -s test_output/pages-overlay-check/web-runtime-profile.json
-          test -s test_output/pages-overlay-check/jars/fixer_patch.jar
-          test -s test_output/pages-overlay-check/jars/starfarer.api.jar
-          test -s test_output/pages-overlay-check/jars/starfarer_obf.jar
-          test -s test_output/pages-overlay-check/jars/scripts-precompiled.jar
+          test -s test_output/pages-overlays/pr-check/web-runtime-profile.json
+          test -s test_output/pages-overlays/pr-check/jars/fixer_patch.jar
+          test -s test_output/pages-overlays/pr-check/jars/starfarer.api.jar
+          test -s test_output/pages-overlays/pr-check/jars/starfarer_obf.jar
+          test -s test_output/pages-overlays/pr-check/jars/scripts-precompiled.jar
       - name: Upload campaign-direct-main-thread-java17 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,6 +120,6 @@ jobs:
           name: campaign-runtime-campaign-direct-main-thread-java17
           path: |
             test_output/campaign-direct-main-thread-java17
-            test_output/pages-overlay-check/web-runtime-profile.json
-            test_output/pages-overlay-check/web-runtime-manifest.json
+            test_output/pages-overlays/pr-check/web-runtime-profile.json
+            test_output/pages-overlays/pr-check/web-runtime-manifest.json
           if-no-files-found: warn

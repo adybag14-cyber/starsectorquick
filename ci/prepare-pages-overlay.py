@@ -18,9 +18,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+GENERATED_OVERLAY_ROOT = (ROOT / "test_output" / "pages-overlays").resolve()
+OVERLAY_MARKER = ".starsectorquick-pages-overlay"
 
 REQUIRED_FILES = {
-    ".nojekyll",
     "index.html",
     "launch.html",
     "starsectorquick-sw.js",
@@ -60,7 +61,7 @@ def copy_file(rel: str, output: Path) -> dict[str, object]:
     src = ROOT / rel
     if not src.is_file():
         raise RuntimeError(f"overlay source missing: {src}")
-    if src.stat().st_size == 0 and rel not in {".nojekyll"}:
+    if src.stat().st_size == 0:
         raise RuntimeError(f"refusing to publish empty runtime file: {rel}")
     dst = output / rel
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -70,15 +71,36 @@ def copy_file(rel: str, output: Path) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default=".pages-overlay")
+    parser.add_argument("--output", default="test_output/pages-overlays/deploy")
     parser.add_argument("--profile", default="corvus-asharu-compat")
     parser.add_argument("--source-sha", default="")
     args = parser.parse_args()
 
-    output = (ROOT / args.output).resolve()
+    requested_output = Path(args.output)
+    if requested_output.is_absolute():
+        raise RuntimeError("overlay output must be repository-relative")
+    output = (ROOT / requested_output).resolve()
+    try:
+        output.relative_to(GENERATED_OVERLAY_ROOT)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"overlay output must be under {GENERATED_OVERLAY_ROOT.relative_to(ROOT)}: {args.output}"
+        ) from exc
+    if output == GENERATED_OVERLAY_ROOT:
+        raise RuntimeError("overlay output must be a child of the generated overlay root")
     if output.exists():
+        if not output.is_dir():
+            raise RuntimeError(f"overlay output exists and is not a directory: {output}")
+        marker = output / OVERLAY_MARKER
+        if not marker.is_file():
+            raise RuntimeError(
+                f"refusing to remove unmarked existing overlay directory: {output}"
+            )
         shutil.rmtree(output)
     output.mkdir(parents=True)
+    (output / OVERLAY_MARKER).write_text(
+        "starsectorquick-pages-overlay-v1\n", encoding="utf-8"
+    )
 
     source_sha = args.source_sha.strip() or subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -124,6 +146,8 @@ def main() -> int:
             raise RuntimeError(f"unexpected {args.profile} Corvus market data: {corvus_rel}")
 
     entries = [copy_file(rel, output) for rel in sorted(selected)]
+    (output / ".nojekyll").touch()
+    entries.insert(0, {"path": ".nojekyll", "bytes": 0, "sha256": sha256(output / ".nojekyll")})
     profile = {
         "profile": args.profile,
         "sourceSha": source_sha,
