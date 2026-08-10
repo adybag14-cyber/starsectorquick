@@ -88,7 +88,7 @@ def main() -> int:
         "fileCount": len(entries),
         "files": entries,
     }
-    index_path.write_text(json.dumps(manifest, separators=(",", ":")) + "\n", encoding="utf-8")
+    index_path.write_bytes((json.dumps(manifest, separators=(",", ":")) + "\n").encode("utf-8"))
 
     if pack_path.stat().st_size != offset:
         raise RuntimeError("data-pack size validation failed")
@@ -119,9 +119,9 @@ def main() -> int:
         profile["overlayFiles"] = len(runtime_files)
         runtime_manifest["profile"] = profile
         runtime_manifest["files"] = runtime_files
-        profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
-        runtime_manifest_path.write_text(
-            json.dumps(runtime_manifest, indent=2) + "\n", encoding="utf-8"
+        profile_path.write_bytes((json.dumps(profile, indent=2) + "\n").encode("utf-8"))
+        runtime_manifest_path.write_bytes(
+            (json.dumps(runtime_manifest, indent=2) + "\n").encode("utf-8")
         )
 
     print(
