@@ -52,138 +52,74 @@ import data.scripts.world.systems.Zagan;
 public class SectorGen implements SectorGeneratorPlugin {
 
 	public void generate(SectorAPI sector) {
-		//ClassLoader cl = Global.getSettings().getScriptClassLoader();
-		
-		StarSystemAPI system = sector.createStarSystem("Corvus");
-		//system.getLocation().set(16000 - 8000, 9000 - 10000);
-		system.setBackgroundTextureFilename("graphics/backgrounds/background4.jpg");
-		
-		//sector.setCurrentLocation(system);
-		sector.setRespawnLocation(system);
-		sector.getRespawnCoordinates().set(-2500, -3500);
-		
-		initFactionRelationships(sector);
-		
-		new Galatia().generate(sector);
-		new Askonia().generate(sector);
-		new Eos().generate(sector);
-		new Valhalla().generate(sector);
-		new Arcadia().generate(sector);
-		new Magec().generate(sector);
-		new Corvus().generate(sector);
-		new Aztlan().generate(sector);
-		new Samarra().generate(sector);
-		new Penelope().generate(sector);
-		new Yma().generate(sector);
-		new Hybrasil().generate(sector);
-		new Duzahk().generate(sector);
-		new TiaTaxet().generate(sector);
-		new Canaan().generate(sector);
-		new AlGebbar().generate(sector);
-		new Isirah().generate(sector);
-		new KumariKandam().generate(sector);
-		new Naraka().generate(sector);
-		new Thule().generate(sector);
-		new Mayasura().generate(sector);
-		new Zagan().generate(sector);
-		new Westernesse().generate(sector);
-		new Tyle().generate(sector);
-		
-		LocationAPI hyper = Global.getSector().getHyperspace();
-		SectorEntityToken atlanticLabel = hyper.addCustomEntity("atlantic_label_id", null, "atlantic_label", null);
-		SectorEntityToken perseanLabel = hyper.addCustomEntity("persean_label_id", null, "persean_label", null);
-		SectorEntityToken luddicLabel = hyper.addCustomEntity("luddic_label_id", null, "luddic_label", null);
-		SectorEntityToken zinLabel = hyper.addCustomEntity("zin_label_id", null, "zin_label", null);
-		SectorEntityToken abyssLabel = hyper.addCustomEntity("opabyss_label_id", null, "opabyss_label", null);
-		SectorEntityToken telmunLabel = hyper.addCustomEntity("telmun_label_id", null, "telmun_label", null);
-		SectorEntityToken cathedralLabel = hyper.addCustomEntity("cathedral_label_id", null, "cathedral_label", null);
-		SectorEntityToken coreLabel = hyper.addCustomEntity("core_label_id", null, "core_label", null);
-		
-		atlanticLabel.setFixedLocation(500, -2000);
-		perseanLabel.setFixedLocation(-10000, 1000);
-		luddicLabel.setFixedLocation(-14000, -9500);
-		zinLabel.setFixedLocation(-22000, -17000); 
-		telmunLabel.setFixedLocation(-16000, 0);
-		cathedralLabel.setFixedLocation(-12700, -12000);
-		coreLabel.setFixedLocation(0, -6000);
-		
-		abyssLabel.setFixedLocation(-65000, -47000);
-		
-		/*SectorEntityToken deep_hyperspace_test = Global.getSector().getHyperspace().addTerrain(Terrain.NEBULA, new BaseTiledTerrain.TileParams(
-				"   xx     " +
-				"   xxx    " +
-				"  xxx x   " +
-				"  xx   x  " +
-				" xxxx xxx " +
-				"  xxxxxxx " +
-				" xxxxxxxxx" +
-				" xxxxxxxxx" +
-				"  xxxxxxx " +
-				" xxxxxxx  " +
-				" x xxxxx  " +
-				"  xxxxxx  " +
-				" xxxx xxx " +
-				"xxxx  xxx " +
-				" xxxx     " +
-				"xxxxxxxxx " +
-				"  xxxxxxxx" +
-				" xxxxxxxxx" +
-				"  xxxxxxx " +
-				"   xxx    ",
-				10, 20, // size of the nebula grid, should match above string
-				"terrain", "deep_hyperspace", 4, 4));
-		
-		deep_hyperspace_test.getLocation().set(5000,5000);*/
-		
-		
-		SectorEntityToken deep_hyperspace = Misc.addNebulaFromPNG("data/campaign/terrain/hyperspace_map.png",
-		//SectorEntityToken deep_hyperspace = Misc.addNebulaFromPNG("data/campaign/terrain/hyperspace_map_filled.png",
-				  0, 0, // center of nebula
-				  Global.getSector().getHyperspace(), // location to add to
-				  "terrain", "deep_hyperspace", // "nebula_blue", // texture to use, uses xxx_map for map
-				  4, 4, Terrain.HYPERSPACE, null); // number of cells in texture
-		
-		
-		
-		// ensure area around stars is clear
-		HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
-		NebulaEditor editor = new NebulaEditor(plugin);
-		float minRadius = plugin.getTileSize() * 2f;
-		for (StarSystemAPI curr : sector.getStarSystems()) {
-			float radius = curr.getMaxRadiusInHyperspace() * 0.5f;
-			editor.clearArc(curr.getLocation().x, curr.getLocation().y, 0, radius + minRadius * 0.5f, 0, 360f);
-			editor.clearArc(curr.getLocation().x, curr.getLocation().y, 0, radius + minRadius, 0, 360f, 0.25f);
-		}
-		
-		
-		
-//		PirateSpawnPoint pirateSpawn = new PirateSpawnPoint(sector, sector.getHyperspace(), 1, 15, system.getHyperspaceAnchor());
-//		system.addSpawnPoint(pirateSpawn);
-//		for (int i = 0; i < 2; i++) {
-//			pirateSpawn.spawnFleet();
-//		}
-		
-		// need to do this after hyperspace terrain exists
-		//SectorProcGen.generate();
-		// this is done through settings.json, "plugins"->"newGameSectorProcGen"
-		
-		sector.registerPlugin(new CoreCampaignPluginImpl());
-		sector.addScript(new CoreScript());
-		sector.addScript(new CoreEventProbabilityManager());
-		
-		sector.addScript(new EconomyFleetRouteManager());
-		//sector.addScript(new MercFleetManager());
-		sector.addScript(new MercFleetManagerV2());
-		
-		
-		sector.addScript(new DisposablePirateFleetManager());
-		sector.addScript(new DisposableLuddicPathFleetManager());
-		
-//		sector.addScript(new LuddicPathFleetManager());
-//		sector.addScript(new PirateFleetManager());
-//		sector.addScript(new BountyPirateFleetManager());
-		
-	}
+        // Browser compatibility sector. Match the authoritative precompiled
+        // diagnostic path: preserve the stock Corvus shell/current/respawn
+        // skeleton, faction relationships and core plugin/scripts, while
+        // deferring heavyweight system population.
+        System.out.println("BrowserSectorGenDiag: begin lightweight SectorGen.generate");
+        try {
+            System.out.println("BrowserSectorGenDiag: before Corvus shell bootstrap");
+            StarSystemAPI system = sector.createStarSystem("Corvus");
+            system.setBackgroundTextureFilename("graphics/backgrounds/background4.jpg");
+            sector.setCurrentLocation(system);
+            sector.setRespawnLocation(system);
+            sector.getRespawnCoordinates().set(-2500, -3500);
+            System.out.println("BrowserSectorGenDiag: after Corvus shell bootstrap");
+        } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: Corvus shell bootstrap partial: " + t);
+            try {
+                Global.getLogger(SectorGen.class).warn(
+                        "SectorGen: browser Corvus shell bootstrap was partial", t);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        try {
+            System.out.println("BrowserSectorGenDiag: before initFactionRelationships");
+            initFactionRelationships(sector);
+            System.out.println("BrowserSectorGenDiag: after initFactionRelationships");
+        } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: initFactionRelationships partial: " + t);
+            try {
+                Global.getLogger(SectorGen.class).warn(
+                        "SectorGen: browser relationship initialization was partial", t);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        try {
+            System.out.println("BrowserSectorGenDiag: before CoreCampaignPluginImpl registration");
+            sector.registerPlugin(new CoreCampaignPluginImpl());
+            System.out.println("BrowserSectorGenDiag: after CoreCampaignPluginImpl registration");
+        } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: CoreCampaignPluginImpl registration skipped: " + t);
+            try {
+                Global.getLogger(SectorGen.class).warn(
+                        "SectorGen: browser core campaign plugin registration skipped", t);
+            } catch (Throwable ignored) {
+            }
+        }
+        try {
+            System.out.println("BrowserSectorGenDiag: before core script registration");
+            sector.addScript(new CoreScript());
+            sector.addScript(new CoreEventProbabilityManager());
+            System.out.println("BrowserSectorGenDiag: after core script registration");
+        } catch (Throwable t) {
+            System.out.println("BrowserSectorGenDiag: core script registration partial: " + t);
+            try {
+                Global.getLogger(SectorGen.class).warn(
+                        "SectorGen: browser core script registration was partial", t);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        System.out.println("BrowserSectorGenDiag: end lightweight SectorGen.generate");
+        try {
+            Global.getLogger(SectorGen.class).warn(
+                    "SectorGen: using lightweight CheerpJ browser sector; desktop core-system generation deferred.");
+        } catch (Throwable ignored) {
+        }
+    }
 	
 	public static void initFactionRelationships(SectorAPI sector) {
 		

@@ -1,107 +1,107 @@
-ammo_feeder_oneshot.ogg
-burn_drive_activate.ogg
-burn_drive_deactivate.ogg
-burn_drive_loop.ogg
-burn_drive_oneshot.ogg
-canister_flak_01.ogg
-canister_flak_02.ogg
-canister_flak_03.ogg
-canister_flak_04.ogg
-canister_flak_05.ogg
-canister_flak_06.ogg
-canister_flak_explosion_01.ogg
-canister_flak_explosion_02.ogg
-canister_flak_explosion_03.ogg
-canister_flak_explosion_04.ogg
-canister_flak_explosion_05.ogg
-combat_readiness_malfunctions_engine_01.ogg
-combat_readiness_malfunctions_engine_02.ogg
-combat_readiness_malfunctions_engine_03.ogg
-combat_readiness_malfunctions_weapon_large_01.ogg
-combat_readiness_malfunctions_weapon_medium_01.ogg
-combat_readiness_malfunctions_weapon_small_01.ogg
-damper_field_activate.ogg
-damper_field_deactivate.ogg
-damper_field_loop.ogg
-disabled_large.ogg
-disabled_medium.ogg
-disabled_small.ogg
-drone_launch.ogg
-emp_emitter_activate.ogg
-emp_emitter_impact_01.ogg
-emp_emitter_impact_02.ogg
-emp_emitter_impact_03.ogg
-emp_emitter_loop.ogg
-entropy_amplifier_activate.ogg
-entropy_amplifier_deactivate.ogg
-entropy_amplifier_loop.ogg
-fast_missile_racks_oneshot.ogg
-fighter_launch.ogg
-flare_launcher_active_oneshot.ogg
-flare_launcher_active_triplet.ogg
-flare_launcher_passive_oneshot.ogg
-fortress_shield_loop.ogg
-high_energy_focus_activate.ogg
-high_energy_focus_deactivate.ogg
-high_energy_focus_loop.ogg
-interdictor_array.ogg
-lidar_array_targeting.ogg
-lidar_array_windup.ogg
-maneuvering_jets_activate.ogg
-maneuvering_jets_loop.ogg
-mine_strike_explosion_01.ogg
-mine_strike_explosion_02.ogg
-mine_strike_explosion_03.ogg
-mine_strike_explosion_04.ogg
-mine_strike_pinged_01.ogg
-mine_strike_pinged_02.ogg
-mine_strike_pinged_03.ogg
-mine_strike_pinged_04.ogg
-mine_strike_teleport_01.ogg
-mine_strike_teleport_02.ogg
-mine_strike_teleport_03.ogg
-mine_strike_teleport_04.ogg
-mine_strike_teleport_05.ogg
-mine_strike_windup_01.ogg
-mine_strike_windup_02.ogg
-mine_strike_windup_03.ogg
-mine_strike_windup_04.ogg
-mote_attractor_activation.ogg
-mote_attractor_ambience.ogg
-mote_attractor_ambience_DARK_VARIANT.ogg
-mote_attractor_impact_heavy_01.ogg
-mote_attractor_impact_heavy_02.ogg
-mote_attractor_impact_heavy_03.ogg
-mote_attractor_impact_heavy_04.ogg
-mote_attractor_impact_light_01.ogg
-mote_attractor_impact_light_02.ogg
-mote_attractor_impact_light_03.ogg
-mote_attractor_impact_light_04.ogg
-mote_attractor_spawn_01.ogg
-mote_attractor_targeted_empty_space_01.ogg
-mote_attractor_targeted_empty_space_02.ogg
-mote_attractor_targeted_ship_01.ogg
-mote_attractor_targeted_ship_02.ogg
-nova_burst_charge_1.ogg
-nova_burst_charge_2.ogg
-nova_burst_charge_3.ogg
-nova_burst_detonate_1.ogg
-nova_burst_detonate_2.ogg
-nova_burst_detonate_3.ogg
-orion_device_charge_1.ogg
-orion_device_detonate_1.ogg
-out_of_ammo_01.ogg
-phase_cloak_activate.ogg
-phase_cloak_collision.ogg
-phase_cloak_deactivate.ogg
-phase_skimmer_oneshot.ogg
-phase_teleporter_oneshot.ogg
-quantum_disruptor_oneshot.ogg
-recall_device_oneshot.ogg
-reserve_wing_oneshot.ogg
-targeting_feed_activate.ogg
-targeting_feed_loop.ogg
-temporal_shell_activate.ogg
-temporal_shell_deactivate.ogg
-temporal_shell_loop.ogg
-termination_sequence_activate.ogg
+ammo_feeder_oneshot.ogg	14500
+burn_drive_activate.ogg	26954
+burn_drive_deactivate.ogg	10579
+burn_drive_loop.ogg	47664
+burn_drive_oneshot.ogg	64124
+canister_flak_01.ogg	6826
+canister_flak_02.ogg	7076
+canister_flak_03.ogg	7076
+canister_flak_04.ogg	6458
+canister_flak_05.ogg	7100
+canister_flak_06.ogg	6701
+canister_flak_explosion_01.ogg	14891
+canister_flak_explosion_02.ogg	14910
+canister_flak_explosion_03.ogg	13783
+canister_flak_explosion_04.ogg	15477
+canister_flak_explosion_05.ogg	15578
+combat_readiness_malfunctions_engine_01.ogg	11673
+combat_readiness_malfunctions_engine_02.ogg	12304
+combat_readiness_malfunctions_engine_03.ogg	11569
+combat_readiness_malfunctions_weapon_large_01.ogg	17317
+combat_readiness_malfunctions_weapon_medium_01.ogg	16812
+combat_readiness_malfunctions_weapon_small_01.ogg	14805
+damper_field_activate.ogg	27728
+damper_field_deactivate.ogg	27541
+damper_field_loop.ogg	61379
+disabled_large.ogg	14453
+disabled_medium.ogg	12881
+disabled_small.ogg	10768
+drone_launch.ogg	9687
+emp_emitter_activate.ogg	7774
+emp_emitter_impact_01.ogg	25698
+emp_emitter_impact_02.ogg	28100
+emp_emitter_impact_03.ogg	28056
+emp_emitter_loop.ogg	218777
+entropy_amplifier_activate.ogg	68412
+entropy_amplifier_deactivate.ogg	30113
+entropy_amplifier_loop.ogg	419557
+fast_missile_racks_oneshot.ogg	15391
+fighter_launch.ogg	8281
+flare_launcher_active_oneshot.ogg	11343
+flare_launcher_active_triplet.ogg	26183
+flare_launcher_passive_oneshot.ogg	15086
+fortress_shield_loop.ogg	95751
+high_energy_focus_activate.ogg	7748
+high_energy_focus_deactivate.ogg	8026
+high_energy_focus_loop.ogg	142084
+interdictor_array.ogg	67981
+lidar_array_targeting.ogg	20545
+lidar_array_windup.ogg	52888
+maneuvering_jets_activate.ogg	6713
+maneuvering_jets_loop.ogg	55743
+mine_strike_explosion_01.ogg	15337
+mine_strike_explosion_02.ogg	19682
+mine_strike_explosion_03.ogg	16148
+mine_strike_explosion_04.ogg	18584
+mine_strike_pinged_01.ogg	16873
+mine_strike_pinged_02.ogg	16553
+mine_strike_pinged_03.ogg	16799
+mine_strike_pinged_04.ogg	16777
+mine_strike_teleport_01.ogg	18155
+mine_strike_teleport_02.ogg	17860
+mine_strike_teleport_03.ogg	16862
+mine_strike_teleport_04.ogg	17388
+mine_strike_teleport_05.ogg	17231
+mine_strike_windup_01.ogg	17157
+mine_strike_windup_02.ogg	18113
+mine_strike_windup_03.ogg	17571
+mine_strike_windup_04.ogg	17077
+mote_attractor_activation.ogg	14617
+mote_attractor_ambience.ogg	304599
+mote_attractor_ambience_DARK_VARIANT.ogg	231965
+mote_attractor_impact_heavy_01.ogg	17784
+mote_attractor_impact_heavy_02.ogg	16181
+mote_attractor_impact_heavy_03.ogg	17431
+mote_attractor_impact_heavy_04.ogg	16950
+mote_attractor_impact_light_01.ogg	16591
+mote_attractor_impact_light_02.ogg	16016
+mote_attractor_impact_light_03.ogg	16252
+mote_attractor_impact_light_04.ogg	16325
+mote_attractor_spawn_01.ogg	23239
+mote_attractor_targeted_empty_space_01.ogg	17389
+mote_attractor_targeted_empty_space_02.ogg	18051
+mote_attractor_targeted_ship_01.ogg	33344
+mote_attractor_targeted_ship_02.ogg	38029
+nova_burst_charge_1.ogg	11745
+nova_burst_charge_2.ogg	11741
+nova_burst_charge_3.ogg	11755
+nova_burst_detonate_1.ogg	18371
+nova_burst_detonate_2.ogg	18654
+nova_burst_detonate_3.ogg	18637
+orion_device_charge_1.ogg	8564
+orion_device_detonate_1.ogg	25252
+out_of_ammo_01.ogg	14805
+phase_cloak_activate.ogg	25892
+phase_cloak_collision.ogg	38515
+phase_cloak_deactivate.ogg	7947
+phase_skimmer_oneshot.ogg	21276
+phase_teleporter_oneshot.ogg	30009
+quantum_disruptor_oneshot.ogg	65150
+recall_device_oneshot.ogg	12638
+reserve_wing_oneshot.ogg	13176
+targeting_feed_activate.ogg	7222
+targeting_feed_loop.ogg	82337
+temporal_shell_activate.ogg	65840
+temporal_shell_deactivate.ogg	74933
+temporal_shell_loop.ogg	491312
+termination_sequence_activate.ogg	15869

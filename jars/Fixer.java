@@ -1,4 +1,4 @@
-﻿import java.io.File;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -487,6 +487,8 @@ public class Fixer {
                 return;
             }
 
+            settingsApi = wrapSettingsApiNullSafe(settingsApi);
+
             Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
             Method setSettings = findGlobalSetSettingsMethod(globalClass);
             if (setSettings != null) {
@@ -546,6 +548,65 @@ public class Fixer {
         } catch (Throwable ignored) {
         }
         return null;
+    }
+
+    private static Object wrapSettingsApiNullSafe(final Object delegate) {
+        if (delegate == null) {
+            return null;
+        }
+        try {
+            final Class<?> settingsApiInterface =
+                    Class.forName("com.fs.starfarer.api.SettingsAPI");
+            if (!settingsApiInterface.isInstance(delegate)) {
+                return delegate;
+            }
+            ClassLoader loader = settingsApiInterface.getClassLoader();
+            if (loader == null) {
+                loader = delegate.getClass().getClassLoader();
+            }
+            if (loader == null) {
+                loader = Fixer.class.getClassLoader();
+            }
+            final boolean[] campaignStateNullLogged = new boolean[] {false};
+            return java.lang.reflect.Proxy.newProxyInstance(
+                    loader,
+                    new Class<?>[] {settingsApiInterface},
+                    new java.lang.reflect.InvocationHandler() {
+                        @Override
+                        public Object invoke(Object proxy, Method method, Object[] args)
+                                throws Throwable {
+                            try {
+                                return method.invoke(delegate, args);
+                            } catch (Throwable invokeError) {
+                                // CheerpJ can surface the delegate's exception directly instead of
+                                // wrapping it in InvocationTargetException. Handle both forms.
+                                Throwable cause = invokeError;
+                                if (invokeError instanceof java.lang.reflect.InvocationTargetException) {
+                                    Throwable reflectedCause =
+                                            ((java.lang.reflect.InvocationTargetException) invokeError).getCause();
+                                    if (reflectedCause != null) {
+                                        cause = reflectedCause;
+                                    }
+                                }
+                                if ("isInCampaignState".equals(method.getName())
+                                        && cause instanceof NullPointerException) {
+                                    if (!campaignStateNullLogged[0]) {
+                                        campaignStateNullLogged[0] = true;
+                                        System.out.println(
+                                                "Fixer: SettingsAPI.isInCampaignState returned false while AppDriver state was not yet initialized.");
+                                    }
+                                    return Boolean.FALSE;
+                                }
+                                throw cause == null ? invokeError : cause;
+                            }
+                        }
+                    });
+        } catch (Throwable t) {
+            System.out.println(
+                    "Fixer: unable to install null-safe SettingsAPI proxy; using original provider: "
+                            + describeThrowableChain(t));
+            return delegate;
+        }
     }
 
     private static Method findGlobalSetSettingsMethod(Class<?> globalClass) {
@@ -1957,9 +2018,8 @@ public class Fixer {
                         stateId = currentState.getClass().getName();
                     }
                 }
-                if (stateId == null && titleStateFromMap != null) {
-                    stateId = TITLE_STATE_ID;
-                }
+                // Do not synthesize Title Screen State from states[] while AppDriver
+                // still reports no current state. State registration is not state ownership.
 
                 if (stateId != null && !stateId.equals(lastStateId)) {
                     System.out.println("Fixer: auto campaign watcher state=" + stateId);
@@ -2122,7 +2182,7 @@ public class Fixer {
                     }
                 }
                 Object titleState =
-                        isTitleState(stateId, currentState) ? currentState : titleStateFromMap;
+                        isTitleState(stateId, currentState) ? currentState : null;
                 if (!isTitleState(stateId, titleState) || titleState == null) {
                     titleStateSince = -1L;
                     directNoAdvanceTransitionAttempts = 0;
@@ -3026,15 +3086,8 @@ public class Fixer {
             Map states = statesObj instanceof Map ? (Map) statesObj : null;
             Map session = sessionObj instanceof Map ? (Map) sessionObj : null;
 
-            if (currentState == null && states != null && startState instanceof String) {
-                try {
-                    Object titleState = states.get(TITLE_STATE_ID);
-                    if (titleState != null) {
-                        currentState = titleState;
-                    }
-                } catch (Throwable ignored) {
-                }
-            }
+            // currentState intentionally remains null until AppDriver itself enters a state.
+            // Presence in the states map is construction/registration, not state ownership.
 
             return new DriverContext(
                     driver,
@@ -3827,7 +3880,15 @@ public class Fixer {
                 .append(" state=")
                 .append(target.getState())
                 .append(" stack=");
-        StackTraceElement[] trace = target.getStackTrace();
+        StackTraceElement[] trace;
+        try {
+            trace = target.getStackTrace();
+        } catch (Throwable t) {
+            sb.append("<unavailable:")
+                    .append(t.getClass().getName())
+                    .append(">");
+            return sb.toString();
+        }
         if (trace == null || trace.length == 0) {
             sb.append("<empty>");
             return sb.toString();
@@ -3859,13 +3920,19 @@ public class Fixer {
                 autoCampaignCoreSpecBaselinePendingSince = now;
             }
             autoCampaignCoreSpecBaselinePendingCount++;
+            long pendingMs = Math.max(0L, now - autoCampaignCoreSpecBaselinePendingSince);
             if (autoCampaignCoreSpecBaselinePendingCount == 1
-                    || autoCampaignCoreSpecBaselinePendingCount % 30 == 0) {
+                    || autoCampaignCoreSpecBaselinePendingCount % 20 == 0) {
                 System.out.println(
-                        "Fixer: direct-new-game non-mutating mode defers core spec baseline to ResourceLoaderState.init; proceeding without pre-loader SpecStore warmup: "
+                        "Fixer: direct-new-game waiting for official ResourceLoaderState core-spec baseline before create (pending="
+                                + pendingMs
+                                + "ms): "
                                 + baselineIssue);
             }
-            return null;
+            return "core spec baseline waiting for ResourceLoaderState ("
+                    + pendingMs
+                    + "ms): "
+                    + baselineIssue;
         }
 
         String repairedBaselineIssue = maybeRepairCoreSpecBaselineForDirectNewGame(baselineIssue);
@@ -6330,7 +6397,7 @@ public class Fixer {
             boolean skipDirectUiPreflight =
                     Boolean.parseBoolean(
                             System.getProperty(
-                                    "starsector.autoCampaignSkipDirectUiPreflight", "true"));
+                                    "starsector.autoCampaignSkipDirectUiPreflight", "false"));
             if (skipDirectUiPreflight) {
                 System.out.println(
                         "Fixer: direct-new-game ui-preflight skipped by starsector.autoCampaignSkipDirectUiPreflight.");
@@ -6467,13 +6534,14 @@ public class Fixer {
             directNewGameLastNullMarker = "before-preinvoke-readiness-check";
             String preInvokeReadiness = checkDirectNewGameRuntimeReadiness();
             if (preInvokeReadiness == null) {
+                // A synthetic fleet/market can satisfy the lightweight readiness probe before
+                // CampaignGameManager has actually run create(). Treat that as partial runtime
+                // state, not a completed new game, or the driver enters an uninitialized black
+                // CampaignState that never owns the render loop.
                 System.out.println(
-                        "Fixer: direct-new-game pre-invoke readiness="
-                                + String.valueOf(preInvokeReadiness)
-                                + "; skipping invoke-create and continuing transition flow.");
-                directNewGameLastNullMarker = "pre-invoke-ready";
-                System.out.println("Fixer: direct-new-game return-null marker=pre-invoke-ready");
-                return null;
+                        "Fixer: direct-new-game pre-invoke readiness is superficially ready; "
+                                + "requiring the real campaign create() path before transition.");
+                directNewGameLastNullMarker = "pre-invoke-partial-runtime-require-create";
             }
             if ("player-fleet-null".equals(preInvokeReadiness)) {
                 String settleWindowIssue = checkDirectNewGameCreateSettleWindow();
@@ -6596,6 +6664,10 @@ public class Fixer {
                                     @Override
                                     public void run() {
                                         try {
+                                            System.setProperty(
+                                                    "starsector.campaignCreateInProgress", "true");
+                                            System.out.println(
+                                                    "Fixer: campaign create worker armed BaseGameState title-advance guard.");
                                             invokeResultHolder[0] =
                                                     invokeCreateMethod.invoke(
                                                             null,
@@ -6603,6 +6675,14 @@ public class Fixer {
                                                             invokeCreateCampaignState);
                                         } catch (Throwable t) {
                                             invokeErrorHolder[0] = t;
+                                        } finally {
+                                            try {
+                                                System.clearProperty(
+                                                        "starsector.campaignCreateInProgress");
+                                            } catch (Throwable ignored) {
+                                            }
+                                            System.out.println(
+                                                    "Fixer: campaign create worker released BaseGameState title-advance guard.");
                                         }
                                     }
                                 },
@@ -6618,7 +6698,9 @@ public class Fixer {
                                         invokeCreateWatchdogStop,
                                         "direct-new-game invoke-create");
                     }
-                    invokeCreateThread.join(invokeCallTimeoutMs);
+                    System.out.println(
+                            "Fixer: waiting for the single campaign create worker to finish; browser timeout is the outer guard.");
+                    invokeCreateThread.join();
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     retainInvokeCreateLease = true;
@@ -7110,9 +7192,24 @@ public class Fixer {
                     String tempPlanetCleanupIssue =
                             cleanupTemporaryPlanetSpecsForDirectNewGame(
                                     "procgen-nebula-background");
-                    maybeLogNewGamePreflightIssue(
-                            "procgen nebula/background observed in non-mutating mode; deferring procgen preload to ResourceLoaderState.init. tempPlanetCleanup="
-                                    + String.valueOf(tempPlanetCleanupIssue));
+                    String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
+                    String starIssue = ensureStarGenSpecsReadyForDirectNewGame();
+                    String pickerIssue = refreshProcgenBackgroundPickersForDirectNewGame();
+                    if (ageIssue == null && starIssue == null && pickerIssue == null) {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen nebula/background targeted runtime repair succeeded in non-mutating mode; preserving repaired age/star tables for retry. tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                    } else {
+                        maybeLogNewGamePreflightIssue(
+                                "procgen nebula/background targeted runtime repair issues in non-mutating mode: age="
+                                        + String.valueOf(ageIssue)
+                                        + ", star="
+                                        + String.valueOf(starIssue)
+                                        + ", picker="
+                                        + String.valueOf(pickerIssue)
+                                        + ", tempPlanetCleanup="
+                                        + String.valueOf(tempPlanetCleanupIssue));
+                    }
                     return "direct new-game preflight pending";
                 }
                 String ageIssue = ensureAgeGenSpecsReadyForDirectNewGame();
@@ -7260,15 +7357,11 @@ public class Fixer {
             }
             if (isCampaignGameManagerNpe(t) && isSyntheticPlayerFleetFallbackEnabled()) {
                 String recoveryReadiness = checkDirectNewGameRuntimeReadiness();
-                if (recoveryReadiness == null) {
-                    directNewGameLastNullMarker = "campaign-newgame-npe-synthetic-recovered";
-                    System.out.println(
-                            "Fixer: direct new-game campaign-manager NPE recovered via synthetic partial runtime readiness.");
-                    return null;
-                }
                 System.out.println(
-                        "Fixer: direct new-game campaign-manager NPE synthetic recovery readiness="
-                                + String.valueOf(recoveryReadiness));
+                        "Fixer: direct new-game campaign-manager NPE is not accepted as successful creation; "
+                                + "synthetic readiness="
+                                + String.valueOf(recoveryReadiness)
+                                + ". Logging the original create() failure instead of entering a partial CampaignState.");
             }
             logDirectNewGameDataSnapshot(lastDirectNewGameData);
             logDirectNewGameRuntimeSnapshot();
@@ -18664,18 +18757,14 @@ public class Fixer {
                 }
             }
             if (playerFleet == null && isSyntheticPlayerFleetFallbackEnabled()) {
-                Object synthesizedFleet =
-                        tryCreateSyntheticPlayerFleetForReadiness(sector, "runtime-readiness");
-                if (synthesizedFleet != null) {
-                    playerFleet = synthesizedFleet;
-                }
+                System.out.println(
+                        "Fixer: strict runtime readiness observed player-fleet-null; synthetic fleet recovery suppressed.");
             }
             if (playerFleet == null) {
                 return "player-fleet-null";
             }
             String worldPopulationIssue =
-                    ensureCampaignWorldPopulatedForReadiness(
-                            sector, economy, "runtime-readiness");
+                    checkCampaignWorldPopulationForPlayerFleetNullTransition(null);
             if (worldPopulationIssue != null) {
                 return worldPopulationIssue;
             }
@@ -18995,6 +19084,16 @@ public class Fixer {
     private static boolean setCampaignStateIfPossible(DriverContext ctx, Object titleState) {
         Object resolvedTitleState = resolveTitleStateForTransition(ctx, titleState);
         maybePrepareUiForCampaignTransition();
+        if (resolvedTitleState != null) {
+            final String transitionKey = "starsector.pendingStateTransition";
+            String pendingTransition = System.getProperty(transitionKey);
+            if (pendingTransition == null || pendingTransition.length() == 0) {
+                System.setProperty(transitionKey, CAMPAIGN_STATE_ID);
+                System.out.println(
+                        "Fixer: queued Campaign State transition for the AppDriver render thread.");
+            }
+            return true;
+        }
         Object beforeState = readCurrentStateFromDriver(ctx);
         if (ctx != null && ctx.driver != null && ctx.driverClass != null) {
             try {
@@ -19011,18 +19110,9 @@ public class Fixer {
                         return false;
                     }
                     forceStateFaderOut(resolvedTitleState);
-                    if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
-                        if (forceCampaignStateActivation(ctx, resolvedTitleState, beforeState)) {
-                            System.out.println(
-                                    "Fixer: Campaign State transition fallback succeeded via direct state activation after driver.goToState no-advance.");
-                            return true;
-                        }
-                        System.out.println(
-                                "Fixer: requested Campaign State via driver.goToState; awaiting asynchronous state advance.");
-                        return true;
-                    }
                     System.out.println(
-                            "Fixer: requested transition to Campaign State (driver.goToState).");
+                            "Fixer: requested Campaign State via driver.goToState; "
+                                    + "leaving state ownership on the AppDriver render thread.");
                     return true;
                 }
             } catch (Throwable t) {
@@ -19049,17 +19139,9 @@ public class Fixer {
                 return false;
             }
             forceStateFaderOut(resolvedTitleState);
-            if (!didCampaignTransitionAdvance(ctx, resolvedTitleState, beforeState)) {
-                if (forceCampaignStateActivation(ctx, resolvedTitleState, beforeState)) {
-                    System.out.println(
-                            "Fixer: Campaign State transition fallback succeeded via direct state activation after titleState.goToState no-advance.");
-                    return true;
-                }
-                System.out.println(
-                        "Fixer: requested Campaign State via titleState.goToState; awaiting asynchronous state advance.");
-                return true;
-            }
-            System.out.println("Fixer: requested transition to Campaign State (titleState.goToState).");
+            System.out.println(
+                    "Fixer: requested Campaign State via titleState.goToState; "
+                            + "leaving state ownership on the AppDriver render thread.");
             return true;
         } catch (Throwable t) {
             System.out.println("Fixer: unable to request Campaign State transition: " + t);

@@ -3,7 +3,7 @@ const { default: glMatrix } = await import("./gl-matrix-loader.js");
 
 const glCanvas = window.lwjglCanvasElement;
 if (!(glCanvas instanceof HTMLCanvasElement)) throw new Error("window.lwjglCanvasElement is not set or is not a canvas");
-const glCtx = glCanvas.getContext("webgl2", {antialias: false, alpha: false});
+const glCtx = glCanvas.getContext("webgl2", {antialias: false, alpha: false, preserveDrawingBuffer: true});
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 
@@ -274,6 +274,14 @@ var immediateModeData =
 };
 var verboseLog = false;
 var frameCount = 0;
+var presentationStats = {
+	swapCount: 0,
+	samples: [],
+	lastFramebufferStatus: null,
+	lastViewport: null
+};
+if(typeof window !== "undefined")
+	window.__lwjglPresentationStats = presentationStats;
 // Set to a non-zero value to stop after a certain number of frames
 var frameLimit = 0;
 var unsupportedDrawModes = new Set();
@@ -289,13 +297,32 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_MATRIX_STACK_GUARD_V1: OpenGL matrix stacks always retain their base identity matrix.
+var matrixStackWarnings = new Set();
+function ensureCurMatrixStack()
+{
+	if(!Array.isArray(curMatrixStack))
+		throw new Error("LWJGL current matrix stack is invalid");
+	if(curMatrixStack.length === 0)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-empty-recovery",
+			"LWJGL recovered an empty matrix stack with an identity matrix."
+		);
+		curMatrixStack.push(glMatrix.mat4.create());
+	}
+	return curMatrixStack;
+}
 function getCurMatrixTop()
 {
-	return curMatrixStack[curMatrixStack.length - 1];
+	var stack = ensureCurMatrixStack();
+	return stack[stack.length - 1];
 }
 function setCurMatrixTop(m)
 {
-	curMatrixStack[curMatrixStack.length - 1] = m;
+	var stack = ensureCurMatrixStack();
+	stack[stack.length - 1] = m;
 }
 
 function ensureFramebufferSize()
@@ -387,10 +414,18 @@ function ensureImmediateArrayCapacity(buf, neededLength)
 	nextBuf.set(buf);
 	return nextBuf;
 }
+// LWJGL_DISPLAY_LIST_NONFATAL_V1: non-listable legacy calls execute immediately, as in desktop GL.
+var displayListCompatibilityWarnings = new Set();
 function checkNoList(list)
 {
 	if(list != null)
-		throw new Error("Unsupported command in list");
+	{
+		warnOnce(
+			displayListCompatibilityWarnings,
+			"immediate-command-during-list",
+			"LWJGL executed a non-recorded legacy OpenGL command immediately while compiling a display list."
+		);
+	}
 }
 function pushInList(list, args, callee)
 {
@@ -805,6 +840,43 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		console.warn("SwapBuffer");
 	ensureFramebufferSize();
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+	presentationStats.swapCount++;
+	if(presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
+	{
+		try
+		{
+			var sampleWidth = Math.max(1, Math.min(fbWidth, 256));
+			var sampleHeight = Math.max(1, Math.min(fbHeight, 192));
+			var sampleX = Math.max(0, Math.floor((fbWidth - sampleWidth) / 2));
+			var sampleY = Math.max(0, Math.floor((fbHeight - sampleHeight) / 2));
+			var sample = new Uint8Array(sampleWidth * sampleHeight * 4);
+			glCtx.readPixels(sampleX, sampleY, sampleWidth, sampleHeight, glCtx.RGBA, glCtx.UNSIGNED_BYTE, sample);
+			var nonBlack = 0;
+			var sum = 0;
+			for(var i=0;i<sample.length;i+=4)
+			{
+				var r = sample[i], g = sample[i + 1], b = sample[i + 2];
+				if(r > 8 || g > 8 || b > 8) nonBlack++;
+				sum += r + g + b;
+			}
+			presentationStats.lastFramebufferStatus = glCtx.checkFramebufferStatus(glCtx.READ_FRAMEBUFFER);
+			presentationStats.lastViewport = Array.from(glCtx.getParameter(glCtx.VIEWPORT));
+			presentationStats.samples.push({
+				swap: presentationStats.swapCount,
+				fbWidth,
+				fbHeight,
+				nonBlack,
+				pixels: sampleWidth * sampleHeight,
+				meanRgb: sum / Math.max(1, sampleWidth * sampleHeight * 3),
+				framebufferStatus: presentationStats.lastFramebufferStatus,
+				viewport: presentationStats.lastViewport
+			});
+		}
+		catch(err)
+		{
+			presentationStats.samples.push({swap: presentationStats.swapCount, error: String(err)});
+		}
+	}
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
 	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
@@ -1133,14 +1205,25 @@ function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-	curMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));
+	var stack = ensureCurMatrixStack();
+	stack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-	curMatrixStack.pop();
+	var stack = ensureCurMatrixStack();
+	if(stack.length <= 1)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-underflow",
+			"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow."
+		);
+		return;
+	}
+	stack.pop();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)

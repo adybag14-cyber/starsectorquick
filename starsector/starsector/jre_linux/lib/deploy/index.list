@@ -1,18 +1,18 @@
-MixedCodeMainDialog.ui
-MixedCodeMainDialogJs.ui
-cautionshield.icns
-java-icon.ico
-messages.properties
-messages_de.properties
-messages_es.properties
-messages_fr.properties
-messages_it.properties
-messages_ja.properties
-messages_ko.properties
-messages_pt_BR.properties
-messages_sv.properties
-messages_zh_CN.properties
-messages_zh_HK.properties
-messages_zh_TW.properties
-mixcode_s.png
-splash.gif
+MixedCodeMainDialog.ui	4661
+MixedCodeMainDialogJs.ui	6320
+cautionshield.icns	3588
+java-icon.ico	29926
+messages.properties	2917
+messages_de.properties	3338
+messages_es.properties	3632
+messages_fr.properties	3441
+messages_it.properties	3255
+messages_ja.properties	6381
+messages_ko.properties	5751
+messages_pt_BR.properties	3380
+messages_sv.properties	3441
+messages_zh_CN.properties	4104
+messages_zh_HK.properties	3784
+messages_zh_TW.properties	3784
+mixcode_s.png	3115
+splash.gif	13959

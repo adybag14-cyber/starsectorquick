@@ -1,26 +1,26 @@
-aspect_Attack.variant
-aspect_Missile.variant
-aspect_Shieldbreaker.variant
-aspect_Shock.variant
-facet_Armorbreaker.variant
-facet_Attack.variant
-facet_Attack2.variant
-facet_Defense.variant
-facet_Missile.variant
-facet_Shieldbreaker.variant
-shard_left_Armorbreaker.variant
-shard_left_Attack.variant
-shard_left_Attack2.variant
-shard_left_Defense.variant
-shard_left_Missile.variant
-shard_left_Shieldbreaker.variant
-shard_right_Attack.variant
-shard_right_Missile.variant
-shard_right_Shieldbreaker.variant
-shard_right_Shock.variant
-tesseract_Attack.variant
-tesseract_Attack2.variant
-tesseract_Defense.variant
-tesseract_Disruptor.variant
-tesseract_Shieldbreaker.variant
-tesseract_Strike.variant
+﻿aspect_Attack.variant	375
+aspect_Missile.variant	386
+aspect_Shieldbreaker.variant	390
+aspect_Shock.variant	393
+facet_Armorbreaker.variant	1185
+facet_Attack.variant	1226
+facet_Attack2.variant	1080
+facet_Defense.variant	1074
+facet_Missile.variant	876
+facet_Shieldbreaker.variant	1061
+shard_left_Armorbreaker.variant	652
+shard_left_Attack.variant	656
+shard_left_Attack2.variant	643
+shard_left_Defense.variant	639
+shard_left_Missile.variant	651
+shard_left_Shieldbreaker.variant	659
+shard_right_Attack.variant	771
+shard_right_Missile.variant	486
+shard_right_Shieldbreaker.variant	680
+shard_right_Shock.variant	680
+tesseract_Attack.variant	1346
+tesseract_Attack2.variant	1349
+tesseract_Defense.variant	1088
+tesseract_Disruptor.variant	1363
+tesseract_Shieldbreaker.variant	1316
+tesseract_Strike.variant	1353

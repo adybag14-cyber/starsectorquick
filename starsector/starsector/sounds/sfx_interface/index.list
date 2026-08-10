@@ -1,120 +1,120 @@
-autofire_toggle_01.ogg
-campaign_warp_jump_in.ogg
-campaign_warp_jump_out.ogg
-campaign_warp_point_close.ogg
-campaign_warp_point_open.ogg
-campaign_warp_ship_in.ogg
-campaign_warp_ship_in_01.ogg
-campaign_warp_ship_in_02.ogg
-campaign_warp_ship_in_03.ogg
-campaign_warp_ship_in_04.ogg
-campaign_warp_ship_in_05.ogg
-campaign_warp_ship_out.ogg
-campaign_warp_ship_out_01.ogg
-campaign_warp_ship_out_02.ogg
-campaign_warp_ship_out_03.ogg
-campaign_warp_ship_out_04.ogg
-campaign_warp_ship_out_05.ogg
-colony_engage_ai.ogg
-colony_establish.ogg
-colony_faction_establish.ogg
-colony_industry_build.ogg
-colony_industry_cancel.ogg
-colony_industry_grade_down.ogg
-colony_industry_grade_up.ogg
-colony_industry_shutdown.ogg
-combat_readiness_malfunctions_alarm_allied_01.ogg
-combat_readiness_malfunctions_alarm_allied_02.ogg
-combat_readiness_malfunctions_alarm_allied_03.ogg
-combat_readiness_malfunctions_alarm_flagship_01.ogg
-combat_readiness_malfunctions_alarm_flagship_02.ogg
-combat_readiness_malfunctions_alarm_flagship_03.ogg
-fighter_recall_activate.ogg
-fighter_recall_deactivate.ogg
-neural_link_transfer_begin.ogg
-neural_link_transfer_complete.ogg
-perform_survey_exp_gain.ogg
-perform_survey_hit_01.ogg
-perform_survey_hit_02.ogg
-perform_survey_hit_03.ogg
-perform_survey_ore_01.ogg
-perform_survey_ore_02.ogg
-perform_survey_ore_03.ogg
-perform_survey_ore_04.ogg
-perform_survey_ore_05.ogg
-survey_result_01.ogg
-survey_result_02.ogg
-survey_result_03.ogg
-survey_result_04.ogg
-survey_result_05.ogg
-survey_scan_01.ogg
-survey_scan_02.ogg
-test_blip.ogg
-ui_button_disabled_pressed.ogg
-ui_button_mouseover.ogg
-ui_button_pressed.ogg
-ui_campaign_sensor_detect_fleet_01.ogg
-ui_campaign_sensor_detect_fleet_02.ogg
-ui_campaign_sensor_detect_fleet_03.ogg
-ui_campaign_sensor_detect_fleet_04.ogg
-ui_campaign_sensor_detect_fleet_05.ogg
-ui_campaign_sensor_detect_fleet_06.ogg
-ui_campaign_sensor_lose_fleet_01.ogg
-ui_campaign_sensor_lose_fleet_02.ogg
-ui_campaign_sensor_lose_fleet_03.ogg
-ui_campaign_sensor_lose_fleet_04.ogg
-ui_campaign_sensor_lose_fleet_05.ogg
-ui_campaign_sensor_lose_fleet_06.ogg
-ui_channel_colony alert.ogg
-ui_channel_comm_local_01.ogg
-ui_channel_comm_local_02.ogg
-ui_channel_comm_local_03.ogg
-ui_channel_comm_local_04.ogg
-ui_channel_comm_secure_01.ogg
-ui_channel_default_01.ogg
-ui_channel_default_02.ogg
-ui_channel_default_03.ogg
-ui_channel_default_04.ogg
-ui_channel_income_report_negative.ogg
-ui_channel_income_report_negative_short.ogg
-ui_channel_income_report_positive.ogg
-ui_channel_income_report_positive_short.ogg
-ui_channel_intel_assessment_01.ogg
-ui_channel_news_01.ogg
-ui_channel_news_02.ogg
-ui_channel_news_03.ogg
-ui_channel_news_04.ogg
-ui_channel_sniffer_01.ogg
-ui_char_can_not_increase_skill.ogg
-ui_char_decrease_skill.ogg
-ui_char_increase_aptitude.ogg
-ui_char_increase_aptitude_max.ogg
-ui_char_increase_skill.ogg
-ui_char_increase_skill_new.ogg
-ui_char_level_up.ogg
-ui_char_receive_perk1.ogg
-ui_char_receive_perk2.ogg
-ui_char_reset.ogg
-ui_colony_raid_event_01.ogg
-ui_colony_raid_event_02.ogg
-ui_command_create_waypoint.ogg
-ui_command_out_of_command_points.ogg
-ui_command_refund_command_point.ogg
-ui_command_right_click_command_given.ogg
-ui_command_select_command_ui_icon.ogg
-ui_command_selection_cleared.ogg
-ui_discovery.ogg
-ui_income_report_negative.ogg
-ui_income_report_negative_light.ogg
-ui_income_report_positive.ogg
-ui_income_report_positive_light.ogg
-ui_objective_constructed.ogg
-ui_radar_detect_mine.ogg
-ui_radar_detect_missile.ogg
-ui_radar_detect_vessel.ogg
-ui_reputation_drop.ogg
-ui_reputation_raise.ogg
-ui_static01.ogg
-ui_static02.ogg
-ui_static03.ogg
-ui_type.ogg
+autofire_toggle_01.ogg	10047
+campaign_warp_jump_in.ogg	87144
+campaign_warp_jump_out.ogg	83943
+campaign_warp_point_close.ogg	39885
+campaign_warp_point_open.ogg	33526
+campaign_warp_ship_in.ogg	52449
+campaign_warp_ship_in_01.ogg	13102
+campaign_warp_ship_in_02.ogg	15813
+campaign_warp_ship_in_03.ogg	15794
+campaign_warp_ship_in_04.ogg	15702
+campaign_warp_ship_in_05.ogg	14357
+campaign_warp_ship_out.ogg	52449
+campaign_warp_ship_out_01.ogg	29499
+campaign_warp_ship_out_02.ogg	21941
+campaign_warp_ship_out_03.ogg	22624
+campaign_warp_ship_out_04.ogg	21816
+campaign_warp_ship_out_05.ogg	22242
+colony_engage_ai.ogg	25895
+colony_establish.ogg	74503
+colony_faction_establish.ogg	76194
+colony_industry_build.ogg	44356
+colony_industry_cancel.ogg	27347
+colony_industry_grade_down.ogg	31668
+colony_industry_grade_up.ogg	39927
+colony_industry_shutdown.ogg	46334
+combat_readiness_malfunctions_alarm_allied_01.ogg	22014
+combat_readiness_malfunctions_alarm_allied_02.ogg	19125
+combat_readiness_malfunctions_alarm_allied_03.ogg	26929
+combat_readiness_malfunctions_alarm_flagship_01.ogg	22544
+combat_readiness_malfunctions_alarm_flagship_02.ogg	27280
+combat_readiness_malfunctions_alarm_flagship_03.ogg	34201
+fighter_recall_activate.ogg	12490
+fighter_recall_deactivate.ogg	12365
+neural_link_transfer_begin.ogg	24146
+neural_link_transfer_complete.ogg	38994
+perform_survey_exp_gain.ogg	45490
+perform_survey_hit_01.ogg	23318
+perform_survey_hit_02.ogg	24070
+perform_survey_hit_03.ogg	29015
+perform_survey_ore_01.ogg	33993
+perform_survey_ore_02.ogg	35583
+perform_survey_ore_03.ogg	33781
+perform_survey_ore_04.ogg	40794
+perform_survey_ore_05.ogg	45558
+survey_result_01.ogg	18112
+survey_result_02.ogg	19569
+survey_result_03.ogg	24223
+survey_result_04.ogg	30097
+survey_result_05.ogg	32910
+survey_scan_01.ogg	21983
+survey_scan_02.ogg	21453
+test_blip.ogg	17130
+ui_button_disabled_pressed.ogg	64652
+ui_button_mouseover.ogg	25444
+ui_button_pressed.ogg	37510
+ui_campaign_sensor_detect_fleet_01.ogg	19235
+ui_campaign_sensor_detect_fleet_02.ogg	21099
+ui_campaign_sensor_detect_fleet_03.ogg	19227
+ui_campaign_sensor_detect_fleet_04.ogg	20672
+ui_campaign_sensor_detect_fleet_05.ogg	18519
+ui_campaign_sensor_detect_fleet_06.ogg	18970
+ui_campaign_sensor_lose_fleet_01.ogg	18124
+ui_campaign_sensor_lose_fleet_02.ogg	18525
+ui_campaign_sensor_lose_fleet_03.ogg	18234
+ui_campaign_sensor_lose_fleet_04.ogg	17479
+ui_campaign_sensor_lose_fleet_05.ogg	17594
+ui_campaign_sensor_lose_fleet_06.ogg	18020
+ui_channel_colony alert.ogg	47775
+ui_channel_comm_local_01.ogg	15198
+ui_channel_comm_local_02.ogg	12179
+ui_channel_comm_local_03.ogg	13857
+ui_channel_comm_local_04.ogg	11760
+ui_channel_comm_secure_01.ogg	13373
+ui_channel_default_01.ogg	11506
+ui_channel_default_02.ogg	11802
+ui_channel_default_03.ogg	10088
+ui_channel_default_04.ogg	12385
+ui_channel_income_report_negative.ogg	77686
+ui_channel_income_report_negative_short.ogg	73218
+ui_channel_income_report_positive.ogg	103707
+ui_channel_income_report_positive_short.ogg	77333
+ui_channel_intel_assessment_01.ogg	11397
+ui_channel_news_01.ogg	9435
+ui_channel_news_02.ogg	8974
+ui_channel_news_03.ogg	8639
+ui_channel_news_04.ogg	8726
+ui_channel_sniffer_01.ogg	20243
+ui_char_can_not_increase_skill.ogg	9123
+ui_char_decrease_skill.ogg	21428
+ui_char_increase_aptitude.ogg	45745
+ui_char_increase_aptitude_max.ogg	50195
+ui_char_increase_skill.ogg	25932
+ui_char_increase_skill_new.ogg	30951
+ui_char_level_up.ogg	67091
+ui_char_receive_perk1.ogg	30904
+ui_char_receive_perk2.ogg	35228
+ui_char_reset.ogg	34073
+ui_colony_raid_event_01.ogg	27157
+ui_colony_raid_event_02.ogg	40986
+ui_command_create_waypoint.ogg	18160
+ui_command_out_of_command_points.ogg	83352
+ui_command_refund_command_point.ogg	23895
+ui_command_right_click_command_given.ogg	43212
+ui_command_select_command_ui_icon.ogg	79495
+ui_command_selection_cleared.ogg	71246
+ui_discovery.ogg	24272
+ui_income_report_negative.ogg	29052
+ui_income_report_negative_light.ogg	29211
+ui_income_report_positive.ogg	43326
+ui_income_report_positive_light.ogg	42822
+ui_objective_constructed.ogg	45866
+ui_radar_detect_mine.ogg	6931
+ui_radar_detect_missile.ogg	6931
+ui_radar_detect_vessel.ogg	12916
+ui_reputation_drop.ogg	143279
+ui_reputation_raise.ogg	141042
+ui_static01.ogg	54650
+ui_static02.ogg	39432
+ui_static03.ogg	55011
+ui_type.ogg	6786

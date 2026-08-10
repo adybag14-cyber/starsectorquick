@@ -1,0 +1,4031 @@
+{
+  "profile": {
+    "profile": "corvus-asharu-compat",
+    "sourceSha": "6d615e79df0dcf0e58d618c846790ccadb2a2fbb",
+    "workflowRunId": "31384083223",
+    "generatedAt": "2026-08-10T11:35:03.447897+00:00",
+    "overlayFiles": 804
+  },
+  "files": [
+    {
+      "path": ".nojekyll",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "build/final/wasm-modules/lwjgl.js",
+      "bytes": 54998,
+      "sha256": "c3010718fa32738f366f29938f5ba6114f169d9bba476127e18c59783a03dafc"
+    },
+    {
+      "path": "data/campaign/econ/corvus.json",
+      "bytes": 531,
+      "sha256": "2b66949da76a2b36a981f0b785a8817067896ab34e598256a07d9c8427aef3fc"
+    },
+    {
+      "path": "data/campaign/econ/economy.json",
+      "bytes": 192,
+      "sha256": "d725eb6da10c9ddd0f4e944d295b759d8fd7368c357648cfd8ab694197b1c595"
+    },
+    {
+      "path": "data/campaign/econ/index.list",
+      "bytes": 363,
+      "sha256": "af2d65c7fc0b7f9890d7785eca3c0feb58b52e4797bce1398757c2eec2b093f4"
+    },
+    {
+      "path": "data/campaign/index.list",
+      "bytes": 383,
+      "sha256": "48c7166b2c1e8b932f93c3ed878556337551d0d48ca2677b1929394121eb5b9b"
+    },
+    {
+      "path": "data/campaign/procgen/index.list",
+      "bytes": 227,
+      "sha256": "768b0d966344d94cb24343a7b82ad26ead63b8381b45fef4916c97d7711f701b"
+    },
+    {
+      "path": "data/campaign/terrain/index.list",
+      "bytes": 149,
+      "sha256": "0d664f4eeba254b37d0af8f1a6e0b79ad7eff2868905853cb66c263e022ac72c"
+    },
+    {
+      "path": "data/characters/index.list",
+      "bytes": 56,
+      "sha256": "027056db5f36defda56888879cfba1524b021c7d7ffa89a231a6e61fbb25db82"
+    },
+    {
+      "path": "data/characters/skills/index.list",
+      "bytes": 1953,
+      "sha256": "b94c57bc26f26fbd5b1088b16419c00e8c61c40ce6e074d3f9cdf61cd03f476d"
+    },
+    {
+      "path": "data/config/index.list",
+      "bytes": 234,
+      "sha256": "f817cad4f58511d6e7ab817cb3dbe6cf36c683f0f4cf06d5f396f07d5e61175b"
+    },
+    {
+      "path": "data/hullmods/index.list",
+      "bytes": 1585,
+      "sha256": "89aedcbcab4ae038571c24efc64e6ca971ac62bdcabdb24f3986c2a6cfd31817"
+    },
+    {
+      "path": "data/hulls/index.list",
+      "bytes": 4582,
+      "sha256": "c675b0617388917bf4dd5faa78af5cabc97e5f21562c8ce143aee1c681863add"
+    },
+    {
+      "path": "data/hulls/skins/index.list",
+      "bytes": 1540,
+      "sha256": "03ed637e42b4251b801793d0e232a54d13f2d3a481c08599bbea3308203d06bf"
+    },
+    {
+      "path": "data/index.list",
+      "bytes": 150,
+      "sha256": "c81b95d29984f8d454de2b450e4e66d66968023cfe7d78ef21028d825ddddfb0"
+    },
+    {
+      "path": "data/missions/afistfulofcredits/index.list",
+      "bytes": 85,
+      "sha256": "0bb9dd01d0c377adf89de03d8d6d7e9fdbfc1bd9d4c3d89bf1d5f447c77b68d7"
+    },
+    {
+      "path": "data/missions/ambush/index.list",
+      "bytes": 85,
+      "sha256": "80ad19c438a74bc64c01e2ac3d7798da63946ba9348370fc103cab90e6ee2851"
+    },
+    {
+      "path": "data/missions/coralnebula/index.list",
+      "bytes": 85,
+      "sha256": "9f040ed041c4ce69f7fd6f03eec8ff4163f773fe80b30fef6492412332fe4ad2"
+    },
+    {
+      "path": "data/missions/direstraits/index.list",
+      "bytes": 85,
+      "sha256": "27ca571a6bee6f52b60ef2ec29d8139860488cb5c915ba59120f8aabce3b3887"
+    },
+    {
+      "path": "data/missions/forlornhope/index.list",
+      "bytes": 85,
+      "sha256": "266636ab08c90546e673e449dc0fe630ccc7087f751f2b0eed56d7db1c41a00c"
+    },
+    {
+      "path": "data/missions/forthegreaterlud/index.list",
+      "bytes": 85,
+      "sha256": "f70fa12cf7b4a8f6a3d4be147aace3952bfe3e7aa46f21de807cb5fd39f3e703"
+    },
+    {
+      "path": "data/missions/hornetsnest/index.list",
+      "bytes": 85,
+      "sha256": "561542cd3a15405830de88bd8c652c0c1854a984ae6bc6cdcbde44e1c6fa28e9"
+    },
+    {
+      "path": "data/missions/index.list",
+      "bytes": 288,
+      "sha256": "177e0a57ed2ea4d74e9f76d2c359d62cd363b42d3b12a567c19823bd4615d73e"
+    },
+    {
+      "path": "data/missions/m2/index.list",
+      "bytes": 83,
+      "sha256": "005871a87fc48d726daef4dc8cc956607f511a252a4e8680e1429da17f36a6fd"
+    },
+    {
+      "path": "data/missions/m3/index.list",
+      "bytes": 83,
+      "sha256": "ff434f4dc57755b3098a7ea9e48b2889f06a9fc2afc273543738deaffd08c276"
+    },
+    {
+      "path": "data/missions/nothingpersonal/index.list",
+      "bytes": 85,
+      "sha256": "c9914f0c45dabc6e4b8830d20ebc15bb9dcd3272d00edc81eb690d45f7b61f3d"
+    },
+    {
+      "path": "data/missions/predatororprey/index.list",
+      "bytes": 85,
+      "sha256": "4a80f08b30008de7f2aea477fbc2f34fbe8aeb0c284d3e39a9b3b054d8548b24"
+    },
+    {
+      "path": "data/missions/randombattle1/index.list",
+      "bytes": 84,
+      "sha256": "eb6351290ade43d13bb665872e4a232745a209eedd9d33db3c60e5f5eb1e8676"
+    },
+    {
+      "path": "data/missions/sinkingthebismarck/index.list",
+      "bytes": 85,
+      "sha256": "0f5f408e7161a3248a00da735dffa40f505ae840bbc805b92a758a9aaaf26ed2"
+    },
+    {
+      "path": "data/missions/thelasthurrah/index.list",
+      "bytes": 85,
+      "sha256": "b2643e500d237f7c2fb211485378c9a3cf72317464d6f7bb7c4727d688084470"
+    },
+    {
+      "path": "data/missions/thewolfpack/index.list",
+      "bytes": 85,
+      "sha256": "b443afe4d2c55f03eece1663a316da60e18b9a998a40e61f13d0cfa530182da4"
+    },
+    {
+      "path": "data/missions/turningthetables/index.list",
+      "bytes": 85,
+      "sha256": "4aaca0307dc9fff1df3532a44d973bbf0a5b24f11f71efc64599cc84f4005564"
+    },
+    {
+      "path": "data/scripts/index.list",
+      "bytes": 22,
+      "sha256": "6417a9dc1c4a7681e32d7ca4a8004f2f640310c211d3601b83e78d7c73b79bbe"
+    },
+    {
+      "path": "data/scripts/plugins/index.list",
+      "bytes": 56,
+      "sha256": "c0a068df377bf430434f307273f9eb7cbb336c657f3cc35f2344fd417aa6dfe1"
+    },
+    {
+      "path": "data/scripts/world/SectorGen.java",
+      "bytes": 13775,
+      "sha256": "af05fbff5cd9b16fa83bc11ee2eb1f7fab3cc72f92bf6e354284a3bcb791ea99"
+    },
+    {
+      "path": "data/scripts/world/corvus/index.list",
+      "bytes": 18,
+      "sha256": "2a46783840e36242fe8491e1482a158949be9d3b703a69d3b6f46a2fcb1a3a12"
+    },
+    {
+      "path": "data/scripts/world/index.list",
+      "bytes": 68,
+      "sha256": "eb33b05e05614967b0625e510623d4e85b7c34b6254bba89d55f8b455f47cbee"
+    },
+    {
+      "path": "data/scripts/world/systems/index.list",
+      "bytes": 414,
+      "sha256": "57a4fcf5be3452ba2632fc5a468e32500eb12bacdb0f70b19bd66cfde965936a"
+    },
+    {
+      "path": "data/shipsystems/index.list",
+      "bytes": 1664,
+      "sha256": "fbdcd819a148a644d4745f53ee0a55dae57ec07960f099b262f8c7e9aef9cf8c"
+    },
+    {
+      "path": "data/shipsystems/proj/index.list",
+      "bytes": 108,
+      "sha256": "242d6d5c2fd95e81eec493fbcc2513801b8b1e544f1586664c3bd0f62a9b1e88"
+    },
+    {
+      "path": "data/shipsystems/scripts/ai/index.list",
+      "bytes": 32,
+      "sha256": "f75df487fc059c19bbe212f1f5af80451b6a75fb9dfb2936b1c8f08ac123d1f8"
+    },
+    {
+      "path": "data/shipsystems/scripts/index.list",
+      "bytes": 373,
+      "sha256": "85ee0cf5e97b3df9e4a44bfd9da2086d9b492516b43a1f1f570c75f981db9921"
+    },
+    {
+      "path": "data/shipsystems/wpn/index.list",
+      "bytes": 164,
+      "sha256": "673f81251690f9a99793f9e639f7537c241ad27dc99d33984011fc8e6f3a723e"
+    },
+    {
+      "path": "data/strings/index.list",
+      "bytes": 98,
+      "sha256": "caef1505bd1bdc8413fab86c7867d8c41bbb297b060083cd72acb4fefbac110c"
+    },
+    {
+      "path": "data/variants/anubis/index.list",
+      "bytes": 31,
+      "sha256": "abfbc32029bbcc9b8c390f8ea5495422f187915452b9260463a235f281ae88ff"
+    },
+    {
+      "path": "data/variants/aurora/index.list",
+      "bytes": 142,
+      "sha256": "e5c0ba5aa2cf029e2aa6d30e25e55eb26359bfb3e6eb8eb9503fef5ba0d1fe16"
+    },
+    {
+      "path": "data/variants/brawler/index.list",
+      "bytes": 77,
+      "sha256": "9299e6c709a060d89c64a5a0017d0d7771a2015946cb49f6a4571da0ee6723f0"
+    },
+    {
+      "path": "data/variants/buffalo/index.list",
+      "bytes": 221,
+      "sha256": "3b20f07e95bd605209aad7868e79005cb91170d3526c8b5eecce41add8f660ab"
+    },
+    {
+      "path": "data/variants/centurion/index.list",
+      "bytes": 97,
+      "sha256": "d3b3c3b8c1ad0c56c35f42377fe58806066f5f6340cd39edd8ba10605e8f5c0f"
+    },
+    {
+      "path": "data/variants/cerberus/index.list",
+      "bytes": 307,
+      "sha256": "a1d82bc6e68ff03f1d4fc53f379ecc1a2bd602ee2a41be98459e7a2b791b9493"
+    },
+    {
+      "path": "data/variants/champion/index.list",
+      "bytes": 181,
+      "sha256": "0fd5f955b0fa3bb956cf213187ed551b0e09a5f9fa191fe6f83774c0b725d6f1"
+    },
+    {
+      "path": "data/variants/codex_autogen/index.list",
+      "bytes": 5702,
+      "sha256": "b4ff0adfe30ae83dbd359fdb2beb90846acda5688bc5127c1782b54b9c3c6e66"
+    },
+    {
+      "path": "data/variants/conquest/index.list",
+      "bytes": 88,
+      "sha256": "0d0f611b21a5804743a106a2871a535268ea86640dd79e0f7a8b18af65f30821"
+    },
+    {
+      "path": "data/variants/derelict/index.list",
+      "bytes": 383,
+      "sha256": "adb357dcd0877928a595b3cb8c2b3aee280f63a7f319937a705ac5535a8547b9"
+    },
+    {
+      "path": "data/variants/dominator/index.list",
+      "bytes": 232,
+      "sha256": "4081c07efff93f7201face5e65f2b85ef05cf07b922b2b0924d7d54082c19a87"
+    },
+    {
+      "path": "data/variants/drones/index.list",
+      "bytes": 157,
+      "sha256": "6abe83ec3f797e4cf6a0ec0ea6f1c7a5505c7f5ea4b66e7391c2f8cc922912d8"
+    },
+    {
+      "path": "data/variants/dweller/index.list",
+      "bytes": 223,
+      "sha256": "3d146e6c2423af907ceebf86c160087ddf671b6ea6e7d22f9a08a3adef846141"
+    },
+    {
+      "path": "data/variants/eagle/index.list",
+      "bytes": 203,
+      "sha256": "25ac9d4358c4b2e3074e4b19241a16e29452b710d3a4b4b492927c1d98023ef2"
+    },
+    {
+      "path": "data/variants/enforcer/index.list",
+      "bytes": 378,
+      "sha256": "07124f526207de9a28c2f3026c080180a8933302a010f290c09901fe79bbfe5e"
+    },
+    {
+      "path": "data/variants/eradicator/index.list",
+      "bytes": 322,
+      "sha256": "3aa9537acc29c92574f55e7db377025eab4b3109c776e1bc1f55e68adf100123"
+    },
+    {
+      "path": "data/variants/falcon/index.list",
+      "bytes": 251,
+      "sha256": "a74f1c0c253a1a8d3b331396712544c6debb87fba147ae0c0e5c49889047288a"
+    },
+    {
+      "path": "data/variants/fighters/index.list",
+      "bytes": 480,
+      "sha256": "dab03bf2aae568bcac058462a2fabfe244a0258e60739f6081980c68a67a9e65"
+    },
+    {
+      "path": "data/variants/gryphon/index.list",
+      "bytes": 82,
+      "sha256": "626334a7535b6e41796ca26293e2a20539c0cfcc2db1427dde33885154562dc6"
+    },
+    {
+      "path": "data/variants/hammerhead/index.list",
+      "bytes": 286,
+      "sha256": "13627de64aa9fb2b9fbddfdf66a0f83f79fcd402314d54671a69affc85f5e57f"
+    },
+    {
+      "path": "data/variants/harbinger/index.list",
+      "bytes": 32,
+      "sha256": "7e3da38316d37a8bb733e9de472a1d682134ae8b60a490b7d7af8264e73e3413"
+    },
+    {
+      "path": "data/variants/hermes/index.list",
+      "bytes": 83,
+      "sha256": "2dbac1d0f49e8a461fec82fb3d530c885f7e9a402c12262049f9cd002747d36b"
+    },
+    {
+      "path": "data/variants/hound/index.list",
+      "bytes": 313,
+      "sha256": "5342935b26ea02fc886d6852a04a40a7d9799a18b54b4f483a11a8f552ae4d5a"
+    },
+    {
+      "path": "data/variants/index.list",
+      "bytes": 3171,
+      "sha256": "cfc2dedfc2b78de71e2c3a1ded32200b81998b2030c768896c34cd33526c6aac"
+    },
+    {
+      "path": "data/variants/invictus/index.list",
+      "bytes": 64,
+      "sha256": "c01e13c5ea68fd9b658a808ca2fa928c938982e96da89b55145171bbf45eccfa"
+    },
+    {
+      "path": "data/variants/kite/index.list",
+      "bytes": 236,
+      "sha256": "4cbfb9b7b2e4aa8b519deabba1a76da41bea3f8ef5f9607e0918399242324690"
+    },
+    {
+      "path": "data/variants/lasher/index.list",
+      "bytes": 293,
+      "sha256": "a0f948c2aef003b32d4f18c6ecc89a5daa40ac92238c0fad014a8a603c287f79"
+    },
+    {
+      "path": "data/variants/legion/index.list",
+      "bytes": 172,
+      "sha256": "83a4371608bcede2d6a8a2adc65e38c663c1a2fd5f7c7594e39c1b302ebbb580"
+    },
+    {
+      "path": "data/variants/manticore/index.list",
+      "bytes": 242,
+      "sha256": "91f702e0efe37b481b007b1df21f37140a1897ad998e847447a4edeee6e8493d"
+    },
+    {
+      "path": "data/variants/mercury/index.list",
+      "bytes": 136,
+      "sha256": "017f0b6da5a510bccbc22d089d8bbe8a50759fa38e33b439bd14f770616d44ac"
+    },
+    {
+      "path": "data/variants/mora/index.list",
+      "bytes": 106,
+      "sha256": "b7b697464dfa1ae03c1d57c5af1f60315cad87007ee83cae85f8c7b45488c469"
+    },
+    {
+      "path": "data/variants/mule/index.list",
+      "bytes": 188,
+      "sha256": "9c40816d51420dde0d1637b2b1066349905f880a642d5ad1e9fe5258ce215afd"
+    },
+    {
+      "path": "data/variants/omega/index.list",
+      "bytes": 804,
+      "sha256": "6e65e4739ce1cc2b1559b98c625e5e7f0fdc84d3ba9ea8b8e1b53ee8e4dd109b"
+    },
+    {
+      "path": "data/variants/onslaught/index.list",
+      "bytes": 263,
+      "sha256": "5b75f56c4c87ce202806b9a9cc5d700aa7a8417037e6a7fdd3b67625c8964c29"
+    },
+    {
+      "path": "data/variants/paragon/index.list",
+      "bytes": 86,
+      "sha256": "221cec76bc11cf28c4e8021db4d7c9bd91f48c2ddbb5727a71499effbedb9ba4"
+    },
+    {
+      "path": "data/variants/pegasus/index.list",
+      "bytes": 120,
+      "sha256": "85cf11c6473c9fe379a7e7257ac52684883fc756de5647a7421c6af1eb5d8ca6"
+    },
+    {
+      "path": "data/variants/remnant/index.list",
+      "bytes": 986,
+      "sha256": "5cb6e0439f3a6498c63e18b3de239bb0f92c7f479f79c5c633305acac96f3123"
+    },
+    {
+      "path": "data/variants/retribution/index.list",
+      "bytes": 37,
+      "sha256": "bbc94074018bc44b0ca3a01d732f4ad8018365d1d1ef0c1ad60589ec825d7084"
+    },
+    {
+      "path": "data/variants/scarab/index.list",
+      "bytes": 65,
+      "sha256": "e9563b115b2600f5c953dedda7483e968613270739d7a3a247c712f3936ac395"
+    },
+    {
+      "path": "data/variants/stations/index.list",
+      "bytes": 1855,
+      "sha256": "f8a948c77d532efad573fbdf67c57d4fddd2705459ba11593462c2c54dd024e8"
+    },
+    {
+      "path": "data/variants/sunder/index.list",
+      "bytes": 198,
+      "sha256": "8328252b7d41be34a7ac6529d4ec910241df4ce643bce2468ee47578cd6b1c31"
+    },
+    {
+      "path": "data/variants/tarsus/index.list",
+      "bytes": 61,
+      "sha256": "20dff5caa6530eca588c2d9bcff409fe0fe9213516cbfd4c63bbc8690b00235a"
+    },
+    {
+      "path": "data/variants/threat/index.list",
+      "bytes": 454,
+      "sha256": "2a69ce2ca1b115d5a4cc7b7902a804ccc3b526ca35ffcc3ea63171b245f8e972"
+    },
+    {
+      "path": "data/variants/vanguard/index.list",
+      "bytes": 198,
+      "sha256": "503ea754d58f0428ccf1fcd23b165707371670ea6eff826039e7571f8471f9f6"
+    },
+    {
+      "path": "data/variants/venture/index.list",
+      "bytes": 161,
+      "sha256": "4e15b96a51776c87f82ad5aac3988c4ba5a0df7630d3a4767ce60e171d1a105e"
+    },
+    {
+      "path": "data/variants/wayfarer/index.list",
+      "bytes": 63,
+      "sha256": "2ed43b769df4548502625ea344349a70ce758f4d2d9f3923e46333e383e371f2"
+    },
+    {
+      "path": "data/variants/wolf/index.list",
+      "bytes": 298,
+      "sha256": "37ffc10bc23fd8eb8a06b0fe664b11d2de5c78f09ec27ece821d75363e678e67"
+    },
+    {
+      "path": "data/weapons/index.list",
+      "bytes": 3275,
+      "sha256": "7bfbab1ca83a387c47548600378ec0e81f4f44b4cdcc1aac9ce7557251f7fa7c"
+    },
+    {
+      "path": "data/weapons/proj/index.list",
+      "bytes": 2734,
+      "sha256": "cb3baa1becaaccc654632335c5c0042093e16f16f6d237ebe3f642fc28dc2a63"
+    },
+    {
+      "path": "data/world/factions/index.list",
+      "bytes": 549,
+      "sha256": "1e777e31665da58489d3972c5a9c536548e111d101fea39a5e49885c8de8ddd6"
+    },
+    {
+      "path": "data/world/index.list",
+      "bytes": 31,
+      "sha256": "67caa4febde34b30bbda9d730727719ced36fa0756e81a837a4d3e901fdb8c65"
+    },
+    {
+      "path": "index.html",
+      "bytes": 627,
+      "sha256": "8ee96df3834cde2981ee2a73fd9deae6eced31bd2652487324dff4c7d5bc8d36"
+    },
+    {
+      "path": "jars/Fixer.java",
+      "bytes": 948418,
+      "sha256": "edefb68b6642a5709e492d7b91c9f1c45a2423a70c99acb57515bc2f7d375076"
+    },
+    {
+      "path": "jars/fixer_patch.jar",
+      "bytes": 214707,
+      "sha256": "6cd14e837bccca084aa033e2bdeeb15afec52bfeecc3e4def534b536521f36e0"
+    },
+    {
+      "path": "jars/index.list",
+      "bytes": 466,
+      "sha256": "8b8d023de55b79062a9fc0115b8aa724107bd3b0d7bd713ca1152157d36faa25"
+    },
+    {
+      "path": "jars/scripts-precompiled.jar",
+      "bytes": 151978,
+      "sha256": "dc5b8fb97dda10c19b1c2f85f83dfc22ddd461dec9711dc623a2e42d98166ec6"
+    },
+    {
+      "path": "jars/starfarer.api.jar",
+      "bytes": 7239782,
+      "sha256": "c3e8cb2a1f246e0ac8cd1abd2248a171d765955b5d04433f2333fc2437f84562"
+    },
+    {
+      "path": "jars/starfarer_obf.jar",
+      "bytes": 6018471,
+      "sha256": "3da46288cbe81b342bc5035715049e750fd4a5c8501645f50caa17b789a95ad2"
+    },
+    {
+      "path": "jars/txw2-2.3.1.jar",
+      "bytes": 70288,
+      "sha256": "34975dde1c6920f1a39791142235689bc3cd357e24d05edd8ff93b885bd68d60"
+    },
+    {
+      "path": "launch.html",
+      "bytes": 84449,
+      "sha256": "269fdd4cc83383442643a48adff38b51287ee5b1740ed59d81b3bfc99fd0556d"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/corvus.json",
+      "bytes": 531,
+      "sha256": "2b66949da76a2b36a981f0b785a8817067896ab34e598256a07d9c8427aef3fc"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/economy.json",
+      "bytes": 192,
+      "sha256": "d725eb6da10c9ddd0f4e944d295b759d8fd7368c357648cfd8ab694197b1c595"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/index.list",
+      "bytes": 363,
+      "sha256": "af2d65c7fc0b7f9890d7785eca3c0feb58b52e4797bce1398757c2eec2b093f4"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/index.list",
+      "bytes": 383,
+      "sha256": "48c7166b2c1e8b932f93c3ed878556337551d0d48ca2677b1929394121eb5b9b"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/procgen/index.list",
+      "bytes": 227,
+      "sha256": "768b0d966344d94cb24343a7b82ad26ead63b8381b45fef4916c97d7711f701b"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/terrain/index.list",
+      "bytes": 149,
+      "sha256": "0d664f4eeba254b37d0af8f1a6e0b79ad7eff2868905853cb66c263e022ac72c"
+    },
+    {
+      "path": "starsector/starsector/data/characters/index.list",
+      "bytes": 56,
+      "sha256": "027056db5f36defda56888879cfba1524b021c7d7ffa89a231a6e61fbb25db82"
+    },
+    {
+      "path": "starsector/starsector/data/characters/skills/index.list",
+      "bytes": 1953,
+      "sha256": "b94c57bc26f26fbd5b1088b16419c00e8c61c40ce6e074d3f9cdf61cd03f476d"
+    },
+    {
+      "path": "starsector/starsector/data/config/index.list",
+      "bytes": 234,
+      "sha256": "f817cad4f58511d6e7ab817cb3dbe6cf36c683f0f4cf06d5f396f07d5e61175b"
+    },
+    {
+      "path": "starsector/starsector/data/hullmods/index.list",
+      "bytes": 1585,
+      "sha256": "89aedcbcab4ae038571c24efc64e6ca971ac62bdcabdb24f3986c2a6cfd31817"
+    },
+    {
+      "path": "starsector/starsector/data/hulls/index.list",
+      "bytes": 4579,
+      "sha256": "776ed8a552716a590891d826cde21badb8c5c7592d7d42fbb2d8f5e50a0899f2"
+    },
+    {
+      "path": "starsector/starsector/data/hulls/skins/index.list",
+      "bytes": 1537,
+      "sha256": "6daf0577014de04b33446edeaa497996fc6c064bf846fee7e29cabd998adb4c7"
+    },
+    {
+      "path": "starsector/starsector/data/index.list",
+      "bytes": 150,
+      "sha256": "c81b95d29984f8d454de2b450e4e66d66968023cfe7d78ef21028d825ddddfb0"
+    },
+    {
+      "path": "starsector/starsector/data/missions/afistfulofcredits/index.list",
+      "bytes": 85,
+      "sha256": "0bb9dd01d0c377adf89de03d8d6d7e9fdbfc1bd9d4c3d89bf1d5f447c77b68d7"
+    },
+    {
+      "path": "starsector/starsector/data/missions/ambush/index.list",
+      "bytes": 85,
+      "sha256": "80ad19c438a74bc64c01e2ac3d7798da63946ba9348370fc103cab90e6ee2851"
+    },
+    {
+      "path": "starsector/starsector/data/missions/coralnebula/index.list",
+      "bytes": 85,
+      "sha256": "9f040ed041c4ce69f7fd6f03eec8ff4163f773fe80b30fef6492412332fe4ad2"
+    },
+    {
+      "path": "starsector/starsector/data/missions/direstraits/index.list",
+      "bytes": 85,
+      "sha256": "27ca571a6bee6f52b60ef2ec29d8139860488cb5c915ba59120f8aabce3b3887"
+    },
+    {
+      "path": "starsector/starsector/data/missions/forlornhope/index.list",
+      "bytes": 85,
+      "sha256": "266636ab08c90546e673e449dc0fe630ccc7087f751f2b0eed56d7db1c41a00c"
+    },
+    {
+      "path": "starsector/starsector/data/missions/forthegreaterlud/index.list",
+      "bytes": 85,
+      "sha256": "f70fa12cf7b4a8f6a3d4be147aace3952bfe3e7aa46f21de807cb5fd39f3e703"
+    },
+    {
+      "path": "starsector/starsector/data/missions/hornetsnest/index.list",
+      "bytes": 85,
+      "sha256": "561542cd3a15405830de88bd8c652c0c1854a984ae6bc6cdcbde44e1c6fa28e9"
+    },
+    {
+      "path": "starsector/starsector/data/missions/index.list",
+      "bytes": 288,
+      "sha256": "177e0a57ed2ea4d74e9f76d2c359d62cd363b42d3b12a567c19823bd4615d73e"
+    },
+    {
+      "path": "starsector/starsector/data/missions/m2/index.list",
+      "bytes": 83,
+      "sha256": "005871a87fc48d726daef4dc8cc956607f511a252a4e8680e1429da17f36a6fd"
+    },
+    {
+      "path": "starsector/starsector/data/missions/m3/index.list",
+      "bytes": 83,
+      "sha256": "ff434f4dc57755b3098a7ea9e48b2889f06a9fc2afc273543738deaffd08c276"
+    },
+    {
+      "path": "starsector/starsector/data/missions/nothingpersonal/index.list",
+      "bytes": 85,
+      "sha256": "c9914f0c45dabc6e4b8830d20ebc15bb9dcd3272d00edc81eb690d45f7b61f3d"
+    },
+    {
+      "path": "starsector/starsector/data/missions/predatororprey/index.list",
+      "bytes": 85,
+      "sha256": "4a80f08b30008de7f2aea477fbc2f34fbe8aeb0c284d3e39a9b3b054d8548b24"
+    },
+    {
+      "path": "starsector/starsector/data/missions/randombattle1/index.list",
+      "bytes": 84,
+      "sha256": "eb6351290ade43d13bb665872e4a232745a209eedd9d33db3c60e5f5eb1e8676"
+    },
+    {
+      "path": "starsector/starsector/data/missions/sinkingthebismarck/index.list",
+      "bytes": 85,
+      "sha256": "0f5f408e7161a3248a00da735dffa40f505ae840bbc805b92a758a9aaaf26ed2"
+    },
+    {
+      "path": "starsector/starsector/data/missions/thelasthurrah/index.list",
+      "bytes": 85,
+      "sha256": "b2643e500d237f7c2fb211485378c9a3cf72317464d6f7bb7c4727d688084470"
+    },
+    {
+      "path": "starsector/starsector/data/missions/thewolfpack/index.list",
+      "bytes": 85,
+      "sha256": "b443afe4d2c55f03eece1663a316da60e18b9a998a40e61f13d0cfa530182da4"
+    },
+    {
+      "path": "starsector/starsector/data/missions/turningthetables/index.list",
+      "bytes": 85,
+      "sha256": "4aaca0307dc9fff1df3532a44d973bbf0a5b24f11f71efc64599cc84f4005564"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/index.list",
+      "bytes": 22,
+      "sha256": "6417a9dc1c4a7681e32d7ca4a8004f2f640310c211d3601b83e78d7c73b79bbe"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/plugins/index.list",
+      "bytes": 56,
+      "sha256": "c0a068df377bf430434f307273f9eb7cbb336c657f3cc35f2344fd417aa6dfe1"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/world/SectorGen.java",
+      "bytes": 12900,
+      "sha256": "835d19b7378a8ce1de1764a6ed536c5011484704f0195200bbb66c639a4364cb"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/world/corvus/index.list",
+      "bytes": 18,
+      "sha256": "2a46783840e36242fe8491e1482a158949be9d3b703a69d3b6f46a2fcb1a3a12"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/world/index.list",
+      "bytes": 68,
+      "sha256": "eb33b05e05614967b0625e510623d4e85b7c34b6254bba89d55f8b455f47cbee"
+    },
+    {
+      "path": "starsector/starsector/data/scripts/world/systems/index.list",
+      "bytes": 414,
+      "sha256": "57a4fcf5be3452ba2632fc5a468e32500eb12bacdb0f70b19bd66cfde965936a"
+    },
+    {
+      "path": "starsector/starsector/data/shipsystems/index.list",
+      "bytes": 1661,
+      "sha256": "70694e16f757b960f49ae26bbf8c9fe21af919ad105a223484ffd099adb0821c"
+    },
+    {
+      "path": "starsector/starsector/data/shipsystems/proj/index.list",
+      "bytes": 105,
+      "sha256": "8554d28d6c6375761d6de12a605126a8662729c073f164e0d6821d3eb49db0af"
+    },
+    {
+      "path": "starsector/starsector/data/shipsystems/scripts/ai/index.list",
+      "bytes": 29,
+      "sha256": "6070307927c8f20d6956799d39610748bda7e5b507e2226203dca8f9236837a2"
+    },
+    {
+      "path": "starsector/starsector/data/shipsystems/scripts/index.list",
+      "bytes": 370,
+      "sha256": "c937f45dd57ee1ac1bc4114b52423d7a19a164041bc8f2661b6246e34263ef41"
+    },
+    {
+      "path": "starsector/starsector/data/shipsystems/wpn/index.list",
+      "bytes": 161,
+      "sha256": "813183b625d3d30babc5db84e09bc0f909d2031b6abb7e2c6f1e4ea8fb7c0d71"
+    },
+    {
+      "path": "starsector/starsector/data/strings/index.list",
+      "bytes": 98,
+      "sha256": "caef1505bd1bdc8413fab86c7867d8c41bbb297b060083cd72acb4fefbac110c"
+    },
+    {
+      "path": "starsector/starsector/data/variants/anubis/index.list",
+      "bytes": 28,
+      "sha256": "82c198ca9779234d9e5a9b7eebb3838094ba927da93b710266edf8a11e52dd33"
+    },
+    {
+      "path": "starsector/starsector/data/variants/aurora/index.list",
+      "bytes": 139,
+      "sha256": "0a503cd693ee540282b6d681714d4eba67e35ff2456889db32d2a960335184a3"
+    },
+    {
+      "path": "starsector/starsector/data/variants/brawler/index.list",
+      "bytes": 74,
+      "sha256": "e9a1ad171970b0fdcecc9e9a9589d25c6f3dfba8fe629c2a7507e6353614dca0"
+    },
+    {
+      "path": "starsector/starsector/data/variants/buffalo/index.list",
+      "bytes": 218,
+      "sha256": "49fe08c8e86bc715bb6293eb0e8152658b5d2f7576b6c713ebc0d47c44759dad"
+    },
+    {
+      "path": "starsector/starsector/data/variants/centurion/index.list",
+      "bytes": 94,
+      "sha256": "64ccf9f8fd6e3edd8604d3a7286d5d689f382153dd0e17ec8c9a37ab3c4561d7"
+    },
+    {
+      "path": "starsector/starsector/data/variants/cerberus/index.list",
+      "bytes": 304,
+      "sha256": "29f531c9bb34cbd248cdb35f1cd8705df63fc9c1591e1b7994b9c5ac52895638"
+    },
+    {
+      "path": "starsector/starsector/data/variants/champion/index.list",
+      "bytes": 178,
+      "sha256": "542564b33a16a6183c08402926e469a293aa08e767de2a2f09bfeef710978d20"
+    },
+    {
+      "path": "starsector/starsector/data/variants/codex_autogen/index.list",
+      "bytes": 5702,
+      "sha256": "b4ff0adfe30ae83dbd359fdb2beb90846acda5688bc5127c1782b54b9c3c6e66"
+    },
+    {
+      "path": "starsector/starsector/data/variants/conquest/index.list",
+      "bytes": 85,
+      "sha256": "2b65bbed70f6838a90e75cc9a113410cde6f863e6c0988ac84bf3e9e8500f5ef"
+    },
+    {
+      "path": "starsector/starsector/data/variants/derelict/index.list",
+      "bytes": 380,
+      "sha256": "48463216424427c867524295ad682df21e68ee268bfb2af9e3b0b739274ce881"
+    },
+    {
+      "path": "starsector/starsector/data/variants/dominator/index.list",
+      "bytes": 229,
+      "sha256": "84469b19361dd18fc4678f007fb869b6ce34fc0949593d2ebab8fa12ff8e2733"
+    },
+    {
+      "path": "starsector/starsector/data/variants/drones/index.list",
+      "bytes": 154,
+      "sha256": "0a6db684eb02133cc1ee3ef48400c4695b9dcc11a9a456d0492d6c8a475888f4"
+    },
+    {
+      "path": "starsector/starsector/data/variants/dweller/index.list",
+      "bytes": 220,
+      "sha256": "2086b510c3bf0f86eaa6ce3d2ccbac9f93d3e21954f270b7a2f1a4313049b533"
+    },
+    {
+      "path": "starsector/starsector/data/variants/eagle/index.list",
+      "bytes": 200,
+      "sha256": "6b9d3f526bb9c4eb401a3cb435e00ffd2804c34d512595bbec3b9d997c30e30a"
+    },
+    {
+      "path": "starsector/starsector/data/variants/enforcer/index.list",
+      "bytes": 375,
+      "sha256": "218e5b3887081865bef2c569058abbd5591dc1aac57c7b703bdb8ad42eee2b5e"
+    },
+    {
+      "path": "starsector/starsector/data/variants/eradicator/index.list",
+      "bytes": 319,
+      "sha256": "a5e28e4e451030debe9a403e08682c2c36b3b1af46faad474009b87bbc14b7ac"
+    },
+    {
+      "path": "starsector/starsector/data/variants/falcon/index.list",
+      "bytes": 248,
+      "sha256": "ff1376bce01c3812f947d311e17b4059fb28238f14a72cfd8a662159f75a9695"
+    },
+    {
+      "path": "starsector/starsector/data/variants/fighters/index.list",
+      "bytes": 477,
+      "sha256": "89dde198771bf5dec9ab2ac51eb0d4fca6a40955ce1cdfc9a685f9300da3cea5"
+    },
+    {
+      "path": "starsector/starsector/data/variants/gryphon/index.list",
+      "bytes": 79,
+      "sha256": "30e8b1881d1f9629e5112faa9475b8851ef6b4954bdd7b9b4857c62b0722800c"
+    },
+    {
+      "path": "starsector/starsector/data/variants/hammerhead/index.list",
+      "bytes": 283,
+      "sha256": "2489b5f38f265eb9602c02091aed9317af72670c80267bd9b1eda197ff1a00b5"
+    },
+    {
+      "path": "starsector/starsector/data/variants/harbinger/index.list",
+      "bytes": 29,
+      "sha256": "ee912922ac78bc9f6cc5e329831653c20b20672bb6b4af0d66e8014248589e27"
+    },
+    {
+      "path": "starsector/starsector/data/variants/hermes/index.list",
+      "bytes": 80,
+      "sha256": "085c22760ee95e9fdf4d471c0b9e0bb588529213bf43fdf8612dedef73439cb9"
+    },
+    {
+      "path": "starsector/starsector/data/variants/hound/index.list",
+      "bytes": 310,
+      "sha256": "570dcd969545a3a70e2f0bb1713627db15ffee492d77c6a5ed0c6016303651a2"
+    },
+    {
+      "path": "starsector/starsector/data/variants/index.list",
+      "bytes": 3168,
+      "sha256": "5f16d59a343023f16dd02c147dc6b52843a92254cca26b794c7f56a399fbadae"
+    },
+    {
+      "path": "starsector/starsector/data/variants/invictus/index.list",
+      "bytes": 61,
+      "sha256": "35575b45fd8e9052dcac9f62085b89e97db4629a769559bc06cc174ce5259119"
+    },
+    {
+      "path": "starsector/starsector/data/variants/kite/index.list",
+      "bytes": 233,
+      "sha256": "82c2af387a28f4deba09f3afa0bc559d0cd16cd621fb3ceec2e9e645486b004f"
+    },
+    {
+      "path": "starsector/starsector/data/variants/lasher/index.list",
+      "bytes": 290,
+      "sha256": "500b05d33c93ffaff349c817a27d085b3453700c768b66a3944c12a21da4f3d2"
+    },
+    {
+      "path": "starsector/starsector/data/variants/legion/index.list",
+      "bytes": 169,
+      "sha256": "11a1afeb3d0fd109d88320e7c3dd7858753e1ba752fe511b87b3ea81001d5f5f"
+    },
+    {
+      "path": "starsector/starsector/data/variants/manticore/index.list",
+      "bytes": 239,
+      "sha256": "13a495fac66fdeb3a67e902c2f194c4db8cad1924be4dae067be5415f02430a2"
+    },
+    {
+      "path": "starsector/starsector/data/variants/mercury/index.list",
+      "bytes": 133,
+      "sha256": "8fc5022fb5e72a48e510c5338e22896007a516f129d5da2319290baedfb505fb"
+    },
+    {
+      "path": "starsector/starsector/data/variants/mora/index.list",
+      "bytes": 103,
+      "sha256": "5eb8792aecacf76cd1a0db1dbf47acffbad3614f0eb6522980d35884480464ca"
+    },
+    {
+      "path": "starsector/starsector/data/variants/mule/index.list",
+      "bytes": 185,
+      "sha256": "033380e7855971774a0db0a77571062207e561cdaa20ebc73e24bec5f0d01d61"
+    },
+    {
+      "path": "starsector/starsector/data/variants/omega/index.list",
+      "bytes": 801,
+      "sha256": "a777d2d2938ebabb81c0c7c524fc49a50d88fe52e894e7d7499d2d9545e5a881"
+    },
+    {
+      "path": "starsector/starsector/data/variants/onslaught/index.list",
+      "bytes": 260,
+      "sha256": "6b6fe48080622c3cbd22cfd8aa9f4fa80f47dbf89e05fd93449e12443ecc29f5"
+    },
+    {
+      "path": "starsector/starsector/data/variants/paragon/index.list",
+      "bytes": 83,
+      "sha256": "ddfc3359a54d0fce4ecf11af09666e17b29760665b6df4fadb6cc8d2cd6ff74b"
+    },
+    {
+      "path": "starsector/starsector/data/variants/pegasus/index.list",
+      "bytes": 117,
+      "sha256": "9c283a3995d3fdb317602223c6956fff0652279fdfeb396407978b50bacb1acf"
+    },
+    {
+      "path": "starsector/starsector/data/variants/remnant/index.list",
+      "bytes": 983,
+      "sha256": "d3d4c22999b4c30d219e3254c561d0aceef1c1e73394ca6b94912d3403da5ae2"
+    },
+    {
+      "path": "starsector/starsector/data/variants/retribution/index.list",
+      "bytes": 34,
+      "sha256": "06c3c99b3efe2936d570b2237f5406834a792ed367bc9f001e681999cc8456bd"
+    },
+    {
+      "path": "starsector/starsector/data/variants/scarab/index.list",
+      "bytes": 62,
+      "sha256": "faa5b3e401c4b997f9b43e34808438740c836fea06080f30ec795e087e14191f"
+    },
+    {
+      "path": "starsector/starsector/data/variants/stations/index.list",
+      "bytes": 1852,
+      "sha256": "f6d07a602eeb40ef9ce55b503193e2fb83c68daa40c4dbad49ba9eafc21927a6"
+    },
+    {
+      "path": "starsector/starsector/data/variants/sunder/index.list",
+      "bytes": 195,
+      "sha256": "08c5008f31d8bebc356ca276bedf516ad209090c04632747405d01b5d4c7a888"
+    },
+    {
+      "path": "starsector/starsector/data/variants/tarsus/index.list",
+      "bytes": 58,
+      "sha256": "95dd518c75e49d4a8354a1d03b196030b58ec6bf768cdfb040b722e5db72a939"
+    },
+    {
+      "path": "starsector/starsector/data/variants/threat/index.list",
+      "bytes": 451,
+      "sha256": "c1258aa2f3017f60fecaa25661529fc48bfb04a2e43894b2a55f2bef21471d45"
+    },
+    {
+      "path": "starsector/starsector/data/variants/vanguard/index.list",
+      "bytes": 195,
+      "sha256": "97bf9a99917d6d5e50f385e5ca4a264e2892fb6bbd128588742c3670a6d0e97e"
+    },
+    {
+      "path": "starsector/starsector/data/variants/venture/index.list",
+      "bytes": 158,
+      "sha256": "7d2cb8a7bff1e2c4eadc955ac245c0c0e15dd1e35d2ba6ef7f9362767596e676"
+    },
+    {
+      "path": "starsector/starsector/data/variants/wayfarer/index.list",
+      "bytes": 60,
+      "sha256": "fd92934e60fdeeae0cc0a221f38051e20afcd8929afff3cfc46342247adea9c2"
+    },
+    {
+      "path": "starsector/starsector/data/variants/wolf/index.list",
+      "bytes": 295,
+      "sha256": "5905e01c74e53b7f3450ee957aef52267b57d5a0c01f9a610efe8309a4e57887"
+    },
+    {
+      "path": "starsector/starsector/data/weapons/index.list",
+      "bytes": 3272,
+      "sha256": "d6ad79f212ccfb885dc7404a0f7199bf51721af3b2d7d5f32d25c83e35310359"
+    },
+    {
+      "path": "starsector/starsector/data/weapons/proj/index.list",
+      "bytes": 2731,
+      "sha256": "f60701ece378ebe5675604fcb5c79fb84c292b8d0722ae7af3383063f68c89e8"
+    },
+    {
+      "path": "starsector/starsector/data/world/factions/index.list",
+      "bytes": 549,
+      "sha256": "1e777e31665da58489d3972c5a9c536548e111d101fea39a5e49885c8de8ddd6"
+    },
+    {
+      "path": "starsector/starsector/data/world/index.list",
+      "bytes": 31,
+      "sha256": "67caa4febde34b30bbda9d730727719ced36fa0756e81a837a4d3e901fdb8c65"
+    },
+    {
+      "path": "starsector/starsector/graphics/asteroids/index.list",
+      "bytes": 450,
+      "sha256": "9d1caa73e9c029ab5483490ff0319d21b41b70f8df21c572add4bfa7468077c8"
+    },
+    {
+      "path": "starsector/starsector/graphics/backgrounds/index.list",
+      "bytes": 394,
+      "sha256": "e1f38736f1c77be0498424710327c6d90aacf452392aa51e1aa919eac5ff4a70"
+    },
+    {
+      "path": "starsector/starsector/graphics/cursors/index.list",
+      "bytes": 110,
+      "sha256": "c2692f27a103b563a71c4d5d3592af910a4c03e862895f9a6ffd9d2138043545"
+    },
+    {
+      "path": "starsector/starsector/graphics/damage/index.list",
+      "bytes": 1032,
+      "sha256": "00894a8266c67bbb480b5ca2bd313505c5d20ff3f04aadf97ea74ea9e50b5cd2"
+    },
+    {
+      "path": "starsector/starsector/graphics/debris/index.list",
+      "bytes": 286,
+      "sha256": "883c1ab84a6558d0cb846018e65bf9a3735229ef1e2a3811bcd6dabb5c83862e"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/crest_dweller.png",
+      "bytes": 104832,
+      "sha256": "035fb771c2688845a0335f36cf56ac628384e4de70286611b86949b4b6f0f72c"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/crest_lg.png",
+      "bytes": 36622,
+      "sha256": "0f306fe5c209f1c9a52024f57ed51ba905e56caf2951102e3ca6478b3d28b29c"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/crest_tactistar.png",
+      "bytes": 10427,
+      "sha256": "d423cfe9dfacc9ff3c6750380b788db0a7bb67f8bdc3187fea510b0e41142c80"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/crest_threat.png",
+      "bytes": 53461,
+      "sha256": "a5bf3e44f9f6da1e3ed5e30a93b8148fff1831f74d0d61716906b9840028b942"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/custom/index.list",
+      "bytes": 1059,
+      "sha256": "2089a3941bb78f61a4577aa9c649611135d6b1204092ddad94eea46498f75c26"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/dweller.png",
+      "bytes": 154098,
+      "sha256": "bfe15dbc1e55df76ab2bd7fcce22caa486a5aff52f6e3e8ace5819e2d8f6f956"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/index.list",
+      "bytes": 1159,
+      "sha256": "8dadaeed77cefe1a8b58de2b6b019804062646cca203226dc9527a9735f11164"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/lg.png",
+      "bytes": 38209,
+      "sha256": "2ec9c345965764033643b6dd2c6bd20d8b6a1d07db1e906aba07362d1dfafb8b"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/tactistar.png",
+      "bytes": 10912,
+      "sha256": "080401e122583971ee23be3d2711490ea6c7d1bd8c884ef4bbd9027eb44f776a"
+    },
+    {
+      "path": "starsector/starsector/graphics/factions/threat.png",
+      "bytes": 57635,
+      "sha256": "3f9add87b95b4ad4a2436e2cbd2320f12601789acccf608bfcdce90303ff7ae8"
+    },
+    {
+      "path": "starsector/starsector/graphics/fonts/index.list",
+      "bytes": 2278,
+      "sha256": "2e8c5de7b4dde50c446fedb8ed3d8a315542fd9f25e3a25d1e6c7551b05b539d"
+    },
+    {
+      "path": "starsector/starsector/graphics/fx/index.list",
+      "bytes": 2713,
+      "sha256": "f26c0a51189063aa427a1a5a50ab6f2b21ed47c56707de9905e4fa00663cd6aa"
+    },
+    {
+      "path": "starsector/starsector/graphics/hud/index.list",
+      "bytes": 632,
+      "sha256": "c2e0c6b65ae8f4f02a7ebe0fcaec43f02614be6d34dbd6a67c91255431fc92ad"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/design_compromises.png",
+      "bytes": 6770,
+      "sha256": "07a1df07944cf34d9b9a9eda151e26c70f26cc3dbbbbf09d0632674be5605ed9"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/fragment_coordinator.png",
+      "bytes": 2930,
+      "sha256": "ced6280d0290cd3ba78fae50f27c1deee31ecd3ec5800545d773894563ec762f"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/fragment_swarm.png",
+      "bytes": 2739,
+      "sha256": "cb4eee3d11d27e0213d3f5c58d0ac67c2982d8fcba77c733bac650935d42bbab"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/index.list",
+      "bytes": 3255,
+      "sha256": "8750ad672411cbd657235d217101694d3e9e6114c55b650716e297ac3d59fe5a"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/secondary_fabricator.png",
+      "bytes": 2882,
+      "sha256": "f64fccf3f98fec962eebd68bcc64516bdd7899bd5e52ffb39d14a4f498070501"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/shrouded_lens.png",
+      "bytes": 2567,
+      "sha256": "f8f5afbb2e8e5767108f810e63fa27998468703743c188165141cb1f7cc7fbb5"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/shrouded_mantle.png",
+      "bytes": 2724,
+      "sha256": "8942124230f4c2d74c79fb64708d58cab3949854ddab671a375cfa6f11a89187"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/shrouded_thunderhead.png",
+      "bytes": 2095,
+      "sha256": "4e569de5cbd5323813ef9f2682cb52b04af370a154385824e9d85120faaaa2ca"
+    },
+    {
+      "path": "starsector/starsector/graphics/hullmods/the_threat.png",
+      "bytes": 2647,
+      "sha256": "f5e5036ff717e4016aecb896799258f1b461133ab6d0a9491428da2db4c93253"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/abilities/index.list",
+      "bytes": 343,
+      "sha256": "fb79be0306f0e82b8fd5537a3bfb0e4dae136690de45bacae8a1e529eea04389"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/campaign/index.list",
+      "bytes": 576,
+      "sha256": "79f1dc4c779562124fa953a2d1a29fbf5775b44901870c53a2d96483bdc32ff7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/fragment_fabricator.png",
+      "bytes": 14379,
+      "sha256": "9eb00074a6c793f4f891fe10fd6b3cef1afdeca7b753a27b3696f9bf8438b2b4"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/index.list",
+      "bytes": 2135,
+      "sha256": "7fd5a4b2bf238838ebb80aaa8580607bb1c4e17ef20624bc9ea4d91aecb8547b"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/shrouded_lens.png",
+      "bytes": 16417,
+      "sha256": "32949d4e28582db21668bed37ed536c4ea48d6fb10eaf3cde8dd195f39dba99b"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/shrouded_mantle.png",
+      "bytes": 17703,
+      "sha256": "15b835b1d0eff56215c9860d26cd934ff0f5db2678d6d49c74af2400c2c748b2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/shrouded_substrate.png",
+      "bytes": 16497,
+      "sha256": "661e82ff4c832f66334c2c0cf5dea9fc27988a3263cf60a7b27500a0979545b8"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/shrouded_thunderhead.png",
+      "bytes": 15241,
+      "sha256": "85bda54fa81a38ae86d239fb2b0577b01b42d481f345e98e3a5745a0cb053923"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/cargo/threat_processing_unit.png",
+      "bytes": 22931,
+      "sha256": "072595465c6c8554b4943901c2536369b5c9a674d9a94e1ecd0e577968e39732"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/abilities.png",
+      "bytes": 2480,
+      "sha256": "d80e5eafab0ea2d9f70325c6be1e8f43159b464f118b7ee686bd3d2e67ef3513"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/commodities.png",
+      "bytes": 2759,
+      "sha256": "e023512bafc83c9a4a65377be499567c26250dc2288a7dbea8a7bf7ac473aa00"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/custom.png",
+      "bytes": 2654,
+      "sha256": "1aabe7812122e12fbcec12522575507c9fbc8a2b0a55ccdca7de4d3df885e3e3"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/fighters.png",
+      "bytes": 3851,
+      "sha256": "0588cb3f634602885dc8cb1de2ec58b96818be469f7304bdda353ebf7ab6a34f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/gallery.png",
+      "bytes": 2757,
+      "sha256": "430231ba202872cb207a8b64e7e856501bbf9d996abe5ad876087621e078ad77"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/game_mechanics.png",
+      "bytes": 2295,
+      "sha256": "6a7d40dd1b3d4386c18b9dafd1d1ea065a1ec14c748086b659a8a0cdc5ccce57"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/hullmods.png",
+      "bytes": 2704,
+      "sha256": "e4ef47c4f77da3509c1fb58e99ae9458a8ca3f8047b01a951f8fff1879c9f247"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/industries.png",
+      "bytes": 2595,
+      "sha256": "fc6e6a7f31dadf03b6b789de1bcf89a08dcfbe90f4fe0a60ab5db41957c54e88"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_armor.png",
+      "bytes": 2775,
+      "sha256": "23c1875233870b93f402955be052096cb1ee50e50a2ad47a2553b273ac22c1a2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_ballistic_weapons.png",
+      "bytes": 2546,
+      "sha256": "0f8859af8ca15ddf84278e34e9cce1dd3895a437baf0247032cb5235336e3294"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_combat.png",
+      "bytes": 3024,
+      "sha256": "a73d9c26b58107110f097adf7e05377c59a2428b158c7ca62f51a12195626e8a"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_energy_weapons.png",
+      "bytes": 2612,
+      "sha256": "d747f3eca7c8b58a1292ea4b180ed9b940fb3237b5c6ae6f7a1c1256c75e87bc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_flux.png",
+      "bytes": 2695,
+      "sha256": "476b5bb5b64010c6a7ee193f96b9b563a081a6965197482d98346f32cc6d09d9"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_missiles.png",
+      "bytes": 2340,
+      "sha256": "02cc4147a8e93aca23ff23386cd67a89adba894b1164ae4362c666980bb57293"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_other.png",
+      "bytes": 2516,
+      "sha256": "8f53b6997027db0ef681567a7de19410f5ba937aeacbbaedf3bdec7ecf5a24f8"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_shields.png",
+      "bytes": 3751,
+      "sha256": "d93612502bbfb92a99b31a46748150cb5b839334ca13909db3f7079397e9b0fd"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_tripad.png",
+      "bytes": 2588,
+      "sha256": "a3819fbc46adb8391413589806842ad6a8ae7bf067f771d2427dd0d6010699d6"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_ui.png",
+      "bytes": 2974,
+      "sha256": "34b844300136a3297561ae8f2ecded806058cadc8437e0e326119fef29e8b801"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_ui2.png",
+      "bytes": 2687,
+      "sha256": "bee20b8437840de693af10fd242c989faa58c3d9a9c092f56edd01f01dbdda1d"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/manual_venting.png",
+      "bytes": 2805,
+      "sha256": "2c01d7870fc2db0355db4d5b1ce21297d52abfdcae62068abb578b8d73a9c31d"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/market_conditions.png",
+      "bytes": 2731,
+      "sha256": "0c54eca9dd6abcef9348754f180b3d71e6a6a45729b27d704d5324cac0bddcc7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/ship_systems.png",
+      "bytes": 2953,
+      "sha256": "d89632e1da9de43f40cdd5b440a5c07067bdee52a6f5ab54af7d2a308a9d9ad3"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/ships.png",
+      "bytes": 4125,
+      "sha256": "ed08de219e09f1207b9a0861247eb976459faea34eadce30cac1b853248ea487"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/skills.png",
+      "bytes": 2688,
+      "sha256": "556ce36ec7a02524fffe40110bbfb8fbee0eabda231bafb976b95e5f4acebb18"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/spacers_manual.png",
+      "bytes": 2847,
+      "sha256": "1ffc260c9e3369e87c1e115c7e5842db652256d17be4ecb7af28fe725adee3ee"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/special_items.png",
+      "bytes": 2904,
+      "sha256": "ce69954391037e12eed50d9f4ec3860d215313132cd0f47041d22f4a8866d1e2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/stars_planets.png",
+      "bytes": 2428,
+      "sha256": "65baf763f253ba6a9ab3e97fe918b9d6f0a6cbe4380679168c6bfbaa5c96d9bc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/stations.png",
+      "bytes": 2745,
+      "sha256": "974b4a3055364728c2ec16e38c3ed55c903144d17331dcd747278200da02b294"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/codex/weapons.png",
+      "bytes": 4176,
+      "sha256": "7c5dc046eed64179b3ef65722c0bc6eb417d796cea8d56f369249a5c62937eed"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/canister_flak.png",
+      "bytes": 1692,
+      "sha256": "f5ae0b0a78ef316038b858b26655c8d5e45af13e80f03347ffec31023246710f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/combat_burn.png",
+      "bytes": 7539,
+      "sha256": "11d8569d4216bf9aa382afcd8639e8206eed5097c3af6358f0e415f0c26b0be6"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/construction_swarm.png",
+      "bytes": 4057,
+      "sha256": "fc6f6d6b2fc1c919dc2b20d2e38bf0dbd5f25c994adf9df685874fb88c471d57"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/convulsive_lunge.png",
+      "bytes": 8755,
+      "sha256": "12842c1eeae80f150061e224abf0b15e8e8a7c25750e67f5c70955c45000062c"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/darkened_gaze.png",
+      "bytes": 9803,
+      "sha256": "6955c7a4f78c74ba89f70296d9b8d532d983c2f7e6f4e7693a1c3a4dda7e5339"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/decoy_flare.png",
+      "bytes": 2916,
+      "sha256": "75d7cc0bf400b5e4d5c8f3b184b1f8d1bcef537a611581194210db0e5e2bcd41"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/energy_lash.png",
+      "bytes": 3029,
+      "sha256": "ab77cfe8e46ca4ebe35cea4f8406098bbd040a124050e2151848da4e558b89a2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/extraction_protocol.png",
+      "bytes": 3388,
+      "sha256": "94da543c6e402a6164a50ecce31495e0551335b210e031039e50b0ca69441b85"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/fragment_volley.png",
+      "bytes": 6181,
+      "sha256": "9cf68ebc9d01fc5fb4c91221c01865b130aec8e82e87acbc19a707f36080114c"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/heavy_missile_autoforge.png",
+      "bytes": 4490,
+      "sha256": "ca179eb7665082816217d5ede051698061cd8e61b1f5a9cebe8e0fd8e9104ca7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/incursion_mode.png",
+      "bytes": 4485,
+      "sha256": "f348e714db74980415609972bf25507446ddc82f26d28a38ec2458e1fef4307e"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/index.list",
+      "bytes": 646,
+      "sha256": "beb31d9651770af64ed3f66f815bc6fc0ad0ea1f201223fcedca1301a9e4cfbd"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/mine_strike.png",
+      "bytes": 2828,
+      "sha256": "335323174d55a5a3f077e736d17a4087de159dabd7bb25a832a4422223997649"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/mote_attractor.png",
+      "bytes": 6183,
+      "sha256": "5374f261c6f0c7bc951de944d041c9c523aeaa359afa069e855f515d4ece778f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/nova_burst.png",
+      "bytes": 6850,
+      "sha256": "028fda32d611bfcdac0abed3ffcf2efb7a9ebc0ed5c0d0719fa11f0047770f5f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/orion_drive.png",
+      "bytes": 6748,
+      "sha256": "4c5434e43f9dfa6fed19d3d5618983c37cf7142ec5cd5897cea4258fb9dc0d93"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/plasma_burn.png",
+      "bytes": 5884,
+      "sha256": "3353f5fae1b1de59293a4fa4c5adf95c7fcb13eadcc24d2bbcdc90fac5e66556"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/plasma_jets.png",
+      "bytes": 6078,
+      "sha256": "8d533c1becd20eaf617d51691105b04f9e57f96c0a523355e76d9e433f7d8a14"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/skimmer_degraded.png",
+      "bytes": 6840,
+      "sha256": "6672804fd5cfa73b0274282793d833d38ff404a43b0c72c7e236aa044ecdf323"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/station_defense_drones.png",
+      "bytes": 1548,
+      "sha256": "67bb2b65e07e7aaa61c628ef1767f06a36be3ae127c38cad1ac48678c6e802b6"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/station_defense_drones_high.png",
+      "bytes": 1514,
+      "sha256": "0b45510b4baf73d6f39f115201b2dc75120487a3c80878381cd7cb4df78e31cb"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/station_defense_drones_low.png",
+      "bytes": 1499,
+      "sha256": "d2820110773c2a213bd20b03f577f217156d06174cf5d4a6ce2c4c0108089455"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/station_defense_drones_mid.png",
+      "bytes": 1494,
+      "sha256": "943e21c4f1af0e6d5e7ed42b68ec0ee791c18eac0b5174f0bceb7a2af2171560"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/station_mine_strike.png",
+      "bytes": 2559,
+      "sha256": "51b365ae5f92709915e2906d0bf40e88f56f52005d7d90ad17f6dec680146a24"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/teleport.png",
+      "bytes": 5898,
+      "sha256": "84dd85ac72616bd40af8fa7a1b06ba5aefba40b7f6cef3eea698ad30544c1405"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/tenebrous_expulsion.png",
+      "bytes": 3366,
+      "sha256": "277ad1004a2ef4ac2ac86665eb91437d77cc5264ad663c72d66573f957122a46"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/hullsys/termination_sequence.png",
+      "bytes": 2735,
+      "sha256": "0b578d05f06ac4e59cbd954c76d922127770e7ee9e07963e0a4dfdca2f1728eb"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/index.list",
+      "bytes": 1379,
+      "sha256": "427d04a115f2761f364e7ee89d8637f165f62599ed38f6ad53ca3a2f7a0fb37f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/industry/gas_giant_mining.png",
+      "bytes": 71125,
+      "sha256": "53451e06442a9ecfd7e469d371a30a1ccb998e634e93ffa04179660fa75faa46"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/industry/index.list",
+      "bytes": 1230,
+      "sha256": "f287818fab75918d70e6bd18d05896fb6ccd82cdf6ee821f1b14bbedf8823439"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/industry/star_fortress.png",
+      "bytes": 47699,
+      "sha256": "1ed1d185ae68b37aa62eceaeea49be4d4b799bc50f164be2b2fcd9d8b0d5ce62"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/insignia/24x_star.png",
+      "bytes": 1393,
+      "sha256": "9d5c90b11facceea8e44d63c57f524c4f1cd17029a566fac1cf990079de9e2be"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/insignia/24x_starDarkBG.png",
+      "bytes": 1710,
+      "sha256": "f8123d588ab08a31be84fab8b5b6dcc2935bd0f5860e00eda8b8e9ef279c6c30"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/insignia/index.list",
+      "bytes": 62,
+      "sha256": "653103f532bb27b4247cbdff31d0ba6e316fec5f0f825d6a6e3992eb0ac0386e"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/codex_update.png",
+      "bytes": 4592,
+      "sha256": "3baa2213d9aeb7bf8428fd34c45e773889382a3c66c5f8f815a74512faf2f319"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/fleet_log_debris.png",
+      "bytes": 3523,
+      "sha256": "a1f3cd7be41ee4d79a6f974edf11b08d65b12f0a7d504ababfbb584d4b734c4a"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/found_planet_data.png",
+      "bytes": 4003,
+      "sha256": "805ca107a0408604c43fdef6d0423cbf628d32ee8a0cc55661f7ff91bf94224a"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/index.list",
+      "bytes": 1345,
+      "sha256": "0211b7255ba10e76af7ac511b0b058f39d707bf28483f2d91b459a31367213d7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_blue_circle.png",
+      "bytes": 1599,
+      "sha256": "bcea54f68242e6dd6646028600aaff5acc03007fd311facb05b874e5f0c2a83a"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_blue_circle_hollow.png",
+      "bytes": 2037,
+      "sha256": "2ab648dc46005dbe6804b5f571bafa11093dfa081bef25470ce6d133f6c789dd"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_checkmark.png",
+      "bytes": 1528,
+      "sha256": "d225c331715464870504fed7a9632df6aca9dc768c866d7a65212c6c3cef2dfb"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_coronal_tap.png",
+      "bytes": 3503,
+      "sha256": "4289a6dcdc688ae3c92d56e0a33ac90a4f119f471d0c7359124ba7f35f62f4ae"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_coronal_tap2.png",
+      "bytes": 3942,
+      "sha256": "181f5c611c48df6b33380031f2b18bcaf63e82cc660161085e2c133bca19d41b"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_crosshair.png",
+      "bytes": 3020,
+      "sha256": "0093fe5bfeb3c95d2dcf6790d19844cf8d39e5ae9b9f31e635fb1eb0873fef19"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_cryosleeper.png",
+      "bytes": 3786,
+      "sha256": "2e7001ee74ff19aa50e66ed6f8a1a2b540ca299ccbee8dda78fc9d8145b74dca"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_cryosleeper2.png",
+      "bytes": 4315,
+      "sha256": "25f7afa90ac87c2b006f10bdcac16da465317950f57714f822a3a70fad9a09ef"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_go_here.png",
+      "bytes": 1259,
+      "sha256": "6ee72469d1717d31b94eabf036b42b428d53e20ce31324f2d1f0272a2958e981"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_green_triangle.png",
+      "bytes": 1302,
+      "sha256": "6c68dc88a51b44c9ecceec889cc39d86b220b4fb8f111b56e5e45cf82705cb80"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_green_triangle_hollow.png",
+      "bytes": 1587,
+      "sha256": "70e013f44ced213aecc049c7287db2241db25b2170725c3dc6def882d073f9bc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_historian_target.png",
+      "bytes": 3019,
+      "sha256": "604fb23d65fc150ad2c7c41eed9ea97dd952586c093313a8ae4c7ede8382ee43"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_orange_triangle.png",
+      "bytes": 1287,
+      "sha256": "77338e9691220f1ee29949ac49e43949d29c5fc8aac83a65816d7ec2229deab5"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_orange_triangle_hollow.png",
+      "bytes": 1531,
+      "sha256": "e8982c9b09d46f557a755c4c9e5fb43e6c1bd3fe551b8440e59460e6e7dc93cc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_red_diamond.png",
+      "bytes": 1330,
+      "sha256": "b717a3a5489b1a1cbd9102bcfc90088270ee8a2227b1ddd9340657981b3a148f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_red_diamond_hollow.png",
+      "bytes": 1650,
+      "sha256": "ce17a52863cb5a0e005ee3bca034bc440930710f72fa6813bea74e8c5ef15830"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_ships.png",
+      "bytes": 1420,
+      "sha256": "6d2d5c1ca000c23b3c95d2b2bdc975ab791545972c527da0be249b14a1ff9aa7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_sparkle.png",
+      "bytes": 1776,
+      "sha256": "0c9ece8aacfc4dbba6c688b04701a606e539abd28c7de5275eae157f0b2d1c63"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_star.png",
+      "bytes": 1318,
+      "sha256": "b83d1c20078f0d8020676761ce30c038f90727cad4a6f0847e22b70403897582"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_sunburst.png",
+      "bytes": 2405,
+      "sha256": "8eba82ecdeca65537329e03b18dff98ebcb4c2d8e1628eb84822c4c31a0f6ebd"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_debris_field.png",
+      "bytes": 3562,
+      "sha256": "a79e2ce66346e81f92061a1fc14dc67fbdf4be529de4059d32f92ebb059bf0f5"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_debris_field2.png",
+      "bytes": 3988,
+      "sha256": "b809f1e60d79c55d677675c8e5eaaf4da545d0e8529b3a1bd6839f1e154521ee"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_derelict_ship.png",
+      "bytes": 4053,
+      "sha256": "d382f1d8cd1c4a2fe9dffb556ee2ba9cb761dc963b6dcd391fc739fe98bf4384"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_domain_derelict.png",
+      "bytes": 4102,
+      "sha256": "c656035c7e1b9de89866b906a0bbbbe7af0cbce42ea7648299ad2f80fb2576b1"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_orbital.png",
+      "bytes": 4133,
+      "sha256": "34b7dd97534686efe3a0d3e147ac5b8045d168abdfb5a17966219687a99f7208"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_to_other.png",
+      "bytes": 3547,
+      "sha256": "8f6ce95cb6f472e4100ecfc0d5f045d6f88d6d8817b7c88309c4f2f4f22740b3"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_treasure.png",
+      "bytes": 2057,
+      "sha256": "b589660e980018e208cc20cd43202441a1e49eeb69217971ac68a2899afbb221"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_treasure_minor.png",
+      "bytes": 1779,
+      "sha256": "6579cef52fe5a4031a49477f4003118016c9273b74c28c76335fc885e85f5c39"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_upgrade.png",
+      "bytes": 1538,
+      "sha256": "4087ae4312d07588b5865027339f1f5ba97fc8c6b0252518fc035863c7474252"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_x_mark.png",
+      "bytes": 1457,
+      "sha256": "8781600cf325d8644405b51ab99dba58f0142f44bff33fb934dfa2776b7edef3"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_yellow_square.png",
+      "bytes": 506,
+      "sha256": "49af67ce4e1aa4020af0e4f4d74bf26be5f31e4d23e2857de8b64224adb8934f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/log_yellow_square_hollow.png",
+      "bytes": 475,
+      "sha256": "9d2aa6f741b0014303b9b5010d0386f9ed98f8cd698092c071c921ab55bd6538"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/remote_survey_data.png",
+      "bytes": 4093,
+      "sha256": "8fa40f87e7568e1ec2f04fef1724e35f6966144e64b72af4c0b7bc0a251edba9"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/salvor_high.png",
+      "bytes": 4163,
+      "sha256": "0ab0abbddc77a88eef68ffe02938661c717ccce807c34274a28c100b50540298"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/salvor_low.png",
+      "bytes": 3678,
+      "sha256": "e5cd53ed9a525b43bf2aed5f9b75ca99aec9482af848cd67907f6afc98968268"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/salvor_medium.png",
+      "bytes": 3889,
+      "sha256": "53813af81f3c2ffdd797319acf89cb02172c6df950e8e221623ad08676304d9b"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/salvor_none.png",
+      "bytes": 3591,
+      "sha256": "59dbb3bb1e0dcbae5c8f0e3ae90b00fc23e54e77b0abb4f64d0f30c38ac2f628"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/simulator.png",
+      "bytes": 2653,
+      "sha256": "400dc64ea56bf9b533eab36db01e50c3e9985e8815ba367977eb963ceeb4dfc2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/stabilized_pods2.png",
+      "bytes": 4143,
+      "sha256": "604af5890e5d2c56d0ea41514d0deecd5831a9250c46df2274a47c7ac65328dc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/to_other.png",
+      "bytes": 5092,
+      "sha256": "5aa65178aadf586c40c83f093d68e2b63120fa523664d7be89be11ed1db786fc"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/to_ruins.png",
+      "bytes": 5489,
+      "sha256": "9ec938b82766c74a5134d32c684a58beaf530930c3a4c3dc9623ea5bb0ba0560"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/intel/wormhole.png",
+      "bytes": 4039,
+      "sha256": "cd781324981c58961ce76e0f7a107d78d2838baf4f8b2ff170011a5b564280b6"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/markets/established_polity.png",
+      "bytes": 2614,
+      "sha256": "b5d60c5a154daa3806202a72b75bfd93162ad288d4b9b60f48765bb90b8ccec7"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/markets/index.list",
+      "bytes": 3448,
+      "sha256": "6c11ae5537c4570f99c01c6fd425b71fa0723f224c35c855e329cbe72395109c"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/markets/league_member.png",
+      "bytes": 2804,
+      "sha256": "44abc7709945d22996bc659cb8e4e2c6d7d19c0c43b1fb00f97626734525677a"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/missions/false_idols.png",
+      "bytes": 8697,
+      "sha256": "399d91412e05594113c6ab948c21320ec213153b45ee575dd22394d1a6077a3d"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/missions/hyperspace_oddity.png",
+      "bytes": 7903,
+      "sha256": "fc709c12139785a817887c77b31acad62c93831e86ee7156832298120bf53e87"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/missions/index.list",
+      "bytes": 1268,
+      "sha256": "2269485036baea4634c7062cb69fc0664f9ab0b4fa5e33692f8079e51a431e91"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/ranks/index.list",
+      "bytes": 60,
+      "sha256": "b814684b9c601be9910a42fb11ec1580c3ba6800d85ea99b6e45c217800cc941"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/reports/index.list",
+      "bytes": 360,
+      "sha256": "d30f04e3f92a9217c1100f6e285feaf1d82150ab583d7fa5d3377557dbeff461"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/skills/index.list",
+      "bytes": 2440,
+      "sha256": "b28381f3866f57a55291f1feb49a38ad396c985bc06a3917c03ebae1e66871fb"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_habitat.png",
+      "bytes": 1338,
+      "sha256": "c8dbe46b3c4cc1fe0993ed72b05716450d598f104a524bddf1f0e58a5ee24996"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_habitat_broken.png",
+      "bytes": 2110,
+      "sha256": "3a876a2898aa8cc6833a54ed83e7296a079ee14c2127747b22f8909dd47e52c0"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_mining.png",
+      "bytes": 1213,
+      "sha256": "6e20357739fabfeead2b366158670c64f37f209682cb831030befb907ef3251f"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_mining_broken.png",
+      "bytes": 1819,
+      "sha256": "0d9e5dbec1cdd0749a456bb6072f7bed08e8f029539349bd50a9e01e5520eb5e"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_research.png",
+      "bytes": 1397,
+      "sha256": "bc318c21114bd0bb5d8450b865d13526924d16b7a002af373909259a2dad47e2"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/station_research_broken.png",
+      "bytes": 2052,
+      "sha256": "44901fa8da4d950dde885b711edadbc4b2b2735e9815a0baffeb7474529a5cd5"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/tactical/index.list",
+      "bytes": 349,
+      "sha256": "9f9e91f6345805a8291958bb53406e3bfab9c7cd8cfff09a5889231034f718a8"
+    },
+    {
+      "path": "starsector/starsector/graphics/icons/terrain/index.list",
+      "bytes": 226,
+      "sha256": "7c559ce210c60bca35fbac1fb16121e370235723734f6f17edcffdeab2813b11"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/abyssal_light2.jpg",
+      "bytes": 38332,
+      "sha256": "8c0ef04b63715e9958ba843430cbb3569537345e3070e9de30fabfe6edfa833e"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/bar_diktat.jpg",
+      "bytes": 92667,
+      "sha256": "297d73df02f7135d23d65de0a738376b814740f4e7e3d07a32feec96d817ada6"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/cathedral_skyline.jpg",
+      "bytes": 159537,
+      "sha256": "6bc552c235f35a41c1c3d4fb44ae85d75f3ccfb25bd01c30587c93cda51a0b3b"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/coronal_tap2.jpg",
+      "bytes": 46636,
+      "sha256": "cf70b221c155ceacc8c8a896c6ea885b1221fbb0393ac6458316345c0c0b3489"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/dead_zero_g.jpg",
+      "bytes": 129649,
+      "sha256": "9f0f2883679a7cb5d443b19a877a4f28ccbd64ea3a0bf79f016a87e64b3895ca"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/eochu_bres_landing.jpg",
+      "bytes": 136847,
+      "sha256": "cde9edf6553cfc3bd96ab719ba49e222eb8b387ff3de9f5fd2fd3afe61ee1070"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/index.list",
+      "bytes": 2103,
+      "sha256": "236797ad4b89e3d1997a01f122014b9036fe075765341eea0179b3c4c4c45f15"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/salvor_explore_hull.jpg",
+      "bytes": 65441,
+      "sha256": "8329ad213eef52c9043574d7fd1bbf15d4299cacc606aeb388c7d65755785c80"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/shrouded_weapon_assembly.jpg",
+      "bytes": 195178,
+      "sha256": "c00adc0d96b2109e5ae9dedd1888488402014789bbb64fd059e226d27dab5f86"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/tartessus.jpg",
+      "bytes": 92289,
+      "sha256": "5687de065fb97a4a83f2e3a6c5d8b30a0efaf96fba07acbde3384f1a9df5deab"
+    },
+    {
+      "path": "starsector/starsector/graphics/illustrations/tritachyon_bar.jpg",
+      "bytes": 199515,
+      "sha256": "2339370bc6aa2c29369ac0a0d78464fa5d77d543a181f1e731d37f20dd1f6034"
+    },
+    {
+      "path": "starsector/starsector/graphics/index.list",
+      "bytes": 330,
+      "sha256": "1ee4e9fe71534b05f782ed05a333e85dd13f744f41503f8755c9889db8af1491"
+    },
+    {
+      "path": "starsector/starsector/graphics/misc/index.list",
+      "bytes": 218,
+      "sha256": "a59566194ca0d6fd022bf583851d06782a5e5d3c6983611c5b4de9dc28c9e5b8"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/hungering_rift_projectile.png",
+      "bytes": 570,
+      "sha256": "5ac870d2682631bba2ea0e101d1a716391f387d5769197cfb048d125d823a9cc"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/index.list",
+      "bytes": 1941,
+      "sha256": "2e652d143a6ef0c30f1b7c5652448357973c089c8fee36e11b180c60f9e5e998"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/neutron_torpedo.png",
+      "bytes": 2156,
+      "sha256": "4939171d782090de82b5ff82050291b74dcf314badde4137930637f56e119b7a"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/shell_mass_driver.png",
+      "bytes": 1814,
+      "sha256": "21d0a3388affcd6ee7b15525bfa6e74a96fd8f07f7e55fb606c902ff5ab669d1"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/threat_mine1.png",
+      "bytes": 688,
+      "sha256": "0c2cbd832eb7c26b4f468bde5678970a54f4067f8335904bc511aa0e24748d15"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/threat_mine2.png",
+      "bytes": 610,
+      "sha256": "5b4c340d13eb777170bda4d77810ea1e3aa58a803a10d6e3fde15c0946efe1f8"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/threat_missile1.png",
+      "bytes": 712,
+      "sha256": "578189436ccbdda80c6e05ce80f0f132d1eaf94e1015d0962c195d0b143fb2ca"
+    },
+    {
+      "path": "starsector/starsector/graphics/missiles/threat_missile2.png",
+      "bytes": 430,
+      "sha256": "c92899be2f3c778e9e2602fd8de17222eeb9e7db1303f66774e940846bdab657"
+    },
+    {
+      "path": "starsector/starsector/graphics/mock/index.list",
+      "bytes": 19,
+      "sha256": "fe512ca6ed716ee7446042c37cd27b123496c74bcd129211fc4f26c7e205acb0"
+    },
+    {
+      "path": "starsector/starsector/graphics/particlealpha32sq.png",
+      "bytes": 678,
+      "sha256": "3506469c901092c57fecfc0a1abf46c0eb6bd3f1f2a78d44af4c8b0e5ab1df95"
+    },
+    {
+      "path": "starsector/starsector/graphics/planets/index.list",
+      "bytes": 1485,
+      "sha256": "f20e1f00f98a000832485938b5d476a1a019f9674a60289d6c52d6a5579694f6"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/bgs/index.list",
+      "bytes": 64,
+      "sha256": "73af74cac470fbe5183060431b8c8eabd757b48b9d34237958aadb8bc788310c"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/cedra_keepfaith.png",
+      "bytes": 31984,
+      "sha256": "bfc12e8f41425fd1c25e68755ff670a758c083826918b21ba11c1f801050ff47"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/cedra_keepfaith2.png",
+      "bytes": 25727,
+      "sha256": "e04bb418acbfcdfc695252590eebd642de22c37c7cfbc33fa1c4558a7b62d4c2"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/damos_hannan.png",
+      "bytes": 29005,
+      "sha256": "64214fcf10985d8b06a696a81a6ed9ad18d768c27458be0d3386c8554ea248a9"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/dwelller.png",
+      "bytes": 38161,
+      "sha256": "10c007bb0ed543f2c66b507b0d6c41167577115a4856be8a9faf1ec88e2f1090"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/elek2.png",
+      "bytes": 31413,
+      "sha256": "589c15939f7926c299f3a5590f719ff2f77a9bfa081dce4883ca81dbdbc94de0"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/fortuna_kato.png",
+      "bytes": 37948,
+      "sha256": "c8e0289f8da5ee3d0eb1dc766d3e531ada4c696dbca6562d26ef4663be65e357"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/glamor_rotanev.png",
+      "bytes": 27777,
+      "sha256": "b299b97e979ef54a13e4c61bcadc59912cedf0d11e9f445104f0e675f49c8716"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/index.list",
+      "bytes": 1281,
+      "sha256": "9a6a104d9cc76d00796e3962e25b06d688356c85df8b8e4504abad434b81e3ac"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/menes_yaribay.png",
+      "bytes": 29854,
+      "sha256": "8a9f9d5bfbff5d214a321c7febf29a1f311970f3d5e04b1a50aafe7cb2f1e9a5"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/nanoforge_engineer.png",
+      "bytes": 36868,
+      "sha256": "6bc97910cccb7994c8661282a6ab7987d9a252ed42e342e7cb4fb17a5cc02c40"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/characters/rivas.png",
+      "bytes": 26767,
+      "sha256": "0bcfaef361199164beca100fc3adc2973eefee1e0351c4eb482b18afc0e4ed26"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/index.list",
+      "bytes": 3807,
+      "sha256": "779ac9713df3a9b3090354e0af49c4beaf9777d3ef664a89db239b033a34107e"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait49.png",
+      "bytes": 31968,
+      "sha256": "1f619c39b00b0cd7a5b7f2f2935cb87c05c2355ec2e6156e85618d1f17c23206"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_league11.png",
+      "bytes": 27164,
+      "sha256": "1adcaf7879ddfb0a72c31f8618bb3d13d8e9dc8512976d42d5408925c44c1df4"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_league12.png",
+      "bytes": 25623,
+      "sha256": "613397b79e4217c45c29784e2602518a92d97e0c1035c950d1fa862b6a5ed7e4"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_league13.png",
+      "bytes": 30568,
+      "sha256": "386d8523bcef3b084d6f5358aa3dc4c571166977e381217bde23026d7955e6b4"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_league14.png",
+      "bytes": 33614,
+      "sha256": "8e7a604be3d1f09c9af34a8c647ed15bb9cfa401055a621039ce3f609e0c2516"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_luddic13.png",
+      "bytes": 29460,
+      "sha256": "70955f6926a2d25f26b207dc0934761da859254dc47ac07e9027e035ca9616c1"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_luddic14.png",
+      "bytes": 27499,
+      "sha256": "1f4c1b2e84fd52d06d29e91459901ca0d59ede47042ee003c81680f8cb8b4d31"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_luddic15.png",
+      "bytes": 31380,
+      "sha256": "e0139a6102603616174dfecbfd968541327c2386883dc1faffd460665ab1e32a"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_luddic16.png",
+      "bytes": 28696,
+      "sha256": "27f90b422dbc3dc7d40640e2e591ff168dd3f517b7ac7e1eaca515063843c361"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/portrait_pirate22.png",
+      "bytes": 37377,
+      "sha256": "a0310f044aa3a8c9823896eedc63bc241a7e4b8e1e367e19789d628a489a4ac1"
+    },
+    {
+      "path": "starsector/starsector/graphics/portraits/threat.png",
+      "bytes": 32165,
+      "sha256": "5749aa3abde04fc98d00d2bdc4a91d0790f4a50af9db25a73d69deca17a81fa3"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/aeroshuttle/index.list",
+      "bytes": 177,
+      "sha256": "4248770bcaa83348465db855b89ece6ec8dac8bf519e6e105f1ed1ed11a7da1b"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/afflictor/index.list",
+      "bytes": 100,
+      "sha256": "26c62e6a0e262b8716987f4cf93b2e5541c1e85156ee4c3229f37e7cdf7ed33c"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/anubis/anubis_base.png",
+      "bytes": 68597,
+      "sha256": "68e19b512585a1b068a007d257f141a7c952a3ecb6ebf71bbdf93d0e52e066fd"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/apogee/index.list",
+      "bytes": 17,
+      "sha256": "aefd647c3492eafc4df4e7735075675a8574065f3d7359bfc015db4f57f35e11"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/astral/index.list",
+      "bytes": 40,
+      "sha256": "e79bd07ea1da7178e93d84a4f13a627aba153ae87b8160518657f93fb0ad5df7"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/atlas/index.list",
+      "bytes": 43,
+      "sha256": "95814720b8745ae36cd31015d0d8bc237546d4b39296e0c37f2009b3d76dea6d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/aurora/index.list",
+      "bytes": 17,
+      "sha256": "ec91643ccb8b0997e8b128415ef034b4e42a1b7dc0ff29a5b1972bf9900b360e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/brawler/index.list",
+      "bytes": 147,
+      "sha256": "7fdc8b068fecad3683c812c5d058e760453cc85baadd81caca3057181a541d79"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/buffalo/index.list",
+      "bytes": 220,
+      "sha256": "62ab96f5207a953df282550ceb93369288dc014d42091eee6411410e24be09f8"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/centurion/index.list",
+      "bytes": 67,
+      "sha256": "2e689edf24732e4af067da03634be9e5df8ab033ceb98b8ad913351a3162f78f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/cerberus/index.list",
+      "bytes": 109,
+      "sha256": "51a3a91cf35889df9d7a7b273bdb4fb091f234b07e190e9862a15b99823d7052"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/champion/index.list",
+      "bytes": 24,
+      "sha256": "6e98ce9b5ea8eed585bb7c470d4965ccd4405407ebc50ed18085858a1f4f4dc9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/colossus/index.list",
+      "bytes": 73,
+      "sha256": "357f997f0d19265b8da77befd5e264669bbfaca4af0599191b14b2e973eca806"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/condor/index.list",
+      "bytes": 43,
+      "sha256": "77e003c49c7ad16011d6c2cae4e7d8fc8fe088f957512f9c8d16d1da95a4bce5"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/conquest/index.list",
+      "bytes": 69,
+      "sha256": "0cd5bc27d2ed4d01e831d4b3c3e65d8def769f6d01cde99944845fd305ac5b9b"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/deployables/index.list",
+      "bytes": 133,
+      "sha256": "e338ba589d53cb5ba34b81655216bc5125350296fb9495b9d3cef0444249f960"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/derelict/index.list",
+      "bytes": 505,
+      "sha256": "231bbb0b938b3e40aa89137b63c04012f35a7a71837d9abbe9d1735c5dabc452"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/dominator/index.list",
+      "bytes": 83,
+      "sha256": "10666af4f70bf0707ae08652288c2dc1af4be1eed3f4af94f36a6a1b1f4725f0"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/drones/index.list",
+      "bytes": 264,
+      "sha256": "04f79ba4b02c8ac3f9a6022cbaf4e4edda86f2e495bc6d06341dd4659ac81e0e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/drover/index.list",
+      "bytes": 38,
+      "sha256": "7a708563165ca6bef06fd7f1afbe89e32e4c92d54170d4b9ca2d24cb79e25727"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/eagle/index.list",
+      "bytes": 127,
+      "sha256": "9b56ae2c4f8f589b5704a3653b5bc5c59079320b616a17539d3ab0d1e0c77e78"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/enforcer/index.list",
+      "bytes": 123,
+      "sha256": "cba786c9c0db74b4698b3cc89f5b85879f58b64752f0a50eac1087552cc54620"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/eradicator/index.list",
+      "bytes": 54,
+      "sha256": "b36528d39c5345cee05753b1511d722d0558be35d96fa005b5b49f387999eaaf"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/falcon/index.list",
+      "bytes": 112,
+      "sha256": "e3f2a493d93661b3843a723a3daecbb3c0c2bcacb438945fb371b05ab8e82c45"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/fighters/index.list",
+      "bytes": 265,
+      "sha256": "6ebe6c1b0723cd8a0405e199d74cd9f5355ed427f5958c70a534d46ba7d0549d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/fighters/warthog_lowtech_old.png",
+      "bytes": 2277,
+      "sha256": "fdc17be123bb1e31ea0b70af4a54bd1814b551ec9cc446d95b7891363b695521"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/fury/index.list",
+      "bytes": 34,
+      "sha256": "87120f366bf3b01cbfcaab3c8f74581154e267bbe49bf42adb7393657fce49d3"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/gemini/index.list",
+      "bytes": 43,
+      "sha256": "7c5fb635676a24e159eb4510275ab4f298882e8df95500314a024c164c270432"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/gryphon/index.list",
+      "bytes": 40,
+      "sha256": "47a48666c4add0c72b09909ba13d85264ed116dbfecdcd933272398fd5a9e7f9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/hammerhead/index.list",
+      "bytes": 104,
+      "sha256": "0971e3bdb94c202ff778f3bfdcc10d08063f8cd4250b86005b2eb0e9a96bfeaa"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/harbinger/index.list",
+      "bytes": 70,
+      "sha256": "b63605d2a49ce12ea81112b3e05de24e2bac3512584194d8c8f404fa28c70b1d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/hermes/index.list",
+      "bytes": 99,
+      "sha256": "60e42729139e88b747082c641537b14d9db485a1f1a631c90b040fca2701a1a1"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/heron/index.list",
+      "bytes": 36,
+      "sha256": "7fc5ab7fd09658437d13196394768830c0796e539b044ceed8fe84aa78ddf6c8"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/hound/index.list",
+      "bytes": 177,
+      "sha256": "11187426749cade8dc98958fb9460fcb873616735e2d2a00f57727739b7aa906"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/hyperion/index.list",
+      "bytes": 41,
+      "sha256": "e487b110f2843f8008de6e413815a118d7a73ede7d96dd02d9ab92e6e8e25280"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/index.list",
+      "bytes": 2707,
+      "sha256": "fbb31097e4a3f1db559f12eee677c5ea00f45b99e5393a74919b0f42d108878d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/invictus/index.list",
+      "bytes": 20,
+      "sha256": "9fb0bca12c6d10c21204702758a93d8524b7c1a72f633d1bb56300dbec1c50be"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/lasher/index.list",
+      "bytes": 148,
+      "sha256": "0d1721310bbd938d8de3f83d3c5444f25cef14af606ba70e0858858709cd4b28"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/legion/index.list",
+      "bytes": 40,
+      "sha256": "895f0eaa6549f04326959659f26eb0349b590891f2b9310158bd7884c1dda7c9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/manticore/index.list",
+      "bytes": 79,
+      "sha256": "18604dfd68c36d7efe611f92e8be4ab2557949b13bdae0b0d9789c909b46d5e9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/medusa/index.list",
+      "bytes": 17,
+      "sha256": "3c3268c012e7717df8861669f7c87f3b3fe51f7d33df2f2dc4f34132c0f7e750"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/mercury/index.list",
+      "bytes": 76,
+      "sha256": "ec6a5cde876d0ad26703bff0ddd4c1c56886769fa9520e6b8a50d0fdfb05c9f0"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/mora/index.list",
+      "bytes": 15,
+      "sha256": "276bf376a84c6f085bfa610e7aad4b5d7b927a77922eaafe5806d6cf5cb35c54"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/mudskipper/index.list",
+      "bytes": 43,
+      "sha256": "59435f83996c2adaafd0250eb5c68b9177f0aea808432fb3bd2d19d45a90bc06"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/mule/index.list",
+      "bytes": 111,
+      "sha256": "00855b7e149434db9e03dec7c6abdb40165479841d991747974eacfb20d199e1"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/nebula/index.list",
+      "bytes": 38,
+      "sha256": "262ad2035cab9018763a08a6593f13eb1ecf23e6c97651dceff9477a8213ba61"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/omega/index.list",
+      "bytes": 124,
+      "sha256": "ff846e8a2d716fd67e9f3932a25bbd81535e33a7cb53e7617a57ed340c0b32c0"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/omen/index.list",
+      "bytes": 15,
+      "sha256": "53007459092223896050d57ffec6202861ccb6bc19dc03cae58b06863a93aade"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/onslaught/index.list",
+      "bytes": 56,
+      "sha256": "5dfd08f25a5d8ebdf419e83b44f05e038fc27495b3dfea96fc5e33c2b725160e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/onslaught/onslaught1.png",
+      "bytes": 183000,
+      "sha256": "47674f280701b66bc956aa9daec22b4c48da4389d840bac704c96a461c80148e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/onslaught/onslaught1_armor_left.png",
+      "bytes": 28707,
+      "sha256": "a49c3d9e3ed2c8256a206a5d24f3bb8fb2be3f89b56519e87e85db013d40d6ca"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/onslaught/onslaught1_armor_right.png",
+      "bytes": 28596,
+      "sha256": "990502a2427c34d3d989a7259e22b115b22f45a27ec0822736cd6ef2e96a1820"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/ox/index.list",
+      "bytes": 14,
+      "sha256": "5098aa93a2d4cf6c27132d4bb7e0ac70556259644e1b081f1bcd1c7829b28e78"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/pegasus/index.list",
+      "bytes": 39,
+      "sha256": "790a95ff84b9132332fe0e62c083e180128db674c4c343c90f41a14e35267d09"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/phase/index.list",
+      "bytes": 782,
+      "sha256": "c91f3a533d91efd41bec220a94e6ea727f6ac9b6789909dab0b306bd7ff5a089"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/prometheus/index.list",
+      "bytes": 50,
+      "sha256": "f72c1ee130d39ea505b036d146286bdf81b382f5d135576a3f7493b7ee05af76"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/remnants/index.list",
+      "bytes": 594,
+      "sha256": "1c507e0abecec2212a4f1da91a790489048b19f4eefcd84c8e27bd7407b33a52"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/retribution/index.list",
+      "bytes": 23,
+      "sha256": "b98151ca930c56636292749169dd0cc35a6cd6d3cf9a044fe95e8bdd7fd32ac8"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/scarab/index.list",
+      "bytes": 17,
+      "sha256": "b92bd6b79a6e516ecce953f1d1b366d93264a5dbd940f0207f4bbbdacf803baf"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shade/index.list",
+      "bytes": 88,
+      "sha256": "2d3a602436f3feba0e2a1c19a0c9babca89d5c62d3f91f7dbc36b457bb205c3c"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shrike/index.list",
+      "bytes": 41,
+      "sha256": "44119b3bfeeb8dd875bb74cdf7015abb6ca7f22874fee30920cf85694d407e46"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/branching_structureA.png",
+      "bytes": 29220,
+      "sha256": "0efa4f6f51dd701406dc628e9cde29d48039ead9960af4fea017ce6060b625bb"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/clusterA.png",
+      "bytes": 11711,
+      "sha256": "05bfd35f1b98c22c2dbbca20d4e3ddad9502fb62ec1b0b50c29acbf33c651e79"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/clusterB.png",
+      "bytes": 18451,
+      "sha256": "8968a9cc7122e8e0580e2445d6697e58a3248881a4f11e988d57f3208fb6b9d9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/coronetA.png",
+      "bytes": 4718,
+      "sha256": "e7f280e316d5231645148907e520f99392cf727dccdb0148d349b55827a23a1a"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/coronetB.png",
+      "bytes": 2786,
+      "sha256": "745e2dec74c573cfdf9f0bd8f7e391db2808ad0fccbbf41f17f170cb17746a79"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/coronet_stalks.png",
+      "bytes": 15351,
+      "sha256": "b5ad4e749b33d1471cc6e6fdb11c5da96b6c9a57fc277a3e0391f8e2090eb105"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyeA.png",
+      "bytes": 819,
+      "sha256": "0ef1f33c4d9b1f36452230a4e0091e6994065e0be48e32fa65ff274603739fa9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyeB.png",
+      "bytes": 1559,
+      "sha256": "9c55f72704661c8965c6d380093570adbd59b7a337603dd7b1afcbf366142e2f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyeC.png",
+      "bytes": 782,
+      "sha256": "1390bdb94797e680ffd8f5c6592c96141d1023d1f9866c6cbabcbfd078158b37"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_circle.png",
+      "bytes": 26791,
+      "sha256": "13eee0d7cd949fc059aed4f8a053939a23fafe88d06fcb283a74f989951beb3a"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_circle2.png",
+      "bytes": 48837,
+      "sha256": "768149b636ec5c2a50534e696650ec27cdb34f787d0ba1576626d75b063bb668"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_circle3.png",
+      "bytes": 29540,
+      "sha256": "bd255f2e3056be6b298ee29414155fe29a2e608df65bf3320f5541da276022c3"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_circle5.png",
+      "bytes": 99551,
+      "sha256": "04e5068971dc356c708375ad41e3c33dca13f2cd29c9e42f5191feac7c5425e2"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_cluster1.png",
+      "bytes": 4235,
+      "sha256": "6869270d07d990084b9e33d90927d400375d16a7d0eb237db51e1ac273b08491"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_cluster2.png",
+      "bytes": 3973,
+      "sha256": "2c030144b0bbba0e044f8aa51229821481804fc4738027d499411db017aff224"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_cluster3.png",
+      "bytes": 3408,
+      "sha256": "e22b1cddd5009fa528b2658fc72bff199dea2fadcfb46a65873c9a82b6359d3e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_flat.png",
+      "bytes": 98038,
+      "sha256": "5f3c6bb33eda3aaede24d8d89ca600dba310a064b1e8e024eda480b106ed3e6d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eye_iris.png",
+      "bytes": 48049,
+      "sha256": "c9e3fad6f68349b56cad139cf188296402ea5a9cb4e075223821f32b66f12019"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyeballs.png",
+      "bytes": 20905,
+      "sha256": "9000961a3a218cd550ad1ff9569a2e3492c8566a95a0944c55fb5e88ea713173"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyes0.png",
+      "bytes": 1915,
+      "sha256": "34657c679f4fd5975ebf94af0503235564deeb005102dfd98030ffc4a16ca4ac"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyes1.png",
+      "bytes": 1878,
+      "sha256": "b89bddb692968ed724464500a722ace0e8a426602e941a8b23b2482a8856e7bf"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyes2.png",
+      "bytes": 1761,
+      "sha256": "0baf608ed76c83d1762c65f69f70361577427a5e65bf23bf4c530f946278a0f3"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/eyes3.png",
+      "bytes": 2001,
+      "sha256": "f2111f770589dbbe699e8615db46b6a6476f92f3ba171b199181c5100407ef0b"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/headA.png",
+      "bytes": 3221,
+      "sha256": "e96fdf950422d09fef4ec6e0e779fa578dc29d58cf7ec5760a6c9adefd57d5be"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/headB.png",
+      "bytes": 2864,
+      "sha256": "fdc22c11a60bed222fee50525897142d5480cb7e712767f4ed949072fd8a71a7"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/index.list",
+      "bytes": 41,
+      "sha256": "44119b3bfeeb8dd875bb74cdf7015abb6ca7f22874fee30920cf85694d407e46"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/maelstrom_base.png",
+      "bytes": 34808,
+      "sha256": "6c1bf11904eeb4181a1b470b5de874b5475a56e17d5f99da78c6f9a9ab4bbb9a"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/maelstrom_flat.png",
+      "bytes": 51409,
+      "sha256": "4e31a7279ab71191230d7e48df7bc5d9b1053eda380adb38776bd199b88b9679"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/maw_base.png",
+      "bytes": 156011,
+      "sha256": "1dcc3e10ae13e61204ee02803cd971fe7b32bb2703d5424ce3919dff662b1773"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/maw_flat.png",
+      "bytes": 132996,
+      "sha256": "0a04226fa9f0e34474832cd79f87c99c2d9078187717248038645f5f0c11c539"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/maw_glow.png",
+      "bytes": 138050,
+      "sha256": "a54ebef128ffda1b4c3bbf86861823198fb853348ee7a2b506ec54d857b1dae5"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/segmentA.png",
+      "bytes": 3600,
+      "sha256": "a8e3438e383f4f683d7c76bd7a38288d758a150ce43f6cd421f05b4f87bb671f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/segmentB.png",
+      "bytes": 6540,
+      "sha256": "27119ccb8e5385bbbd98451b095e4a51d75889ea89346930cc36f1d9ddf967d9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/shroud_bright.png",
+      "bytes": 267772,
+      "sha256": "ac4bb8e1ed6abc5432997fe30be5a719b301ff5e5adcaa41b8aab58e66fbeab5"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/shroud_tendril_base.png",
+      "bytes": 40336,
+      "sha256": "60b705cb95d381fdb028a1c99123a856c1d3458d62b48d23e7f73c21ca4a6ae6"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/shrouded_blobs.png",
+      "bytes": 77911,
+      "sha256": "dbeb40cd0baf1770baf1d3b12e40ee6dd0994ca068767c2060b6a14afce037bb"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/spot_cluster.png",
+      "bytes": 8983,
+      "sha256": "8077f6a83cdf6a2e1d2763080b810de1580930bea4ada599172b5d1c9de41def"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/tendril_base.png",
+      "bytes": 48559,
+      "sha256": "c7dd23c535eb97b1801b955d770887449985b2137a7294fd450b28bdc1950462"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/vortex1.png",
+      "bytes": 10924,
+      "sha256": "43dccb138f544d63b90a1dedd1e6845ac9e592b2ba93736ad7c8e4d57222e3da"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/vortex2.png",
+      "bytes": 17323,
+      "sha256": "e17dbc5c9d4f586fb55969eefad3ebe72395932121999f54241f7aefc60b4dfb"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/vortex3.png",
+      "bytes": 17687,
+      "sha256": "1ef63c789271951309f921b8ddf69f97b8e164a2dd042c08896655f6fcbef4fe"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shroud/vortex_flat.png",
+      "bytes": 26678,
+      "sha256": "d816c5e649067fb2eeed7a8341c71271d404ee95596ff44e40c74e427bf8c51e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/shuttle2.png",
+      "bytes": 946,
+      "sha256": "7adfd7522e97b3123c4af62c3f55ed8ea23d88d084322a51cb6ea12d914aaa58"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/starliner/index.list",
+      "bytes": 20,
+      "sha256": "f7ffbbf520f53f61af2b91f6a16796bd0939ee318c7838ef88e04dec34349061"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/stations/index.list",
+      "bytes": 2092,
+      "sha256": "26e748cc97e2433820e166290b2d7aef56865d6849ca0e01a471c67023f7ed19"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/sunder/index.list",
+      "bytes": 80,
+      "sha256": "f25b907e42dc3094f2b280fb9351a6a061c2501eafa3a3cd4b859536ad99c55d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/talon/index.list",
+      "bytes": 147,
+      "sha256": "a450400ddd63a9fb0c3cfe24f7572e4893f5bf14d6ba626c6716348d36cf8f22"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/tarsus/index.list",
+      "bytes": 94,
+      "sha256": "4838b18422f22411248e096176c72d65d759cb2914ae65710ca1fec86233ece7"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/fabricator.png",
+      "bytes": 261468,
+      "sha256": "8b79db5628ba933b1a24e15b783eb3e3f737c259f5f99303081b7c0b287f894f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/fragment_single.png",
+      "bytes": 3509,
+      "sha256": "56d0ae7ebd18715b0336ca651c1d70cc11be0a13abb690a9b311d528b7d44f6d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/fragment_swarm.png",
+      "bytes": 40735,
+      "sha256": "e2f17cada396fed8f2ee6ca9a5592aec9fff1f004e6a79f724d4d9150dfb9746"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/overseer.png",
+      "bytes": 57656,
+      "sha256": "fce8f03ffc4c28977648059191d1582a4e738e08b61cfcbd0ce85495e338c38d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/threat_assault_unit.png",
+      "bytes": 53062,
+      "sha256": "334c82990103b3ea8d8967bf27df1c73013010446264ed399f047903a2a5b2d9"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/threat_fragments.png",
+      "bytes": 25414,
+      "sha256": "a9aee4f0fd10f930d4e571960c44c8688b9d091d27360f9068dd84be1d12c3e4"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/threat_hive.png",
+      "bytes": 104683,
+      "sha256": "7dc6ca1e198fc7cf16d06ff49e10e284828d8347c338cd9dd4499d26842e4643"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/threat_skirmish.png",
+      "bytes": 26289,
+      "sha256": "0f07676ed39936424ca95f9cdf3acf0981dc1ea21b23a923004f0e1753a67d0c"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/threat/threat_standoff_unit.png",
+      "bytes": 89839,
+      "sha256": "78ae354e66f404388008f658ae7a9dcddba460cd733c29bebcd89f759722ab79"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/valkyrie/index.list",
+      "bytes": 48,
+      "sha256": "aa3a0e7e32dbe21d705a99cb29f041d7620305e5b9bc1cf25bbb951105a10eb2"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/vanguard/index.list",
+      "bytes": 50,
+      "sha256": "08ba9fed65b7d1c9c9654dac02d2153c85fabcc6a84a28ce192e494ba1151c71"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/venture/index.list",
+      "bytes": 81,
+      "sha256": "d2eabaabffd080856b589a7396d927b4bb11647e543934fad12fc1d9f4acfa4f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/wayfarer/index.list",
+      "bytes": 19,
+      "sha256": "4c4a398b40cc889eb5474a30fb6c2226b777214fdad133e74f9259fa393309e5"
+    },
+    {
+      "path": "starsector/starsector/graphics/ships/wolf/index.list",
+      "bytes": 84,
+      "sha256": "8c10e3db5dc60ce61a2bcfc6352df711ae8eb3b481cf5f3f847a3a0cb1e82160"
+    },
+    {
+      "path": "starsector/starsector/graphics/starscape/index.list",
+      "bytes": 118,
+      "sha256": "c2139cf9286f2e3e192302e1b8dde8f659588fc81df77e7fd0e60e2cc46bedda"
+    },
+    {
+      "path": "starsector/starsector/graphics/stations/index.list",
+      "bytes": 1182,
+      "sha256": "4bae8bb51db003cbc2e052a5bb77b24f5b692d0fa83a5d9dfbca9bc07e0b59b4"
+    },
+    {
+      "path": "starsector/starsector/graphics/stations/vambrace1.png",
+      "bytes": 5284,
+      "sha256": "161c0fa138f52fbd261c31c1397cadf68c109fdc9c12112f811f653a3004412d"
+    },
+    {
+      "path": "starsector/starsector/graphics/stations/vambrace2.png",
+      "bytes": 6202,
+      "sha256": "a2a3f6622fb6b06bff20a8086421a88a9b0718b55b1d892bb650808769c3c5a4"
+    },
+    {
+      "path": "starsector/starsector/graphics/terrain/index.list",
+      "bytes": 432,
+      "sha256": "d61730b7b098f32bc058f02bcbc9d92dc38fe5f1827334fdaa7afc5e38a8edc7"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/bgs/index.list",
+      "bytes": 1257,
+      "sha256": "fdb29dc26f104383642c7ef1136d8caca3a93e663050e381d0a81733826bf833"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/all22.png",
+      "bytes": 178,
+      "sha256": "c8b0cd58281e96ae06e73c3ea901fbc3021cc80790e2c3bf41248a99a0874e5c"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/all24.png",
+      "bytes": 177,
+      "sha256": "1a285b56cceab91f38055633e5308bb7b3f44e62b4505f8525bdf385ec207a12"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/codex_arrow_up_category.png",
+      "bytes": 273,
+      "sha256": "8d1b376e183929059ee94905b7dcc90c6b7aed9efcbbf2f3da04b3ee156dd218"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/index.list",
+      "bytes": 697,
+      "sha256": "20d8f3873c1df28c1a6bb49cca6fa1ccd9294f2bf8f14270f8222d6098fe1999"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/none22.png",
+      "bytes": 474,
+      "sha256": "0a2cac2d529f5ef5e0d3835c92b161bc735cdeaf2b38a294f8a7eac905e47eaa"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/none24.png",
+      "bytes": 489,
+      "sha256": "51e23fde9b6085439d2d8424378135beefa694b1ba8786a4646db9d03f81735b"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/buttons/random24.png",
+      "bytes": 588,
+      "sha256": "0ea68920cb64ac4151965b9bf978a699242e599ad3a48dd8b0c71a6f0fa26ee0"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/codex_arrow_back.png",
+      "bytes": 1618,
+      "sha256": "902856bd9aa5dd50cc80f26cd34ca1bae8940074bb2bb3a399c41bc4cd6fae6e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/codex_arrow_forward.png",
+      "bytes": 1613,
+      "sha256": "378c7af7557830acfd36d03d201d2445c0d17fc49c99c7684aa95aeaf95c292d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/codex_arrow_up.png",
+      "bytes": 1578,
+      "sha256": "147848653dd84b6d8e48dec15c420a1ac21028caf79c2c214a4e31ab560e327d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/codex_close_x.png",
+      "bytes": 1804,
+      "sha256": "d8103bb374a946fe84a12576f1ea35a576f3bd481653f4b59f0715aee8a1c92f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/codex_mod_info.png",
+      "bytes": 272,
+      "sha256": "34e910dd1d6f9efec107777d68e6f748a803f1b16acf6fa0fc4e4a184c3fc0d0"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/fleettab/index.list",
+      "bytes": 879,
+      "sha256": "d54b147ca9100e603aa09b588f743a1500fc8ffb83413b57075228c03e1c6332"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/index.list",
+      "bytes": 1176,
+      "sha256": "b17d70754c616fccc1d0b0277ad21862e50badca005b1a430733652e1959431f"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behavior_aggressive.png",
+      "bytes": 227,
+      "sha256": "39614980fccfe1e28a32309cf8e0787cdaf7262ff17047b8a5e51e3ebb3a4d63"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behavior_cautious.png",
+      "bytes": 247,
+      "sha256": "0c3247296e3619cc359ba102875f239e86ae238717a71b57dfb177e745fe6935"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behavior_reckless.png",
+      "bytes": 469,
+      "sha256": "a97f779d9ad9c1653560f945113a827a51b2d4e3658716d94ce80b7e20e3a75d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behavior_steady.png",
+      "bytes": 155,
+      "sha256": "75528c17eaa8ff2896071c8c99a8c627c15b96eb846fc4c91b4d1adaf50ada14"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behavior_steady_default.png",
+      "bytes": 161,
+      "sha256": "529fd8740bc55dcfd304dd5c8553f7a7e774261cdf898161645bcbc1ce34024b"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behaviour_defenses.png",
+      "bytes": 317,
+      "sha256": "a8f22598525f80543cc492106f034a6b72336dc0e49e83938dfeff14a811b8fb"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behaviour_passive.png",
+      "bytes": 366,
+      "sha256": "18855f93a33b8a1d099e99f305c87d99211a5f9f76874e2796c8dc1de0c6fb53"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_behaviour_stationary.png",
+      "bytes": 370,
+      "sha256": "4562b33a8fd877b956ac756709d3a18add24f54ff5ecaad3484bae5d4d44be8d"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_alpha.png",
+      "bytes": 283,
+      "sha256": "beccb5e432de22e72035f8f14b4e213f056a18766cf8e74e5817838aad1d680e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_beta.png",
+      "bytes": 305,
+      "sha256": "5d7dedd1c9f41d67a8f7f09ddc9128156ad260304e0562c165229b3299d74f03"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_gamma.png",
+      "bytes": 315,
+      "sha256": "b6f82278eb688fdebf106edcd9ed109246dfe76807a639fb3598332bd091175e"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_mixed.png",
+      "bytes": 594,
+      "sha256": "395fdb8dcdd0cb1f8151335fbdd39ac0d61e96aec9192092c98b1a83a3699539"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_none.png",
+      "bytes": 437,
+      "sha256": "72d822cf770c5544c49b28f5a97a4f8089c599c0a037b8aa4a23fde886357f87"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_cores_omega.png",
+      "bytes": 262,
+      "sha256": "6647405b500b55c81b05c0bcc6de2a19dc0952282af536a1377b7e44bbbe3ef1"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_officer_level_all.png",
+      "bytes": 307,
+      "sha256": "623ed206da1d4dc0cd6de09ec69e4d41f17d9d6b4b6fc105d27ab1a1686dcabe"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_officer_level_all_high.png",
+      "bytes": 346,
+      "sha256": "e111db279d3adfee09d3d99cf43f561663146f6f7e68a9dff87847c45327560a"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_officer_level_none.png",
+      "bytes": 437,
+      "sha256": "72d822cf770c5544c49b28f5a97a4f8089c599c0a037b8aa4a23fde886357f87"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_officer_level_some.png",
+      "bytes": 232,
+      "sha256": "a24875c98800d15a91b30980a58af7c3a09d691e852b6512eae53d654d7a167a"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_quality_average.png",
+      "bytes": 210,
+      "sha256": "1c6993b1fbd602223eb5001d7bbb16b3f32fa2b11d192d12e60a2891e90d98cd"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_quality_high.png",
+      "bytes": 229,
+      "sha256": "1980afb685814dbae64fa7ca5fb46acdc8cdf71993ab3515b84f266f4be5a278"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_quality_highest.png",
+      "bytes": 259,
+      "sha256": "bf7a1456856376ac7f348b2da04636ccd215c06392bf82cf0b8f28415fbb9ece"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_quality_low.png",
+      "bytes": 303,
+      "sha256": "267daa1ffe67a6e637ec041e61635d1bb767fee7f8738e11626882864af85b18"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/icons/sim_quality_lowest.png",
+      "bytes": 325,
+      "sha256": "c6c7d1ea8fdb5dd5dfe27567a530bb17e710e399117572bbc833a521823da7b4"
+    },
+    {
+      "path": "starsector/starsector/graphics/ui/index.list",
+      "bytes": 2241,
+      "sha256": "0b13b3eeb2dc8dfe4fac023a2a9c6b09120bd0210f36f8dabb10a899e6097a80"
+    },
+    {
+      "path": "starsector/starsector/graphics/warroom/index.list",
+      "bytes": 738,
+      "sha256": "13080f78d3aaf30ebc24a907f52cec1ba41baa32490d7b2831d766c637433d74"
+    },
+    {
+      "path": "starsector/starsector/graphics/warroom/taskicons/icon_ignore.png",
+      "bytes": 1838,
+      "sha256": "135d34de6a23a36accb1a44a93b78360047f1b9ad13d298edbbbc563c42b6a13"
+    },
+    {
+      "path": "starsector/starsector/graphics/warroom/taskicons/index.list",
+      "bytes": 868,
+      "sha256": "827b2172fb870c504400a6f17035e765456c25b2d814765f4d71cb9d1526dc23"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/abyssal_glare_hardpoint_base.png",
+      "bytes": 5441,
+      "sha256": "de945b72fabcfb1dafc0c5c264c43572caf4baa69a00e45fbebec5bc05af9f01"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/abyssal_glare_hardpoint_glow.png",
+      "bytes": 2379,
+      "sha256": "1e7e3d041bd7a66829a733350edd4092e580cc50fdcc8486c88bc0c9fa323136"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/abyssal_glare_turret_base.png",
+      "bytes": 5451,
+      "sha256": "6feafef19b5e5ae550f0dc36282ebfedabe443c4484383dd296ca92f8a6feb19"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/abyssal_glare_turret_glow.png",
+      "bytes": 2442,
+      "sha256": "4e5aab260588fc04e5b8936fdd07166803dafa0d986c3c20578885162a6211c6"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/blaster2ht_hardpoint_base.png",
+      "bytes": 2412,
+      "sha256": "b8214f747550442437c2a59601bb0f0a6d87bca3110221005a3cdcdd2dfdd6dd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/blaster2ht_turret_base.png",
+      "bytes": 2452,
+      "sha256": "93dfd7177b2119cebbe247e087d39d8a5b38f4bbd1a8b254990f4456a0036777"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/churning_locus.png",
+      "bytes": 10396,
+      "sha256": "04bd5147cbd724a573490037c3054dae114e1a3c3ba04d150f96700f2348bc26"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_hardpoint_large.png",
+      "bytes": 2802,
+      "sha256": "cd48617355305a16d9e3207366b16210f0b20f3912ad01ca317251d24c58da20"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_hardpoint_medium.png",
+      "bytes": 1570,
+      "sha256": "d202948693553a18fcecf580d4b09f1c47319f3745ec4d3f18f5a205e9085f07"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_hardpoint_small.png",
+      "bytes": 709,
+      "sha256": "5abcccf1aec50908d34d339ec4107846d582c2baf5c8a1885f0ce52abd04ec8d"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_turret_large.png",
+      "bytes": 2683,
+      "sha256": "20a55ff6cf9d1dd89e875bc4e2234d8a10aa3e4ebf563a2817dce73096133752"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_turret_medium.png",
+      "bytes": 1575,
+      "sha256": "0f1190ee691c4a7392c5f18d22c26b537891b60956374822287fadb064a73c20"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/cover_threat_turret_small.png",
+      "bytes": 619,
+      "sha256": "5ddb90c6bcdca40e7ffd4c4d92a87c71729fecbf0fafba1eaa4287f2d36215a6"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/covers/index.list",
+      "bytes": 905,
+      "sha256": "5e141fd595d85c126cff0edcaaa79f23f0a13d0d0697f444fffd38d50429866e"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/blinker_amber/index.list",
+      "bytes": 51,
+      "sha256": "3ae97abe93ac146fc1857085341b45bbde017a4fd73a5b576dbbd49219245cdd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/blinker_blue/index.list",
+      "bytes": 49,
+      "sha256": "d30d721b02c303528b23b2eed0bc830a8a5e86d914451ee9cc16a4a2e5e62b92"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/blinker_green/index.list",
+      "bytes": 51,
+      "sha256": "8a8b78f65a75c82083f113b43007eac4e74ace5f2c8ab899fcec13b834293d6a"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/blinker_red/index.list",
+      "bytes": 46,
+      "sha256": "bedaa7a7dd08a58220f71d379ea5118a982afa172b1006b3eee37c6b3b68a1e4"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/blinker_white/index.list",
+      "bytes": 51,
+      "sha256": "dd4dd92950aa92aa0d4a362228fb1d974ad35485bbcfc41f2316a5c8da65dc5c"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/decorative/index.list",
+      "bytes": 243,
+      "sha256": "f97c02a23872d7339a817515931135830b8489e5dd076624147c49f1bf9de9e9"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/devouring_swarm_hardpoint_base.png",
+      "bytes": 1061,
+      "sha256": "284b816c14ed81b59c979f05a1c0702dabf3b71512d8a2189c752a9324e393cd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/devouring_swarm_hardpoint_glow.png",
+      "bytes": 408,
+      "sha256": "7c66d33dd264e8ba947354f65c529f02999093bfb90ceabc692e16abd11efb6b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/devouring_swarm_turret_base.png",
+      "bytes": 1031,
+      "sha256": "6c3c7f4adf2bb5cb6d6066a1c5a89ab1287d3497ff11c7e6be59806cdb826586"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/devouring_swarm_turret_glow.png",
+      "bytes": 486,
+      "sha256": "b53097c89bd5300f220b907a0a40caedd3d16b3182f1e2b22f9eebc2f73ee6f5"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_adjudicator_hardpoint_base.png",
+      "bytes": 1504,
+      "sha256": "baa1bc7cc593f92ca36b6729be6832e8f465fe8c619368cd8f027ad93aee741a"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_adjudicator_hardpoint_recoil.png",
+      "bytes": 1130,
+      "sha256": "9c093a141f26d4b8701f1d43c5ce018f0a2f6632f215b253bfd7dfb0e47e221f"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_adjudicator_turret_base.png",
+      "bytes": 3715,
+      "sha256": "97eaa627fa6197fa2257c234843a4d59e02d200473667f0a080ffc116f92cf30"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_adjudicator_turret_recoil.png",
+      "bytes": 1235,
+      "sha256": "ad383f649974a419e43362b908005b8ad39497187e2138354c73a28a3bd9fbba"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_hardpoint_base.png",
+      "bytes": 2283,
+      "sha256": "ee4ea46b886c94756c95cd3ad53091c0ad73e2ebebf26b02e2acca0c63f7d5cf"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_hardpoint_glow.png",
+      "bytes": 675,
+      "sha256": "5c10bbf92b9fb30e30dfa595637660b132cf3d701b62c1d63a6f1885f6b966f5"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_hardpoint_recoil.png",
+      "bytes": 1620,
+      "sha256": "f8e8240233c0cc2f095d8bfe167c644a7ae527a0370fce96500203d73ec01387"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_turret_base.png",
+      "bytes": 2317,
+      "sha256": "9fef4991cdfd90e62106d0044de9145a8e0ac1e599b5db9850ba1454ba170c9b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_turret_glow.png",
+      "bytes": 665,
+      "sha256": "b77a494c535e9c18c3e9e6ee12c9cbebb87ddd9b91ee7ff85d3a90bddd359634"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_driver_turret_recoil.png",
+      "bytes": 1665,
+      "sha256": "53674037ab5a4860d5d5fc6e92959855b2e1a9097d6436e704d7d770b9d30d56"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_mass_driver_hardpoint_base.png",
+      "bytes": 2152,
+      "sha256": "eebfe9c4b9cd3f696f87c7129c3e23eb9d0f7b33ca4adb6b8a7baedf76c391ac"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/heavy_mass_driver_turret_base.png",
+      "bytes": 2032,
+      "sha256": "a44de9769f336529d08c8930e0e6a90cce06f55c09d76e8d702a69dc601c64fd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/hungering_rift_hardpoint_base.png",
+      "bytes": 2208,
+      "sha256": "ffce13c79d1aa256bdbe0fc0ec03666ec82a93e6a866783bd62023d84f13a2d4"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/hungering_rift_hardpoint_glow.png",
+      "bytes": 1668,
+      "sha256": "68cf35cb3055e2b58709e8aa26cb8dff725118fae070c5e3c0f52ca51a451410"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/hungering_rift_turret_base.png",
+      "bytes": 2311,
+      "sha256": "27b57ea567dec472293b0108c833058c39c44eb33d2e50d3a7655746193d92b2"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/hungering_rift_turret_glow.png",
+      "bytes": 1870,
+      "sha256": "b3b365fefc1ca3f8a59c92dcbbe2b1902343317e564812cee78547d6eb259c92"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/index.list",
+      "bytes": 12337,
+      "sha256": "cf9398c7639a4d064b9f25f0fe938b3880343d1bec8ba95c1f251a8237fc9b6c"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/inimical_emanation_hardpoint_base.png",
+      "bytes": 1135,
+      "sha256": "56dd993fe2d6182a7694e391a1d29127cbc96fe99ea5a11fdeaa314bce7df1a6"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/inimical_emanation_hardpoint_glow.png",
+      "bytes": 338,
+      "sha256": "f36ad944d3d57337892b04d6e51c7ea397afee484108bbc9ab3b4bfa7eb539d0"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/inimical_emanation_turret_base.png",
+      "bytes": 1296,
+      "sha256": "5a9882909fdaa7b136aecf0c63f87921bd204ba47e83757842ab06cb89f3d3fd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/inimical_emanation_turret_glow.png",
+      "bytes": 350,
+      "sha256": "5bef5fcd49d640da7f822c3f44091319bb5b624642723d8e7e95ccd11045ce30"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/ionpulser/index.list",
+      "bytes": 479,
+      "sha256": "cb30b0f0f449d4890cee0206c208a8d795f5d5aaab31018f2acf2441112a6ea6"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/kinetic_frag_hardpoint_base.png",
+      "bytes": 912,
+      "sha256": "0f99b32aacd60918aa42248e9e69a4a5341f2a55164e508bccf3f938afe3df2c"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/kinetic_frag_hardpoint_glow.png",
+      "bytes": 338,
+      "sha256": "3cdb3e2587b6b1f6610466e2a6ad277ed41b33ed2a863a87087f5ecbe38f807c"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/kinetic_frag_turret_base.png",
+      "bytes": 930,
+      "sha256": "faa48d22f42fd4eb889c37281a471a9363e2e21b95ca39be8c2055374e254cb7"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/kinetic_frag_turret_glow.png",
+      "bytes": 351,
+      "sha256": "b757d30f8f0657b15446a06291aa5f6e88baef2b2e17028d69d5bdcc855cf1d8"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_hardpoint_base.png",
+      "bytes": 14042,
+      "sha256": "0ca40d51599d94b7d82fe9aae130f1e8570784e59211bca2b68577837705ccb7"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_hardpoint_glow.png",
+      "bytes": 1711,
+      "sha256": "721bd122d49b1b5c66290a135d91bd3de798f90c00e3668b31a5f1a0bc62641b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_hardpoint_recoil.png",
+      "bytes": 2188,
+      "sha256": "8e46abb7f29538c70c687fc9fd537ef3e93a051adf97eab27c0ac830cba4147f"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_turret_base.png",
+      "bytes": 14170,
+      "sha256": "93db2d7d3451ad7dd11ccb93d6d89a16ed04dae7d90e056d03c6f6ae7bac6f93"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_turret_glow.png",
+      "bytes": 1708,
+      "sha256": "f27eff407bc55de8543657a1575714105f337cecd9e713f282ad33937195340c"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mass_driver_turret_recoil.png",
+      "bytes": 2237,
+      "sha256": "7adea1bdd64601cc012b7a5600d5cee56645a1ce69bc67c390e7f807eb3f94e8"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mining_laser_hightech_hardpoint_base.png",
+      "bytes": 1204,
+      "sha256": "797dbe9e77fc6534a29888d02caa27a7114e029b53cc32672f70ea2815d41832"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mining_laser_hightech_hardpoint_glow.png",
+      "bytes": 402,
+      "sha256": "283ca244dff4c1a1fcad83005ab60f4803d3161101320376bc649aea8a66c44f"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mining_laser_hightech_turret_base.png",
+      "bytes": 1228,
+      "sha256": "8297305eedef34e3570b9552940c4a1ab2c3d9d912bc42b15da8b721938b4958"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/mining_laser_hightech_turret_glow.png",
+      "bytes": 355,
+      "sha256": "61ff8d2e8dd2e81e29f9f51a8049ac1b4fde754076a6f1d4e68b68492cb7d697"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/neutron_torp_rack_hardpoint_base.png",
+      "bytes": 920,
+      "sha256": "3f8a21d7b84ccbbde5e1cea8de09e72d2e8b9b0b5121e87283f90045f6288f6e"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/neutron_torp_rack_turret_base.png",
+      "bytes": 970,
+      "sha256": "ec2427b8dba11fa567eaa01ace1b77ea355069ba1dba7ccac082c126a52ccf24"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/pseudoparticle_hardpoint_base.png",
+      "bytes": 2686,
+      "sha256": "6b8b55d93212f41ee947dc7231c6530e83a2c13cc6d7f8a24faf87ccae8e9763"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/pseudoparticle_hardpoint_glow.png",
+      "bytes": 917,
+      "sha256": "e35b2356268d676bfc2baaa45873c1b342833b15f71d3d3fceefaffb92a12778"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/pseudoparticle_turret_base.png",
+      "bytes": 2668,
+      "sha256": "1213b7e6dcea8152103b3905188c6b1e79c0d61859e61606faf07e0b8f251434"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/pseudoparticle_turret_glow.png",
+      "bytes": 818,
+      "sha256": "0447e49edba5760b2c46e36aaae1b97693b34a4cc85957b2c84a430acc52617a"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_hardpoint_base.png",
+      "bytes": 14548,
+      "sha256": "acd90eeeaa0b4ca4db54f1d49e6acd14cf4577f9d7ce83f2d24cdbbf6847e5d0"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_hardpoint_glow.png",
+      "bytes": 2642,
+      "sha256": "13c8c04b83a8c2b07f570f58fb62387145620212fd7d60fd40272e0909227d9d"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_hardpoint_recoil.png",
+      "bytes": 441,
+      "sha256": "480805ca9828242d8db4c9a9d0df0cc8f3b086ea7c92f0f8ea93079b8990d0d3"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_turret_base.png",
+      "bytes": 14351,
+      "sha256": "43a4b9cd0975d3a126cb10d5dc985c2518fcfc0049a71783dad9c1edf70b7503"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_turret_glow.png",
+      "bytes": 2478,
+      "sha256": "e4ec251165c0a9c5fde7bf8e89cc7b35bd735e1dd6bc099463fbbe425728752e"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/quadcoil_turret_recoil.png",
+      "bytes": 498,
+      "sha256": "73e9c21e42019049daa56e2cc1a54d64f50e13aea912071998c6f00a03d73f00"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/rift_lightning_hardpoint_base.png",
+      "bytes": 2395,
+      "sha256": "be1364ced32a9b17b0605fbb3dbf895d736f92d8be894b066e223d56fb781869"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/rift_lightning_hardpoint_glow.png",
+      "bytes": 835,
+      "sha256": "1916e5a4444511942ac855d9f1e6e8f55f6cf7d8eb4407fc7557dff8d73dfd58"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/rift_lightning_turret_base.png",
+      "bytes": 2705,
+      "sha256": "c0ac34e41d4611683b34efadb055368c662d15451c1b6b4f4c56a2ecb2df936a"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/rift_lightning_turret_glow.png",
+      "bytes": 864,
+      "sha256": "14a9bfe1eb2b3707db85c1322301d26d3faab751f0e25bf3292af7b33592e924"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/rotary/index.list",
+      "bytes": 308,
+      "sha256": "5d7b73b08b6496a3d1e9a71a8cfa836146f90d797f617670eb9bc79a80e75831"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/seeker_fragment_hardpoint_base.png",
+      "bytes": 909,
+      "sha256": "49aee04440b8d7b5e37cfb7d1ce7366324bb1b65b1bb46842db1b650161d4aaf"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/seeker_fragment_hardpoint_glow.png",
+      "bytes": 273,
+      "sha256": "1ad4ff3835d9685e757dce7e278d58920e5bb8a40b1a21b1605ca8bd624947e3"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/seeker_fragment_turret_base.png",
+      "bytes": 938,
+      "sha256": "ffaaf680c70ed68cf12b771341c34ee40aedc12d2f9ccd287e0b0cd12c959d9b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/seeker_fragment_turret_glow.png",
+      "bytes": 259,
+      "sha256": "6d5cca29bf28d0154765c034206ff044a0a9156e016b85ea68da3659fcb0a1ef"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/shredder/index.list",
+      "bytes": 276,
+      "sha256": "db3c04d9260dbc6d529e4e1057f7076cae752eb149fe92fc99069d236bfbec12"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/storm/index.list",
+      "bytes": 324,
+      "sha256": "69e43a262927ac174724882b630425a220f91e5a3b07f7cb2efb82c4e23a0a52"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/swarm_launcher_hardpoint_base.png",
+      "bytes": 1828,
+      "sha256": "46a209081b41aaae86e8678141e4ad68cb579df32942b4fc1926c693f647a95e"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/swarm_launcher_hardpoint_glow.png",
+      "bytes": 908,
+      "sha256": "af676673675976c5315345543b43716133ae369e26783b9f635513874853da61"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/swarm_launcher_turret_base.png",
+      "bytes": 1832,
+      "sha256": "4e83d88fc9b60e21af88b2b12898e84e6c95d9d9fcaf9659892e6daa6c2b73a1"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/swarm_launcher_turret_glow.png",
+      "bytes": 934,
+      "sha256": "49a0b8ea96d615be3604cde5352294dfee371b27de762cc4dc9dca120c9ea4ce"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/unstable_fragment_hardpoint_base.png",
+      "bytes": 1013,
+      "sha256": "e5039442cfcf487055e41a9688b66c7a75c97f5b63f27c1fbfa9ceda514873c9"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/unstable_fragment_hardpoint_glow.png",
+      "bytes": 370,
+      "sha256": "d331e9151bbb6bfc03d89e46b684a0d329645d6649d0b9a1e83115ad2d7e276b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/unstable_fragment_turret_base.png",
+      "bytes": 1100,
+      "sha256": "6165716aeb16632a2e93a8650d60217a793e8de1b250a3b6665621c2213cc377"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/unstable_fragment_turret_glow.png",
+      "bytes": 436,
+      "sha256": "5f44ea8d6644c4ffb0cb3dd953939dac58385d66c7fb1cbf571c3ba734503a7e"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_hardpoint_base.png",
+      "bytes": 1834,
+      "sha256": "21f3add1b7a1ef2f5062fdb08348f06259f06e22c57a4ec879fcf05b34c44beb"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_hardpoint_glow.png",
+      "bytes": 448,
+      "sha256": "ea4ca044499004f4b278e8217d3911bd5a3deefae21fd99c00f83a0e5136f7fa"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_hardpoint_recoil.png",
+      "bytes": 1786,
+      "sha256": "47112a0bc154fb2ed5222c97eba534769eeec04f1141337aabf09239d0148b12"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_turret_base.png",
+      "bytes": 2083,
+      "sha256": "281d44546556d53899a3867db21943b3dc7cec8146333e82b67ed05f047427de"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_turret_glow.png",
+      "bytes": 464,
+      "sha256": "1163c0732e78a4bd66d93720ea0582aa5cb16691c5d3e7b43f41735a44d67191"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voidblaster_turret_recoil.png",
+      "bytes": 1821,
+      "sha256": "1772beacb7711d0b4f6f149e492b7f6d3e516dc8576e01fd59f44d1d4cfd8ed7"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_cannon_hardpoint_base.png",
+      "bytes": 1091,
+      "sha256": "1da1e4f0d5037a4ed383969b22459477420031d8e5811ad687fca64d43c633cc"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_cannon_hardpoint_glow.png",
+      "bytes": 492,
+      "sha256": "f3d362a86805faf08b1670c6a311c108ac03b0249f9fc81281e79fff7bef6d95"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_cannon_turret_base.png",
+      "bytes": 1146,
+      "sha256": "6a4fd32b977219b13434175afdf8de8e6451c569cce1f55732381b0b2c3142e5"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_cannon_turret_glow.png",
+      "bytes": 470,
+      "sha256": "45db2e83f459343987e6c43e0ace6d4c56d2f63c0d3cfe1639ac8b02d9f68abd"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_discharge_hardpoint_base.png",
+      "bytes": 1034,
+      "sha256": "1d3d76a71005bd7146efd91ca7eb96e972f377380211add793f81beebcf65a8b"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_discharge_hardpoint_glow.png",
+      "bytes": 573,
+      "sha256": "7931b412623ae9838a2eefb7a3b0bc4313b08d6665bd27d264f8c9777c89b9f1"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_discharge_turret_base.png",
+      "bytes": 1011,
+      "sha256": "8bf555a17498af965370cd4281617762e7b9860eed7e9c47ed8bd97fe7034267"
+    },
+    {
+      "path": "starsector/starsector/graphics/weapons/voltaic_discharge_turret_glow.png",
+      "bytes": 586,
+      "sha256": "73ea04761fcecc4884760660a75ec79ed68d4b5134cb5f585d5581d678fd1111"
+    },
+    {
+      "path": "starsector/starsector/index.list",
+      "bytes": 177,
+      "sha256": "4c8d993646e22262eb3c6366138c4db4253d88db8ed2bfc754865b4f63f1786a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/bin/index.list",
+      "bytes": 194,
+      "sha256": "a612cfd3da7f4ab86bb9e303374239a330b4a2af7a27ef0465ee8a73bf393fe6"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/index.list",
+      "bytes": 177,
+      "sha256": "e739db33f10a756c965ade12f335f14297ed7fb5eb9567e80358987d57a63db9"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/amd64/index.list",
+      "bytes": 23,
+      "sha256": "01a1965621bdc87a4008bce90a6f57bdd9befa0f8feff875fb21d960d829cf58"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/amd64/server/index.list",
+      "bytes": 16,
+      "sha256": "7e12b892bfd1ef20d072d4c4084f145b6b54b5481719d44eca2b9f4493b09a3f"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/cmm/index.list",
+      "bytes": 75,
+      "sha256": "a51bb2509986c1abd65c298f67245c5460c2dfb915336ded7186c7a609b97db5"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/deploy/index.list",
+      "bytes": 483,
+      "sha256": "dd8001bf58cdd28c2619bf23d530ec7f243f3a38f99741606c8ade7e723b3e0d"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/applications/index.list",
+      "bytes": 65,
+      "sha256": "534ce47d1dec124f917f2b3bab14fa124605062ddd8a2ea94a2ebbe94297e77b"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/16x16/apps/index.list",
+      "bytes": 57,
+      "sha256": "1001ea17c07be44bf6b6e0f6a354448d37300353da4b96068e1e326e94b8b23e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/16x16/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/16x16/mimetypes/index.list",
+      "bytes": 132,
+      "sha256": "1e49ca3f4cca4cc7e41e624656da4602e63e887d0d43107497496e4709060d22"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/48x48/apps/index.list",
+      "bytes": 60,
+      "sha256": "2916b49c55d1db2bfb053b5b7d97b5f1f953ce0c9b54529dad716dfa0b5c4b11"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/48x48/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/48x48/mimetypes/index.list",
+      "bytes": 135,
+      "sha256": "95bcaf10c34319f5f76e24cb8f7163670fa857d7db6eef936b00c945d81d960f"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrast/index.list",
+      "bytes": 20,
+      "sha256": "189d95b6bb99927915bedce00412113b3abcc3bc121ca0303b4ee5806185cdf5"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/16x16/apps/index.list",
+      "bytes": 57,
+      "sha256": "26119d0b33cde2db96879551834a16caa875d4d5a9e5afda67884ebf75dfcd78"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/16x16/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/16x16/mimetypes/index.list",
+      "bytes": 125,
+      "sha256": "709054697f19d75469a905210dab2705b93deb9352600e5bd12417a9f2b96a79"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/48x48/apps/index.list",
+      "bytes": 60,
+      "sha256": "fad51e38c93763319e45e11fa487bfe8a46984d0a68d21d5d231eccdd7702163"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/48x48/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/48x48/mimetypes/index.list",
+      "bytes": 128,
+      "sha256": "55fa01f7bdd8b8b210d79aa47e2ae05602164f6a322df3b2d7cc9118224204b0"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/HighContrastInverse/index.list",
+      "bytes": 20,
+      "sha256": "189d95b6bb99927915bedce00412113b3abcc3bc121ca0303b4ee5806185cdf5"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/16x16/apps/index.list",
+      "bytes": 57,
+      "sha256": "f64e398685fb2ca971f4c7cae57a950f715a37fd244e0454af2baef6c29dbce4"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/16x16/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/16x16/mimetypes/index.list",
+      "bytes": 125,
+      "sha256": "f2097ec700d75bcb700dfed72b8cc87aab29f58981bf3e94bfe61594aec5229b"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/48x48/apps/index.list",
+      "bytes": 60,
+      "sha256": "8d11265bcf3697d7984b00d09395642372a21879735a0c6657faf18fe6e972db"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/48x48/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/48x48/mimetypes/index.list",
+      "bytes": 128,
+      "sha256": "b7987ce2a6045c2c087bdb0442183e56b67baad944c1420bdeb866960c224bc3"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/LowContrast/index.list",
+      "bytes": 20,
+      "sha256": "189d95b6bb99927915bedce00412113b3abcc3bc121ca0303b4ee5806185cdf5"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/16x16/apps/index.list",
+      "bytes": 57,
+      "sha256": "da96f0445385428aea1c4479d9e364670f3ca811141d821b34d2bed14b2c027b"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/16x16/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/16x16/mimetypes/index.list",
+      "bytes": 125,
+      "sha256": "a09e2c02db5678f07cf1548fd526a6a1b58772523c2818007e99b67bfdb92d82"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/48x48/apps/index.list",
+      "bytes": 60,
+      "sha256": "3cd8058d5af06bd29b461ecaa5483ae85a60abe01d5e04b2517b066f1c4149dc"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/48x48/index.list",
+      "bytes": 23,
+      "sha256": "edb327a886c3fb1bfaa35879bdb837f0daf63f5c1bd1d3c4579add52f076be88"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/48x48/mimetypes/index.list",
+      "bytes": 128,
+      "sha256": "95b2af6fb2867f408e03cde43f244c2c8f5354d9086aafd1cd7edf8229c3dab8"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/hicolor/index.list",
+      "bytes": 20,
+      "sha256": "189d95b6bb99927915bedce00412113b3abcc3bc121ca0303b4ee5806185cdf5"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/icons/index.list",
+      "bytes": 69,
+      "sha256": "eb8a7dbc3b8cae70c1916808ed5a5b1170f028efed433f13da1fb7b972deebb8"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/index.list",
+      "bytes": 36,
+      "sha256": "6c38c5ec8abc2d77cdc1f5a9cb27002f73dd2f760da09c9f2dcbdc205f12ad02"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/mime/index.list",
+      "bytes": 13,
+      "sha256": "5a85f42e93b4b93201d8dcf71e3e2b06a04f46ea2d72037cce17ad8ccb933ee7"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/desktop/mime/packages/index.list",
+      "bytes": 49,
+      "sha256": "5ff425be8f5970773436a8ff3195b0007f7df3fced444254a142892bd66a01d4"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/ext/index.list",
+      "bytes": 15,
+      "sha256": "d4d638a7d15cf89d4a2e8401b0766f95795efaab6f90fe57f8ecb37852dea24d"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/fonts/index.list",
+      "bytes": 265,
+      "sha256": "127c3b72bf2651f6a597215c5e15c6c68d0ce0ed9011d38f38560e74147d6523"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/images/cursors/index.list",
+      "bytes": 219,
+      "sha256": "789fd0b39505e99c2bce2fd5b103efcc0d3e7c299373301ebc1a53a20124dd93"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/images/icons/index.list",
+      "bytes": 117,
+      "sha256": "54e4f0e923c466f8a43a64b54859342e001880affba0862e1cd2e08a1d82ac97"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/images/index.list",
+      "bytes": 22,
+      "sha256": "28448106014759d1a96083d7e707755f487129bf6b85072735c36fce16d10760"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/index.list",
+      "bytes": 834,
+      "sha256": "b370b652cb9a6ca892b68d1ba4e28bd0277be98060b373974bc18afdad873e50"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/jfr/index.list",
+      "bytes": 36,
+      "sha256": "a2729a1be43f95bc6b2c9e357d324e8c187a618354231c612ad1b18566c9275d"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/de/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "1588b4a178e244ef329c407114f21b1d28cb3d9429c383f4471d39e561fe9eaf"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/de/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/es/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "38b9b63959b0fb629557ace540f2d63a205bebd68c97c7ce01d76277d9ec762f"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/es/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/fr/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "a2b5af7380a7f1b85edb5305db820f9b949957f0f17c40f95490cde4d554a271"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/fr/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/index.list",
+      "bytes": 132,
+      "sha256": "ee56e601c1de28a6fe90913cd69dc94a9e6acff9f95a01f3629aa818a0ae2272"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/it/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "f6a0875cf9fda97ee718f9c2bea5335227cabf648d7e5e54634f168dd55f8e64"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/it/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ja/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "5912bb3f34697ce881243145f7c776f449ddd4cd0f8e6cfa660d827030f349e6"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ja/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ko.UTF-8/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c56bdaf5a15e750e9325f9e2ebefe72702861a2523533cb1e033b6aeb72c623f"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ko.UTF-8/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ko/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "a77f050c79b6554e0be10aea6aa9f16f6a1f76ae7d7e09509c049a24e51cfddd"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/ko/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/pt_BR/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "b94d861b8c0470f6ac6848b8cc4bd36511a8ff34ea7e7576aa0147f639e6d965"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/pt_BR/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/sv/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "7b89f969f311d98b427bbe2e83e0df223731e39a105d9ec2a7828ae41575f32a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/sv/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh.GBK/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c6a850e049e0f27a8f08e764d0873fa8d5554e5ae0a32e23a8985fb51d20d306"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh.GBK/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c6a850e049e0f27a8f08e764d0873fa8d5554e5ae0a32e23a8985fb51d20d306"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_HK.BIG5HK/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c3a44b65645e658bf566195acaec992c192d666189ff2b2564d6bb3afad81a4a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_HK.BIG5HK/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_TW.BIG5/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c3a44b65645e658bf566195acaec992c192d666189ff2b2564d6bb3afad81a4a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_TW.BIG5/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_TW/LC_MESSAGES/index.list",
+      "bytes": 25,
+      "sha256": "c3a44b65645e658bf566195acaec992c192d666189ff2b2564d6bb3afad81a4a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/locale/zh_TW/index.list",
+      "bytes": 16,
+      "sha256": "5350be3eb21fd319ba6c5f5e2be14810d0b38cca999745929ca4bbcefff2de7e"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/management/index.list",
+      "bytes": 106,
+      "sha256": "ac0b6e8d34445bffe11a948b14d2791a52da40977820cc8f14c222db9d7c6c26"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/oblique-fonts/index.list",
+      "bytes": 149,
+      "sha256": "ca831094315f43c915e58248757905a1f54470fb1d9937f7d104e16011297395"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/security/index.list",
+      "bytes": 122,
+      "sha256": "143b58d07d289ef67868539f660ce3b7edb619ce0652977840fa7cdbf1d8c1cb"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Africa/index.list",
+      "bytes": 212,
+      "sha256": "6e73d6485839b7ebda96dbc6272bb59a3eb54804b3ccbd8252f781b3fe5b785a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/America/Argentina/index.list",
+      "bytes": 155,
+      "sha256": "8816f2c9d6a051c35fb9039045c2fff4b9917304377a8709b74009ae9208801c"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/America/Indiana/index.list",
+      "bytes": 105,
+      "sha256": "c0d864a93c405f131dda402e8b57311085e5d522347be302dc253766fbdfb2da"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/America/Kentucky/index.list",
+      "bytes": 32,
+      "sha256": "6fd2dc3456c10bc7292c7b2543410bda9507514a464277daa2edb05d0d6291ba"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/America/North_Dakota/index.list",
+      "bytes": 39,
+      "sha256": "020d376cd1bbdf4c826ae6cb38271c359c1cea43ea4db9a11660e393439f671d"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/America/index.list",
+      "bytes": 1514,
+      "sha256": "c707e4180ba6dd2a0e11f23981935de806ea338045e569407a001b32087abbb4"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Antarctica/index.list",
+      "bytes": 113,
+      "sha256": "10434badadd0e435a30f95a42889a24a62e27e51a935e6095d3dde6c4aa578bb"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Asia/index.list",
+      "bytes": 922,
+      "sha256": "97deb08b80016d555b92aadc579a81b2fed09195ed5f92844fba815b188d708a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Atlantic/index.list",
+      "bytes": 118,
+      "sha256": "e95c7f7408e25b325d5b0cd1bc09b931eb177244400202f46cd1b81c46ae2cbf"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Australia/index.list",
+      "bytes": 154,
+      "sha256": "bd43422a903a95ab27dd2fe73f1a46478ef972101a6c9a6476ce64b60e289b04"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Etc/index.list",
+      "bytes": 263,
+      "sha256": "f567535e6ae8b2315444ae910814566f0242eeb8bc7878e1028c403ece207919"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Europe/index.list",
+      "bytes": 538,
+      "sha256": "c04dd46bfcdbd6f16c55146e438dd007956121b67393627d0ec78fd703ed8bab"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Indian/index.list",
+      "bytes": 90,
+      "sha256": "1d5a71c0ad13655cbc0cc7c93719a1b639156daf9c121128e553931829b07eb4"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/Pacific/index.list",
+      "bytes": 433,
+      "sha256": "78201e8fc1ba33784a87f5fa0ea6e0e607b0e93a72448220ecf5aacff3be955f"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/SystemV/index.list",
+      "bytes": 135,
+      "sha256": "56ee39f735eb1ac1cd376b269b9fb999b81a8ccdc6748924e83614d18df1d2c2"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/lib/zi/index.list",
+      "bytes": 267,
+      "sha256": "ad75f099394398e99dfd2b048b7937b32c8c944888c3f574705ad53f08caeb73"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/man/index.list",
+      "bytes": 30,
+      "sha256": "bed2b7af568d780b7c99e156b118a785cea5a3a65168b7e99b845ddfe0eba40a"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/man/ja_JP.UTF-8/index.list",
+      "bytes": 9,
+      "sha256": "244da0d7f757f6018cc551dbb674e4a709066d23ec3e2cd48c228ffd9e1de13c"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/man/ja_JP.UTF-8/man1/index.list",
+      "bytes": 176,
+      "sha256": "9cb482e90f21c617c64605d64cdeeb0e59d0826ca2551fbbc2387613f45b31cf"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/man/man1/index.list",
+      "bytes": 175,
+      "sha256": "89f877349b4a32be1eb7fe1a5803fd6ca79d0f40b4ca65bc9cda3b267ddd8c06"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/plugin/desktop/index.list",
+      "bytes": 39,
+      "sha256": "c7e0fe7827532110a92e8d781e6aa11d8bd1eb40bda4ce4046dc6261588b0fe2"
+    },
+    {
+      "path": "starsector/starsector/jre_linux/plugin/index.list",
+      "bytes": 12,
+      "sha256": "2a5adcc721044d857ae36a9fb5e3b5bfb1081a35de68e4d998fe2213a9a9524c"
+    },
+    {
+      "path": "starsector/starsector/mods/index.list",
+      "bytes": 21,
+      "sha256": "1c74da8319192ff952155abf56a7d0da5cdf8295f055695730398121c211ee03"
+    },
+    {
+      "path": "starsector/starsector/sounds/index.list",
+      "bytes": 276,
+      "sha256": "e3848f8a3a15de70365d807df50f079cf2578a3653ba77f222902f66a398e06e"
+    },
+    {
+      "path": "starsector/starsector/sounds/music/index.list",
+      "bytes": 19,
+      "sha256": "d00759d3a46f62aeafff506f601bb2b89afaf0845ebd5f3262af788fc586e017"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_abilities/index.list",
+      "bytes": 2766,
+      "sha256": "dbb96e9b046bb962f35ffab62754aaf0e788c65bd321f5d8764eed24efb33cef"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_bar/index.list",
+      "bytes": 107,
+      "sha256": "ac4661f9ec02b0a66b9c72722ad956152b8713bcc63be97fcd2dd988e38c59fc"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_cargo/index.list",
+      "bytes": 1665,
+      "sha256": "a8a36ae572c30b851cab5bb9dfea6755a38f3b97aea0c55669eef65ee4588d30"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_charscreen/index.list",
+      "bytes": 1006,
+      "sha256": "adea0f3b31c0187f428643cb49f6f6e4c1bd282dc96acc6513c8c8abd67db25a"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_engines/index.list",
+      "bytes": 831,
+      "sha256": "a41bdbd37e69289ba311ce339fe88807b81dc6bc64c50922ec8ac8724119cdf5"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_flux/index.list",
+      "bytes": 46,
+      "sha256": "d85cb0d3439cb19545a41a6af649042e46582f1dd1f29626cf21ce67b714208d"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_impacts/index.list",
+      "bytes": 2336,
+      "sha256": "ec4f5068308e757dbeec789b4688bb1e89bebec244915200620b690a87192ed2"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_interface/index.list",
+      "bytes": 4273,
+      "sha256": "2c5993b6e00df4bc40a753153b17381e128bfc8011b9963caecf90890fa53061"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_misc/index.list",
+      "bytes": 38,
+      "sha256": "59bee89c389e3776704f414007f226916f70e1602ec4353dd0586a1f80ed3b72"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_refit/index.list",
+      "bytes": 339,
+      "sha256": "7d83935ebf611c4e2d82aba3789614d26c6c28186a9766b96b81d743979e7efc"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_shields/index.list",
+      "bytes": 233,
+      "sha256": "2dd9906032268030f246655a2ca1dd5635311cfbfbf749ecbda0f2d195b08db1"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_systems/index.list",
+      "bytes": 3710,
+      "sha256": "a8209cff5723c49814e93b228159daf3e39e077b866719a1df50ac798fc32e92"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_terrain/index.list",
+      "bytes": 1350,
+      "sha256": "3c0b97aaee5e1522e62ce894d6430b4319c4e951c1ff1e76ebe2b1b8c6548a70"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_wpn_energy/index.list",
+      "bytes": 2515,
+      "sha256": "21f6be52b54db5eee7e2539cea70d860ab7a388b1e55515ce3bc8fd2acac38c6"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_wpn_guns/index.list",
+      "bytes": 1482,
+      "sha256": "f02725621582ec17fecc09685dac36202742ad97a25d0e818312c2f67b8494ce"
+    },
+    {
+      "path": "starsector/starsector/sounds/sfx_wpn_missiles/index.list",
+      "bytes": 1001,
+      "sha256": "6dafb1fcdbdcb9bebc9dbe212ff821e2a301e5f94b45b2af69923b24ced06890"
+    },
+    {
+      "path": "starsector/starsector/sounds/soe/index.list",
+      "bytes": 924,
+      "sha256": "dcea42f04c6196ad79d02dac0acf3a13cee78a4ad9c624a27b8dbc7a1d68adff"
+    },
+    {
+      "path": "starsectorquick-sw.js",
+      "bytes": 6029,
+      "sha256": "6d6a62b462ac7c1f17b5f34978ac3bcc892c39006b080c801c58efff2373dad4"
+    }
+  ]
+}

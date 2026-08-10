@@ -1,39 +1,39 @@
-amd64/
-cmm/
-deploy/
-desktop/
-ext/
-fonts/
-images/
-jfr/
-locale/
-management/
-oblique-fonts/
-security/
-zi/
-calendars.properties
-classlist
-content-types.properties
-currency.data
-flavormap.properties
-fontconfig.RedHat.5.bfc
-fontconfig.RedHat.5.properties.src
-fontconfig.RedHat.6.bfc
-fontconfig.RedHat.6.properties.src
-fontconfig.SuSE.10.bfc
-fontconfig.SuSE.10.properties.src
-fontconfig.SuSE.11.bfc
-fontconfig.SuSE.11.properties.src
-fontconfig.Turbo.bfc
-fontconfig.Turbo.properties.src
-fontconfig.bfc
-fontconfig.properties.src
-javafx.properties
-jexec
-jvm.hprof.txt
-logging.properties
-meta-index
-net.properties
-psfont.properties.ja
-psfontj2d.properties
-sound.properties
+amd64/	-1
+cmm/	-1
+deploy/	-1
+desktop/	-1
+ext/	-1
+fonts/	-1
+images/	-1
+jfr/	-1
+locale/	-1
+management/	-1
+oblique-fonts/	-1
+security/	-1
+zi/	-1
+calendars.properties	1286
+classlist	77991
+content-types.properties	6196
+currency.data	4074
+flavormap.properties	3979
+fontconfig.RedHat.5.bfc	4532
+fontconfig.RedHat.5.properties.src	8975
+fontconfig.RedHat.6.bfc	4250
+fontconfig.RedHat.6.properties.src	8869
+fontconfig.SuSE.10.bfc	6702
+fontconfig.SuSE.10.properties.src	16990
+fontconfig.SuSE.11.bfc	7032
+fontconfig.SuSE.11.properties.src	17008
+fontconfig.Turbo.bfc	4668
+fontconfig.Turbo.properties.src	9336
+fontconfig.bfc	1678
+fontconfig.properties.src	1984
+javafx.properties	29
+jexec	10373
+jvm.hprof.txt	4312
+logging.properties	2514
+meta-index	2134
+net.properties	3144
+psfont.properties.ja	2915
+psfontj2d.properties	10716
+sound.properties	1249

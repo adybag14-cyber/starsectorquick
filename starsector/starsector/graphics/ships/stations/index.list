@@ -1,68 +1,68 @@
-gargoyle.png
-merlon.png
-module_blocker1.png
-module_blocker2.png
-module_blocker2_hightech.png
-module_blocker2_hightech2.png
-module_blocker2_midline.png
-module_citadel1_combat.png
-module_citadel1_lowtech.png
-module_comm_mast1.png
-module_decor3.png
-module_decor_giant0.png
-module_decor_giant1.png
-module_decor_industrial1.png
-module_decor_midline1.png
-module_decor_midline2.png
-module_decor_midline3.png
-module_decor_panels1.png
-module_hightech_armour.png
-module_hightech_attack.png
-module_hightech_citadel.png
-module_hightech_decor1.png
-module_hightech_hangar.png
-module_hightech_shield.png
-module_hightech_understrut.png
-module_large1_combat.png
-module_large1_lowtech.png
-module_large2_lowtech.png
-module_large2_support.png
-module_large_shield1.png
-module_medium_gunnery1.png
-module_medium_hangar1.png
-module_medium_missile1.png
-module_medium_pd1.png
-module_medium_pd1_lowtech.png
-module_medium_shield1.png
-module_midline_bastion.png
-module_midline_broadside.png
-module_midline_citadel.png
-module_midline_citadel_left.png
-module_midline_citadel_right.png
-module_midline_hangar.png
-module_small_decor1.png
-module_small_decor2.png
-module_small_gunnery1.png
-module_small_hangar1.png
-module_small_missile1.png
-module_small_pd1.png
-module_small_pd2.png
-module_small_shield1.png
-module_small_shield2.png
-orbital_platform1.png
-ravelin.png
-ravelin2.png
-station_armour1.png
-station_armour2.png
-station_armour3.png
-station_armour3b.png
-station_armour4.png
-station_armour4b.png
-station_level1_hightech.png
-station_level1_lowtech.png
-station_level1_midline.png
-station_level2_lowtech.png
-station_level3_lowtech.png
-station_module_generic.png
-station_small_base.png
-station_small_full.png
+gargoyle.png	15736
+merlon.png	13307
+module_blocker1.png	24692
+module_blocker2.png	11459
+module_blocker2_hightech.png	11458
+module_blocker2_hightech2.png	16094
+module_blocker2_midline.png	12847
+module_citadel1_combat.png	74571
+module_citadel1_lowtech.png	104565
+module_comm_mast1.png	7562
+module_decor3.png	65275
+module_decor_giant0.png	218985
+module_decor_giant1.png	102144
+module_decor_industrial1.png	30627
+module_decor_midline1.png	96520
+module_decor_midline2.png	29520
+module_decor_midline3.png	50081
+module_decor_panels1.png	43091
+module_hightech_armour.png	51831
+module_hightech_attack.png	77917
+module_hightech_citadel.png	69058
+module_hightech_decor1.png	16136
+module_hightech_hangar.png	147347
+module_hightech_shield.png	16203
+module_hightech_understrut.png	58003
+module_large1_combat.png	131494
+module_large1_lowtech.png	147441
+module_large2_lowtech.png	84227
+module_large2_support.png	73970
+module_large_shield1.png	45257
+module_medium_gunnery1.png	26012
+module_medium_hangar1.png	42241
+module_medium_missile1.png	41554
+module_medium_pd1.png	29522
+module_medium_pd1_lowtech.png	53799
+module_medium_shield1.png	34608
+module_midline_bastion.png	35814
+module_midline_broadside.png	101175
+module_midline_citadel.png	35084
+module_midline_citadel_left.png	39887
+module_midline_citadel_right.png	40405
+module_midline_hangar.png	59284
+module_small_decor1.png	5902
+module_small_decor2.png	5006
+module_small_gunnery1.png	33933
+module_small_hangar1.png	28716
+module_small_missile1.png	33163
+module_small_pd1.png	23475
+module_small_pd2.png	8109
+module_small_shield1.png	21200
+module_small_shield2.png	10832
+orbital_platform1.png	21367
+ravelin.png	12553
+ravelin2.png	19966
+station_armour1.png	5856
+station_armour2.png	26806
+station_armour3.png	37053
+station_armour3b.png	26117
+station_armour4.png	31178
+station_armour4b.png	14472
+station_level1_hightech.png	425254
+station_level1_lowtech.png	328310
+station_level1_midline.png	317184
+station_level2_lowtech.png	381141
+station_level3_lowtech.png	464604
+station_module_generic.png	22506
+station_small_base.png	132286
+station_small_full.png	213218

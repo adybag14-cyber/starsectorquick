@@ -1,31 +1,31 @@
-damage_burns48_0_base.png
-damage_burns48_0_glow.png
-damage_burns48_1_base.png
-damage_burns48_1_glow.png
-damage_cracks48_0_base.png
-damage_cracks48_0_glow.png
-damage_cracks48_1_base.png
-damage_cracks48_1_glow.png
-damage_decal_sheet_base.png
-damage_decal_sheet_glow.png
-damage_holes48_0_base.png
-damage_holes48_0_glow.png
-damage_holes48_1_base.png
-damage_holes48_1_glow.png
-dmod_overlay_hightech_heavy.png
-dmod_overlay_hightech_light.png
-dmod_overlay_hightech_medium.png
-dmod_overlay_lowtech_heavy.png
-dmod_overlay_lowtech_light.png
-dmod_overlay_lowtech_medium.png
-dmod_overlay_midline_heavy.png
-dmod_overlay_midline_light.png
-dmod_overlay_midline_medium.png
-ship_damage_over0.png
-ship_damage_over1.png
-ship_damage_over3.png
-ship_damage_over4.png
-ship_damage_over5.png
-ship_damage_over5_hightech.png
-ship_damage_over5_midline.png
-fragmentation.png
+damage_burns48_0_base.png	6241
+damage_burns48_0_glow.png	2361
+damage_burns48_1_base.png	6349
+damage_burns48_1_glow.png	2301
+damage_cracks48_0_base.png	6631
+damage_cracks48_0_glow.png	2218
+damage_cracks48_1_base.png	6803
+damage_cracks48_1_glow.png	2412
+damage_decal_sheet_base.png	35228
+damage_decal_sheet_glow.png	15021
+damage_holes48_0_base.png	5452
+damage_holes48_0_glow.png	2288
+damage_holes48_1_base.png	5418
+damage_holes48_1_glow.png	2313
+dmod_overlay_hightech_heavy.png	215567
+dmod_overlay_hightech_light.png	131308
+dmod_overlay_hightech_medium.png	215565
+dmod_overlay_lowtech_heavy.png	219496
+dmod_overlay_lowtech_light.png	130470
+dmod_overlay_lowtech_medium.png	215397
+dmod_overlay_midline_heavy.png	222713
+dmod_overlay_midline_light.png	131509
+dmod_overlay_midline_medium.png	215780
+ship_damage_over0.png	125349
+ship_damage_over1.png	64490
+ship_damage_over3.png	137074
+ship_damage_over4.png	149248
+ship_damage_over5.png	119520
+ship_damage_over5_hightech.png	101174
+ship_damage_over5_midline.png	99988
+fragmentation.png	133

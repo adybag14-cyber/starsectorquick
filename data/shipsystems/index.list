@@ -1,67 +1,67 @@
-proj/
-scripts/
-wpn/
-acausaldisruptor.system
-ammofeed.system
-burndrive.system
-canister_flak.system
-chiral_figment.system
-combat_burn.system
-construction_swarm.system
-convulsive_lunge.system
-cryoflux.system
-damper_omega.system
-damper.system
-darkened_gaze.system
-displacer_degraded.system
-displacer_threat.system
-displacer.system
-drone_borer.system
-drone_pd_x2.system
-drone_pd.system
-drone_sensor.system
-drone_station_high.system
-drone_station_lt.system
-drone_station_mid.system
-drone_strike.system
-drone_terminator.system
-dynamic_stabilizer.system
-emp.system
-energy_conversion.system
-energy_lash.system
-entropyamplifier.system
-extraction_protocol.system
-fastmissileracks.system
-flarelauncher_active.system
-flarelauncher_fighter.system
-flarelauncher_single.system
-flarelauncher.system
-forgevats_station.system
-forgevats.system
-fortressshield.system
-fragment_volley.system
-highenergyfocus.system
-incursion_mode.system
-inferniuminjector.system
-interdictor.system
-lidararray.system
-maneuveringjets.system
-microburn_omega.system
-microburn.system
-mine_strike_station.system
-mine_strike.system
-mote_control.system
-nova_burst.system
-orion_device.system
-phasecloak.system
-phaseteleporter.system
-plasmajets.system
-recalldevice.system
-reservewing.system
-ship_systems.csv
-shrouded_vortex.system
-skimmer_drone.system
-targetingfeed.system
-temporalshell.system
-tenebrous_expulsion.system
-traveldrive.system
+﻿proj/	-1
+scripts/	-1
+wpn/	-1
+acausaldisruptor.system	834
+ammofeed.system	277
+burndrive.system	724
+canister_flak.system	150
+chiral_figment.system	273
+combat_burn.system	641
+construction_swarm.system	521
+convulsive_lunge.system	355
+cryoflux.system	436
+damper_omega.system	454
+damper.system	863
+darkened_gaze.system	708
+displacer_degraded.system	652
+displacer_threat.system	659
+displacer.system	643
+drone_borer.system	767
+drone_pd_x2.system	1046
+drone_pd.system	1094
+drone_sensor.system	1180
+drone_station_high.system	843
+drone_station_lt.system	878
+drone_station_mid.system	880
+drone_strike.system	540
+drone_terminator.system	785
+dynamic_stabilizer.system	864
+emp.system	791
+energy_conversion.system	611
+energy_lash.system	495
+entropyamplifier.system	508
+extraction_protocol.system	280
+fastmissileracks.system	309
+flarelauncher_active.system	218
+flarelauncher_fighter.system	155
+flarelauncher_single.system	155
+flarelauncher.system	213
+forgevats_station.system	215
+forgevats.system	242
+fortressshield.system	926
+fragment_volley.system	268
+highenergyfocus.system	699
+incursion_mode.system	343
+inferniuminjector.system	721
+interdictor.system	361
+lidararray.system	493
+maneuveringjets.system	654
+microburn_omega.system	799
+microburn.system	836
+mine_strike_station.system	435
+mine_strike.system	419
+mote_control.system	342
+nova_burst.system	452
+orion_device.system	479
+phasecloak.system	1060
+phaseteleporter.system	939
+plasmajets.system	556
+recalldevice.system	258
+reservewing.system	260
+ship_systems.csv	7984
+shrouded_vortex.system	430
+skimmer_drone.system	467
+targetingfeed.system	346
+temporalshell.system	1155
+tenebrous_expulsion.system	390
+traveldrive.system	831

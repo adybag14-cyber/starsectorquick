@@ -58,7 +58,7 @@
             const text = String(message || '');
             const btn = document.getElementById('startBtn');
 
-            if (/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i.test(text)) {
+            if (/watcher state=Campaign State|reached Campaign State/i.test(text)) {
                 updateRuntimeState('campaign', 'Main campaign view');
                 if (btn) {
                     btn.disabled = true;
@@ -161,8 +161,8 @@
                 if (state.gl) return state.gl;
                 const canvas = document.querySelector('#game-container canvas') || document.querySelector('canvas');
                 if (!canvas) return null;
-                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false }) ||
-                           canvas.getContext('webgl', { alpha: false, antialias: false });
+                state.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true }) ||
+                           canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true });
                 if (!state.gl) logFn('Inline LWJGL bridge: failed to acquire WebGL context', '#ff8800');
                 return state.gl;
             }
@@ -498,12 +498,14 @@
             console.error = wrap(console.error.bind(console));
         }
 
-        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container')) {
+        function ensureLwjglCanvas(gameContainer = document.getElementById('game-container'), renderWidth = 1024, renderHeight = 768) {
             if (!gameContainer) {
                 throw new Error('Missing #game-container');
             }
             gameContainer.style.position = 'relative';
             gameContainer.style.overflow = 'hidden';
+            gameContainer.style.width = `${renderWidth}px`;
+            gameContainer.style.height = `${renderHeight}px`;
 
             let lwjglCanvas = gameContainer.querySelector('#lwjglCanvas');
             if (!(lwjglCanvas instanceof HTMLCanvasElement)) {
@@ -516,14 +518,14 @@
                 }
             }
 
-            lwjglCanvas.width = 1024;
-            lwjglCanvas.height = 768;
+            lwjglCanvas.width = renderWidth;
+            lwjglCanvas.height = renderHeight;
             lwjglCanvas.id = 'lwjglCanvas';
             lwjglCanvas.style.position = 'absolute';
             lwjglCanvas.style.left = '0';
             lwjglCanvas.style.top = '0';
-            lwjglCanvas.style.width = '1024px';
-            lwjglCanvas.style.height = '768px';
+            lwjglCanvas.style.width = `${renderWidth}px`;
+            lwjglCanvas.style.height = `${renderHeight}px`;
             lwjglCanvas.style.display = 'block';
             lwjglCanvas.style.zIndex = '2';
             lwjglCanvas.style.pointerEvents = 'auto';
@@ -539,6 +541,8 @@
             if (window.__STARSECTOR_STARTING__) return;
             window.__STARSECTOR_STARTING__ = true;
             const btn = document.getElementById('startBtn');
+            const renderWidth = Math.max(1, Number(window.__STARSECTOR_RENDER_WIDTH__ || 1024) || 1024);
+            const renderHeight = Math.max(1, Number(window.__STARSECTOR_RENDER_HEIGHT__ || 768) || 768);
             btn.disabled = true;
             btn.textContent = 'INITIALIZING...';
             updateRuntimeState('initializing', 'CheerpJ bootstrap');
@@ -564,7 +568,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260731-campaign-load-v1';
+                    const aliasWorkerVersion = '20260810-campaign-render-v2';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -626,7 +630,7 @@
                         return;
                     }
 
-                    const resetVersion = '20260731-campaign-load-v1';
+                    const resetVersion = '20260810-campaign-render-v2';
                     const resetKey = 'starsectorquickCheerpJStorageReset';
                     const params = new URLSearchParams(window.location.search);
                     const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');
@@ -695,8 +699,8 @@
                 const dataUrl = siteRootUrl + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
                 const starfarerResUrl = dataUrl;
-                ensureLwjglCanvas();
-                log('LWJGL canvas bridge ready.', '#888');
+                ensureLwjglCanvas(undefined, renderWidth, renderHeight);
+                log(`LWJGL canvas bridge ready (${renderWidth}x${renderHeight}).`, '#888');
                 const lwjglModuleCandidates = [];
                 if (window.__LWJGL_MODULE__) lwjglModuleCandidates.push(window.__LWJGL_MODULE__);
                 lwjglModuleCandidates.push('lwjgl.js');
@@ -995,7 +999,7 @@
                 ).toString().trim().toLowerCase() || 'small';
                 const autoCampaignTitleSettleMs = Math.max(
                     0,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 0) || 0
                 );
                 const autoCampaignFallbackMs = Math.max(
                     1500,
@@ -1018,11 +1022,13 @@
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
                 );
                 const autoCampaignDirectUseWorkerThread =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__
+                        : false;
                 const autoCampaignDirectNonBlockingWorker =
                     window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
                 const autoCampaignSkipDirectUiPreflight =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ !== false;
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ === true;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
                     15000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_CORE_SPEC_NON_MUTATING_WAIT_MS__ || 120000)
@@ -1053,15 +1059,19 @@
                     typeof window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__ === 'boolean';
                 const autoCampaignWithTimePass = hasAutoCampaignWithTimePassOverride
                     ? window.__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__
-                    : true;
+                    : false;
                 const autoCampaignInvokeCreateOnPlayerFleetNull =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__ !== false;
                 const autoCampaignInvokeCreateInCampaignState =
                     window.__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_IN_CAMPAIGN_STATE__ !== false;
                 const autoCampaignAllowImmediatePlayerFleetNullTransition =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__
+                        : false;
                 const autoCampaignEnableSyntheticPlayerFleetFallback =
-                    window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ !== false;
+                    typeof window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__ === 'boolean'
+                        ? window.__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__
+                        : false;
                 const autoCampaignSyntheticFleetTimeoutMs = Math.max(
                     3000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_SYNTHETIC_FLEET_TIMEOUT_MS__ || 30000)
@@ -1120,6 +1130,10 @@
                     `starsector.boot=${bootMode}`,
                     `-Dstarsector.directLaunch=${directLaunch}`,
                     `starsector.directLaunch=${directLaunch}`,
+                    `-DstartRes=${renderWidth}x${renderHeight}`,
+                    `startRes=${renderWidth}x${renderHeight}`,
+                    `-DstartFS=false`,
+                    `startFS=false`,
                     `-DstartSound=false`,
                     `startSound=false`,
                     `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
@@ -1289,8 +1303,8 @@
 
                 log('Mounting Display to Canvas...', '#00ff88');
                 const gameContainer = document.getElementById('game-container');
-                cheerpjCreateDisplay(1024, 768, gameContainer);
-                ensureLwjglCanvas(gameContainer);
+                cheerpjCreateDisplay(renderWidth, renderHeight, gameContainer);
+                ensureLwjglCanvas(gameContainer, renderWidth, renderHeight);
 
                 // Use stock LWJGL classes by default; opt into loading_patch explicitly.
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
@@ -1329,6 +1343,7 @@
                         'fs.sound_obf.jar',
                         'fs.common_obf.jar',
                         'xstream-1.4.10.jar',
+                        'txw2-2.3.1.jar',
                         'starfarer.res.jar',
                         'scripts-precompiled.jar'
                     ];

@@ -1,107 +1,107 @@
-amblaster_shot.proj
-amsrm_srm.proj
-annihilator_rocket.proj
-arbalest_shot.proj
-assaying_rift_proj.proj
-atropos_torp.proj
-autopulse_shot.proj
-bomb_proj.proj
-breach_srm.proj
-canister_flak.proj
-chaingun_shot.proj
-clusterbomb_proj.proj
-cryoblaster_shot.proj
-cryoflux_shot.proj
-devastator_shot.proj
-devouring_swarm_missile.proj
-disintegrator_shot.proj
-dragon.proj
-dualflak_shot.proj
-flak_shot.proj
-fragbomb_proj.proj
-gauss_shot.proj
-gazer.proj
-gigacannon_shot.proj
-gorgon.proj
-hammer_torp.proj
-harpoon_mrm.proj
-heatseeker_mrm.proj
-heavy_adjudicator_shot.proj
-heavy_mass_driver_shot.proj
-heavyac_shot.proj
-heavyblaster_shot.proj
-heavymauler_shot.proj
-heavymg_shot.proj
-heavymortar_shot.proj
-heavyneedler_shot.proj
-hellbore_shot.proj
-hephag_shot.proj
-hveldriver_shot.proj
-hydra_warhead.proj
-hydra.proj
-inimical_emanation_shot.proj
-ioncannon_shot.proj
-ionpulser_shot.proj
-irpulse_shot.proj
-kinetic_fragments_missile.proj
-kineticblaster_shot.proj
-light_mass_driver_shot.proj
-lightac_shot.proj
-lightag_shot.proj
-lightdualac_shot.proj
-lightmg_shot.proj
-lightmortar_shot.proj
-lightneedler_shot.proj
-locust_srm.proj
-mark9_shot.proj
-minelayer_mine_heavy.proj
-minelayer_mine.proj
-miningblaster_shot.proj
-minipulser_shot.proj
-mirv_warhead.proj
-missile.sample
-mjolnir_shot.proj
-multineedler_shot.proj
-neoferric_quadcoil_shot.proj
-neutron_torpedo_proj.proj
-nova_burst_bomb.proj
-orion_device_bomb.proj
-phase_charge_bomber.proj
-phase_charge.proj
-pilum_second_stage.proj
-plasma_shot.proj
-pseudoparticle_jet_shot.proj
-pulselaser_shot.proj
-railgun_shot.proj
-realitydisruptor_shot.proj
-reaper_torp.proj
-resonatormrm_shot.proj
-rift_lightning_minelayer_mine.proj
-rift_lightning_shot.proj
-rift_torp.proj
-riftbeam_minelayer_mine.proj
-riftcascade_minelayer_mine.proj
-riftlance_minelayer_mine.proj
-sabot_srm.proj
-sabot_warhead.proj
-sabot_warhead2.proj
-seeker_fragment_missile.proj
-shockrepeater_shot.proj
-shot.sample
-shredder_shot.proj
-squall_rocket.proj
-swarm_launcher_shot.proj
-tachyonlance_shot.proj
-terminator_missile_proj.proj
-tpc_shot.proj
-type_1_lrm.proj
-type_1_mirv_empty.proj
-type_1_mirv.proj
-type_1_srm.proj
-unstable_fragment_missile.proj
-voidblaster_shot.proj
-voltaic_cannon_shot.proj
-voltaic_discharge_shot.proj
-vortex_launcher_shot.proj
-vpdriver_shot.proj
-vulcan_shot.proj
+﻿amblaster_shot.proj	497
+amsrm_srm.proj	1723
+annihilator_rocket.proj	1528
+arbalest_shot.proj	471
+assaying_rift_proj.proj	2991
+atropos_torp.proj	1852
+autopulse_shot.proj	551
+bomb_proj.proj	778
+breach_srm.proj	1555
+canister_flak.proj	2001
+chaingun_shot.proj	492
+clusterbomb_proj.proj	704
+cryoblaster_shot.proj	591
+cryoflux_shot.proj	529
+devastator_shot.proj	1076
+devouring_swarm_missile.proj	1765
+disintegrator_shot.proj	537
+dragon.proj	3943
+dualflak_shot.proj	974
+flak_shot.proj	1108
+fragbomb_proj.proj	1468
+gauss_shot.proj	495
+gazer.proj	1932
+gigacannon_shot.proj	577
+gorgon.proj	2127
+hammer_torp.proj	1890
+harpoon_mrm.proj	1374
+heatseeker_mrm.proj	1325
+heavy_adjudicator_shot.proj	1864
+heavy_mass_driver_shot.proj	493
+heavyac_shot.proj	492
+heavyblaster_shot.proj	468
+heavymauler_shot.proj	495
+heavymg_shot.proj	405
+heavymortar_shot.proj	493
+heavyneedler_shot.proj	494
+hellbore_shot.proj	669
+hephag_shot.proj	415
+hveldriver_shot.proj	534
+hydra_warhead.proj	2157
+hydra.proj	2284
+inimical_emanation_shot.proj	478
+ioncannon_shot.proj	466
+ionpulser_shot.proj	466
+irpulse_shot.proj	463
+kinetic_fragments_missile.proj	1790
+kineticblaster_shot.proj	758
+light_mass_driver_shot.proj	492
+lightac_shot.proj	492
+lightag_shot.proj	491
+lightdualac_shot.proj	496
+lightmg_shot.proj	411
+lightmortar_shot.proj	489
+lightneedler_shot.proj	494
+locust_srm.proj	1307
+mark9_shot.proj	420
+minelayer_mine_heavy.proj	1605
+minelayer_mine.proj	1584
+miningblaster_shot.proj	587
+minipulser_shot.proj	452
+mirv_warhead.proj	1559
+missile.sample	930
+mjolnir_shot.proj	649
+multineedler_shot.proj	762
+neoferric_quadcoil_shot.proj	496
+neutron_torpedo_proj.proj	1816
+nova_burst_bomb.proj	1962
+orion_device_bomb.proj	2038
+phase_charge_bomber.proj	1880
+phase_charge.proj	1873
+pilum_second_stage.proj	1551
+plasma_shot.proj	430
+pseudoparticle_jet_shot.proj	506
+pulselaser_shot.proj	450
+railgun_shot.proj	413
+realitydisruptor_shot.proj	2586
+reaper_torp.proj	2300
+resonatormrm_shot.proj	1694
+rift_lightning_minelayer_mine.proj	1682
+rift_lightning_shot.proj	533
+rift_torp.proj	2574
+riftbeam_minelayer_mine.proj	1660
+riftcascade_minelayer_mine.proj	1994
+riftlance_minelayer_mine.proj	1694
+sabot_srm.proj	2326
+sabot_warhead.proj	1559
+sabot_warhead2.proj	639
+seeker_fragment_missile.proj	2174
+shockrepeater_shot.proj	419
+shot.sample	941
+shredder_shot.proj	434
+squall_rocket.proj	1576
+swarm_launcher_shot.proj	535
+tachyonlance_shot.proj	422
+terminator_missile_proj.proj	2010
+tpc_shot.proj	583
+type_1_lrm.proj	2446
+type_1_mirv_empty.proj	644
+type_1_mirv.proj	2182
+type_1_srm.proj	1437
+unstable_fragment_missile.proj	1740
+voidblaster_shot.proj	605
+voltaic_cannon_shot.proj	436
+voltaic_discharge_shot.proj	434
+vortex_launcher_shot.proj	455
+vpdriver_shot.proj	1213
+vulcan_shot.proj	526

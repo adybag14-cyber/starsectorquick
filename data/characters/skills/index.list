@@ -1,72 +1,72 @@
-advanced_countermeasures.skill
-aptitude_combat.skill
-aptitude_data.csv
-aptitude_industry.skill
-aptitude_leadership.skill
-aptitude_technology.skill
-automated_ships.skill
-auxiliary_support.skill
-ballistic_mastery.skill
-best_of_the_best.skill
-bulk_transport.skill
-carrier_command.skill
-carrier_group.skill
-colony_management.skill
-combat_endurance.skill
-command_and_control.skill
-containment_procedures.skill
-coordinated_maneuvers.skill
-crew_training.skill
-cybernetic_augmentation.skill
-damage_control.skill
-defensive_systems.skill
-derelict_contingent.skill
-electronic_warfare.skill
-energy_weapon_mastery.skill
-evasive_action.skill
-field_modulation.skill
-field_repairs.skill
-fighter_doctrine.skill
-fighter_uplink.skill
-fleet_logistics.skill
-flux_modulation.skill
-flux_regulation.skill
-force_concentration.skill
-gunnery_implants.skill
-helmsmanship.skill
-hull_restoration.skill
-hypercognition.skill
-impact_mitigation.skill
-industrial_planning.skill
-makeshift_equipment.skill
-missile_specialization.skill
-navigation.skill
-neural_link.skill
-officer_management.skill
-officer_training.skill
-omega_ecm.skill
-ordnance_expert.skill
-phase_corps.skill
-phase_mastery.skill
-planetary_operations.skill
-point_defense.skill
-polarized_armor.skill
-ranged_specialization.skill
-recovery_operations.skill
-reliability_engineering.skill
-safety_procedures.skill
-salvaging.skill
-sensors.skill
-shield_modulation.skill
-ship_design.skill
-skill_data.csv
-space_operations.skill
-special_modifications.skill
-strike_commander.skill
-support_doctrine.skill
-systems_expertise.skill
-tactical_drills.skill
-target_analysis.skill
-weapon_drills.skill
-wing_commander.skill
-wolfpack_tactics.skill
+advanced_countermeasures.skill	916
+aptitude_combat.skill	250
+aptitude_data.csv	1601
+aptitude_industry.skill	254
+aptitude_leadership.skill	258
+aptitude_technology.skill	258
+automated_ships.skill	654
+auxiliary_support.skill	487
+ballistic_mastery.skill	904
+best_of_the_best.skill	638
+bulk_transport.skill	677
+carrier_command.skill	768
+carrier_group.skill	689
+colony_management.skill	652
+combat_endurance.skill	763
+command_and_control.skill	1105
+containment_procedures.skill	873
+coordinated_maneuvers.skill	950
+crew_training.skill	462
+cybernetic_augmentation.skill	841
+damage_control.skill	1275
+defensive_systems.skill	1129
+derelict_contingent.skill	773
+electronic_warfare.skill	818
+energy_weapon_mastery.skill	647
+evasive_action.skill	785
+field_modulation.skill	1006
+field_repairs.skill	835
+fighter_doctrine.skill	1124
+fighter_uplink.skill	683
+fleet_logistics.skill	1447
+flux_modulation.skill	774
+flux_regulation.skill	685
+force_concentration.skill	600
+gunnery_implants.skill	1047
+helmsmanship.skill	836
+hull_restoration.skill	986
+hypercognition.skill	692
+impact_mitigation.skill	1232
+industrial_planning.skill	473
+makeshift_equipment.skill	805
+missile_specialization.skill	1086
+navigation.skill	805
+neural_link.skill	685
+officer_management.skill	650
+officer_training.skill	751
+omega_ecm.skill	321
+ordnance_expert.skill	670
+phase_corps.skill	831
+phase_mastery.skill	574
+planetary_operations.skill	688
+point_defense.skill	1134
+polarized_armor.skill	987
+ranged_specialization.skill	644
+recovery_operations.skill	1451
+reliability_engineering.skill	906
+safety_procedures.skill	868
+salvaging.skill	678
+sensors.skill	1162
+shield_modulation.skill	913
+ship_design.skill	776
+skill_data.csv	21132
+space_operations.skill	466
+special_modifications.skill	961
+strike_commander.skill	690
+support_doctrine.skill	600
+systems_expertise.skill	1169
+tactical_drills.skill	615
+target_analysis.skill	855
+weapon_drills.skill	413
+wing_commander.skill	890
+wolfpack_tactics.skill	525

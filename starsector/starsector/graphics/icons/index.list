@@ -1,72 +1,72 @@
-abilities/
-campaign/
-cargo/
-hullsys/
-industry/
-insignia/
-intel/
-markets/
-missions/
-ranks/
-reports/
-skills/
-tactical/
-terrain/
-abyssal_light.png
-black_hole_well.png
-blackhole.png
-cache0.png
-cache1.png
-cargo_pod0.png
-cargo_pod1.png
-coronal_shunt.png
-cryosleeper.png
-cryosleeper2.png
-danger1.png
-danger2.png
-danger3.png
-danger4.png
-debris_field_icon.png
-derelict.png
-empty_fleet.png
-entity.png
-entity_hollow.png
-fleet0.png
-fleet1.png
-fleet2.png
-fleet3.png
-fleet_triangle.png
-gas_giant_well.png
-gas_giant_well2.png
-gate0.png
-gate_hauler.png
-gate_hauler2.png
-generic_probe_icon.png
-icon_portal.png
-intel_border_cyan.png
-intel_border_white.png
-jump-point.png
-jump-point2.png
-mirror.png
-mirror2.png
-mission_location.png
-mission_location2.png
-mission_marker.png
-nascent_well.png
-nascent_well2.png
-nav_buoy.png
-nav_buoy_makeshift.png
-nebula_map_icon.png
-radar_circle.png
-raid_objective.png
-relay.png
-relay_makeshift.png
-sensor_array.png
-sensor_array_makeshift.png
-stable_location.png
-station0.png
-station1.png
-station2.png
-station3.png
-station_broken.png
-warning_beacon.png
+abilities/	-1
+campaign/	-1
+cargo/	-1
+hullsys/	-1
+industry/	-1
+insignia/	-1
+intel/	-1
+markets/	-1
+missions/	-1
+ranks/	-1
+reports/	-1
+skills/	-1
+tactical/	-1
+terrain/	-1
+abyssal_light.png	857
+black_hole_well.png	3060
+blackhole.png	20318
+cache0.png	770
+cache1.png	567
+cargo_pod0.png	436
+cargo_pod1.png	334
+coronal_shunt.png	2785
+cryosleeper.png	1051
+cryosleeper2.png	347
+danger1.png	158
+danger2.png	201
+danger3.png	258
+danger4.png	345
+debris_field_icon.png	602
+derelict.png	421
+empty_fleet.png	585
+entity.png	423
+entity_hollow.png	482
+fleet0.png	3274
+fleet1.png	3495
+fleet2.png	3849
+fleet3.png	4127
+fleet_triangle.png	316
+gas_giant_well.png	2655
+gas_giant_well2.png	2234
+gate0.png	505
+gate_hauler.png	1457
+gate_hauler2.png	3184
+generic_probe_icon.png	522
+icon_portal.png	6108
+intel_border_cyan.png	410
+intel_border_white.png	389
+jump-point.png	16081
+jump-point2.png	16191
+mirror.png	812
+mirror2.png	1064
+mission_location.png	1387
+mission_location2.png	1214
+mission_marker.png	287
+nascent_well.png	2376
+nascent_well2.png	2265
+nav_buoy.png	970
+nav_buoy_makeshift.png	15823
+nebula_map_icon.png	5573
+radar_circle.png	1577
+raid_objective.png	1682
+relay.png	742
+relay_makeshift.png	1276
+sensor_array.png	1689
+sensor_array_makeshift.png	16678
+stable_location.png	443
+station0.png	1288
+station1.png	1457
+station2.png	1459
+station3.png	1459
+station_broken.png	16535
+warning_beacon.png	15130

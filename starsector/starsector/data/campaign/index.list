@@ -1,20 +1,20 @@
-econ/
-procgen/
-terrain/
-abilities.csv
-bar_events.csv
-channels.json
-commodities.csv
-events.json
-industries.csv
-market_conditions.csv
-person_missions.csv
-pings.json
-reports.csv
-rules.csv
-sim_opponents.csv
-sim_opponents_dev.csv
-special_items.csv
-starmap.json
-submarkets.csv
-terrain.json
+econ/	-1
+procgen/	-1
+terrain/	-1
+abilities.csv	4909
+bar_events.csv	2491
+channels.json	4006
+commodities.csv	5956
+events.json	3920
+industries.csv	14993
+market_conditions.csv	31910
+person_missions.csv	7928
+pings.json	3091
+reports.csv	43645
+rules.csv	3908242
+sim_opponents.csv	521
+sim_opponents_dev.csv	3349
+special_items.csv	21761
+starmap.json	1139
+submarkets.csv	1782
+terrain.json	4012

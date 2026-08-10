@@ -1,7 +1,7 @@
-blacklist
-cacerts
-java.policy
-java.security
-javafx.policy
-javaws.policy
-trusted.libraries
+blacklist	4149
+cacerts	98626
+java.policy	2645
+java.security	18469
+javafx.policy	162
+javaws.policy	103
+trusted.libraries	0

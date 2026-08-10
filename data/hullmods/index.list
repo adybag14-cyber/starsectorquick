@@ -1,59 +1,59 @@
-AcceleratedShieldEmitter.java
-AdvancedOptics.java
-AdvancedTargetingCore.java
-AdvancedTurretGyros.java
-AlwaysDetaches.java
-AnchorRotation.java
-ArmoredWeapons.java
-AugmentedEngines.java
-AutomatedRepairUnit.java
-AuxiliaryThrusters.java
-AxialRotation.java
-BlastDoors.java
-CivGrade.java
-CompromisedArmor.java
-CompromisedHull.java
-ConvertedCargoBay.java
-ConvertedFighterBay.java
-DedicatedTargetingCore.java
-DegradedDriveField.java
-DegradedEngines.java
-DelicateMachinery.java
-DestroyedWeaponMounts.java
-DoNotFireThrough.java
-ECCMPackage.java
-ExpandedMagazines.java
-ExpandedMissileRacks.java
-ExtendedShieldEmitter.java
-FaultyPowerGrid.java
-FluxBreakers.java
-FluxCoilAdjunct.java
-FluxDistributor.java
-FluxShunt.java
-Fourteenth.java
-FrontShieldEmitter.java
-FrontShieldGenerator.java
-HardenedShieldEmitter.java
-HardenedSubsystems.java
-HeavyArmor.java
-HighMaintenance.java
-IllAdvised.java
-InsulatedEngines.java
-IntegratedPointDefenseAI.java
-IntegratedTargetingUnit.java
-Militarized.java
-NeverDetaches.java
-NoWeaponFlux.java
-OmniShieldEmitter.java
-PhaseCoilInstability.java
-ReducedExplosion.java
-ReinforcedBulkheads.java
-SafetyOverrides.java
-ShieldedCargoHolds.java
-SolarShielding.java
-StabilizedShieldEmitter.java
-SurveyingEquipment.java
-TargetingSupercomputer.java
-UnstableInjector.java
-VastBulk.java
-hull_mods.csv
+AcceleratedShieldEmitter.java	1747
+AdvancedOptics.java	1473
+AdvancedTargetingCore.java	1876
+AdvancedTurretGyros.java	1886
+AlwaysDetaches.java	586
+AnchorRotation.java	1157
+ArmoredWeapons.java	1818
+AugmentedEngines.java	1267
+AutomatedRepairUnit.java	1810
+AuxiliaryThrusters.java	1384
+AxialRotation.java	816
+BlastDoors.java	1462
+CivGrade.java	1237
+CompromisedArmor.java	1294
+CompromisedHull.java	1287
+ConvertedCargoBay.java	1386
+ConvertedFighterBay.java	2087
+DedicatedTargetingCore.java	2668
+DegradedDriveField.java	1597
+DegradedEngines.java	1810
+DelicateMachinery.java	907
+DestroyedWeaponMounts.java	228
+DoNotFireThrough.java	578
+ECCMPackage.java	3379
+ExpandedMagazines.java	1387
+ExpandedMissileRacks.java	1472
+ExtendedShieldEmitter.java	1523
+FaultyPowerGrid.java	1964
+FluxBreakers.java	1136
+FluxCoilAdjunct.java	2611
+FluxDistributor.java	2159
+FluxShunt.java	711
+Fourteenth.java	3765
+FrontShieldEmitter.java	2225
+FrontShieldGenerator.java	2555
+HardenedShieldEmitter.java	1066
+HardenedSubsystems.java	2983
+HeavyArmor.java	3255
+HighMaintenance.java	641
+IllAdvised.java	987
+InsulatedEngines.java	1491
+IntegratedPointDefenseAI.java	2451
+IntegratedTargetingUnit.java	2166
+Militarized.java	2763
+NeverDetaches.java	583
+NoWeaponFlux.java	620
+OmniShieldEmitter.java	2160
+PhaseCoilInstability.java	1970
+ReducedExplosion.java	779
+ReinforcedBulkheads.java	803
+SafetyOverrides.java	5948
+ShieldedCargoHolds.java	177
+SolarShielding.java	1393
+StabilizedShieldEmitter.java	1677
+SurveyingEquipment.java	3101
+TargetingSupercomputer.java	1971
+UnstableInjector.java	2127
+VastBulk.java	551
+hull_mods.csv	55482

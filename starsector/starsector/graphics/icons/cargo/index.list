@@ -1,97 +1,97 @@
-ai_core_alpha.png
-ai_core_beta.png
-ai_core_gamma.png
-ai_omega_core.png
-biofactory_embryo.png
-biospecimens.png
-blueprint_basic.png
-blueprint_fighter.png
-blueprint_hightech.png
-blueprint_industry.png
-blueprint_lowtech.png
-blueprint_midline.png
-blueprint_missile.png
-blueprint_shiphull.png
-blueprint_weapons.png
-blueprintschip.png
-bp_hegA.png
-bp_hegXIV.png
-bp_missiles.png
-bp_missiles2.png
-bp_overlay.png
-bp_overlay_fighter.png
-bp_overlay_weapon.png
-catalytic_core.png
-chip1.png
-chip2.png
-combat_drone_replicator.png
-credit_chips.png
-crew.png
-crew00.png
-crew01.png
-crew02.png
-crew03.png
-crew2.png
-crew3.png
-crew4.png
-crew5.png
-crew6.png
-crew7.png
-crew8.png
-crew9.png
-cryoarithmetic_engine.png
-fighter_lpc.png
-fighter_lpc2.png
-fighterchip.png
-food.png
-fuel.png
-fuel_old.png
-fullerene_spool.png
-furniture.png
-fusion_lamp.png
-goods.png
-handweapons.png
-heavymachinery.png
-heavyweapons.png
-holosuite.png
-hypershunt_tap.png
-hyperspace_data.png
-janus_device.png
-lobster.png
-luxurygoods.png
-marine.png
-materials.png
-modspec.png
-modspec2.png
-nanoforge_corrupted.png
-nanoforge_decayed.png
-nanoforge_pristine.png
-necrocore.png
-ore.png
-organics.png
-organs.png
-package_hightech.png
-package_lowtech.png
-package_midline.png
-planetkiller.png
-plasma_dynamo.png
-raremetals.png
-rareore.png
-recdrugs.png
-refined_metal.png
-soil_nanites.png
-starship_weapons.png
-supplies.png
-supplies_old.png
-survey_data.png
-survey_data1.png
-survey_data2.png
-survey_data3.png
-survey_data4.png
-survey_data5.png
-synchrotron_core.png
-terraforming_bore.png
-volatiles.png
-volatilesB.png
-wormhole_anchor.png
-wormhole_scanner.png
+ai_core_alpha.png	27466
+ai_core_beta.png	25468
+ai_core_gamma.png	24270
+ai_omega_core.png	13327
+biofactory_embryo.png	14793
+biospecimens.png	9006
+blueprint_basic.png	12630
+blueprint_fighter.png	26866
+blueprint_hightech.png	11050
+blueprint_industry.png	13359
+blueprint_lowtech.png	12720
+blueprint_midline.png	12156
+blueprint_missile.png	13114
+blueprint_shiphull.png	13860
+blueprint_weapons.png	11269
+blueprintschip.png	7189
+bp_hegA.png	4382
+bp_hegXIV.png	19010
+bp_missiles.png	22326
+bp_missiles2.png	5026
+bp_overlay.png	15828
+bp_overlay_fighter.png	15393
+bp_overlay_weapon.png	16926
+catalytic_core.png	13883
+chip1.png	8778
+chip2.png	7898
+combat_drone_replicator.png	14154
+credit_chips.png	14803
+crew.png	5642
+crew00.png	5357
+crew01.png	5186
+crew02.png	5082
+crew03.png	5053
+crew2.png	4998
+crew3.png	5069
+crew4.png	5144
+crew5.png	4644
+crew6.png	4787
+crew7.png	4884
+crew8.png	4792
+crew9.png	4862
+cryoarithmetic_engine.png	15381
+fighter_lpc.png	27537
+fighter_lpc2.png	14684
+fighterchip.png	4208
+food.png	24515
+fuel.png	25678
+fuel_old.png	7947
+fullerene_spool.png	12503
+furniture.png	9828
+fusion_lamp.png	15989
+goods.png	26854
+handweapons.png	22861
+heavymachinery.png	30370
+heavyweapons.png	29609
+holosuite.png	14831
+hypershunt_tap.png	12458
+hyperspace_data.png	12148
+janus_device.png	15555
+lobster.png	10483
+luxurygoods.png	21912
+marine.png	21983
+materials.png	24723
+modspec.png	26511
+modspec2.png	11908
+nanoforge_corrupted.png	16801
+nanoforge_decayed.png	16013
+nanoforge_pristine.png	15610
+necrocore.png	27447
+ore.png	11093
+organics.png	26552
+organs.png	5165
+package_hightech.png	5441
+package_lowtech.png	6383
+package_midline.png	4221
+planetkiller.png	14697
+plasma_dynamo.png	14800
+raremetals.png	23982
+rareore.png	8092
+recdrugs.png	24100
+refined_metal.png	12446
+soil_nanites.png	14268
+starship_weapons.png	13892
+supplies.png	26826
+supplies_old.png	7931
+survey_data.png	10140
+survey_data1.png	23415
+survey_data2.png	23443
+survey_data3.png	23523
+survey_data4.png	23552
+survey_data5.png	23508
+synchrotron_core.png	29929
+terraforming_bore.png	13849
+volatiles.png	10019
+volatilesB.png	27148
+wormhole_anchor.png	13006
+wormhole_scanner.png	13620
