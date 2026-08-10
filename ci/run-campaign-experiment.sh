@@ -24,7 +24,8 @@ OFFICIAL_URL=${STARSECTOR_OFFICIAL_ARCHIVE_URL:-https://f005.backblazeb2.com/fil
 OFFICIAL_ZIP=${STARSECTOR_OFFICIAL_ARCHIVE:-.ci-cache/starsector_linux-0.98a-RC8.zip}
 if [[ ! -s "$OFFICIAL_ZIP" ]] || ! unzip -tq "$OFFICIAL_ZIP" >/dev/null 2>&1; then
   rm -f "$OFFICIAL_ZIP"
-  curl -fL --retry 3 --retry-delay 3 --connect-timeout 30 --max-time 900 \
+  curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 1200 \
+    --connect-timeout 30 --max-time 900 --continue-at - \
     -o "$OFFICIAL_ZIP" "$OFFICIAL_URL"
 fi
 test "$(wc -c < "$OFFICIAL_ZIP")" -gt 200000000

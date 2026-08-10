@@ -52,7 +52,8 @@ jobs:
           PY
       - name: Download official 0.98a-RC8 release
         run: |
-          curl -fL --retry 3 --retry-delay 3 --connect-timeout 30 --max-time 900 \
+          curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 1200 \
+            --connect-timeout 30 --max-time 900 --continue-at - \
             -o .ci-cache/starsector_linux-0.98a-RC8.zip \
             https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip
           unzip -tq .ci-cache/starsector_linux-0.98a-RC8.zip
