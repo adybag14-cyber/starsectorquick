@@ -72,12 +72,21 @@ jobs:
           rm -rf .pages-worktree
           git worktree add --detach .pages-worktree origin/gh-pages
           cp -a test_output/pages-overlays/deploy/. .pages-worktree/
+          rm -f .pages-worktree/.starsectorquick-pages-overlay
           touch .pages-worktree/.nojekyll
           SOURCE_SHA="${{ steps.source.outputs.sha }}"
           git -C .pages-worktree config user.name 'github-actions[bot]'
           git -C .pages-worktree config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C .pages-worktree add -A
+          # The overlay may contain intentionally ignored runtime binaries such as
+          # newly generated JARs. This worktree starts clean from gh-pages, so force
+          # staging is limited to the verified overlay copied above.
+          git -C .pages-worktree add -f -A
           git -C .pages-worktree diff --cached --check
+          if git -C .pages-worktree diff --cached --name-status | grep -q '^D'; then
+            echo 'Refusing Pages overlay that deletes existing deployed files.' >&2
+            git -C .pages-worktree diff --cached --name-status >&2
+            exit 1
+          fi
           if git -C .pages-worktree diff --cached --quiet; then
             echo 'Pages overlay already matches gh-pages.'
           else
