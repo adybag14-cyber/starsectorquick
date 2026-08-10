@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260810-campaign-render-v3';
+const ALIAS_WORKER_VERSION = '20260810-campaign-render-v4';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -111,6 +111,25 @@ const shouldNormalizeRange = (url, request) => {
   return TEXT_LIKE_DATA_FILE.test(url.pathname);
 };
 
+const isRuntimeDirectoryProbe = url => {
+  if (!RANGE_NORMALIZED_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return false;
+  const pathname = url.pathname;
+  if (pathname.endsWith('/')) return true;
+  const leaf = pathname.slice(pathname.lastIndexOf('/') + 1);
+  return leaf.length > 0 && !leaf.includes('.');
+};
+
+const respondWithMissingRuntimeDirectory = request => {
+  const headers = new Headers({
+    'cache-control': 'no-store',
+    'content-type': 'text/plain; charset=utf-8',
+    'x-starsectorquick-sw-version': ALIAS_WORKER_VERSION,
+    'x-starsectorquick-directory-probe': 'direct-404'
+  });
+  const body = request.method === 'HEAD' ? null : 'Not found';
+  return new Response(body, { status: 404, statusText: 'Not Found', headers });
+};
+
 const shouldNormalizeFullIndexList = (url, request) => {
   if (request.headers.has('range')) return false;
   if (!RANGE_NORMALIZED_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return false;
@@ -206,6 +225,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (isRuntimeDirectoryProbe(url)) {
+    event.respondWith(Promise.resolve(respondWithMissingRuntimeDirectory(event.request)));
+    return;
+  }
+
   if (shouldNormalizeRange(url, event.request)) {
     event.respondWith(respondWithNormalizedRange(url, event.request));
     return;
@@ -222,6 +246,11 @@ self.addEventListener('fetch', event => {
   const [from, to] = rewrite;
   const target = new URL(event.request.url);
   target.pathname = to + url.pathname.slice(from.length);
+
+  if (isRuntimeDirectoryProbe(target)) {
+    event.respondWith(Promise.resolve(respondWithMissingRuntimeDirectory(event.request)));
+    return;
+  }
 
   if (shouldNormalizeRange(target, event.request)) {
     event.respondWith(respondWithNormalizedRange(target, event.request));
