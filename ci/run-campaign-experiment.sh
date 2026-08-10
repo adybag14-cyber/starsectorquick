@@ -155,6 +155,11 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
 
+if [[ "${STARSECTOR_PREPARE_ONLY:-false}" == "true" ]]; then
+  echo "Prepared verified campaign runtime candidate; browser execution skipped by STARSECTOR_PREPARE_ONLY=true."
+  exit 0
+fi
+
 npm ci
 # GitHub-hosted Ubuntu already carries Chromium runtime libraries. Avoid apt here:
 # external Microsoft package feeds have intermittently returned 403 and should not

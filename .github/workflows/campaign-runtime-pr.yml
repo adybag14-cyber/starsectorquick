@@ -97,15 +97,29 @@ jobs:
           fail-on-cache-miss: true
       - name: Build and verify campaign-direct-main-thread-java17
         env:
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_AUTO_CAMPAIGN_DIRECT_USE_WORKER_THREAD__":false,"__STARSECTOR_AUTO_CAMPAIGN_WITH_TIME_PASS__":false,"__STARSECTOR_AUTO_CAMPAIGN_ENABLE_SYNTHETIC_PLAYER_FLEET_FALLBACK__":false,"__STARSECTOR_AUTO_CAMPAIGN_ALLOW_IMMEDIATE_PLAYER_FLEET_NULL_TRANSITION__":false,"__STARSECTOR_AUTO_CAMPAIGN_INVOKE_CREATE_ON_PLAYER_FLEET_NULL__":true}'
+          EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
           STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Validate Pages overlay from verified candidate
+        run: |
+          python3 ci/prepare-pages-overlay.py \
+            --output test_output/pages-overlay-check \
+            --profile corvus-asharu-compat \
+            --source-sha "$GITHUB_SHA"
+          test -s test_output/pages-overlay-check/web-runtime-profile.json
+          test -s test_output/pages-overlay-check/jars/fixer_patch.jar
+          test -s test_output/pages-overlay-check/jars/starfarer.api.jar
+          test -s test_output/pages-overlay-check/jars/starfarer_obf.jar
+          test -s test_output/pages-overlay-check/jars/scripts-precompiled.jar
       - name: Upload campaign-direct-main-thread-java17 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: campaign-runtime-campaign-direct-main-thread-java17
-          path: test_output/campaign-direct-main-thread-java17
+          path: |
+            test_output/campaign-direct-main-thread-java17
+            test_output/pages-overlay-check/web-runtime-profile.json
+            test_output/pages-overlay-check/web-runtime-manifest.json
           if-no-files-found: warn
