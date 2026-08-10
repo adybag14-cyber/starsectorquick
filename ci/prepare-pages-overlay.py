@@ -123,7 +123,7 @@ def main() -> int:
                 selected.add(index.relative_to(ROOT).as_posix())
 
     launch = (ROOT / "launch.html").read_text(encoding="utf-8")
-    if "20260810-campaign-render-v4" not in launch:
+    if "20260810-campaign-render-v5" not in launch:
         raise RuntimeError("launch cache/reset version was not updated")
     if "preserveDrawingBuffer: true" not in (
         ROOT / "build" / "final" / "wasm-modules" / "lwjgl.js"

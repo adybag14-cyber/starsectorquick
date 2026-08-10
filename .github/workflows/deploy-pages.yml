@@ -73,6 +73,12 @@ jobs:
           git worktree add --detach .pages-worktree origin/gh-pages
           cp -a test_output/pages-overlays/deploy/. .pages-worktree/
           touch .pages-worktree/.nojekyll
+          # Collapse the final combined Starsector data tree into one immutable payload.
+          # The service worker serves byte ranges from this pack, avoiding thousands of
+          # latency-bound GitHub Pages filesystem requests on a cold launch.
+          python3 ci/build-pages-data-pack.py --root .pages-worktree
+          test -s .pages-worktree/starsector-data-pack-v1.bin
+          test -s .pages-worktree/starsector-data-pack-v1.json
           SOURCE_SHA="${{ steps.source.outputs.sha }}"
           git -C .pages-worktree config user.name 'github-actions[bot]'
           git -C .pages-worktree config user.email '41898282+github-actions[bot]@users.noreply.github.com'

@@ -568,7 +568,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260810-campaign-render-v4';
+                    const aliasWorkerVersion = '20260810-campaign-render-v5';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -615,7 +615,11 @@
                             sessionStorage.removeItem(reloadKey);
                             sessionStorage.removeItem(versionReloadKey);
                             const activeControllerUrl = navigator.serviceWorker.controller.scriptURL || 'unknown-controller';
-                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion}, controller=${activeControllerUrl})`, '#888');
+                            navigator.serviceWorker.controller.postMessage({
+                                type: 'warm-starsector-data-pack',
+                                version: aliasWorkerVersion
+                            });
+                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion}, controller=${activeControllerUrl}); data-pack warmup requested.`, '#888');
                         } else {
                             log('Project path alias worker registered but not controlling this page.', '#ffaa00');
                         }
@@ -630,7 +634,7 @@
                         return;
                     }
 
-                    const resetVersion = '20260810-campaign-render-v4';
+                    const resetVersion = '20260810-campaign-render-v5';
                     const resetKey = 'starsectorquickCheerpJStorageReset';
                     const params = new URLSearchParams(window.location.search);
                     const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');
@@ -1226,9 +1230,18 @@
                 }
                 log(`Boot mode: ${bootMode}`, '#00d9ff');
 
+                // Captured from a complete Title -> Campaign session with CheerpJ 4.3 / Java 17.
+                // CheerpJ uses this profile to fetch runtime modules in parallel on cold starts.
+                const cheerpjPreloadResources = {"/lt/17/lib/modules":[0,131072,1179648,6291456,6422528,7340032,7602176,8519680,9437184,10223616,19005440,19136512,19660800,20447232,21102592,22413312,22937600,23199744,25165824,25559040,26083328,26607616,26738688,27394048,29360128,29491200,30277632,30408704,31326208,31588352,31850496,32505856,32636928,32768000,33030144,33423360,33554432,33947648,34209792,34865152,35258368,35389440,35520512,35651584,37617664,37748736,37879808,38273024],"/lt/etc/users":[0,131072],"/lt/etc/localtime":[],"/lt/17/jre/lib/cheerpj-handlers.jar":[0,131072],"/lt/17/jre/lib/cheerpj-awt.jar":[0,131072],"/lt/17/jre/lib/cheerpj-jsobject.jar":[0,131072],"/lt/17/lib/tzdb.dat":[0,131072],"/lt/17/conf/security/java.security":[0,131072],"/lt/17/conf/accessibility.properties":[],"/lt/17/conf/jaxp.properties":[],"/lt/17/lib/currency.properties":[],"/lt/17/conf/chronology":[],"/lt/17/conf/stax.properties":[]};
                 await cheerpjInit({
                     version: 17,
                     enableX11: true,
+                    preloadResources: cheerpjPreloadResources,
+                    preloadProgress(preloadDone, preloadTotal) {
+                        if (preloadDone === preloadTotal && preloadTotal > 0) {
+                            log(`CheerpJ runtime preload complete: ${preloadDone}/${preloadTotal}`, '#888');
+                        }
+                    },
                     natives: {
                         ...mergedNatives,
                         async Java_java_lang_NullPointerException_getExtendedNPEMessage(lib, self) {
