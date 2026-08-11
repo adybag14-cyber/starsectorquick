@@ -1,3 +1,4 @@
 everything.jar filter=lfs diff=lfs merge=lfs -text
 jars/resources.jar filter=lfs diff=lfs merge=lfs -text
 starsector-data-pack-v1.bin binary
+starsector-graphics-pack-v1/*.bin binary

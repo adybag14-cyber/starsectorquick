@@ -568,7 +568,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260810-campaign-render-v5';
+                    const aliasWorkerVersion = '20260810-campaign-render-v6';
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -619,7 +619,7 @@
                                 type: 'warm-starsector-data-pack',
                                 version: aliasWorkerVersion
                             });
-                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion}, controller=${activeControllerUrl}); data-pack warmup requested.`, '#888');
+                            log(`Project path alias worker active: ${registration.scope} (${aliasWorkerVersion}, controller=${activeControllerUrl}); data/graphics-pack warmup requested.`, '#888');
                         } else {
                             log('Project path alias worker registered but not controlling this page.', '#ffaa00');
                         }
@@ -634,7 +634,7 @@
                         return;
                     }
 
-                    const resetVersion = '20260810-campaign-render-v5';
+                    const resetVersion = '20260810-campaign-render-v6';
                     const resetKey = 'starsectorquickCheerpJStorageReset';
                     const params = new URLSearchParams(window.location.search);
                     const forceReset = window.__STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__ === true || params.has('resetCheerpJ');

@@ -1,22 +1,28 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "ec6841b38730eb0b98b0e9cff66775516c675772",
-    "workflowRunId": "hermes-static-hotfix-v5-20260810",
-    "generatedAt": "2026-08-10T20:54:00.269997+00:00",
-    "overlayFiles": 807,
+    "sourceSha": "6547c034a13751083bebb2c3917132ee621d6af7",
+    "workflowRunId": "31480329333",
+    "generatedAt": "2026-08-11T10:02:06.327595+00:00",
+    "overlayFiles": 833,
     "dataPack": {
       "version": 1,
       "fileCount": 1695,
       "bytes": 8107810,
       "sha256": "d5918a6dcc1be26340e625e126388d93bdbc0499b0712c21da689a8a43bf5e30"
+    },
+    "graphicsPack": {
+      "version": 1,
+      "fileCount": 3381,
+      "packCount": 25,
+      "bytes": 100465512
     }
   },
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 141,
-      "sha256": "600be6fff490fe9015c7fa3011fb17c4879ff4e50ecde7456b273578dc56b270"
+      "bytes": 182,
+      "sha256": "eb56c8bd3916d085f68ea90602c65612b644da3e70fc4fa01c9a1614419b38ff"
     },
     {
       "path": ".nojekyll",
@@ -506,7 +512,7 @@
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 214707,
-      "sha256": "a0e80f170e0d47a47a00ed48e1ad1816bfafc392f2811ea1b9714f5f212fe8d3"
+      "sha256": "8a4cb936b60cad8ee51655a365be84ed56660f6e5d2363fb473bbd5615f554c2"
     },
     {
       "path": "jars/index.list",
@@ -535,8 +541,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 86211,
-      "sha256": "90605d7ffe996cb568a5b2d4a6d627bccedad022d34bc036edf1f3832090728f"
+      "bytes": 86220,
+      "sha256": "831688bd0636261e8a4305c81fb7e99ed97b2abde899c4a19e3d9257c4082f1b"
     },
     {
       "path": "starsector-data-pack-v1.bin",
@@ -547,6 +553,136 @@
       "path": "starsector-data-pack-v1.json",
       "bytes": 176361,
       "sha256": "ff3866515b71811e69c0156c4f96524b9e0ceb35d63755c4b2fbc7cae1731c7b"
+    },
+    {
+      "path": "starsector-graphics-pack-v1.json",
+      "bytes": 361420,
+      "sha256": "bd57e358a7f017116717c98072b47a2e7ec1d4da97d57b050d7c70569e3148b4"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/_root.bin",
+      "bytes": 1386,
+      "sha256": "0b1a6d87f3d4d6dbee31ea378dad97d5e7a6c28b0b57ab6e2a4a31925861807b"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/asteroids.bin",
+      "bytes": 627469,
+      "sha256": "ab5f32baccce68e7cb70e0a43b7ddcf8172257d4a2a5ce0b534f318d73cf4b0a"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/backgrounds.bin",
+      "bytes": 2456787,
+      "sha256": "6a5c6ca989d88261e715b0174f603beb01d4c69e6d2415cb69673781cd0a7e61"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/cursors.bin",
+      "bytes": 9581,
+      "sha256": "064caa693017432e550cf2a4829d4e649eda2c61ef3692c2598ed5ae12766018"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/damage.bin",
+      "bytes": 2596849,
+      "sha256": "9f6e55ffb2dd73a08026c20e6d19a6df275d2ebb387f3dbdad067eed5a210ebc"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/debris.bin",
+      "bytes": 100640,
+      "sha256": "2cb06eef9625bd5201a5dc944a80176b5902ff869c7a295ff679277ec83952f5"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/factions.bin",
+      "bytes": 3334589,
+      "sha256": "f1a327d19e61f5b83fbeeaa16d88cad3e7805338039ce3fbb87a0bd8f077121d"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/fonts.bin",
+      "bytes": 1998384,
+      "sha256": "df1032cc17eb703528a53627fedb26665f3b64a4aee64a996d05b6534aaa875a"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/fx.bin",
+      "bytes": 9230910,
+      "sha256": "bfa339c74be641b2c89701b89b65e0ad07873e34223c2b762c4c3a678f337161"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/hud.bin",
+      "bytes": 38055,
+      "sha256": "ab0cef342d0cd36d901068cd0fa085d4f08b9ea0d6c3c421f1991680f8a17701"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/hullmods.bin",
+      "bytes": 571940,
+      "sha256": "97eda1dd247926b8f482f0b14c5f26ea78500d78a734434eef6bcf37daccbc08"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/icons.bin",
+      "bytes": 8165234,
+      "sha256": "893ada9ce3143cd826d7f0d950cf96be04150287efdad893d2cfdf6e7cd05a06"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/illustrations.bin",
+      "bytes": 9200126,
+      "sha256": "b167769a7093e91fa020ae4039883ca4c69e138b0d833ec47c45aeb6b35492be"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/misc.bin",
+      "bytes": 2409349,
+      "sha256": "5d067724560acf46ff659c53e935ba78f3da1afa3b8f78eb6bff179698c0b65e"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/missiles.bin",
+      "bytes": 237445,
+      "sha256": "04b384efd9e6a71578869cdefa1e62824b0e62a36ea9ce6a946ba990409e41cd"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/mock.bin",
+      "bytes": 25444,
+      "sha256": "d96c2d271f113466fc048e2a6cf52ba8063dc58a3a9d2d10dbd69edce2e9cdc0"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/planets.bin",
+      "bytes": 21686484,
+      "sha256": "483f2b262ba1fc1f839be0e34b626b26f7973a7c3b54fa192cbab10511ccbecf"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/portraits.bin",
+      "bytes": 6987990,
+      "sha256": "b49aea90b3cc5504720a162fffbb77bcd7ec94c23d74ec4e35eedab1eec468eb"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/ships.bin",
+      "bytes": 21650420,
+      "sha256": "124793a57d2948e2e034297e5259e9018f552450d21db8ec561589afde1e133c"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/starscape.bin",
+      "bytes": 162520,
+      "sha256": "b1c4e5b02923e2b20e9e93c7c5db865d19861efdf602454a8f17561af9a8eaaf"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/stations.bin",
+      "bytes": 1887022,
+      "sha256": "3dbcfc0e5181915d5bb79f48bfdee1518ca6c8fc6ac5989dfd865f9cdc60220d"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/terrain.bin",
+      "bytes": 3992475,
+      "sha256": "db482bdd5ba52591ef319dd7f93f53866a767f718ba5bce4da4c935212ee9461"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/ui.bin",
+      "bytes": 1131001,
+      "sha256": "4b95327f5514063209fb870af20899c2fbad41101bc47fe1ea23a4fc8e0b7994"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/warroom.bin",
+      "bytes": 211475,
+      "sha256": "8dc9b4a011c00eaa1c1f75208d0deb5061c604ea0ed24a338aa037b60c33acc9"
+    },
+    {
+      "path": "starsector-graphics-pack-v1/weapons.bin",
+      "bytes": 1751937,
+      "sha256": "38c02e9c4e773cf91dae7a7ae00f7bc8dc551d4d7e2a4b7c6b3a6541d60b2f0e"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/corvus.json",
@@ -4045,8 +4181,8 @@
     },
     {
       "path": "starsectorquick-sw.js",
-      "bytes": 14143,
-      "sha256": "ce4fdc38fcc88123026fa0242c08650d7b9226325895658fe86ba7b8804c99a2"
+      "bytes": 20764,
+      "sha256": "bfb251b4ae69386b1b0e9ab061555fd7ed0c0341b3c2b4f47f1c48634ddc2b06"
     }
   ]
 }
