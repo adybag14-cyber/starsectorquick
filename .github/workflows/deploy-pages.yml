@@ -71,7 +71,11 @@ jobs:
           set -euo pipefail
           git fetch origin gh-pages
           rm -rf .pages-worktree
-          git worktree add --detach .pages-worktree origin/gh-pages
+          # gh-pages still contains historical LFS-tracked payloads. Preserve their
+          # pointers while checking out the deployment worktree; the verified overlay
+          # replaces every runtime file needed by the live site and must not depend on
+          # the repository owner's LFS download quota.
+          GIT_LFS_SKIP_SMUDGE=1 git worktree add --detach .pages-worktree origin/gh-pages
           cp -a test_output/pages-overlays/deploy/. .pages-worktree/
           touch .pages-worktree/.nojekyll
           # Collapse the final combined Starsector data tree into one immutable payload.
