@@ -1,11 +1,11 @@
-fixer_patch.jar	214707
+fixer_patch.jar	215632
 bridge.jar	88476
 fixer.jar	228690
 resources.jar	2693795
 janino.jar	613299
 commons-compiler.jar	30595
 starfarer.api.jar	7239799
-starfarer_obf.jar	6018512
+starfarer_obf.jar	6018573
 jogg-0.0.7.jar	6839
 jorbis-0.0.15.jar	58917
 json.jar	44055

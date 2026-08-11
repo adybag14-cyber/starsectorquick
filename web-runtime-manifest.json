@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "25468552dd927c73d6a34e3311ff097f850938ef",
-    "workflowRunId": "31490972330",
-    "generatedAt": "2026-08-11T12:24:26.420316+00:00",
+    "sourceSha": "867a254c3237af896e6c97cf92002bb606b43ea0",
+    "workflowRunId": "31522680277",
+    "generatedAt": "2026-08-11T18:27:08.487426+00:00",
     "overlayFiles": 834,
     "dataPack": {
       "version": 1,
@@ -31,8 +31,8 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 63061,
-      "sha256": "233bbb5ecb5b6f415a598cfc67c2e03bae9a6b31269603aabea4cd4de966509d"
+      "bytes": 66956,
+      "sha256": "6d01fe58dec3f8bdf9fa7d5fc773ed9d8e36fdd0f4ae103eeae1204f3976a397"
     },
     {
       "path": "data/campaign/econ/corvus.json",
@@ -511,18 +511,18 @@
     },
     {
       "path": "jars/bridge.jar",
-      "bytes": 88479,
-      "sha256": "eb0d780d058fd03f6f0e17a1046287dccac98ed53a64ef61cb0b272de59ec142"
+      "bytes": 88505,
+      "sha256": "a427730c7ee0bb323c0d9014369a8dd55c90823dff98c07f988c9a1f17495199"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 214707,
-      "sha256": "55c6fac9d97cb6e2e5ac5ebee306f6c72910830c1f0c2621a04bfc81b46dcdd4"
+      "bytes": 215632,
+      "sha256": "8a79d32b12983334b5a0631d3657b25c59204c06b2bb489029bd66363f1ac5dc"
     },
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "5b54f4f2fb71df30c801709849936da4947a97a9fb60b6b99fc459bf7411ecb2"
+      "sha256": "721263ad7fc23fe19a25599839cd7ca80b8b76444164ef81594fe472b7fe0905"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -536,8 +536,8 @@
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6018512,
-      "sha256": "07f06704a7b2857f478f34f55d73486a72dd1a6b65e6e5bf718c8bd4505a1058"
+      "bytes": 6018573,
+      "sha256": "5aeea05ac446d64a64a9bf1da5eabfc3717b725a6b1599d7e468d05ceb39e7ef"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
