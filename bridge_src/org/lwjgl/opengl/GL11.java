@@ -60,6 +60,7 @@ public final class GL11 {
             case 10241: // GL_TEXTURE_MIN_FILTER
             case 10242: // GL_TEXTURE_WRAP_S
             case 10243: // GL_TEXTURE_WRAP_T
+            case 33169: // GL_GENERATE_MIPMAP
                 return true;
             default:
                 return false;
@@ -329,7 +330,8 @@ public final class GL11 {
     static native void nglOrtho(double p0, double p1, double p2, double p3, double p4, double p5, long p6);
 
     public static void glPointSize(float p0) {}
-    public static void glPixelStorei(int p0, int p1) {}
+    public static void glPixelStorei(int p0, int p1) { nglPixelStorei(p0, p1, 0L); }
+    static native void nglPixelStorei(int p0, int p1, long p2);
     public static void glPolygonMode(int p0, int p1) {}
     public static boolean glIsEnabled(int p0) { return nglIsEnabled(p0, 0L); }
     static native boolean nglIsEnabled(int p0, long p1);
@@ -411,6 +413,11 @@ public final class GL11 {
         nglTexParameteri(p0, p1, p2, 0L);
     }
     static native void nglTexParameteri(int p0, int p1, int p2, long p3);
+
+    public static void glCopyTexImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7) {
+        nglCopyTexImage2D(p0, p1, p2, p3, p4, p5, p6, p7, 0L);
+    }
+    static native void nglCopyTexImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, long p8);
 
     public static void glTexSubImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, ByteBuffer p8) {
         nglTexSubImage2D(p0, p1, p2, p3, p4, p5, p6, p7, addr(p8), 0L);

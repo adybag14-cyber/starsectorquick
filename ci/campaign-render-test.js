@@ -33,11 +33,19 @@ function pixelStats(buffer) {
   let dark = 0;
   let midTone = 0;
   let colorful = 0;
+  let centerBright = 0;
+  let centerWarm = 0;
   let sum = 0;
   let sumSq = 0;
   const quantizedColors = new Set();
   const pixels = png.width * png.height;
+  const centerX = png.width / 2;
+  const centerY = png.height / 2;
+  const centerRadius = Math.max(32, Math.floor(Math.min(png.width, png.height) / 16));
   for (let i = 0; i < png.data.length; i += 4) {
+    const pixelIndex = i / 4;
+    const x = pixelIndex % png.width;
+    const yPos = Math.floor(pixelIndex / png.width);
     const r = png.data[i];
     const g = png.data[i + 1];
     const b = png.data[i + 2];
@@ -49,6 +57,10 @@ function pixelStats(buffer) {
     if (y < 12) dark++;
     if (y >= 20 && y <= 220) midTone++;
     if (chroma > 20) colorful++;
+    if (Math.abs(x - centerX) <= centerRadius && Math.abs(yPos - centerY) <= centerRadius) {
+      if (Math.max(r, g, b) > 80) centerBright++;
+      if (r > 45 && r > g * 1.15 && r > b * 1.3) centerWarm++;
+    }
     quantizedColors.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4));
     sum += y;
     sumSq += y * y;
@@ -64,6 +76,8 @@ function pixelStats(buffer) {
     darkRatio: dark / pixels,
     midToneRatio: midTone / pixels,
     colorfulRatio: colorful / pixels,
+    centerBrightPixels: centerBright,
+    centerWarmPixels: centerWarm,
     quantizedColorCount: quantizedColors.size,
     meanLuma: mean,
     variance,
@@ -184,9 +198,11 @@ function pixelStats(buffer) {
 
   flushLogs();
   const game = page.locator('#game-container');
+  const gameCanvas = page.locator('#lwjglCanvas');
   const safeScreenshot = async (path, label) => {
     try {
-      return await withTimeout(game.screenshot({ path, timeout: 10000 }), 12000, label);
+      await withTimeout(gameCanvas.waitFor({ state: 'visible', timeout: 10000 }), 12000, `${label} canvas visibility`);
+      return await withTimeout(gameCanvas.screenshot({ path, timeout: 10000 }), 12000, label);
     } catch (error) {
       screenshotErrors.push(String(error && (error.stack || error.message) || error));
       logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
@@ -246,11 +262,18 @@ function pixelStats(buffer) {
   const secondStats = pixelStats(second);
   const frameChanged = Boolean(firstStats && secondStats && firstStats.sha256 !== secondStats.sha256);
   const rendered = Boolean(secondStats && secondStats.nonBlackRatio > 0.01 && secondStats.variance > 2);
+  const campaignTextureRichness = expectedState !== 'campaign' || Boolean(secondStats
+    && secondStats.quantizedColorCount >= 200
+    && secondStats.variance >= 400);
+  const campaignCenterSubject = expectedState !== 'campaign' || Boolean(secondStats
+    && secondStats.centerBrightPixels >= 150
+    && secondStats.centerWarmPixels >= 8);
   const campaignVisualQuality = expectedState !== 'campaign' || Boolean(secondStats
     && secondStats.nonBlackRatio > 0.03
     && secondStats.darkRatio < 0.94
     && secondStats.midToneRatio > 0.025
-    && secondStats.quantizedColorCount >= 64);
+    && campaignTextureRichness
+    && campaignCenterSubject);
   const campaign = Boolean(campaignSeenAt) || state.bodyState === 'campaign';
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
@@ -274,6 +297,8 @@ function pixelStats(buffer) {
     disallowedRecoverySeenAt,
     disallowedRecovery,
     rendered,
+    campaignTextureRichness,
+    campaignCenterSubject,
     campaignVisualQuality,
     progressing,
     frameChanged,
