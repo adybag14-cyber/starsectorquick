@@ -28,7 +28,7 @@ jobs:
           git init .
           git remote add origin "https://x-access-token:${REPO_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git -c protocol.version=2 fetch --no-tags --prune --depth=1 origin "${GITHUB_SHA}"
-          git checkout --detach FETCH_HEAD
+          GIT_LFS_SKIP_SMUDGE=1 git checkout --detach FETCH_HEAD
           git lfs install --local
 
       - name: Verify preinstalled toolchain
