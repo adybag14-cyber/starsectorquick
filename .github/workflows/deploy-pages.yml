@@ -60,6 +60,7 @@ jobs:
             --source-sha "${{ steps.source.outputs.sha }}"
           test -s test_output/pages-overlays/deploy/web-runtime-profile.json
           test -s test_output/pages-overlays/deploy/jars/fixer_patch.jar
+          test -s test_output/pages-overlays/deploy/jars/bridge.jar
           test -s test_output/pages-overlays/deploy/jars/starfarer.api.jar
           test -s test_output/pages-overlays/deploy/jars/starfarer_obf.jar
           test -s test_output/pages-overlays/deploy/jars/scripts-precompiled.jar

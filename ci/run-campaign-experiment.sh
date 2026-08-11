@@ -56,6 +56,20 @@ python3 ci/patch-lwjgl-matrix-stack.py
 python3 ci/patch-lwjgl-display-lists.py
 grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
+grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
+
+# Rebuild the LWJGL bridge class that owns the desktop client-array overloads.
+# The stock compatibility bridge historically shifted stride into the GL type
+# slot for FloatBuffer/IntBuffer overloads, producing type=0/stride=0 in JS.
+rm -rf .ci-build/bridge-client-arrays
+mkdir -p .ci-build/bridge-client-arrays
+javac -encoding UTF-8 -source 8 -target 8 \
+  -cp "jars/bridge.jar:jars/lwjgl.jar" \
+  -d .ci-build/bridge-client-arrays \
+  bridge_src/org/lwjgl/opengl/GL11.java
+jar uf jars/bridge.jar -C .ci-build/bridge-client-arrays org/lwjgl/opengl/GL11.class
+javap -classpath jars/bridge.jar -c org.lwjgl.opengl.GL11 > .ci-build/bridge-client-arrays.javap
+python3 ci/verify-bridge-client-arrays.py .ci-build/bridge-client-arrays.javap
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py

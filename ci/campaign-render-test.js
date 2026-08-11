@@ -30,8 +30,12 @@ function pixelStats(buffer) {
   const png = PNG.sync.read(buffer);
   let nonBlack = 0;
   let opaque = 0;
+  let dark = 0;
+  let midTone = 0;
+  let colorful = 0;
   let sum = 0;
   let sumSq = 0;
+  const quantizedColors = new Set();
   const pixels = png.width * png.height;
   for (let i = 0; i < png.data.length; i += 4) {
     const r = png.data[i];
@@ -39,8 +43,13 @@ function pixelStats(buffer) {
     const b = png.data[i + 2];
     const a = png.data[i + 3];
     const y = (r + g + b) / 3;
+    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
     if (a > 0) opaque++;
     if (r > 8 || g > 8 || b > 8) nonBlack++;
+    if (y < 12) dark++;
+    if (y >= 20 && y <= 220) midTone++;
+    if (chroma > 20) colorful++;
+    quantizedColors.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4));
     sum += y;
     sumSq += y * y;
   }
@@ -52,6 +61,10 @@ function pixelStats(buffer) {
     nonBlackPixels: nonBlack,
     nonBlackRatio: nonBlack / pixels,
     opaqueRatio: opaque / pixels,
+    darkRatio: dark / pixels,
+    midToneRatio: midTone / pixels,
+    colorfulRatio: colorful / pixels,
+    quantizedColorCount: quantizedColors.size,
     meanLuma: mean,
     variance,
     sha256: crypto.createHash('sha256').update(buffer).digest('hex')
@@ -63,6 +76,7 @@ function pixelStats(buffer) {
   const errors = [];
   const httpErrors = [];
   const screenshotErrors = [];
+  const graphicsErrors = [];
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -117,6 +131,9 @@ function pixelStats(buffer) {
     }
     if (/Fatal:|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
       fatalSeenAt = Date.now();
+    }
+    if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|WebGL: too many errors/i.test(text)) {
+      graphicsErrors.push(text);
     }
     const recoveryUsed =
       /synthetic player fleet create success|auto campaign synthesized player fleet/i.test(text)
@@ -229,11 +246,17 @@ function pixelStats(buffer) {
   const secondStats = pixelStats(second);
   const frameChanged = Boolean(firstStats && secondStats && firstStats.sha256 !== secondStats.sha256);
   const rendered = Boolean(secondStats && secondStats.nonBlackRatio > 0.01 && secondStats.variance > 2);
+  const campaignVisualQuality = expectedState !== 'campaign' || Boolean(secondStats
+    && secondStats.nonBlackRatio > 0.03
+    && secondStats.darkRatio < 0.94
+    && secondStats.midToneRatio > 0.025
+    && secondStats.quantizedColorCount >= 64);
   const campaign = Boolean(campaignSeenAt) || state.bodyState === 'campaign';
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
-  const ok = reachedExpected && rendered && progressing && errors.length === 0 && !fatalSeenAt
+  const ok = reachedExpected && rendered && campaignVisualQuality && progressing && errors.length === 0 && !fatalSeenAt
+    && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
     && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(state.bodyState);
@@ -251,6 +274,7 @@ function pixelStats(buffer) {
     disallowedRecoverySeenAt,
     disallowedRecovery,
     rendered,
+    campaignVisualQuality,
     progressing,
     frameChanged,
     updateMax,
@@ -259,6 +283,7 @@ function pixelStats(buffer) {
     secondStats,
     errors,
     screenshotErrors,
+    graphicsErrors: [...new Set(graphicsErrors)],
     httpErrors: [...new Set(httpErrors)],
     state,
     logTail: logs.slice(-500)

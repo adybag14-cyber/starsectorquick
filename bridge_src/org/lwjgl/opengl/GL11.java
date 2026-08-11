@@ -163,7 +163,7 @@ public final class GL11 {
     }
     static native void nglColorMask(boolean p0, boolean p1, boolean p2, boolean p3, long p4);
 
-    public static void glColorPointer(int p0, int p1, FloatBuffer p2) { nglColorPointer(p0, p1, 0, addr(p2), 0L); }
+    public static void glColorPointer(int p0, int p1, FloatBuffer p2) { nglColorPointer(p0, 5126 /* GL_FLOAT */, p1, addr(p2), 0L); }
     public static void glColorPointer(int p0, int p1, int p2, long p3) { nglColorPointer(p0, p1, p2, p3, 0L); }
     public static void glColorPointer(int p0, boolean p1, int p2, ByteBuffer p3) { nglColorPointer(p0, p1 ? 5121 : 5120, p2, addr(p3), 0L); }
     static native void nglColorPointer(int p0, int p1, int p2, long p3, long p4);
@@ -389,7 +389,7 @@ public final class GL11 {
     public static void glTexCoord2f(float p0, float p1) { nglTexCoord2f(p0, p1, 0L); }
     static native void nglTexCoord2f(float p0, float p1, long p2);
 
-    public static void glTexCoordPointer(int p0, int p1, FloatBuffer p2) { nglTexCoordPointer(p0, p1, 0, addr(p2), 0L); }
+    public static void glTexCoordPointer(int p0, int p1, FloatBuffer p2) { nglTexCoordPointer(p0, 5126 /* GL_FLOAT */, p1, addr(p2), 0L); }
     public static void glTexCoordPointer(int p0, int p1, int p2, long p3) { nglTexCoordPointer(p0, p1, p2, p3, 0L); }
     static native void nglTexCoordPointer(int p0, int p1, int p2, long p3, long p4);
 
@@ -427,8 +427,8 @@ public final class GL11 {
     public static void glVertex3f(float p0, float p1, float p2) { nglVertex3f(p0, p1, p2, 0L); }
     static native void nglVertex3f(float p0, float p1, float p2, long p3);
 
-    public static void glVertexPointer(int p0, int p1, FloatBuffer p2) { nglVertexPointer(p0, p1, 0, addr(p2), 0L); }
-    public static void glVertexPointer(int p0, int p1, IntBuffer p2) { nglVertexPointer(p0, p1, 0, addr(p2), 0L); }
+    public static void glVertexPointer(int p0, int p1, FloatBuffer p2) { nglVertexPointer(p0, 5126 /* GL_FLOAT */, p1, addr(p2), 0L); }
+    public static void glVertexPointer(int p0, int p1, IntBuffer p2) { nglVertexPointer(p0, 5124 /* GL_INT */, p1, addr(p2), 0L); }
     public static void glVertexPointer(int p0, int p1, int p2, long p3) { nglVertexPointer(p0, p1, p2, p3, 0L); }
     static native void nglVertexPointer(int p0, int p1, int p2, long p3, long p4);
 
