@@ -60,6 +60,7 @@ public final class GL11 {
             case 10241: // GL_TEXTURE_MIN_FILTER
             case 10242: // GL_TEXTURE_WRAP_S
             case 10243: // GL_TEXTURE_WRAP_T
+            case 33169: // GL_GENERATE_MIPMAP
                 return true;
             default:
                 return false;
