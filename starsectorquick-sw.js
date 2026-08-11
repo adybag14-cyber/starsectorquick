@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260810-campaign-render-v5';
+const ALIAS_WORKER_VERSION = '20260810-campaign-render-v6';
 const PROJECT_PREFIX = '/starsectorquick/';
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
@@ -15,8 +15,13 @@ const TRANSIENT_FETCH_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const FULL_BODY_RETRY_DELAYS_MS = [100, 300, 800];
 const DATA_PACK_INDEX_URL = `${PROJECT_PREFIX}starsector-data-pack-v1.json?sw=${ALIAS_WORKER_VERSION}`;
 const DATA_PACK_BINARY_URL = `${PROJECT_PREFIX}starsector-data-pack-v1.bin?sw=${ALIAS_WORKER_VERSION}`;
+const GRAPHICS_PACK_INDEX_URL = `${PROJECT_PREFIX}starsector-graphics-pack-v1.json?sw=${ALIAS_WORKER_VERSION}`;
+const GRAPHICS_PACK_DIR = `${PROJECT_PREFIX}starsector-graphics-pack-v1/`;
+const GRAPHICS_RUNTIME_PREFIX = `${PROJECT_PREFIX}starsector/starsector/graphics/`;
 const rangeBodyCache = new Map();
 let dataPackPromise = null;
+let graphicsPackIndexPromise = null;
+const graphicsPackPromises = new Map();
 
 self.addEventListener('install', event => {
   event.waitUntil(self.skipWaiting());
@@ -81,6 +86,149 @@ const loadDataPack = () => {
     return { manifest, body };
   });
   return dataPackPromise;
+};
+
+const fetchResponseWithRetry = async (requestUrl, options = {}) => {
+  let response = null;
+  let lastError = null;
+  let retries = 0;
+  for (let attempt = 0; attempt <= FULL_BODY_RETRY_DELAYS_MS.length; attempt += 1) {
+    const target = new URL(requestUrl.toString(), self.location.origin);
+    if (attempt > 0) {
+      retries = attempt;
+      target.searchParams.set('sw-asset-retry', `${ALIAS_WORKER_VERSION}-${attempt}-${Date.now()}`);
+    }
+    try {
+      response = await fetch(target.toString(), {
+        ...options,
+        cache: 'no-store',
+        redirect: 'follow'
+      });
+      lastError = null;
+    } catch (error) {
+      response = null;
+      lastError = error;
+    }
+    if (response && response.ok) return { response, retries };
+    if (response && !TRANSIENT_FETCH_STATUS.has(response.status)) return { response, retries };
+    if (attempt < FULL_BODY_RETRY_DELAYS_MS.length) await sleep(FULL_BODY_RETRY_DELAYS_MS[attempt]);
+  }
+  if (!response) throw lastError || new Error(`Unable to fetch ${requestUrl}`);
+  return { response, retries };
+};
+
+const loadGraphicsPackIndex = () => {
+  if (graphicsPackIndexPromise) return graphicsPackIndexPromise;
+  graphicsPackIndexPromise = fetchResponseWithRetry(GRAPHICS_PACK_INDEX_URL, {
+    method: 'GET',
+    credentials: 'same-origin'
+  }).then(async ({ response }) => {
+    if (!response.ok) throw new Error(`graphics-pack index HTTP ${response.status}`);
+    const manifest = await response.json();
+    if (!manifest || manifest.version !== 1 || !manifest.files || !manifest.packs) {
+      throw new Error('invalid graphics-pack manifest');
+    }
+    return manifest;
+  }).catch(error => {
+    graphicsPackIndexPromise = null;
+    throw error;
+  });
+  return graphicsPackIndexPromise;
+};
+
+const loadGraphicsPack = (packName, expectedBytes) => {
+  if (graphicsPackPromises.has(packName)) return graphicsPackPromises.get(packName);
+  const promise = fetchResponseWithRetry(`${GRAPHICS_PACK_DIR}${encodeURIComponent(packName)}?sw=${ALIAS_WORKER_VERSION}`, {
+    method: 'GET',
+    credentials: 'same-origin'
+  }).then(async ({ response, retries }) => {
+    if (!response.ok) throw new Error(`graphics-pack ${packName} HTTP ${response.status}`);
+    const body = await response.arrayBuffer();
+    if (Number(expectedBytes) !== body.byteLength) {
+      throw new Error(`graphics-pack ${packName} length mismatch expected=${expectedBytes} body=${body.byteLength}`);
+    }
+    return { body, retries };
+  }).catch(error => {
+    graphicsPackPromises.delete(packName);
+    throw error;
+  });
+  graphicsPackPromises.set(packName, promise);
+  return promise;
+};
+
+const runtimeGraphicsRelativePath = url => {
+  if (!url.pathname.startsWith(GRAPHICS_RUNTIME_PREFIX)) return null;
+  try {
+    const relative = decodeURIComponent(url.pathname.slice(GRAPHICS_RUNTIME_PREFIX.length));
+    if (!relative || relative.startsWith('/') || relative.split('/').includes('..')) return null;
+    return relative;
+  } catch {
+    return null;
+  }
+};
+
+const packedGraphicsHeaders = (entry, length, retries = 0) => {
+  const headers = new Headers();
+  headers.set('accept-ranges', 'bytes');
+  headers.set('cache-control', 'public, max-age=600');
+  headers.set('content-length', String(length));
+  headers.set('content-type', entry.type || 'application/octet-stream');
+  headers.set('x-starsectorquick-sw-version', ALIAS_WORKER_VERSION);
+  headers.set('x-starsectorquick-graphics-pack', 'v1');
+  headers.set('x-starsectorquick-sw-retries', String(retries));
+  return headers;
+};
+
+const respondFromGraphicsPack = async (url, request) => {
+  const relative = runtimeGraphicsRelativePath(url);
+  if (!relative) return null;
+  let manifest;
+  try {
+    manifest = await loadGraphicsPackIndex();
+  } catch {
+    return null;
+  }
+  const entry = manifest.files[relative];
+  if (!entry) return null;
+  const packMeta = manifest.packs[entry.pack];
+  if (!packMeta) return null;
+
+  let pack;
+  try {
+    pack = await loadGraphicsPack(entry.pack, packMeta.bytes);
+  } catch {
+    return null;
+  }
+  const offset = Number(entry.offset);
+  const length = Number(entry.length);
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length < 0 || offset + length > pack.body.byteLength) {
+    return null;
+  }
+
+  if (request.method === 'HEAD') {
+    return new Response(null, { status: 200, statusText: 'OK', headers: packedGraphicsHeaders(entry, length, pack.retries) });
+  }
+  const rangeHeader = request.headers.get('range');
+  if (rangeHeader) {
+    const range = parseByteRange(rangeHeader, length);
+    if (!range) {
+      return new Response(null, {
+        status: 416,
+        statusText: 'Range Not Satisfiable',
+        headers: {
+          'content-range': `bytes */${length}`,
+          'x-starsectorquick-sw-version': ALIAS_WORKER_VERSION,
+          'x-starsectorquick-graphics-pack': 'v1'
+        }
+      });
+    }
+    const slice = pack.body.slice(offset + range.start, offset + range.end + 1);
+    const headers = packedGraphicsHeaders(entry, slice.byteLength, pack.retries);
+    headers.set('content-range', `bytes ${range.start}-${range.end}/${length}`);
+    return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+  }
+  const body = pack.body.slice(offset, offset + length);
+  return new Response(body, { status: 200, statusText: 'OK', headers: packedGraphicsHeaders(entry, length, pack.retries) });
 };
 
 const runtimeDataRelativePath = url => {
@@ -205,7 +353,7 @@ const shouldNormalizeRange = (url, request) => {
 };
 
 const isRuntimeDirectoryProbe = url => {
-  if (!RANGE_NORMALIZED_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) return false;
+  if (![...RANGE_NORMALIZED_PREFIXES, GRAPHICS_RUNTIME_PREFIX].some(prefix => url.pathname.startsWith(prefix))) return false;
   const pathname = url.pathname;
   if (pathname.endsWith('/')) return true;
   const leaf = pathname.slice(pathname.lastIndexOf('/') + 1);
@@ -327,9 +475,26 @@ const respondWithPackedDataOrFallback = async (url, request) => {
   return packed || fetchRuntimeDataFallback(url, request);
 };
 
+const fetchRuntimeGraphicsFallback = async (url, request) => {
+  const headers = new Headers(request.headers);
+  const { response } = await fetchResponseWithRetry(url, {
+    method: request.method,
+    headers,
+    credentials: request.credentials
+  });
+  return response;
+};
+
+const respondWithPackedGraphicsOrFallback = async (url, request) => {
+  const packed = await respondFromGraphicsPack(url, request);
+  return packed || fetchRuntimeGraphicsFallback(url, request);
+};
+
 self.addEventListener('message', event => {
-  if (!event.data || event.data.type !== 'warm-starsector-data-pack') return;
-  event.waitUntil(loadDataPack().catch(() => null));
+  if (!event.data) return;
+  if (event.data.type === 'warm-starsector-data-pack') {
+    event.waitUntil(Promise.all([loadDataPack().catch(() => null), loadGraphicsPackIndex().catch(() => null)]));
+  }
 });
 
 self.addEventListener('fetch', event => {
@@ -350,6 +515,11 @@ self.addEventListener('fetch', event => {
 
   if (runtimeDataRelativePath(url)) {
     event.respondWith(respondWithPackedDataOrFallback(url, event.request));
+    return;
+  }
+
+  if (runtimeGraphicsRelativePath(url)) {
+    event.respondWith(respondWithPackedGraphicsOrFallback(url, event.request));
     return;
   }
 
@@ -377,6 +547,11 @@ self.addEventListener('fetch', event => {
 
   if (runtimeDataRelativePath(target)) {
     event.respondWith(respondWithPackedDataOrFallback(target, event.request));
+    return;
+  }
+
+  if (runtimeGraphicsRelativePath(target)) {
+    event.respondWith(respondWithPackedGraphicsOrFallback(target, event.request));
     return;
   }
 

@@ -79,6 +79,11 @@ jobs:
           python3 ci/build-pages-data-pack.py --root .pages-worktree
           test -s .pages-worktree/starsector-data-pack-v1.bin
           test -s .pages-worktree/starsector-data-pack-v1.json
+          python3 ci/build-pages-graphics-packs.py --root .pages-worktree
+          test -s .pages-worktree/starsector-graphics-pack-v1.json
+          test -d .pages-worktree/starsector-graphics-pack-v1
+          test -s .pages-worktree/starsector-graphics-pack-v1/planets.bin
+          test -s .pages-worktree/starsector-graphics-pack-v1/ships.bin
           SOURCE_SHA="${{ steps.source.outputs.sha }}"
           git -C .pages-worktree config user.name 'github-actions[bot]'
           git -C .pages-worktree config user.email '41898282+github-actions[bot]@users.noreply.github.com'
