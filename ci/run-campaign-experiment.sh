@@ -58,6 +58,8 @@ grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
+grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
+python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
 
 # Rebuild the LWJGL bridge class that owns the desktop client-array overloads.
 # The stock compatibility bridge historically shifted stride into the GL type
@@ -93,6 +95,15 @@ javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Seriali
   | grep 'public class com.thoughtworks.xstream.core.util.SerializationMembers'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void drain(java.lang.Object)'
+mkdir -p .ci-build/verify-texture-upload
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
+java -cp ".ci-build/verify-texture-upload:jars/fixer_patch.jar:$CP" VerifyTextureUploadCompat
+mkdir -p .ci-build/verify-texture-assets
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-texture-assets ci/VerifyTextureAssets.java
+java -Xmx3g -cp ".ci-build/verify-texture-assets:jars/fixer_patch.jar:$CP" \
+  VerifyTextureAssets starsector/starsector/graphics
 mkdir -p .ci-build/verify-xstream
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-xstream ci/VerifyJava17XStreamCompat.java
@@ -115,6 +126,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
   ci/PatchCoreLifecycleBrowserWorld.java \
   ci/PatchCoreLifecycleDiagnostics.java \
+  ci/PatchTextureUploadRaster.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -138,6 +150,9 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
+mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
@@ -173,6 +188,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   data.scripts.world.SectorGen \
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl \
   com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2 \
+  com.fs.starfarer.util.O \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
 

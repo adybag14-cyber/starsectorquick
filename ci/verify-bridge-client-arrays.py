@@ -25,6 +25,12 @@ def require_constant(text: str, signature: str, value: int) -> None:
         raise RuntimeError(f"{signature} does not call the expected native client-array bridge\n{block}")
 
 
+def require_native_call(text: str, signature: str, native_name: str) -> None:
+    block = method_block(text, signature)
+    if native_name not in block:
+        raise RuntimeError(f"{signature} does not call {native_name}\n{block}")
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("usage: verify-bridge-client-arrays.py <javap-output>")
@@ -33,7 +39,10 @@ def main() -> int:
     require_constant(text, "public static void glTexCoordPointer(int, int, java.nio.FloatBuffer);", 5126)
     require_constant(text, "public static void glVertexPointer(int, int, java.nio.FloatBuffer);", 5126)
     require_constant(text, "public static void glVertexPointer(int, int, java.nio.IntBuffer);", 5124)
-    print("Verified LWJGL client-array bridge GL type/stride wiring.")
+    require_native_call(text, "public static boolean glIsEnabled(int);", "nglIsEnabled")
+    require_native_call(text, "public static void glPushAttrib(int);", "nglPushAttrib")
+    require_native_call(text, "public static void glPopAttrib();", "nglPopAttrib")
+    print("Verified LWJGL client-array and fixed-function attribute-state bridge wiring.")
     return 0
 
 

@@ -331,13 +331,15 @@ public final class GL11 {
     public static void glPointSize(float p0) {}
     public static void glPixelStorei(int p0, int p1) {}
     public static void glPolygonMode(int p0, int p1) {}
-    public static boolean glIsEnabled(int p0) { return true; }
+    public static boolean glIsEnabled(int p0) { return nglIsEnabled(p0, 0L); }
+    static native boolean nglIsEnabled(int p0, long p1);
 
     public static void glPopAttrib() {
         if (!popAttribLogged) {
             popAttribLogged = true;
             System.out.println("Bridge GL11.glPopAttrib()");
         }
+        nglPopAttrib(0L);
     }
     static native void nglPopAttrib(long p0);
 
@@ -349,6 +351,7 @@ public final class GL11 {
             pushAttribLogged = true;
             System.out.println("Bridge GL11.glPushAttrib(" + p0 + ")");
         }
+        nglPushAttrib(p0, 0L);
     }
     static native void nglPushAttrib(int p0, long p1);
 

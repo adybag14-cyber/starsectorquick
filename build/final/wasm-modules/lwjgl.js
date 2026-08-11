@@ -246,11 +246,110 @@ var alphaFuncLocation = glCtx.getUniformLocation(program, "uAlphaFunc");
 var alphaRefLocation = glCtx.getUniformLocation(program, "uAlphaRef");
 var alphaTestState = { enabled: false, func: 0x0207/*GL_ALWAYS*/, ref: 0.0 };
 var alphaTestWarnings = new Set();
+var texture2DEnabled = false;
+var attribStateStack = [];
+var attribStateWarnings = new Set();
 function syncAlphaTestUniforms()
 {
 	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
 	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
 	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+}
+function setTexture2DEnabled(enabled)
+{
+	texture2DEnabled = !!enabled;
+	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
+}
+function getCompatEnableState(cap)
+{
+	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
+	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
+	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
+}
+function setCompatEnableState(cap, enabled)
+{
+	if(cap == 0x0BC0/*GL_ALPHA_TEST*/)
+	{
+		alphaTestState.enabled = !!enabled;
+		syncAlphaTestUniforms();
+		return;
+	}
+	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/)
+	{
+		setTexture2DEnabled(enabled);
+		return;
+	}
+	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
+}
+function snapshotAttribState(mask)
+{
+	var state = { mask: mask };
+	if(mask & 0x2000/*GL_ENABLE_BIT*/)
+	{
+		state.enable = {};
+		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
+			state.enable[cap] = getCompatEnableState(cap);
+	}
+	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
+	{
+		state.color = {
+			blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+			blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
+			blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
+			clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
+		};
+		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
+	}
+	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
+	{
+		state.depth = {
+			writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
+			func: glCtx.getParameter(glCtx.DEPTH_FUNC),
+			clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE)
+		};
+	}
+	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
+	{
+		state.viewport = {
+			box: Array.from(glCtx.getParameter(glCtx.VIEWPORT)),
+			depthRange: Array.from(glCtx.getParameter(glCtx.DEPTH_RANGE))
+		};
+	}
+	return state;
+}
+function restoreAttribState(state)
+{
+	if(state.enable)
+	{
+		for(const key of Object.keys(state.enable)) setCompatEnableState(Number(key), state.enable[key]);
+	}
+	if(state.color)
+	{
+		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
+		glCtx.colorMask(...state.color.colorMask);
+		glCtx.clearColor(...state.color.clearColor);
+	}
+	if(state.depth)
+	{
+		glCtx.depthMask(state.depth.writeMask);
+		glCtx.depthFunc(state.depth.func);
+		glCtx.clearDepth(state.depth.clearValue);
+	}
+	if(state.viewport)
+	{
+		glCtx.viewport(...state.viewport.box);
+		glCtx.depthRange(...state.viewport.depthRange);
+	}
+	// GL_COLOR_BUFFER_BIT owns the alpha comparison function/reference. The
+	// alpha-test enable itself is restored above through GL_ENABLE_BIT.
+	if(state.alpha)
+	{
+		alphaTestState.func = state.alpha.func;
+		alphaTestState.ref = state.alpha.ref;
+		syncAlphaTestUniforms();
+	}
 }
 var vertexData =
 {
@@ -1099,7 +1198,7 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	}
 	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
-		glCtx.uniform1f(texMaskLocation, 0);
+		setTexture2DEnabled(false);
 	}
 	else if(verboseLog)
 		console.log("glDisable " + a.toString(16));
@@ -1119,7 +1218,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	}
 	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
-	glCtx.uniform1f(texMaskLocation, 1);
+		setTexture2DEnabled(true);
 	}
 	else if(verboseLog)
 		console.log("glEnable " + a.toString(16));
@@ -1361,6 +1460,27 @@ function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglCullFace);
 	glCtx.cullFace(mode);
+}
+
+// LWJGL_ATTRIB_STACK_COMPAT_V1
+function Java_org_lwjgl_opengl_GL11_nglIsEnabled(lib, cap, funcPtr)
+{
+	return getCompatEnableState(cap);
+}
+function Java_org_lwjgl_opengl_GL11_nglPushAttrib(lib, mask, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushAttrib);
+	attribStateStack.push(snapshotAttribState(mask));
+}
+function Java_org_lwjgl_opengl_GL11_nglPopAttrib(lib, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopAttrib);
+	if(attribStateStack.length == 0)
+	{
+		warnOnce(attribStateWarnings, 'underflow', 'LWJGL glPopAttrib ignored empty attribute stack.');
+		return;
+	}
+	restoreAttribState(attribStateStack.pop());
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
@@ -1977,6 +2097,9 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglClearDepth,
 	Java_org_lwjgl_opengl_GL11_nglDepthFunc,
 	Java_org_lwjgl_opengl_GL11_nglCullFace,
+	Java_org_lwjgl_opengl_GL11_nglIsEnabled,
+	Java_org_lwjgl_opengl_GL11_nglPushAttrib,
+	Java_org_lwjgl_opengl_GL11_nglPopAttrib,
 	Java_org_lwjgl_opengl_GL11_nglPushMatrix,
 	Java_org_lwjgl_opengl_GL11_nglPopMatrix,
 	Java_org_lwjgl_opengl_GL11_nglMultMatrixf,
