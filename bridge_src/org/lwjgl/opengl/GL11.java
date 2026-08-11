@@ -329,7 +329,8 @@ public final class GL11 {
     static native void nglOrtho(double p0, double p1, double p2, double p3, double p4, double p5, long p6);
 
     public static void glPointSize(float p0) {}
-    public static void glPixelStorei(int p0, int p1) {}
+    public static void glPixelStorei(int p0, int p1) { nglPixelStorei(p0, p1, 0L); }
+    static native void nglPixelStorei(int p0, int p1, long p2);
     public static void glPolygonMode(int p0, int p1) {}
     public static boolean glIsEnabled(int p0) { return nglIsEnabled(p0, 0L); }
     static native boolean nglIsEnabled(int p0, long p1);

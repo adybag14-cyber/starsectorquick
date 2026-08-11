@@ -1032,6 +1032,7 @@ function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 	}
 }
 
+// LWJGL_INTEGER_PIXEL_STORE_COMPAT_V1
 function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 {
 	checkNoList(curList);
@@ -1044,10 +1045,48 @@ function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 		buf[1] = 0;
 		buf[2] = fbWidth;
 		buf[3] = fbHeight;
+		return;
 	}
-	else if(verboseLog)
+	try
 	{
-		console.log("glGetInteger", id);
+		var value = glCtx.getParameter(id);
+		if(typeof value === "number")
+		{
+			buf[0] = value | 0;
+			return;
+		}
+		if(typeof value === "boolean")
+		{
+			buf[0] = value ? 1 : 0;
+			return;
+		}
+		if(value != null && typeof value.length === "number")
+		{
+			var n = Math.min(4, value.length);
+			for(var i=0;i<n;i++) buf[i] = Number(value[i]) | 0;
+			return;
+		}
+	}
+	catch(err)
+	{
+		warnOnce(attribStateWarnings, "get-integer-" + id,
+			"LWJGL glGetIntegerv unsupported pname=" + id + " error=" + err);
+		return;
+	}
+	if(verboseLog) console.log("glGetInteger", id);
+}
+
+function Java_org_lwjgl_opengl_GL11_nglPixelStorei(lib, pname, param, funcPtr)
+{
+	checkNoList(curList);
+	try
+	{
+		glCtx.pixelStorei(pname, param);
+	}
+	catch(err)
+	{
+		warnOnce(attribStateWarnings, "pixel-store-" + pname,
+			"LWJGL glPixelStorei unsupported pname=" + pname + " param=" + param + " error=" + err);
 	}
 }
 
@@ -2062,6 +2101,7 @@ export default {
 	Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress,
 	Java_org_lwjgl_opengl_GL11_nglGetString,
 	Java_org_lwjgl_opengl_GL11_nglGetIntegerv,
+	Java_org_lwjgl_opengl_GL11_nglPixelStorei,
 	Java_org_lwjgl_opengl_GL11_nglGetError,
 	Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval,
 	Java_org_lwjgl_opengl_GL11_nglClearColor,
