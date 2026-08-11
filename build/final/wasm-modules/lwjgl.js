@@ -285,6 +285,7 @@ if(typeof window !== "undefined")
 // Set to a non-zero value to stop after a certain number of frames
 var frameLimit = 0;
 var unsupportedDrawModes = new Set();
+var clientArrayWarnings = new Set();
 var unsupportedMatrixModes = new Set();
 var unsupportedEventTypes = new Set();
 var fbWidth = 0;
@@ -348,12 +349,140 @@ function ensureFramebufferSize()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
 }
-function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride)
+// LWJGL_CLIENT_ARRAY_COMPAT_V1
+// Desktop OpenGL permits tightly-packed stride=0 and client array scalar types
+// that WebGL2 does not accept in vertexAttribPointer(). Normalize both here.
+function clientArrayComponentBytes(type)
 {
+	if(type == 0 || type == glCtx.FLOAT || type == 0x1404/*GL_INT*/ || type == 0x1405/*GL_UNSIGNED_INT*/) return 4;
+	if(type == glCtx.BYTE || type == glCtx.UNSIGNED_BYTE) return 1;
+	if(type == glCtx.SHORT || type == glCtx.UNSIGNED_SHORT) return 2;
+	if(typeof glCtx.HALF_FLOAT != "undefined" && type == glCtx.HALF_FLOAT) return 2;
+	if(type == 0x140A/*GL_DOUBLE*/) return 8;
+	return 0;
+}
+function normalizeLegacyClientArrayLayout(type, stride)
+{
+	// Old bridge.jar FloatBuffer overloads called ngl*Pointer(size, stride, 0, ...).
+	// A zero type means packed GL_FLOAT; an impossible low non-zero enum means
+	// the original stride was shifted into the type slot.
+	if(type == 0) return { type: glCtx.FLOAT, stride: stride };
+	if(stride == 0 && type > 0 && type < 0x1000) return { type: glCtx.FLOAT, stride: type };
+	return { type: type, stride: stride };
+}
+function clientArrayEffectiveStride(size, type, stride)
+{
+	var layout = normalizeLegacyClientArrayLayout(type, stride);
+	type = layout.type;
+	stride = layout.stride;
+	if(stride > 0) return stride;
+	var componentBytes = clientArrayComponentBytes(type);
+	return componentBytes > 0 ? size * componentBytes : 0;
+}
+function clientArrayByteLength(size, type, stride, count)
+{
+	if(count <= 0) return 0;
+	var layout = normalizeLegacyClientArrayLayout(type, stride);
+	var effectiveStride = clientArrayEffectiveStride(size, layout.type, layout.stride);
+	var componentBytes = clientArrayComponentBytes(layout.type);
+	if(effectiveStride <= 0 || componentBytes <= 0) return 0;
+	return (count - 1) * effectiveStride + size * componentBytes;
+}
+function isWebGLClientArrayType(type)
+{
+	return type == glCtx.BYTE || type == glCtx.UNSIGNED_BYTE ||
+		type == glCtx.SHORT || type == glCtx.UNSIGNED_SHORT ||
+		type == glCtx.FLOAT ||
+		(typeof glCtx.HALF_FLOAT != "undefined" && type == glCtx.HALF_FLOAT);
+}
+function isIntegerClientArrayType(type)
+{
+	return type == glCtx.BYTE || type == glCtx.UNSIGNED_BYTE ||
+		type == glCtx.SHORT || type == glCtx.UNSIGNED_SHORT ||
+		type == 0x1404/*GL_INT*/ || type == 0x1405/*GL_UNSIGNED_INT*/;
+}
+function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normalizeColor)
+{
+	var componentBytes = clientArrayComponentBytes(type);
+	if(componentBytes <= 0) return null;
+	var effectiveStride = clientArrayEffectiveStride(size, type, stride);
+	if(effectiveStride <= 0) return null;
+	var view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+	var out = new Float32Array(size * count);
+	for(var i=0;i<count;i++)
+	{
+		var vertexBase = i * effectiveStride;
+		for(var c=0;c<size;c++)
+		{
+			var off = vertexBase + c * componentBytes;
+			if(off + componentBytes > view.byteLength) return null;
+			var value;
+			if(type == 0x1404/*GL_INT*/)
+			{
+				value = view.getInt32(off, true);
+				if(normalizeColor) value = Math.max(-1, value / 2147483647);
+			}
+			else if(type == 0x1405/*GL_UNSIGNED_INT*/)
+			{
+				value = view.getUint32(off, true);
+				if(normalizeColor) value = value / 4294967295;
+			}
+			else if(type == 0x140A/*GL_DOUBLE*/)
+				value = view.getFloat64(off, true);
+			else
+				return null;
+			out[i * size + c] = value;
+		}
+	}
+	return out;
+}
+function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
+{
+	var originalType = type;
+	var originalStride = stride;
+	var layout = normalizeLegacyClientArrayLayout(type, stride);
+	type = layout.type;
+	stride = layout.stride;
+	if(originalType != type || originalStride != stride)
+	{
+		warnOnce(clientArrayWarnings, "legacy-layout-" + attributeLocation + "-" + originalType + "-" + originalStride,
+			"LWJGL client array repaired legacy layout type=" + originalType + " stride=" + originalStride + " -> type=" + type + " stride=" + stride + " attr=" + attributeLocation);
+	}
+	var effectiveStride = clientArrayEffectiveStride(size, type, stride);
+	if(effectiveStride <= 0)
+	{
+		warnOnce(clientArrayWarnings, "unknown-type-" + type, "Unsupported LWJGL client array type=" + type);
+		return false;
+	}
+	var normalized = attributeLocation == colorLocation && isIntegerClientArrayType(type);
+	var uploadBuf = buf;
+	var uploadType = type;
+	var uploadStride = stride;
+	if(!isWebGLClientArrayType(type))
+	{
+		uploadBuf = convertDesktopClientArrayToFloat(buf, size, type, stride, count, normalized);
+		if(uploadBuf == null)
+		{
+			warnOnce(clientArrayWarnings, "convert-failed-" + type, "Failed to convert LWJGL client array type=" + type);
+			return false;
+		}
+		warnOnce(clientArrayWarnings, "converted-" + type, "Converted desktop LWJGL client array type=" + type + " to GL_FLOAT");
+		uploadType = glCtx.FLOAT;
+		uploadStride = 0;
+		normalized = false;
+	}
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, buf, glCtx.STATIC_DRAW);
-	glCtx.vertexAttribPointer(attributeLocation, size, type, type != glCtx.FLOAT, stride, 0);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
+	var attribErr = glCtx.getError();
+	if(attribErr != glCtx.NO_ERROR)
+	{
+		warnOnce(clientArrayWarnings, "attrib-error-" + attributeLocation + "-" + uploadType + "-" + uploadStride,
+			"LWJGL vertexAttribPointer error=" + attribErr + " attr=" + attributeLocation + " size=" + size + " type=" + uploadType + " stride=" + uploadStride);
+		return false;
+	}
 	glCtx.enableVertexAttribArray(attributeLocation);
+	return true;
 }
 function applyCurrentColorAttrib()
 {
@@ -368,14 +497,21 @@ function uploadData(v, data, buffer, attributeLocation, count)
 {
 	if(data.enabled)
 	{
-		assert(data.stride);
+		var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
+		var effectiveStride = clientArrayEffectiveStride(data.size, layout.type, layout.stride);
+		var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
+		if(effectiveStride <= 0 || byteLength <= 0)
+		{
+			warnOnce(clientArrayWarnings, "bad-stride-" + data.type, "Unable to determine LWJGL client array stride type=" + data.type + " size=" + data.size);
+			return;
+		}
 		var buf = data.buf;
 		if(buf == null)
 		{
 			assert(v && data.pointer);
-			buf = new Uint8Array(v.buffer, data.pointer, data.stride * count);
+			buf = new Uint8Array(v.buffer, data.pointer, byteLength);
 		}
-		uploadDataImpl(buf, buffer, attributeLocation, data.size, data.type, data.stride);
+		uploadDataImpl(buf, buffer, attributeLocation, data.size, layout.type, layout.stride, count);
 	}
 	else
 	{
@@ -396,8 +532,12 @@ function captureData(v, data, count)
 	var ret = { enabled: data.enabled, size: data.size, type: data.type, stride: data.stride, pointer: 0, buf: null };
 	if(data.enabled)
 	{
-		assert(data.stride);
-		var buf = new Uint8Array(v.buffer, data.pointer, data.stride * count);
+		var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
+		var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
+		if(byteLength <= 0) return ret;
+		ret.type = layout.type;
+		ret.stride = layout.stride;
+		var buf = new Uint8Array(v.buffer, data.pointer, byteLength);
 		// Capture the current data
 		ret.buf = new Uint8Array(buf);
 	}
