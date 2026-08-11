@@ -57,6 +57,7 @@ python3 ci/patch-lwjgl-display-lists.py
 grep -q 'LWJGL_MATRIX_STACK_GUARD_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
+grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 
 # Rebuild the LWJGL bridge class that owns the desktop client-array overloads.
 # The stock compatibility bridge historically shifted stride into the GL type
