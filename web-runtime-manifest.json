@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "290b060d3e83a29f82143f2d0a19cecc7f161339",
-    "workflowRunId": "31487778783",
-    "generatedAt": "2026-08-11T11:42:49.302941+00:00",
+    "sourceSha": "5ad507252736503b1d6a077575a807ae2cedc5a1",
+    "workflowRunId": "31489674873",
+    "generatedAt": "2026-08-11T12:07:30.083485+00:00",
     "overlayFiles": 834,
     "dataPack": {
       "version": 1,
@@ -31,8 +31,8 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 60839,
-      "sha256": "93460a878b53a83206495975f531475b8e25bf17672ec21161bc7d5202181f81"
+      "bytes": 63061,
+      "sha256": "233bbb5ecb5b6f415a598cfc67c2e03bae9a6b31269603aabea4cd4de966509d"
     },
     {
       "path": "data/campaign/econ/corvus.json",
@@ -512,12 +512,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 88479,
-      "sha256": "4223c92a723ff83b12a5d8d51ca029d70bc01bc8248f88164bd6e7040acc32ea"
+      "sha256": "5dd783477a5eb60c41e7d9223ac9fb13fc1375574c1a4a9dff3b6901b4a9a499"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 214707,
-      "sha256": "a4d7367af2d6cc55c9904b7372070f02818f45f8841d6e5fcd303d96e342d8f6"
+      "sha256": "6540a821e2955f6e7f2328409f3bf28ef004d02f707a307179b2095a2884ef26"
     },
     {
       "path": "jars/index.list",

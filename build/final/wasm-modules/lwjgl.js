@@ -195,11 +195,27 @@ var fragmentShaderSrc = `
 	precision mediump float;
 	uniform float uTextureMask;
 	uniform sampler2D uSampler;
+	uniform float uAlphaTestEnabled;
+	uniform float uAlphaFunc;
+	uniform float uAlphaRef;
 	varying vec2 vTexCoord;
 	varying vec4 vColor;
+	bool alphaTestPass(float alpha) {
+		if(uAlphaTestEnabled < 0.5) return true;
+		if(uAlphaFunc < 512.5) return false;             // GL_NEVER 0x0200
+		if(uAlphaFunc < 513.5) return alpha < uAlphaRef; // GL_LESS
+		if(uAlphaFunc < 514.5) return abs(alpha - uAlphaRef) <= (1.0 / 255.0); // GL_EQUAL
+		if(uAlphaFunc < 515.5) return alpha <= uAlphaRef; // GL_LEQUAL
+		if(uAlphaFunc < 516.5) return alpha > uAlphaRef;  // GL_GREATER
+		if(uAlphaFunc < 517.5) return abs(alpha - uAlphaRef) > (1.0 / 255.0); // GL_NOTEQUAL
+		if(uAlphaFunc < 518.5) return alpha >= uAlphaRef; // GL_GEQUAL
+		return true;                                      // GL_ALWAYS 0x0207
+	}
 	void main() {
 		vec4 texSample = texture2D(uSampler, vTexCoord);
-		gl_FragColor = mix(vColor, texSample * vColor, uTextureMask);
+		vec4 fragment = mix(vColor, texSample * vColor, uTextureMask);
+		if(!alphaTestPass(fragment.a)) discard;
+		gl_FragColor = fragment;
 	}
 `;
 var vertexShader = glCtx.createShader(glCtx.VERTEX_SHADER);
@@ -225,6 +241,17 @@ var projLocation = glCtx.getUniformLocation(program, "projection");
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
 var samplerLocation2 = glCtx.getUniformLocation(program, "uSampler2");
 var texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask");
+var alphaTestEnabledLocation = glCtx.getUniformLocation(program, "uAlphaTestEnabled");
+var alphaFuncLocation = glCtx.getUniformLocation(program, "uAlphaFunc");
+var alphaRefLocation = glCtx.getUniformLocation(program, "uAlphaRef");
+var alphaTestState = { enabled: false, func: 0x0207/*GL_ALWAYS*/, ref: 0.0 };
+var alphaTestWarnings = new Set();
+function syncAlphaTestUniforms()
+{
+	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
+	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+}
 var vertexData =
 {
 	enabled: false,
@@ -640,6 +667,7 @@ function drawArraysInList(mode, first, count, capturedVertexData, capturedColorD
 // Fix the sampler to texture unit 0
 glCtx.uniform1i(samplerLocation, 0);
 glCtx.uniform1f(texMaskLocation, 0);
+syncAlphaTestUniforms();
 var curList = null;
 var listBase = 0;
 var cmdLists = [null];
@@ -1091,6 +1119,11 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.disable(a);
+	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
+	{
+		alphaTestState.enabled = false;
+		syncAlphaTestUniforms();
+	}
 	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
 		glCtx.uniform1f(texMaskLocation, 0);
@@ -1105,6 +1138,12 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.enable(a);
+	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
+	{
+		alphaTestState.enabled = true;
+		syncAlphaTestUniforms();
+		warnOnce(alphaTestWarnings, "enabled", "LWJGL alpha-test compatibility enabled.");
+	}
 	else if(a == glCtx.TEXTURE_2D || a == 0x806F/*GL_TEXTURE_3D*/)
 	{
 	glCtx.uniform1f(texMaskLocation, 1);
@@ -1258,11 +1297,21 @@ function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 	applyCurrentColorAttrib();
 }
 
-function Java_org_lwjgl_opengl_GL11_nglAlphaFunc()
+// LWJGL_ALPHA_TEST_COMPAT_V1
+function Java_org_lwjgl_opengl_GL11_nglAlphaFunc(lib, func, ref, funcPtr)
 {
-	checkNoList(curList);
-	if(verboseLog)
-		console.log("glAlphaFunc");
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglAlphaFunc);
+	if(func < 0x0200/*GL_NEVER*/ || func > 0x0207/*GL_ALWAYS*/)
+	{
+		warnOnce(alphaTestWarnings, "invalid-func-" + func, "Unsupported LWJGL alpha-test func=" + func);
+		return;
+	}
+	alphaTestState.func = func;
+	alphaTestState.ref = Math.max(0, Math.min(1, ref));
+	syncAlphaTestUniforms();
+	warnOnce(alphaTestWarnings, "configured-" + func + "-" + alphaTestState.ref,
+		"LWJGL alpha-test configured func=" + func + " ref=" + alphaTestState.ref);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglGenLists(lib, range, funcPtr)
