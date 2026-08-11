@@ -184,9 +184,11 @@ function pixelStats(buffer) {
 
   flushLogs();
   const game = page.locator('#game-container');
+  const gameCanvas = page.locator('#lwjglCanvas');
   const safeScreenshot = async (path, label) => {
     try {
-      return await withTimeout(game.screenshot({ path, timeout: 10000 }), 12000, label);
+      await withTimeout(gameCanvas.waitFor({ state: 'visible', timeout: 10000 }), 12000, `${label} canvas visibility`);
+      return await withTimeout(gameCanvas.screenshot({ path, timeout: 10000 }), 12000, label);
     } catch (error) {
       screenshotErrors.push(String(error && (error.stack || error.message) || error));
       logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
