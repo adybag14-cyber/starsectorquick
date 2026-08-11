@@ -772,6 +772,8 @@ var listBase = 0;
 var cmdLists = [null];
 // The first null implicitly solves resetting on 0 id
 var textureObjects = [null];
+var textureGenerateMipmap = [false];
+var boundTexture2DId = 0;
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
 glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
@@ -1059,6 +1061,7 @@ function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 	}
 }
 
+// LWJGL_INTEGER_PIXEL_STORE_COMPAT_V1
 function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 {
 	checkNoList(curList);
@@ -1071,10 +1074,48 @@ function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 		buf[1] = 0;
 		buf[2] = fbWidth;
 		buf[3] = fbHeight;
+		return;
 	}
-	else if(verboseLog)
+	try
 	{
-		console.log("glGetInteger", id);
+		var value = glCtx.getParameter(id);
+		if(typeof value === "number")
+		{
+			buf[0] = value | 0;
+			return;
+		}
+		if(typeof value === "boolean")
+		{
+			buf[0] = value ? 1 : 0;
+			return;
+		}
+		if(value != null && typeof value.length === "number")
+		{
+			var n = Math.min(4, value.length);
+			for(var i=0;i<n;i++) buf[i] = Number(value[i]) | 0;
+			return;
+		}
+	}
+	catch(err)
+	{
+		warnOnce(attribStateWarnings, "get-integer-" + id,
+			"LWJGL glGetIntegerv unsupported pname=" + id + " error=" + err);
+		return;
+	}
+	if(verboseLog) console.log("glGetInteger", id);
+}
+
+function Java_org_lwjgl_opengl_GL11_nglPixelStorei(lib, pname, param, funcPtr)
+{
+	checkNoList(curList);
+	try
+	{
+		glCtx.pixelStorei(pname, param);
+	}
+	catch(err)
+	{
+		warnOnce(attribStateWarnings, "pixel-store-" + pname,
+			"LWJGL glPixelStorei unsupported pname=" + pname + " param=" + param + " error=" + err);
 	}
 }
 
@@ -1261,6 +1302,7 @@ function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 		var id = textureObjects.length;
 		buf[i] = id;
 		textureObjects[id] = glCtx.createTexture();
+		textureGenerateMipmap[id] = false;
 	}
 }
 
@@ -1269,12 +1311,21 @@ function Java_org_lwjgl_opengl_GL11_nglBindTexture(lib, target, id, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBindTexture);
 	assert(target == glCtx.TEXTURE_2D);
+	boundTexture2DId = id;
 	glCtx.bindTexture(target, textureObjects[id]);
 }
 
+// LWJGL_GENERATE_MIPMAP_COMPAT_V1
 function Java_org_lwjgl_opengl_GL11_nglTexParameteri(lib, target, pname, param, funcPtr)
 {
 	checkNoList(curList);
+	if(pname == 0x8191/*GL_GENERATE_MIPMAP*/)
+	{
+		textureGenerateMipmap[boundTexture2DId] = !!param;
+		return;
+	}
+	if((pname == glCtx.TEXTURE_WRAP_S || pname == glCtx.TEXTURE_WRAP_T) && param == 0x2900/*GL_CLAMP*/)
+		param = glCtx.CLAMP_TO_EDGE;
 	glCtx.texParameteri(target, pname, param);
 }
 
@@ -1285,6 +1336,8 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, internalFormat, format, type);
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
+	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
+		glCtx.generateMipmap(target);
 	var texImageErr = glCtx.getError();
 	if(texImageErr != glCtx.NO_ERROR)
 	{
@@ -1576,10 +1629,21 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 	glCtx.colorMask(r, g, b, a);
 }
 
+function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
+{
+	checkNoList(curList);
+	assert(target == glCtx.TEXTURE_2D);
+	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
+	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
+		glCtx.generateMipmap(target);
+}
+
 function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xoffset, yoffset, x, y, width, height, funcPtr)
 {
 	checkNoList(curList);
 	glCtx.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
+		glCtx.generateMipmap(target);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglScalef(lib, x, y, z, funcPtr)
@@ -1624,6 +1688,8 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, format, format, type);
 	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
+		glCtx.generateMipmap(target);
 	var texSubImageErr = glCtx.getError();
 	if(texSubImageErr != glCtx.NO_ERROR)
 	{
@@ -2100,6 +2166,7 @@ export default {
 	Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress,
 	Java_org_lwjgl_opengl_GL11_nglGetString,
 	Java_org_lwjgl_opengl_GL11_nglGetIntegerv,
+	Java_org_lwjgl_opengl_GL11_nglPixelStorei,
 	Java_org_lwjgl_opengl_GL11_nglGetError,
 	Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval,
 	Java_org_lwjgl_opengl_GL11_nglClearColor,
@@ -2145,6 +2212,7 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglDepthMask,
 	Java_org_lwjgl_opengl_GL11_nglBlendFunc,
 	Java_org_lwjgl_opengl_GL11_nglColorMask,
+	Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D,
 	Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D,
 	Java_org_lwjgl_opengl_GL11_nglScalef,
 	Java_org_lwjgl_opengl_GL11_nglCallLists,
