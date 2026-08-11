@@ -635,6 +635,10 @@ public class SlipstreamTerrainPlugin2 extends BaseTerrain {
 //		}
 		
 		ViewportAPI viewport = Global.getSector().getViewport();
+		// The browser compatibility launcher can enter Campaign State one render tick
+		// before the campaign viewport is attached. This nearby-segment work is safe
+		// to defer until the next tick instead of crashing the campaign.
+		if (viewport == null) return;
 		float viewRadius = new Vector2f(viewport.getVisibleWidth() * 0.5f, viewport.getVisibleHeight() * 0.5f).length();
 		viewRadius = Math.max(6000f, viewRadius);
 		viewRadius += 1000f;
@@ -649,7 +653,7 @@ public class SlipstreamTerrainPlugin2 extends BaseTerrain {
 			curr.fader.advance(amount);
 		}
 		
-		HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
+		HyperspaceTerrainPlugin plugin = Misc.getHyperspaceTerrainPlugin();
 
 //		float [] c = getLengthAndWidthFractionWithinStream(pf.getLocation());
 //		if (c != null) {
@@ -665,7 +669,7 @@ public class SlipstreamTerrainPlugin2 extends BaseTerrain {
 		for (int i = 0; i < near.size(); i++) {
 			SlipstreamSegment curr = near.get(i);
 			
-			if (entity.isInHyperspace() && !curr.fader.isFadedOut() && 
+			if (plugin != null && entity.isInHyperspace() && !curr.fader.isFadedOut() &&
 					curr.fader.getBrightness() * curr.bMult > 0.05f && curr.bMult > 0f) {
 				plugin.setTileState(
 						curr.loc, curr.width * 0.5f + params.edgeWidth + 100f, 
@@ -759,6 +763,10 @@ public class SlipstreamTerrainPlugin2 extends BaseTerrain {
 			boolean inHyperspace = entity.isInHyperspace();
 			boolean spawnForAllSegments = false;
 			ViewportAPI viewport = Global.getSector().getViewport();
+			if (viewport == null) {
+				particles.clear();
+				return;
+			}
 			Vector2f locFrom = viewport.getCenter();
 			float viewRadius = new Vector2f(viewport.getVisibleWidth() * 0.5f, viewport.getVisibleHeight() * 0.5f).length();
 			viewRadius += 2000f;
