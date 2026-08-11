@@ -60,6 +60,7 @@ def main() -> int:
     tex_parameter = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexParameteri")
     tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexImage2D")
     tex_sub_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexSubImage2D")
+    copy_tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D")
 
     require(enable, "setTexture2DEnabled(true);", "glEnable")
     reject(enable, "uniform1f(texMaskLocation", "glEnable")
@@ -75,6 +76,8 @@ def main() -> int:
     require(tex_parameter, "param = glCtx.CLAMP_TO_EDGE;", "GL_CLAMP translation")
     require(tex_image, "glCtx.generateMipmap(target);", "level-0 texture upload mipmaps")
     require(tex_sub_image, "glCtx.generateMipmap(target);", "level-0 texture sub-upload mipmaps")
+    require(copy_tex_image, "glCtx.copyTexImage2D", "texture framebuffer copy")
+    require(copy_tex_image, "glCtx.generateMipmap(target);", "level-0 texture framebuffer-copy mipmaps")
 
     for mask in (
         "0x2000/*GL_ENABLE_BIT*/",
@@ -99,6 +102,7 @@ def main() -> int:
         "Java_org_lwjgl_opengl_GL11_nglPushAttrib,",
         "Java_org_lwjgl_opengl_GL11_nglPopAttrib,",
         "Java_org_lwjgl_opengl_GL11_nglPixelStorei,",
+        "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D,",
     ):
         require(text, export, "module exports")
 

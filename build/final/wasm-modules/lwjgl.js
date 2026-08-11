@@ -1591,6 +1591,15 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 	glCtx.colorMask(r, g, b, a);
 }
 
+function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
+{
+	checkNoList(curList);
+	assert(target == glCtx.TEXTURE_2D);
+	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
+	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
+		glCtx.generateMipmap(target);
+}
+
 function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xoffset, yoffset, x, y, width, height, funcPtr)
 {
 	checkNoList(curList);
@@ -2165,6 +2174,7 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglDepthMask,
 	Java_org_lwjgl_opengl_GL11_nglBlendFunc,
 	Java_org_lwjgl_opengl_GL11_nglColorMask,
+	Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D,
 	Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D,
 	Java_org_lwjgl_opengl_GL11_nglScalef,
 	Java_org_lwjgl_opengl_GL11_nglCallLists,

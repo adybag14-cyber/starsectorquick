@@ -414,6 +414,11 @@ public final class GL11 {
     }
     static native void nglTexParameteri(int p0, int p1, int p2, long p3);
 
+    public static void glCopyTexImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7) {
+        nglCopyTexImage2D(p0, p1, p2, p3, p4, p5, p6, p7, 0L);
+    }
+    static native void nglCopyTexImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, long p8);
+
     public static void glTexSubImage2D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, ByteBuffer p8) {
         nglTexSubImage2D(p0, p1, p2, p3, p4, p5, p6, p7, addr(p8), 0L);
     }
