@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "6547c034a13751083bebb2c3917132ee621d6af7",
-    "workflowRunId": "31480329333",
-    "generatedAt": "2026-08-11T10:02:06.327595+00:00",
+    "sourceSha": "7c5619cb8ccff84baae4b034b03b71642691f5d8",
+    "workflowRunId": "31482349323",
+    "generatedAt": "2026-08-11T10:29:07.346475+00:00",
     "overlayFiles": 833,
     "dataPack": {
       "version": 1,
@@ -512,12 +512,12 @@
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 214707,
-      "sha256": "8a4cb936b60cad8ee51655a365be84ed56660f6e5d2363fb473bbd5615f554c2"
+      "sha256": "ce84468398cadd396e6e80f997684c10b6c096ac016bc9338b9b7d40a5abd9fd"
     },
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "8b8d023de55b79062a9fc0115b8aa724107bd3b0d7bd713ca1152157d36faa25"
+      "sha256": "592c0ba266f4d93a32fed316b24af5a1d3902728e99fcee6b63958f942fe2348"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -526,8 +526,8 @@
     },
     {
       "path": "jars/starfarer.api.jar",
-      "bytes": 7239782,
-      "sha256": "c3e8cb2a1f246e0ac8cd1abd2248a171d765955b5d04433f2333fc2437f84562"
+      "bytes": 7239799,
+      "sha256": "073a74693c0042123e7941d435c16681b62e32c6eb1cc022ce2f690b66c6c884"
     },
     {
       "path": "jars/starfarer_obf.jar",
