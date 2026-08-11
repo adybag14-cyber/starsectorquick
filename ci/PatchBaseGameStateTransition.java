@@ -21,7 +21,7 @@ import org.objectweb.asm.Opcodes;
  * Display.update(), this patch replaces the one virtual advance(float,input)
  * call in traverse() with a small static method injected into BaseGameState.
  * While Fixer is creating a campaign on its worker, that method suppresses only
- * the Title Screen State's background-combat advance. render(), fader.advance(),
+ * the Title Screen State's background-combat advance and render paths. The fader
  * and Display.update() continue, so CheerpJ/browser event processing stays live
  * without allowing TitleScreenState's CombatEngine to race CampaignGameManager.
  *
@@ -34,9 +34,13 @@ public final class PatchBaseGameStateTransition {
     private static final String TARGET = "com/fs/starfarer/BaseGameState.class";
     private static final String BASE = "com/fs/starfarer/BaseGameState";
     private static final String ADVANCE_DESC = "(FLcom/fs/starfarer/util/super/B;)V";
+    private static final String RENDER_DESC = "(F)V";
     private static final String GUARDED_ADVANCE = "cheerpj$guardedAdvance";
     private static final String GUARDED_ADVANCE_DESC =
             "(Lcom/fs/starfarer/BaseGameState;FLcom/fs/starfarer/util/super/B;)V";
+    private static final String GUARDED_RENDER = "cheerpj$guardedRender";
+    private static final String GUARDED_RENDER_DESC =
+            "(Lcom/fs/starfarer/BaseGameState;F)V";
     private static final String CREATE_PROPERTY = "starsector.campaignCreateInProgress";
     private static final String TITLE_ID = "Title Screen State";
 
@@ -48,6 +52,7 @@ public final class PatchBaseGameStateTransition {
         Path output = Path.of(args[1]);
         int[] drains = new int[] {0};
         int[] advanceGuards = new int[] {0};
+        int[] renderGuards = new int[] {0};
         int[] classes = new int[] {0};
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -63,13 +68,13 @@ public final class PatchBaseGameStateTransition {
                 }
                 if (TARGET.equals(entry.getName())) {
                     classes[0]++;
-                    bytes = patch(bytes, drains, advanceGuards);
+                    bytes = patch(bytes, drains, advanceGuards, renderGuards);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
-        if (classes[0] != 1 || drains[0] < 1 || advanceGuards[0] != 1) {
+        if (classes[0] != 1 || drains[0] < 1 || advanceGuards[0] != 1 || renderGuards[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "BaseGameState patch incomplete: classes="
@@ -77,26 +82,34 @@ public final class PatchBaseGameStateTransition {
                             + " drains="
                             + drains[0]
                             + " advanceGuards="
-                            + advanceGuards[0]);
+                            + advanceGuards[0]
+                            + " renderGuards="
+                            + renderGuards[0]);
         }
         System.out.println(
                 "Patched BaseGameState render-thread drains="
                         + drains[0]
                         + " title-advance guards="
-                        + advanceGuards[0]);
+                        + advanceGuards[0]
+                        + " title-render guards="
+                        + renderGuards[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] drains, int[] advanceGuards) {
+    private static byte[] patch(byte[] input, int[] drains, int[] advanceGuards, int[] renderGuards) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
-            private boolean helperExists;
+            private boolean advanceHelperExists;
+            private boolean renderHelperExists;
 
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor,
                                              String signature, String[] exceptions) {
                 if (GUARDED_ADVANCE.equals(name) && GUARDED_ADVANCE_DESC.equals(descriptor)) {
-                    helperExists = true;
+                    advanceHelperExists = true;
+                }
+                if (GUARDED_RENDER.equals(name) && GUARDED_RENDER_DESC.equals(descriptor)) {
+                    renderHelperExists = true;
                 }
                 MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
                 if (!"traverse".equals(name) || !"()Ljava/lang/String;".equals(descriptor)) {
@@ -119,6 +132,19 @@ public final class PatchBaseGameStateTransition {
                             advanceGuards[0]++;
                             return;
                         }
+                        if (opcode == Opcodes.INVOKEVIRTUAL
+                                && BASE.equals(owner)
+                                && "render".equals(methodName)
+                                && RENDER_DESC.equals(methodDescriptor)) {
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    BASE,
+                                    GUARDED_RENDER,
+                                    GUARDED_RENDER_DESC,
+                                    false);
+                            renderGuards[0]++;
+                            return;
+                        }
                         if (opcode == Opcodes.INVOKESTATIC
                                 && "org/lwjgl/opengl/Display".equals(owner)
                                 && "update".equals(methodName)) {
@@ -138,11 +164,19 @@ public final class PatchBaseGameStateTransition {
 
             @Override
             public void visitEnd() {
-                if (!helperExists) {
+                if (!advanceHelperExists) {
                     emitGuardedAdvance(super.visitMethod(
                             Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
                             GUARDED_ADVANCE,
                             GUARDED_ADVANCE_DESC,
+                            null,
+                            null));
+                }
+                if (!renderHelperExists) {
+                    emitGuardedRender(super.visitMethod(
+                            Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+                            GUARDED_RENDER,
+                            GUARDED_RENDER_DESC,
                             null,
                             null));
                 }
@@ -198,6 +232,51 @@ public final class PatchBaseGameStateTransition {
                 BASE,
                 "advance",
                 ADVANCE_DESC,
+                false);
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    private static void emitGuardedRender(MethodVisitor mv) {
+        mv.visitCode();
+        Label invokeRender = new Label();
+
+        mv.visitLdcInsn(CREATE_PROPERTY);
+        mv.visitMethodInsn(
+                Opcodes.INVOKESTATIC,
+                "java/lang/Boolean",
+                "getBoolean",
+                "(Ljava/lang/String;)Z",
+                false);
+        mv.visitJumpInsn(Opcodes.IFEQ, invokeRender);
+
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL,
+                BASE,
+                "getID",
+                "()Ljava/lang/String;",
+                false);
+        mv.visitLdcInsn(TITLE_ID);
+        mv.visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL,
+                "java/lang/String",
+                "equals",
+                "(Ljava/lang/Object;)Z",
+                false);
+        mv.visitJumpInsn(Opcodes.IFEQ, invokeRender);
+        mv.visitInsn(Opcodes.RETURN);
+
+        mv.visitLabel(invokeRender);
+        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitVarInsn(Opcodes.FLOAD, 1);
+        mv.visitMethodInsn(
+                Opcodes.INVOKEVIRTUAL,
+                BASE,
+                "render",
+                RENDER_DESC,
                 false);
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);
