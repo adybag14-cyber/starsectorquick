@@ -841,6 +841,7 @@ inputStats.keyboardPressedQueries = 0;
 inputStats.mouseButtonQueries = 0;
 inputStats.mousePressedQueries = 0;
 inputStats.mousePositionQueries = 0;
+inputStats.mousePollSnapshots = 0;
 inputStats.keyboardQueueHighWater = 0;
 inputStats.mouseQueueHighWater = 0;
 
@@ -1107,13 +1108,21 @@ function Java_org_lwjgl_input_Mouse_nReset()
 	mouseInputState.current = null;
 	mouseInputState.lastX = mouseInputState.lastY = null;
 }
-function Java_org_lwjgl_input_Mouse_nPoll() {}
-function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
+// LWJGL_MOUSE_POLL_SNAPSHOT_V1
+// Desktop LWJGL exposes non-consuming mouse state from its once-per-frame poll.
+// Pack x/y/buttons/inside into one exactly representable JS integer so Java-side
+// getX/getY/isButtonDown calls do not cross JNI thousands of times per session.
+function Java_org_lwjgl_input_Mouse_nPoll()
 {
-	inputStats.mouseButtonQueries++;
-	var down = button >= 0 && button < mouseInputState.buttons.length && mouseInputState.buttons[button] !== 0;
-	if(down) inputStats.mousePressedQueries++;
-	return down;
+	inputStats.mousePollSnapshots++;
+	var x = Math.max(-32768, Math.min(32767, Math.round(mouseInputState.x))) & 0xffff;
+	var y = Math.max(-32768, Math.min(32767, Math.round(mouseInputState.y))) & 0xffff;
+	var meta = mouseInputState.inside ? 0x100 : 0;
+	for(var button = 0; button < mouseInputState.buttons.length && button < 8; button++)
+	{
+		if(mouseInputState.buttons[button] !== 0) meta |= (1 << button);
+	}
+	return x + y * 65536 + meta * 4294967296;
 }
 function Java_org_lwjgl_input_Mouse_nNext()
 {
@@ -1129,8 +1138,6 @@ function Java_org_lwjgl_input_Mouse_nGetEventX() { return mouseInputState.curren
 function Java_org_lwjgl_input_Mouse_nGetEventY() { return mouseInputState.current ? mouseInputState.current.y : mouseInputState.y; }
 function Java_org_lwjgl_input_Mouse_nGetEventDWheel() { return mouseInputState.current ? mouseInputState.current.wheel : 0; }
 function Java_org_lwjgl_input_Mouse_nGetEventNanoseconds() { return mouseInputState.current ? mouseInputState.current.nanos : inputEventNanos(); }
-function Java_org_lwjgl_input_Mouse_nGetX() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.x); }
-function Java_org_lwjgl_input_Mouse_nGetY() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.y); }
 function Java_org_lwjgl_input_Mouse_nGetDX() { var value=Math.round(mouseInputState.dx); mouseInputState.dx=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDY() { var value=Math.round(mouseInputState.dy); mouseInputState.dy=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDWheel() { var value=Math.round(mouseInputState.wheel); mouseInputState.wheel=0; return value; }
@@ -1154,7 +1161,6 @@ function Java_org_lwjgl_input_Mouse_nSetCursorPosition(lib, x, y)
 	mouseInputState.y = mouseInputState.lastY = Number(y) || 0;
 	if(lockedMousePos) lockedMousePos = {x:mouseInputState.x, y:getCanvasHeight()-1-mouseInputState.y};
 }
-function Java_org_lwjgl_input_Mouse_nIsInsideWindow() { return mouseInputState.inside; }
 
 function Java_org_lwjgl_DefaultSysImplementation_getPointerSize()
 {
@@ -2340,7 +2346,6 @@ export default {
 	Java_org_lwjgl_input_Keyboard_nSetRepeatEvents,
 	Java_org_lwjgl_input_Mouse_nReset,
 	Java_org_lwjgl_input_Mouse_nPoll,
-	Java_org_lwjgl_input_Mouse_nIsButtonDown,
 	Java_org_lwjgl_input_Mouse_nNext,
 	Java_org_lwjgl_input_Mouse_nGetEventButton,
 	Java_org_lwjgl_input_Mouse_nGetEventButtonState,
@@ -2350,14 +2355,11 @@ export default {
 	Java_org_lwjgl_input_Mouse_nGetEventY,
 	Java_org_lwjgl_input_Mouse_nGetEventDWheel,
 	Java_org_lwjgl_input_Mouse_nGetEventNanoseconds,
-	Java_org_lwjgl_input_Mouse_nGetX,
-	Java_org_lwjgl_input_Mouse_nGetY,
 	Java_org_lwjgl_input_Mouse_nGetDX,
 	Java_org_lwjgl_input_Mouse_nGetDY,
 	Java_org_lwjgl_input_Mouse_nGetDWheel,
 	Java_org_lwjgl_input_Mouse_nSetGrabbed,
 	Java_org_lwjgl_input_Mouse_nSetCursorPosition,
-	Java_org_lwjgl_input_Mouse_nIsInsideWindow,
 	Java_org_lwjgl_DefaultSysImplementation_getPointerSize,
 	Java_org_lwjgl_DefaultSysImplementation_getJNIVersion,
 	Java_org_lwjgl_DefaultSysImplementation_setDebug,
