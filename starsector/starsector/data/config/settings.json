@@ -73,7 +73,7 @@
 	"writeInteractionTextToFile":false,
 	
 	"profilerEnabled":false,
-	"forceNoVBO":true,
+	"forceNoVBO":false,
 	"useGLFlush":true,
 	"useGLFinish":false,
 	"idleWhileWindowNotVisible":true,

@@ -80,6 +80,7 @@ node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-input-telemetry.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
+python3 ci/verify-arb-vbo.py
 python3 ci/verify-fatal-console-classification.py
 # The browser quick-start keeps the stock 45s fallback available via override,
 # but defaults the successful create-settle gate to 15s. Guard both the default

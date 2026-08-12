@@ -1154,6 +1154,7 @@ ${fallback}`);
     presentationStats: window.__lwjglPresentationStats || null,
     inputStats: window.__lwjglInputStats || null,
     bootTiming: window.__STARSECTOR_BOOT_TIMING__ || null,
+    vboStats: window.__lwjglVboStats || null,
     webglState: (() => {
       if (window.__lwjglGraphicsInfo) return window.__lwjglGraphicsInfo;
       const canvas = window.lwjglCanvasElement || document.getElementById('lwjglCanvas') || document.querySelector('#game-container canvas');
@@ -1253,6 +1254,14 @@ ${fallback}`);
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
+  const vboStats = state.vboStats || {};
+  const vboActive = expectedState !== 'campaign' || Boolean(
+    Number(vboStats.generated || 0) >= 1
+    && Number(vboStats.dataBytes || 0) > 0
+    && Number(vboStats.subDataCalls || 0) >= 1
+    && Number(vboStats.subDataBytes || 0) > 0
+    && Number(vboStats.vboDraws || 0) >= 10
+  );
   const nativeStatsEnabled = state.nativeStats?.enabled === true;
   const bridgeCalls = state.nativeStats?.callsByName || {};
   const legacyTexCoordCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglTexCoord2f || 0);
@@ -1415,7 +1424,7 @@ ${fallback}`);
 
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
-    && abilityKeysSafe && gameplayPerformanceSafe
+    && abilityKeysSafe && gameplayPerformanceSafe && vboActive
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
@@ -1476,6 +1485,8 @@ ${fallback}`);
     playableResources,
     inputBefore,
     inputAfter,
+    vboActive,
+    vboStats,
     nativeStatsEnabled,
     immediateBridgeEfficient,
     legacyTexCoordCalls,
