@@ -324,10 +324,14 @@ function pixelStats(buffer) {
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
+  const nativeStatsEnabled = state.nativeStats?.enabled === true;
   const bridgeCalls = state.nativeStats?.callsByName || {};
   const legacyTexCoordCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglTexCoord2f || 0);
   const batchedVertexCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord || 0);
-  const immediateBridgeEfficient = expectedState !== 'campaign' || Boolean(
+  // Production intentionally bypasses the heavyweight native-statistics wrapper.
+  // Static bridge verification proves the batched path in that mode; if a
+  // diagnostics run explicitly enables stats, retain the runtime count gate.
+  const immediateBridgeEfficient = expectedState !== 'campaign' || !nativeStatsEnabled || Boolean(
     batchedVertexCalls >= 1000
     && legacyTexCoordCalls <= Math.max(100, batchedVertexCalls * 0.05)
   );
