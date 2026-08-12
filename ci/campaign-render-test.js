@@ -268,6 +268,7 @@ function pixelStats(buffer) {
     nativeStats: window.__lwjglNativeStats || null,
     presentationStats: window.__lwjglPresentationStats || null,
     inputStats: window.__lwjglInputStats || null,
+    vboStats: window.__lwjglVboStats || null,
     webglState: (() => {
       const canvas = document.querySelector('#game-container canvas');
       const gl = canvas && canvas.getContext('webgl2');
@@ -324,6 +325,14 @@ function pixelStats(buffer) {
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
+  const vboStats = state.vboStats || {};
+  const vboActive = expectedState !== 'campaign' || Boolean(
+    Number(vboStats.generated || 0) >= 1
+    && Number(vboStats.dataBytes || 0) > 0
+    && Number(vboStats.subDataCalls || 0) >= 1
+    && Number(vboStats.subDataBytes || 0) > 0
+    && Number(vboStats.vboDraws || 0) >= 10
+  );
   const nativeStatsEnabled = state.nativeStats?.enabled === true;
   const bridgeCalls = state.nativeStats?.callsByName || {};
   const legacyTexCoordCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglTexCoord2f || 0);
@@ -336,7 +345,7 @@ function pixelStats(buffer) {
     && legacyTexCoordCalls <= Math.max(100, batchedVertexCalls * 0.05)
   );
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
-    && inputResponsive && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
+    && inputResponsive && vboActive && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -363,6 +372,8 @@ function pixelStats(buffer) {
     inputResponsive,
     inputBefore,
     inputAfter,
+    vboActive,
+    vboStats,
     nativeStatsEnabled,
     immediateBridgeEfficient,
     legacyTexCoordCalls,

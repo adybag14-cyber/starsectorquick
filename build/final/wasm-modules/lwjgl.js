@@ -384,6 +384,7 @@ var vertexData =
 	type: 0,
 	stride: 0,
 	pointer: 0,
+	vbo: 0,
 	buf: null
 };
 var normalData =
@@ -393,6 +394,7 @@ var normalData =
 	type: 0,
 	stride: 0,
 	pointer: 0,
+	vbo: 0,
 	buf: null
 };
 var colorData =
@@ -402,6 +404,7 @@ var colorData =
 	type: 0,
 	stride: 0,
 	pointer: 0,
+	vbo: 0,
 	buf: null
 };
 var texCoordData =
@@ -411,6 +414,7 @@ var texCoordData =
 	type: 0,
 	stride: 0,
 	pointer: 0,
+	vbo: 0,
 	buf: null
 };
 var immediateModeData =
@@ -485,6 +489,114 @@ function ensureFramebufferSize()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
 }
+// LWJGL_ARB_VBO_COMPAT_V1
+// Starsector's com.fs.graphics.F batcher uses one GL_ARRAY_BUFFER and the
+// ARB_vertex_buffer_object entry points from LWJGL 2.9.3. Preserve that GPU
+// resident path instead of copying Java buffers into temporary WebGL buffers
+// on every glDrawArrays call.
+var arbBufferObjects = [null];
+var arbBoundArrayBufferId = 0;
+var arbBoundElementArrayBufferId = 0;
+var arbVboStats = { generated: 0, deleted: 0, dataBytes: 0, subDataBytes: 0, subDataCalls: 0, vboDraws: 0 };
+if(typeof window !== "undefined") window.__lwjglVboStats = arbVboStats;
+
+function arbBufferTarget(target)
+{
+	if(target == 0x8892/*GL_ARRAY_BUFFER_ARB*/) return glCtx.ARRAY_BUFFER;
+	if(target == 0x8893/*GL_ELEMENT_ARRAY_BUFFER_ARB*/) return glCtx.ELEMENT_ARRAY_BUFFER;
+	return target;
+}
+function arbBoundBufferId(target)
+{
+	if(target == 0x8892/*GL_ARRAY_BUFFER_ARB*/) return arbBoundArrayBufferId;
+	if(target == 0x8893/*GL_ELEMENT_ARRAY_BUFFER_ARB*/) return arbBoundElementArrayBufferId;
+	return 0;
+}
+function arbBindPhysical(target)
+{
+	var id = arbBoundBufferId(target);
+	var obj = id > 0 ? arbBufferObjects[id] : null;
+	glCtx.bindBuffer(arbBufferTarget(target), obj || null);
+	return obj;
+}
+function Java_org_lwjgl_opengl_ARBBufferObject_nglGenBuffersARB(lib, count, memPtr, funcPtr)
+{
+	var n = Math.max(0, Number(count) | 0);
+	if(n == 0 || !memPtr) return;
+	var v = lib.getJNIDataView();
+	var out = new Int32Array(v.buffer, Number(memPtr), n);
+	for(var i=0;i<n;i++)
+	{
+		var id = arbBufferObjects.length;
+		arbBufferObjects.push(glCtx.createBuffer());
+		out[i] = id;
+		arbVboStats.generated++;
+	}
+}
+function Java_org_lwjgl_opengl_ARBBufferObject_nglDeleteBuffersARB(lib, count, memPtr, funcPtr)
+{
+	var n = Math.max(0, Number(count) | 0);
+	if(n == 0 || !memPtr) return;
+	var v = lib.getJNIDataView();
+	var ids = new Int32Array(v.buffer, Number(memPtr), n);
+	for(var i=0;i<n;i++)
+	{
+		var id = ids[i] | 0;
+		var obj = id > 0 ? arbBufferObjects[id] : null;
+		if(obj)
+		{
+			glCtx.deleteBuffer(obj);
+			arbBufferObjects[id] = null;
+			arbVboStats.deleted++;
+		}
+		if(arbBoundArrayBufferId == id) arbBoundArrayBufferId = 0;
+		if(arbBoundElementArrayBufferId == id) arbBoundElementArrayBufferId = 0;
+	}
+}
+function Java_org_lwjgl_opengl_ARBBufferObject_nglBindBufferARB(lib, target, id, funcPtr)
+{
+	id = Number(id) | 0;
+	if(target == 0x8892/*GL_ARRAY_BUFFER_ARB*/) arbBoundArrayBufferId = id;
+	else if(target == 0x8893/*GL_ELEMENT_ARRAY_BUFFER_ARB*/) arbBoundElementArrayBufferId = id;
+	var obj = id > 0 ? arbBufferObjects[id] : null;
+	if(id > 0 && !obj)
+	{
+		warnOnce(clientArrayWarnings, "unknown-vbo-" + id, "LWJGL attempted to bind unknown VBO id=" + id);
+		return;
+	}
+	glCtx.bindBuffer(arbBufferTarget(target), obj || null);
+}
+function Java_org_lwjgl_opengl_ARBBufferObject_nglBufferDataARB(lib, target, size, dataPtr, usage, funcPtr)
+{
+	var bytes = Math.max(0, Number(size));
+	var obj = arbBindPhysical(target);
+	if(!obj) return;
+	var webTarget = arbBufferTarget(target);
+	if(dataPtr && bytes > 0)
+	{
+		var v = lib.getJNIDataView();
+		var src = new Uint8Array(v.buffer, Number(dataPtr), bytes);
+		glCtx.bufferData(webTarget, src, usage);
+	}
+	else
+	{
+		glCtx.bufferData(webTarget, bytes, usage);
+	}
+	arbVboStats.dataBytes += bytes;
+}
+function Java_org_lwjgl_opengl_ARBBufferObject_nglBufferSubDataARB(lib, target, offset, size, dataPtr, funcPtr)
+{
+	var bytes = Math.max(0, Number(size));
+	if(bytes == 0 || !dataPtr) return;
+	var obj = arbBindPhysical(target);
+	if(!obj) return;
+	var v = lib.getJNIDataView();
+	var src = new Uint8Array(v.buffer, Number(dataPtr), bytes);
+	glCtx.bufferSubData(arbBufferTarget(target), Math.max(0, Number(offset)), src);
+	arbVboStats.subDataBytes += bytes;
+	arbVboStats.subDataCalls++;
+}
+
 // LWJGL_CLIENT_ARRAY_COMPAT_V1
 // Desktop OpenGL permits tightly-packed stride=0 and client array scalar types
 // that WebGL2 does not accept in vertexAttribPointer(). Normalize both here.
@@ -634,6 +746,27 @@ function uploadData(v, data, buffer, attributeLocation, count)
 	if(data.enabled)
 	{
 		var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
+		if(data.vbo > 0)
+		{
+			var obj = arbBufferObjects[data.vbo];
+			if(!obj)
+			{
+				warnOnce(clientArrayWarnings, "missing-pointer-vbo-" + data.vbo, "LWJGL client pointer references missing VBO id=" + data.vbo);
+				return;
+			}
+			if(!isWebGLClientArrayType(layout.type))
+			{
+				warnOnce(clientArrayWarnings, "unsupported-vbo-type-" + layout.type, "Unsupported LWJGL VBO client type=" + layout.type);
+				return;
+			}
+			var normalized = attributeLocation == colorLocation && isIntegerClientArrayType(layout.type);
+			glCtx.bindBuffer(glCtx.ARRAY_BUFFER, obj);
+			glCtx.vertexAttribPointer(attributeLocation, data.size, layout.type, normalized, layout.stride, Math.max(0, Number(data.pointer)));
+			glCtx.enableVertexAttribArray(attributeLocation);
+			arbVboStats.vboDraws++;
+			return;
+		}
+
 		var effectiveStride = clientArrayEffectiveStride(data.size, layout.type, layout.stride);
 		var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
 		if(effectiveStride <= 0 || byteLength <= 0)
@@ -665,9 +798,10 @@ function uploadData(v, data, buffer, attributeLocation, count)
 }
 function captureData(v, data, count)
 {
-	var ret = { enabled: data.enabled, size: data.size, type: data.type, stride: data.stride, pointer: 0, buf: null };
+	var ret = { enabled: data.enabled, size: data.size, type: data.type, stride: data.stride, pointer: data.pointer, vbo: data.vbo || 0, buf: null };
 	if(data.enabled)
 	{
+		if(ret.vbo > 0) return ret;
 		var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
 		var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
 		if(byteLength <= 0) return ret;
@@ -1323,8 +1457,7 @@ function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 	// Special case GL_EXTENSION for now
 	if(id == 0x1F03)
 	{
-		// TODO: Do we need any?
-		return "";
+		return "GL_ARB_vertex_buffer_object";
 	}
 	else
 	{
@@ -1635,6 +1768,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoordPointer(lib, size, type, stride, 
 	texCoordData.type = type;
 	texCoordData.stride = stride;
 	texCoordData.pointer = Number(memPtr);
+	texCoordData.vbo = arbBoundArrayBufferId;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglEnableClientState(lib, v, funcPtr)
@@ -1667,6 +1801,7 @@ function Java_org_lwjgl_opengl_GL11_nglColorPointer(lib, size, type, stride, mem
 	colorData.type = type;
 	colorData.stride = stride;
 	colorData.pointer = Number(memPtr);
+	colorData.vbo = arbBoundArrayBufferId;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglVertexPointer(lib, size, type, stride, memPtr, funcPtr)
@@ -1675,6 +1810,7 @@ function Java_org_lwjgl_opengl_GL11_nglVertexPointer(lib, size, type, stride, me
 	vertexData.type = type;
 	vertexData.stride = stride;
 	vertexData.pointer = Number(memPtr);
+	vertexData.vbo = arbBoundArrayBufferId;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcPtr)
@@ -2061,6 +2197,7 @@ function Java_org_lwjgl_opengl_GL11_nglNormalPointer(lib, type, stride, memPtr, 
 	normalData.type = type;
 	normalData.stride = stride;
 	normalData.pointer = Number(memPtr);
+	normalData.vbo = arbBoundArrayBufferId;
 }
 
 function Java_org_lwjgl_opengl_GL13_nglMultiTexCoord2f()
@@ -2385,6 +2522,11 @@ export default {
 	Java_org_lwjgl_opengl_LinuxContextImplementation_nMakeCurrent,
 	Java_org_lwjgl_opengl_LinuxContextImplementation_nIsCurrent,
 	Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress,
+	Java_org_lwjgl_opengl_ARBBufferObject_nglGenBuffersARB,
+	Java_org_lwjgl_opengl_ARBBufferObject_nglDeleteBuffersARB,
+	Java_org_lwjgl_opengl_ARBBufferObject_nglBindBufferARB,
+	Java_org_lwjgl_opengl_ARBBufferObject_nglBufferDataARB,
+	Java_org_lwjgl_opengl_ARBBufferObject_nglBufferSubDataARB,
 	Java_org_lwjgl_opengl_GL11_nglGetString,
 	Java_org_lwjgl_opengl_GL11_nglGetIntegerv,
 	Java_org_lwjgl_opengl_GL11_nglPixelStorei,
