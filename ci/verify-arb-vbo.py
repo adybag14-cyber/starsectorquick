@@ -18,6 +18,18 @@ for token in required:
     if token not in js:
         raise SystemExit(f'missing VBO bridge token: {token}')
 
+
+for source in (
+    Path('bridge_src/org/lwjgl/opengl/ARBBufferObject.java'),
+    Path('bridge_src/org/lwjgl/opengl/ARBVertexBufferObject.java'),
+):
+    if not source.is_file():
+        raise SystemExit(f'missing bridge-owned ARB facade: {source}')
+arb = Path('bridge_src/org/lwjgl/opengl/ARBBufferObject.java').read_text(encoding='utf-8')
+for token in ('glGenBuffersARB()', 'glDeleteBuffersARB(int buffer)', 'glBindBufferARB(int target, int buffer)', 'glBufferDataARB(int target, long size, int usage)', 'glBufferSubDataARB(int target, long offset, FloatBuffer data)'):
+    if token not in arb:
+        raise SystemExit(f'missing bridge ARB API: {token}')
+
 campaign = Path('ci/campaign-render-test.js').read_text(encoding='utf-8')
 for token in ('vboActive', 'vboStats.generated', 'vboStats.subDataCalls', 'vboStats.vboDraws'):
     if token not in campaign:
