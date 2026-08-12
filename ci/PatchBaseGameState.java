@@ -15,9 +15,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Removes Thread.sleep(long) from BaseGameState.traverse(). In CheerpJ the browser
- * frame boundary is supplied by the asynchronous swap-buffer native; an additional
- * Java sleep can suspend the sole effective game VM scheduler after the first frames.
+ * Replaces only BaseGameState.traverse()'s dynamic frame-limiter Thread.sleep(long)
+ * with Thread.yield(). The separate fixed 50 ms inactive-window sleep is preserved:
+ * it is intentional backpressure and prevents title/bootstrap loops from spinning
+ * aggressively while the display is inactive.
  */
 public final class PatchBaseGameState {
     private static final String TARGET = "com/fs/starfarer/BaseGameState.class";
@@ -50,11 +51,13 @@ public final class PatchBaseGameState {
             }
         }
 
-        if (replacements[0] < 1) {
+        if (replacements[0] != 1) {
             Files.deleteIfExists(output);
-            throw new IllegalStateException("no Thread.sleep call was replaced in BaseGameState.traverse");
+            throw new IllegalStateException(
+                    "expected exactly one dynamic frame-limiter Thread.sleep replacement; found "
+                            + replacements[0]);
         }
-        System.out.println("Patched BaseGameState.traverse Thread.sleep calls=" + replacements[0]);
+        System.out.println("Patched BaseGameState.traverse dynamic frame-limiter sleep=" + replacements[0]);
     }
 
     private static byte[] patch(byte[] input, int[] replacements) {
@@ -69,21 +72,50 @@ public final class PatchBaseGameState {
                     return delegate;
                 }
                 return new MethodVisitor(Opcodes.ASM9, delegate) {
+                    private boolean previousWasI2L = false;
+
+                    @Override
+                    public void visitInsn(int opcode) {
+                        super.visitInsn(opcode);
+                        previousWasI2L = opcode == Opcodes.I2L;
+                    }
+
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String methodName,
                                                 String methodDescriptor, boolean isInterface) {
-                        if (opcode == Opcodes.INVOKESTATIC
+                        boolean dynamicFrameSleep = previousWasI2L
+                                && opcode == Opcodes.INVOKESTATIC
                                 && "java/lang/Thread".equals(owner)
                                 && "sleep".equals(methodName)
-                                && "(J)V".equals(methodDescriptor)) {
-                            // Consume the long delay argument and yield cooperatively. The JS
-                            // swap-buffer Promise is the actual browser scheduling boundary.
+                                && "(J)V".equals(methodDescriptor);
+                        previousWasI2L = false;
+                        if (dynamicFrameSleep) {
+                            // The long delay is already on the stack. Rendering is at/behind
+                            // its frame budget here, so consume it and yield without imposing
+                            // a timer. Preserve the fixed 50 ms inactive-display sleep above.
                             super.visitInsn(Opcodes.POP2);
-                            super.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Thread", "yield", "()V", false);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    "java/lang/Thread",
+                                    "yield",
+                                    "()V",
+                                    false);
                             replacements[0]++;
                             return;
                         }
                         super.visitMethodInsn(opcode, owner, methodName, methodDescriptor, isInterface);
+                    }
+
+                    @Override
+                    public void visitVarInsn(int opcode, int varIndex) {
+                        previousWasI2L = false;
+                        super.visitVarInsn(opcode, varIndex);
+                    }
+
+                    @Override
+                    public void visitLdcInsn(Object value) {
+                        previousWasI2L = false;
+                        super.visitLdcInsn(value);
                     }
                 };
             }
