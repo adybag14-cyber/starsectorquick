@@ -143,7 +143,7 @@ function pixelStats(buffer) {
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
-    if (/Fatal:|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
+    if (/(?:^|\b)Fatal\s*:\s*|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
       fatalSeenAt = Date.now();
     }
     if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
@@ -215,6 +215,51 @@ function pixelStats(buffer) {
   await sleep(settleMs);
   const second = await safeScreenshot(`${outputDir}/frame-second.png`, 'second frame screenshot');
 
+  // Exercise real input only after the visual evidence has been captured so the
+  // probe cannot alter the screenshot gate. This catches the previous failure
+  // where DOM events existed but the runtime-winning LWJGL Mouse/Keyboard
+  // classes always returned false/no events.
+  const inputBefore = await withTimeout(
+    page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) })),
+    5000,
+    'input baseline'
+  ).catch(() => ({}));
+  try {
+    const box = await gameCanvas.boundingBox();
+    await gameCanvas.focus();
+    if (box) {
+      const cx = box.x + box.width * 0.57;
+      const cy = box.y + box.height * 0.43;
+      await page.mouse.move(cx, cy);
+      await page.mouse.move(cx + 32, cy + 18, { steps: 3 });
+      await page.mouse.down({ button: 'left' });
+      await sleep(650);
+      await page.mouse.up({ button: 'left' });
+      await page.mouse.wheel(0, -120);
+    }
+    await page.keyboard.down('w');
+    await sleep(900);
+    await page.keyboard.up('w');
+    await sleep(1800);
+  } catch (error) {
+    errors.push(`input probe failed: ${error.message || error}`);
+  }
+  const inputAfter = await withTimeout(
+    page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) })),
+    5000,
+    'input result'
+  ).catch(() => ({}));
+  const inputKeyboardResponsive = expectedState !== 'campaign' || Boolean(
+    (inputAfter.directKeyboardDelivered || 0) > (inputBefore.directKeyboardDelivered || 0)
+    || (inputAfter.keyboardPressedQueries || 0) > (inputBefore.keyboardPressedQueries || 0)
+  );
+  const inputMouseResponsive = expectedState !== 'campaign' || Boolean(
+    (inputAfter.directMouseDelivered || 0) > (inputBefore.directMouseDelivered || 0)
+    || (inputAfter.mousePressedQueries || 0) > (inputBefore.mousePressedQueries || 0)
+    || (inputAfter.mousePositionQueries || 0) > (inputBefore.mousePositionQueries || 0)
+  );
+  const inputResponsive = inputKeyboardResponsive && inputMouseResponsive;
+
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',
@@ -222,6 +267,7 @@ function pixelStats(buffer) {
     button: document.getElementById('startBtn')?.textContent || '',
     nativeStats: window.__lwjglNativeStats || null,
     presentationStats: window.__lwjglPresentationStats || null,
+    inputStats: window.__lwjglInputStats || null,
     webglState: (() => {
       const canvas = document.querySelector('#game-container canvas');
       const gl = canvas && canvas.getContext('webgl2');
@@ -278,7 +324,19 @@ function pixelStats(buffer) {
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
   const reachedExpected = expectedState === 'title' ? title : campaign;
-  const ok = reachedExpected && rendered && campaignVisualQuality && progressing && errors.length === 0 && !fatalSeenAt
+  const nativeStatsEnabled = state.nativeStats?.enabled === true;
+  const bridgeCalls = state.nativeStats?.callsByName || {};
+  const legacyTexCoordCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglTexCoord2f || 0);
+  const batchedVertexCalls = Number(bridgeCalls.Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord || 0);
+  // Production intentionally bypasses the heavyweight native-statistics wrapper.
+  // Static bridge verification proves the batched path in that mode; if a
+  // diagnostics run explicitly enables stats, retain the runtime count gate.
+  const immediateBridgeEfficient = expectedState !== 'campaign' || !nativeStatsEnabled || Boolean(
+    batchedVertexCalls >= 1000
+    && legacyTexCoordCalls <= Math.max(100, batchedVertexCalls * 0.05)
+  );
+  const ok = reachedExpected && rendered && campaignVisualQuality && progressing
+    && inputResponsive && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -300,6 +358,15 @@ function pixelStats(buffer) {
     campaignTextureRichness,
     campaignCenterSubject,
     campaignVisualQuality,
+    inputKeyboardResponsive,
+    inputMouseResponsive,
+    inputResponsive,
+    inputBefore,
+    inputAfter,
+    nativeStatsEnabled,
+    immediateBridgeEfficient,
+    legacyTexCoordCalls,
+    batchedVertexCalls,
     progressing,
     frameChanged,
     updateMax,

@@ -21,6 +21,7 @@ public final class Display {
     private static boolean getPixelScaleLogged = false;
     private static int updateCount = 0;
     private static int swapBuffersCount = 0;
+    private static boolean inputPumpFailureLogged = false;
     static {
         System.out.println("Bridge Display.<clinit>()");
     }
@@ -236,15 +237,16 @@ public final class Display {
     }
 
     public static void update() {
-        updateCount++;
-        maybeLogLoop("update", updateCount);
-        LinuxContextImplementation.nSwapBuffers();
+        update(true);
     }
 
     public static void update(boolean process_messages) {
         updateCount++;
         maybeLogLoop("update(" + process_messages + ")", updateCount);
         LinuxContextImplementation.nSwapBuffers();
+        if (process_messages) {
+            processMessages();
+        }
     }
 
     public static void sync(int fps) {}
@@ -266,7 +268,22 @@ public final class Display {
         return "2.1";
     }
 
-    public static void processMessages() {}
+    public static void processMessages() {
+        try {
+            // Desktop LWJGL drains the X11 event queue here. The browser bridge
+            // synthesizes those X11 events from DOM input in lwjgl.js, so skipping
+            // this call leaves keyboard/mouse events permanently queued.
+            // DOM listeners in lwjgl.js maintain direct LWJGL input state; the
+            // bridge LinuxDisplay class is intentionally minimal, so polling the
+            // devices is the browser equivalent of desktop processMessages().
+            pollDevices();
+        } catch (Throwable t) {
+            if (!inputPumpFailureLogged) {
+                inputPumpFailureLogged = true;
+                System.out.println("Bridge Display input pump failed: " + t);
+            }
+        }
+    }
 
     public static void swapBuffers() throws LWJGLException {
         swapBuffersCount++;
@@ -306,5 +323,20 @@ public final class Display {
         return System.getProperty(key);
     }
 
-    static void pollDevices() {}
+    static void pollDevices() {
+        try {
+            if (org.lwjgl.input.Mouse.isCreated()) {
+                org.lwjgl.input.Mouse.poll();
+                org.lwjgl.input.Mouse.updateCursor();
+            }
+            if (org.lwjgl.input.Keyboard.isCreated()) {
+                org.lwjgl.input.Keyboard.poll();
+            }
+        } catch (Throwable t) {
+            if (!inputPumpFailureLogged) {
+                inputPumpFailureLogged = true;
+                System.out.println("Bridge Display device poll failed: " + t);
+            }
+        }
+    }
 }

@@ -60,19 +60,36 @@ grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
+python3 ci/verify-fatal-console-classification.py
 
-# Rebuild the LWJGL bridge class that owns the desktop client-array overloads.
-# The stock compatibility bridge historically shifted stride into the GL type
-# slot for FloatBuffer/IntBuffer overloads, producing type=0/stride=0 in JS.
-rm -rf .ci-build/bridge-client-arrays
-mkdir -p .ci-build/bridge-client-arrays
+# Rebuild the browser-facing LWJGL bridge classes. GL11 owns the fixed-function
+# compatibility/fast paths; Display and the input classes own live DOM-backed
+# keyboard/mouse polling. Keeping them in one compile step ensures the runtime
+# never falls back to the old always-false input stubs in bridge.jar.
+rm -rf .ci-build/bridge-runtime
+mkdir -p .ci-build/bridge-runtime
 javac -encoding UTF-8 -source 8 -target 8 \
   -cp "jars/bridge.jar:jars/lwjgl.jar" \
-  -d .ci-build/bridge-client-arrays \
-  bridge_src/org/lwjgl/opengl/GL11.java
-jar uf jars/bridge.jar -C .ci-build/bridge-client-arrays org/lwjgl/opengl/GL11.class
-javap -classpath jars/bridge.jar -c org.lwjgl.opengl.GL11 > .ci-build/bridge-client-arrays.javap
-python3 ci/verify-bridge-client-arrays.py .ci-build/bridge-client-arrays.javap
+  -d .ci-build/bridge-runtime \
+  bridge_src/org/lwjgl/opengl/GL11.java \
+  bridge_src/org/lwjgl/opengl/Display.java \
+  bridge_src/org/lwjgl/input/Keyboard.java \
+  bridge_src/org/lwjgl/input/Mouse.java
+jar uf jars/bridge.jar \
+  -C .ci-build/bridge-runtime org/lwjgl/opengl/GL11.class \
+  -C .ci-build/bridge-runtime org/lwjgl/opengl/Display.class \
+  -C .ci-build/bridge-runtime org/lwjgl/input/Keyboard.class \
+  -C .ci-build/bridge-runtime org/lwjgl/input/Mouse.class
+javap -classpath jars/bridge.jar -c org.lwjgl.opengl.GL11 > .ci-build/bridge-runtime-gl11.javap
+javap -classpath jars/bridge.jar -c org.lwjgl.opengl.Display > .ci-build/bridge-runtime-display.javap
+javap -classpath jars/bridge.jar -c org.lwjgl.input.Keyboard > .ci-build/bridge-runtime-keyboard.javap
+javap -classpath jars/bridge.jar -c org.lwjgl.input.Mouse > .ci-build/bridge-runtime-mouse.javap
+python3 ci/verify-bridge-client-arrays.py .ci-build/bridge-runtime-gl11.javap
+python3 ci/verify-browser-input-bridge.py \
+  .ci-build/bridge-runtime-display.javap \
+  .ci-build/bridge-runtime-keyboard.javap \
+  .ci-build/bridge-runtime-mouse.javap \
+  build/final/wasm-modules/lwjgl.js
 
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py

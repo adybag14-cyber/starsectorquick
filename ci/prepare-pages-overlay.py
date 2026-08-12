@@ -127,10 +127,13 @@ def main() -> int:
     launch = (ROOT / "launch.html").read_text(encoding="utf-8")
     if "20260810-campaign-render-v6" not in launch:
         raise RuntimeError("launch cache/reset version was not updated")
-    if "preserveDrawingBuffer: true" not in (
+    lwjgl_js = (
         ROOT / "build" / "final" / "wasm-modules" / "lwjgl.js"
-    ).read_text(encoding="utf-8"):
-        raise RuntimeError("LWJGL candidate is missing preserveDrawingBuffer=true")
+    ).read_text(encoding="utf-8")
+    if "preserveDrawingBuffer: false" not in lwjgl_js:
+        raise RuntimeError("LWJGL candidate is missing production preserveDrawingBuffer=false")
+    if 'powerPreference: "high-performance"' not in lwjgl_js:
+        raise RuntimeError("LWJGL candidate is missing high-performance WebGL context preference")
 
     for econ_rel in (
         "data/campaign/econ/economy.json",
