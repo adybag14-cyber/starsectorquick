@@ -60,6 +60,7 @@ grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
+python3 ci/verify-fatal-console-classification.py
 
 # Rebuild the browser-facing LWJGL bridge classes. GL11 owns the fixed-function
 # compatibility/fast paths; Display and the input classes own live DOM-backed

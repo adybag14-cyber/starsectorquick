@@ -143,7 +143,7 @@ function pixelStats(buffer) {
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
-    if (/Fatal:|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
+    if (/(?:^|\b)Fatal\s*:\s*|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
       fatalSeenAt = Date.now();
     }
     if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
