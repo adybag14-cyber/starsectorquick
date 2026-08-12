@@ -54,9 +54,36 @@
             __STARSECTOR_ORIGINAL_CONSOLE__.log(m);
         }
 
+        // Starsector can emit engine-fatal lines through System.out, which CheerpJ
+        // surfaces as console.log rather than console.error. Classify by content,
+        // not by browser console level, and tolerate the engine's "Fatal :" spacing.
+        const STARSECTOR_FATAL_CONSOLE_PATTERN = /(?:^|\b)fatal\s*:\s*/i;
+        function isFatalRuntimeConsoleText(text) {
+            const value = String(text || '');
+            return STARSECTOR_FATAL_CONSOLE_PATTERN.test(value) ||
+                /Fatal campaign bootstrap failure|Fixer: auto campaign aborting|Fixer: exhausted all new-game/i.test(value);
+        }
+
+        function markRuntimeFatal(text) {
+            const detail = String(text || 'Fatal runtime failure').slice(0, 240);
+            const btn = document.getElementById('startBtn');
+            updateRuntimeState('fatal', detail);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'RETRY STARSECTOR';
+                btn.setAttribute('data-last-error', detail);
+            }
+            appendRuntimeLog(detail, '#ff4444');
+        }
+
         function observeRuntimeConsole(message, level = 'log') {
             const text = String(message || '');
             const btn = document.getElementById('startBtn');
+
+            if (isFatalRuntimeConsoleText(text)) {
+                markRuntimeFatal(text);
+                return;
+            }
 
             if (/watcher state=Campaign State|reached Campaign State/i.test(text)) {
                 updateRuntimeState('campaign', 'Main campaign view');
@@ -73,12 +100,6 @@
             } else if (/watcher state=Title Screen State|reached Title Screen State/i.test(text)) {
                 updateRuntimeState('title', 'Preparing campaign');
                 if (btn) btn.textContent = 'PREPARING CAMPAIGN...';
-            } else if (/Fixer: auto campaign aborting|Fixer: exhausted all new-game|Fatal campaign bootstrap failure/i.test(text)) {
-                updateRuntimeState('failed', text.slice(0, 240));
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'RETRY STARSECTOR';
-                }
             }
 
             const important =
@@ -89,10 +110,13 @@
 
         for (const level of ['log', 'warn', 'error']) {
             console[level] = (...args) => {
-                __STARSECTOR_ORIGINAL_CONSOLE__[level](...args);
                 try {
                     const text = args.map(value => value instanceof Error ? (value.stack || value.message) : String(value)).join(' ');
-                    observeRuntimeConsole(text, level);
+                    // Re-emit engine-fatal System.out/console.log lines through the
+                    // real error console so DevTools, CI and users all see an error.
+                    const effectiveLevel = isFatalRuntimeConsoleText(text) ? 'error' : level;
+                    __STARSECTOR_ORIGINAL_CONSOLE__[effectiveLevel](...args);
+                    observeRuntimeConsole(text, effectiveLevel);
                 } catch (observerError) {
                     __STARSECTOR_ORIGINAL_CONSOLE__.warn('Runtime console observer failed:', observerError);
                 }
@@ -759,8 +783,10 @@
                     lastName: null,
                     lastAt: 0
                 };
+                const collectNativeStats = window.__LWJGL_COLLECT_NATIVE_STATS__ === true;
+                nativeStats.enabled = collectNativeStats;
                 window.__lwjglNativeStats = nativeStats;
-                const enableNativeTraceLog = !!window.__LWJGL_NATIVE_TRACE_LOG__;
+                const enableNativeTraceLog = collectNativeStats && !!window.__LWJGL_NATIVE_TRACE_LOG__;
                 const nativeTraceLimit = Math.max(0, Number(window.__LWJGL_NATIVE_TRACE_LIMIT__ || 24));
                 const firstLogLimit = Math.max(0, Number(window.__LWJGL_FIRST_LOG_LIMIT__ || 256));
                 let firstLogCount = 0;
@@ -787,6 +813,12 @@
                                 console.warn(`[LWJGL SYS ALERT suppressed] ${safeTitle}: ${safeMessage}`);
                                 return;
                             };
+                            continue;
+                        }
+                        if (!collectNativeStats) {
+                            // Production fast path: no Date.now(), histograms, maps, or
+                            // per-call wrapper bookkeeping on the millions-of-calls JNI path.
+                            lwjglNatives[key] = value;
                             continue;
                         }
                         lwjglNatives[key] = (...args) => {
