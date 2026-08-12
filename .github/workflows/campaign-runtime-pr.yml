@@ -102,7 +102,7 @@ jobs:
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
           STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
-        run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'true' 'campaign' "$EXPERIMENT_CONFIG"
+        run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Validate Pages overlay from verified candidate
         run: |
           python3 ci/prepare-pages-overlay.py \
