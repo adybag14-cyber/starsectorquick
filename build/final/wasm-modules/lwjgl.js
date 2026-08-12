@@ -425,6 +425,8 @@ var immediateModeData =
 	texCoordPos: 0
 };
 var verboseLog = false;
+var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
+var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
 var frameCount = 0;
 var presentationStats = {
 	swapCount: 0,
@@ -629,12 +631,15 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
-	var attribErr = glCtx.getError();
-	if(attribErr != glCtx.NO_ERROR)
+	if(strictWebGLValidation)
 	{
-		warnOnce(clientArrayWarnings, "attrib-error-" + attributeLocation + "-" + uploadType + "-" + uploadStride,
-			"LWJGL vertexAttribPointer error=" + attribErr + " attr=" + attributeLocation + " size=" + size + " type=" + uploadType + " stride=" + uploadStride);
-		return false;
+		var attribErr = glCtx.getError();
+		if(attribErr != glCtx.NO_ERROR)
+		{
+			warnOnce(clientArrayWarnings, "attrib-error-" + attributeLocation + "-" + uploadType + "-" + uploadStride,
+				"LWJGL vertexAttribPointer error=" + attribErr + " attr=" + attributeLocation + " size=" + size + " type=" + uploadType + " stride=" + uploadStride);
+			return false;
+		}
 	}
 	glCtx.enableVertexAttribArray(attributeLocation);
 	return true;
@@ -1456,7 +1461,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimes.length - 1) * 1000 / recentDuration : 0;
 		presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;
 	}
-	if(presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
+	if(presentationReadbackDiagnostics && presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
 	{
 		try
 		{
@@ -1645,14 +1650,17 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
-	var texImageErr = glCtx.getError();
-	if(texImageErr != glCtx.NO_ERROR)
+	if(strictWebGLValidation)
 	{
-		warnOnce(
-			texImageWarnings,
-			"texImage-error-" + upload.internalFormat + "-" + upload.format + "-" + upload.type,
-			"LWJGL texImage2D error=" + texImageErr + " ifmt=" + upload.internalFormat + " fmt=" + upload.format + " type=" + upload.type + " size=" + width + "x" + height + " ptr=" + memPtr + " dataCtor=" + (upload.data && upload.data.constructor ? upload.data.constructor.name : "null")
-		);
+		var texImageErr = glCtx.getError();
+		if(texImageErr != glCtx.NO_ERROR)
+		{
+			warnOnce(
+				texImageWarnings,
+				"texImage-error-" + upload.internalFormat + "-" + upload.format + "-" + upload.type,
+				"LWJGL texImage2D error=" + texImageErr + " ifmt=" + upload.internalFormat + " fmt=" + upload.format + " type=" + upload.type + " size=" + width + "x" + height + " ptr=" + memPtr + " dataCtor=" + (upload.data && upload.data.constructor ? upload.data.constructor.name : "null")
+			);
+		}
 	}
 }
 
@@ -1997,14 +2005,17 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
-	var texSubImageErr = glCtx.getError();
-	if(texSubImageErr != glCtx.NO_ERROR)
+	if(strictWebGLValidation)
 	{
-		warnOnce(
-			texImageWarnings,
-			"texSubImage-error-" + upload.format + "-" + upload.type,
-			"LWJGL texSubImage2D error=" + texSubImageErr + " fmt=" + upload.format + " type=" + upload.type + " size=" + width + "x" + height + " ptr=" + memPtr + " dataCtor=" + (upload.data && upload.data.constructor ? upload.data.constructor.name : "null")
-		);
+		var texSubImageErr = glCtx.getError();
+		if(texSubImageErr != glCtx.NO_ERROR)
+		{
+			warnOnce(
+				texImageWarnings,
+				"texSubImage-error-" + upload.format + "-" + upload.type,
+				"LWJGL texSubImage2D error=" + texSubImageErr + " fmt=" + upload.format + " type=" + upload.type + " size=" + width + "x" + height + " ptr=" + memPtr + " dataCtor=" + (upload.data && upload.data.constructor ? upload.data.constructor.name : "null")
+			);
+		}
 	}
 }
 
