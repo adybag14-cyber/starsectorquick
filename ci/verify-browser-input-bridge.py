@@ -30,10 +30,10 @@ def main() -> int:
     js = Path(sys.argv[4]).read_text(encoding="utf-8")
 
     # Display.update(true) must preserve desktop LWJGL's device-poll contract.
-    require(display, "org/lwjgl/opengl/Display.processMessages", "Display.update")
-    require(display, "org/lwjgl/input/Mouse.poll", "Display device poll")
-    require(display, "org/lwjgl/input/Mouse.updateCursor", "Display mouse cursor poll")
-    require(display, "org/lwjgl/input/Keyboard.poll", "Display keyboard poll")
+    require(display, "processMessages:()V", "Display.update")
+    require(display, "org/lwjgl/input/Mouse.poll:()V", "Display device poll")
+    require(display, "org/lwjgl/input/Mouse.updateCursor:()V", "Display mouse cursor poll")
+    require(display, "org/lwjgl/input/Keyboard.poll:()V", "Display keyboard poll")
 
     # The class that wins on the runtime classpath must no longer be an
     # always-false stub; public queries/events need native browser state.
