@@ -763,8 +763,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 			glCtx.bindBuffer(glCtx.ARRAY_BUFFER, obj);
 			glCtx.vertexAttribPointer(attributeLocation, data.size, layout.type, normalized, layout.stride, Math.max(0, Number(data.pointer)));
 			glCtx.enableVertexAttribArray(attributeLocation);
-			arbVboStats.vboDraws++;
-			return;
+			return true;
 		}
 
 		var effectiveStride = clientArrayEffectiveStride(data.size, layout.type, layout.stride);
@@ -795,6 +794,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}
+	return false;
 }
 function captureData(v, data, count)
 {
@@ -891,12 +891,11 @@ function pushDrawArraysInList(list, v, mode, first, count)
 }
 function drawArraysInList(mode, first, count, capturedVertexData, capturedColorData, capturedTexCoordData)
 {
-	// Upload vertex data
-	uploadData(null, capturedVertexData, vertexBuffer, vertexPosition, count);
-	// Upload color data
-	uploadData(null, capturedColorData, colorBuffer, colorLocation, count);
-	// Upload tex coord data
-	uploadData(null, capturedTexCoordData, texCoordBuffer, texCoord, count);
+	var usedVbo = false;
+	usedVbo = uploadData(null, capturedVertexData, vertexBuffer, vertexPosition, count) || usedVbo;
+	usedVbo = uploadData(null, capturedColorData, colorBuffer, colorLocation, count) || usedVbo;
+	usedVbo = uploadData(null, capturedTexCoordData, texCoordBuffer, texCoord, count) || usedVbo;
+	if(usedVbo) arbVboStats.vboDraws++;
 	drawArraysImpl(mode, first, count);
 }
 // Fix the sampler to texture unit 0
@@ -1821,12 +1820,13 @@ function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcP
 		// Capture client state at this point in time
 		return pushDrawArraysInList(curList, v, mode, first, count);
 	}
-	// Upload vertex data
-	uploadData(v, vertexData, vertexBuffer, vertexPosition, count);
-	// Upload color data
-	uploadData(v, colorData, colorBuffer, colorLocation, count);
-	// Upload tex coord data
-	uploadData(v, texCoordData, texCoordBuffer, texCoord, count);
+	// Prepare client arrays. Count VBO usage once for the submitted draw, not
+	// once per enabled attribute.
+	var usedVbo = false;
+	usedVbo = uploadData(v, vertexData, vertexBuffer, vertexPosition, count) || usedVbo;
+	usedVbo = uploadData(v, colorData, colorBuffer, colorLocation, count) || usedVbo;
+	usedVbo = uploadData(v, texCoordData, texCoordBuffer, texCoord, count) || usedVbo;
+	if(usedVbo) arbVboStats.vboDraws++;
 	drawArraysImpl(mode, first, count);
 }
 
