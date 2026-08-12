@@ -74,17 +74,23 @@ javac -encoding UTF-8 -source 8 -target 8 \
   -d .ci-build/bridge-runtime \
   bridge_src/org/lwjgl/opengl/GL11.java \
   bridge_src/org/lwjgl/opengl/Display.java \
+  bridge_src/org/lwjgl/opengl/ARBBufferObject.java \
+  bridge_src/org/lwjgl/opengl/ARBVertexBufferObject.java \
   bridge_src/org/lwjgl/input/Keyboard.java \
   bridge_src/org/lwjgl/input/Mouse.java
 jar uf jars/bridge.jar \
   -C .ci-build/bridge-runtime org/lwjgl/opengl/GL11.class \
   -C .ci-build/bridge-runtime org/lwjgl/opengl/Display.class \
+  -C .ci-build/bridge-runtime org/lwjgl/opengl/ARBBufferObject.class \
+  -C .ci-build/bridge-runtime org/lwjgl/opengl/ARBVertexBufferObject.class \
   -C .ci-build/bridge-runtime org/lwjgl/input/Keyboard.class \
   -C .ci-build/bridge-runtime org/lwjgl/input/Mouse.class
 javap -classpath jars/bridge.jar -c org.lwjgl.opengl.GL11 > .ci-build/bridge-runtime-gl11.javap
 javap -classpath jars/bridge.jar -c org.lwjgl.opengl.Display > .ci-build/bridge-runtime-display.javap
 javap -classpath jars/bridge.jar -c org.lwjgl.input.Keyboard > .ci-build/bridge-runtime-keyboard.javap
 javap -classpath jars/bridge.jar -c org.lwjgl.input.Mouse > .ci-build/bridge-runtime-mouse.javap
+javap -classpath jars/bridge.jar -c org.lwjgl.opengl.ARBBufferObject > .ci-build/bridge-runtime-arb-buffer.javap
+javap -classpath jars/bridge.jar -c org.lwjgl.opengl.ARBVertexBufferObject > .ci-build/bridge-runtime-arb-vbo.javap
 python3 ci/verify-bridge-client-arrays.py .ci-build/bridge-runtime-gl11.javap
 python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-display.javap \
