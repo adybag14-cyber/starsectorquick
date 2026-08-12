@@ -15,10 +15,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Replaces only BaseGameState.traverse()'s dynamic frame-limiter Thread.sleep(long)
- * with Thread.yield(). The separate fixed 50 ms inactive-window sleep is preserved:
- * it is intentional backpressure and prevents title/bootstrap loops from spinning
- * aggressively while the display is inactive.
+ * Redirects only BaseGameState.traverse()'s dynamic frame-limiter sleep through
+ * BrowserFramePacer. Positive delays keep the original Thread.sleep(delay) behavior
+ * so fast title/bootstrap frames yield real scheduler time; a computed zero delay
+ * uses Thread.yield() instead of Thread.sleep(0) when rendering is already behind.
  */
 public final class PatchBaseGameState {
     private static final String TARGET = "com/fs/starfarer/BaseGameState.class";
@@ -30,6 +30,9 @@ public final class PatchBaseGameState {
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
         int[] replacements = new int[] {0};
+
+        byte[] pacerClass = loadPacerClass();
+        boolean[] pacerEntrySeen = new boolean[] {false};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -46,7 +49,17 @@ public final class PatchBaseGameState {
                 if (TARGET.equals(entry.getName())) {
                     bytes = patch(bytes, replacements);
                 }
+                if ("com/fs/starfarer/BrowserFramePacer.class".equals(entry.getName())) {
+                    pacerEntrySeen[0] = true;
+                    bytes = pacerClass;
+                }
                 out.write(bytes);
+                out.closeEntry();
+            }
+            if (!pacerEntrySeen[0]) {
+                JarEntry pacer = new JarEntry("com/fs/starfarer/BrowserFramePacer.class");
+                out.putNextEntry(pacer);
+                out.write(pacerClass);
                 out.closeEntry();
             }
         }
@@ -57,7 +70,8 @@ public final class PatchBaseGameState {
                     "expected exactly one dynamic frame-limiter Thread.sleep replacement; found "
                             + replacements[0]);
         }
-        System.out.println("Patched BaseGameState.traverse dynamic frame-limiter sleep=" + replacements[0]);
+        System.out.println("Patched BaseGameState.traverse dynamic frame-limiter sleep=" + replacements[0]
+                + " with conditional BrowserFramePacer");
     }
 
     private static byte[] patch(byte[] input, int[] replacements) {
@@ -90,15 +104,14 @@ public final class PatchBaseGameState {
                                 && "(J)V".equals(methodDescriptor);
                         previousWasI2L = false;
                         if (dynamicFrameSleep) {
-                            // The long delay is already on the stack. Rendering is at/behind
-                            // its frame budget here, so consume it and yield without imposing
-                            // a timer. Preserve the fixed 50 ms inactive-display sleep above.
-                            super.visitInsn(Opcodes.POP2);
+                            // Preserve the long delay on the stack and route it through a
+                            // helper: positive delays still sleep, zero delay cooperatively
+                            // yields without entering CheerpJ's timer path.
                             super.visitMethodInsn(
                                     Opcodes.INVOKESTATIC,
-                                    "java/lang/Thread",
-                                    "yield",
-                                    "()V",
+                                    "com/fs/starfarer/BrowserFramePacer",
+                                    "sleepOrYield",
+                                    "(J)V",
                                     false);
                             replacements[0]++;
                             return;
@@ -122,6 +135,16 @@ public final class PatchBaseGameState {
         };
         reader.accept(visitor, 0);
         return writer.toByteArray();
+    }
+
+    private static byte[] loadPacerClass() throws IOException {
+        try (InputStream in = PatchBaseGameState.class.getResourceAsStream(
+                "/com/fs/starfarer/BrowserFramePacer.class")) {
+            if (in == null) {
+                throw new IOException("compiled BrowserFramePacer.class not found on transformer classpath");
+            }
+            return readAll(in);
+        }
     }
 
     private static byte[] readAll(InputStream in) throws IOException {
