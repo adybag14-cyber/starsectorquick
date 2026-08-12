@@ -317,6 +317,15 @@ function snapshotAttribState(mask)
 			depthRange: Array.from(glCtx.getParameter(glCtx.DEPTH_RANGE))
 		};
 	}
+	if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/)
+	{
+		state.stencil = {
+			func: glCtx.getParameter(glCtx.STENCIL_FUNC), ref: glCtx.getParameter(glCtx.STENCIL_REF),
+			valueMask: glCtx.getParameter(glCtx.STENCIL_VALUE_MASK), writeMask: glCtx.getParameter(glCtx.STENCIL_WRITEMASK),
+			fail: glCtx.getParameter(glCtx.STENCIL_FAIL), depthFail: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_FAIL),
+			depthPass: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS), clearValue: glCtx.getParameter(glCtx.STENCIL_CLEAR_VALUE)
+		};
+	}
 	return state;
 }
 function restoreAttribState(state)
@@ -341,6 +350,13 @@ function restoreAttribState(state)
 	{
 		glCtx.viewport(...state.viewport.box);
 		glCtx.depthRange(...state.viewport.depthRange);
+	}
+	if(state.stencil)
+	{
+		glCtx.stencilFunc(state.stencil.func, state.stencil.ref, state.stencil.valueMask);
+		glCtx.stencilMask(state.stencil.writeMask);
+		glCtx.stencilOp(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
+		glCtx.clearStencil(state.stencil.clearValue);
 	}
 	// GL_COLOR_BUFFER_BIT owns the alpha comparison function/reference. The
 	// alpha-test enable itself is restored above through GL_ENABLE_BIT.
@@ -404,8 +420,11 @@ var presentationStats = {
 	swapCount: 0,
 	samples: [],
 	lastFramebufferStatus: null,
-	lastViewport: null
+	lastViewport: null,
+	recentFps: 0,
+	recentFrameMs: 0
 };
+var recentSwapTimes = [];
 if(typeof window !== "undefined")
 	window.__lwjglPresentationStats = presentationStats;
 // Set to a non-zero value to stop after a certain number of frames
@@ -451,7 +470,7 @@ function ensureFramebufferSize()
 	glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
 	glCtx.bindTexture(glCtx.TEXTURE_2D, null);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
-	glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH_COMPONENT16, fbWidth, fbHeight);
+	glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH24_STENCIL8, fbWidth, fbHeight);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, null);
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
@@ -763,96 +782,364 @@ glCtx.framebufferTexture2D(glCtx.FRAMEBUFFER, glCtx.COLOR_ATTACHMENT0, glCtx.TEX
 // Add a depth render buffer
 depthRb = glCtx.createRenderbuffer();
 glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
-glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH_COMPONENT16, getCanvasWidth(), getCanvasHeight());
-glCtx.framebufferRenderbuffer(glCtx.FRAMEBUFFER, glCtx.DEPTH_ATTACHMENT, glCtx.RENDERBUFFER, depthRb);
+glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH24_STENCIL8, getCanvasWidth(), getCanvasHeight());
+glCtx.framebufferRenderbuffer(glCtx.FRAMEBUFFER, glCtx.DEPTH_STENCIL_ATTACHMENT, glCtx.RENDERBUFFER, depthRb);
 ensureFramebufferSize();
-// Synthetize a focus event, it's needed for LWJGL logic
-var eventQueue = [{type:"focus"}];
+// Synthesize a focus event; LWJGL's Linux backend expects X11 focus state.
+var eventQueue = [{type:"focus", time: performance.now()}];
+var inputStats = {
+	domEvents: 0,
+	deliveredEvents: 0,
+	droppedEvents: 0,
+	coalescedMoves: 0,
+	queueHighWater: eventQueue.length,
+	byType: {}
+};
+if(typeof window !== "undefined") window.__lwjglInputStats = inputStats;
 
-function convertMousePos(x, y) {
-	const fbWidthNow = getCanvasWidth();
-	const fbHeightNow = getCanvasHeight();
-	const offsetX = glCanvas.width - fbWidthNow;
-	const offsetY = glCanvas.height - fbHeightNow;
-	const clientWidth = Math.max(1, glCanvas.clientWidth || fbWidthNow);
-	const clientHeight = Math.max(1, glCanvas.clientHeight || fbHeightNow);
-	const xRatio = glCanvas.width / clientWidth;
-	const yRatio = glCanvas.height / clientHeight;
+// LWJGL_DIRECT_INPUT_BRIDGE_V1
+var keyboardInputState = {
+	down: new Uint8Array(256),
+	queue: [],
+	current: null,
+	repeatEvents: false
+};
+var mouseInputState = {
+	x: 0,
+	y: 0,
+	dx: 0,
+	dy: 0,
+	wheel: 0,
+	buttons: new Uint8Array(8),
+	queue: [],
+	current: null,
+	inside: true,
+	grabbed: false,
+	lastX: null,
+	lastY: null
+};
+inputStats.directKeyboardDelivered = 0;
+inputStats.directMouseDelivered = 0;
+inputStats.keyboardStateQueries = 0;
+inputStats.keyboardPressedQueries = 0;
+inputStats.mouseButtonQueries = 0;
+inputStats.mousePressedQueries = 0;
+inputStats.mousePositionQueries = 0;
+inputStats.keyboardQueueHighWater = 0;
+inputStats.mouseQueueHighWater = 0;
 
-	return [x * xRatio - offsetX, y * yRatio - offsetY];
+function inputEventNanos()
+{
+	return Math.floor(performance.now() * 1000000);
+}
+function enqueueKeyboardDirect(event)
+{
+	if(event.repeat && !keyboardInputState.repeatEvents) return;
+	if(keyboardInputState.queue.length >= 256)
+	{
+		keyboardInputState.queue.shift();
+		inputStats.droppedEvents++;
+	}
+	keyboardInputState.queue.push(event);
+	inputStats.keyboardQueueHighWater = Math.max(inputStats.keyboardQueueHighWater, keyboardInputState.queue.length);
+}
+function enqueueMouseDirect(event, coalesceMove)
+{
+	var queue = mouseInputState.queue;
+	if(coalesceMove && queue.length && queue[queue.length - 1].button < 0 && queue[queue.length - 1].wheel === 0)
+	{
+		queue[queue.length - 1] = event;
+		inputStats.coalescedMoves++;
+		return;
+	}
+	if(queue.length >= 256)
+	{
+		var staleMove = queue.findIndex(e => e.button < 0 && e.wheel === 0);
+		if(staleMove >= 0) queue.splice(staleMove, 1);
+		else queue.shift();
+		inputStats.droppedEvents++;
+	}
+	queue.push(event);
+	inputStats.mouseQueueHighWater = Math.max(inputStats.mouseQueueHighWater, queue.length);
 }
 
-/** Convert from MouseEvent.button to X11 mouse button */
+// A canvas is not keyboard-focusable by default. Desktop LWJGL always owns a
+// focused native window, so make that contract explicit in the browser.
+glCanvas.tabIndex = 0;
+glCanvas.style.outline = "none";
+function focusGameCanvas()
+{
+	try { glCanvas.focus({preventScroll: true}); }
+	catch(_) { try { glCanvas.focus(); } catch(__) {} }
+}
+
+function enqueueInputEvent(event, coalesceMove)
+{
+	inputStats.domEvents++;
+	inputStats.byType[event.type] = (inputStats.byType[event.type] || 0) + 1;
+	if(coalesceMove && eventQueue.length && eventQueue[eventQueue.length - 1].type === event.type)
+	{
+		eventQueue[eventQueue.length - 1] = event;
+		inputStats.coalescedMoves++;
+		return;
+	}
+	// Do not let pointer motion outrun the emulated X11 consumer and add seconds
+	// of input latency. Prefer discarding stale motion over button/key events.
+	if(eventQueue.length >= 512)
+	{
+		var staleMove = eventQueue.findIndex(e => e.type === "mousemove");
+		if(staleMove >= 0) eventQueue.splice(staleMove, 1);
+		else eventQueue.shift();
+		inputStats.droppedEvents++;
+	}
+	eventQueue.push(event);
+	inputStats.queueHighWater = Math.max(inputStats.queueHighWater, eventQueue.length);
+}
+
+function convertMousePos(clientX, clientY) {
+	const fbWidthNow = getCanvasWidth();
+	const fbHeightNow = getCanvasHeight();
+	const rect = glCanvas.getBoundingClientRect();
+	const clientWidth = Math.max(1, rect.width || glCanvas.clientWidth || fbWidthNow);
+	const clientHeight = Math.max(1, rect.height || glCanvas.clientHeight || fbHeightNow);
+	return [
+		(clientX - rect.left) * fbWidthNow / clientWidth,
+		(clientY - rect.top) * fbHeightNow / clientHeight
+	];
+}
+
+/** Convert from MouseEvent.button to X11 mouse button. */
 function convertMouseButton(button) {
+	if(button === 0) return 1;
+	if(button === 1) return 2;
+	if(button === 2) return 3;
 	return button + 1;
 }
 
-/**
- * If null, the game does not want the mouse pointer locked.
- * @type {{ x: number, y: number } | null}
- */
+/** If non-null, the game wants relative/pointer-locked mouse input. */
 let lockedMousePos = null;
 
+function requestGamePointerLock()
+{
+	if(!lockedMousePos || document.pointerLockElement === glCanvas) return;
+	try {
+		const result = glCanvas.requestPointerLock();
+		if(result && typeof result.catch === "function") result.catch(() => {});
+	} catch(_) {}
+}
+
 glCanvas.addEventListener("mousemove", evt => {
-	let [x, y] = convertMousePos(evt.offsetX, evt.offsetY);
-
-	// If the pointer is locked, we can't use offsetX/offsetY
+	let [x, y] = convertMousePos(evt.clientX, evt.clientY);
 	if (lockedMousePos) {
-		x = lockedMousePos.x += evt.movementX;
-		y = lockedMousePos.y += evt.movementY;
-
-		if (!document.pointerLockElement) {
-			// Game still wants the pointer locked, but it's not
-			Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer();
-		}
+		const rect = glCanvas.getBoundingClientRect();
+		const xScale = getCanvasWidth() / Math.max(1, rect.width || glCanvas.clientWidth || getCanvasWidth());
+		const yScale = getCanvasHeight() / Math.max(1, rect.height || glCanvas.clientHeight || getCanvasHeight());
+		x = lockedMousePos.x = Math.max(0, Math.min(getCanvasWidth() - 1, lockedMousePos.x + evt.movementX * xScale));
+		y = lockedMousePos.y = Math.max(0, Math.min(getCanvasHeight() - 1, lockedMousePos.y + evt.movementY * yScale));
 	}
-
-	if (eventQueue[0]?.type == evt.type) {
-		// Update unhandled event
-		eventQueue[0].x = x;
-		eventQueue[0].y = y;
-	} else {
-		eventQueue.push({ type: evt.type, x, y });
-	}
+	var directX = Math.round(x);
+	var directY = Math.round(getCanvasHeight() - 1 - y);
+	var directDx = mouseInputState.lastX == null ? 0 : directX - mouseInputState.lastX;
+	var directDy = mouseInputState.lastY == null ? 0 : directY - mouseInputState.lastY;
+	mouseInputState.lastX = mouseInputState.x = directX;
+	mouseInputState.lastY = mouseInputState.y = directY;
+	mouseInputState.dx += directDx;
+	mouseInputState.dy += directDy;
+	enqueueMouseDirect({button:-1, state:false, dx:directDx, dy:directDy, x:directX, y:directY, wheel:0, nanos:inputEventNanos()}, true);
+	enqueueInputEvent({ type: "mousemove", x, y, time: performance.now() }, true);
 });
 function mouseHandler(evt) {
-	const [x, y] = convertMousePos(evt.offsetX, evt.offsetY);
-	eventQueue.push({ type: evt.type, x, y, button: convertMouseButton(evt.button) });
+	focusGameCanvas();
+	requestGamePointerLock();
+	const [x, y] = convertMousePos(evt.clientX, evt.clientY);
+	const directX = Math.round(x);
+	const directY = Math.round(getCanvasHeight() - 1 - y);
+	const directButton = evt.button === 0 ? 0 : (evt.button === 2 ? 1 : (evt.button === 1 ? 2 : evt.button));
+	const down = evt.type === "mousedown";
+	if(directButton >= 0 && directButton < mouseInputState.buttons.length) mouseInputState.buttons[directButton] = down ? 1 : 0;
+	mouseInputState.x = mouseInputState.lastX = directX;
+	mouseInputState.y = mouseInputState.lastY = directY;
+	enqueueMouseDirect({button:directButton, state:down, dx:0, dy:0, x:directX, y:directY, wheel:0, nanos:inputEventNanos()}, false);
+	enqueueInputEvent({ type: evt.type, x, y, button: convertMouseButton(evt.button), time: performance.now() }, false);
+	if(evt.type === "mousedown") evt.preventDefault();
 }
 glCanvas.addEventListener("mousedown", mouseHandler);
 glCanvas.addEventListener("mouseup", mouseHandler);
 glCanvas.addEventListener("contextmenu", evt => evt.preventDefault());
+glCanvas.addEventListener("wheel", evt => {
+	focusGameCanvas();
+	const [x, y] = convertMousePos(evt.clientX, evt.clientY);
+	const button = evt.deltaY < 0 ? 4 : 5;
+	const wheel = evt.deltaY < 0 ? 120 : -120;
+	const time = performance.now();
+	const directX = Math.round(x);
+	const directY = Math.round(getCanvasHeight() - 1 - y);
+	mouseInputState.wheel += wheel;
+	enqueueMouseDirect({button:-1, state:false, dx:0, dy:0, x:directX, y:directY, wheel, nanos:inputEventNanos()}, false);
+	enqueueInputEvent({type:"mousedown", x, y, button, time}, false);
+	enqueueInputEvent({type:"mouseup", x, y, button, time: time + 0.01}, false);
+	evt.preventDefault();
+}, {passive:false});
+glCanvas.addEventListener("focus", () => enqueueInputEvent({type:"focus", time:performance.now()}, false));
+glCanvas.addEventListener("blur", () => enqueueInputEvent({type:"blur", time:performance.now()}, false));
+glCanvas.addEventListener("mouseenter", () => { mouseInputState.inside = true; });
+glCanvas.addEventListener("mouseleave", () => { mouseInputState.inside = false; });
 
+const x11KeySyms = {
+	Escape: 0xff1b, Enter: 0xff0d, Tab: 0xff09, Backspace: 0xff08,
+	Insert: 0xff63, Delete: 0xffff, Home: 0xff50, End: 0xff57,
+	PageUp: 0xff55, PageDown: 0xff56,
+	ArrowLeft: 0xff51, ArrowUp: 0xff52, ArrowRight: 0xff53, ArrowDown: 0xff54,
+	Shift: 0xffe1, Control: 0xffe3, Alt: 0xffe9, Meta: 0xffe7,
+	CapsLock: 0xffe5, NumLock: 0xff7f, ScrollLock: 0xff14, Pause: 0xff13,
+	F1: 0xffbe, F2: 0xffbf, F3: 0xffc0, F4: 0xffc1, F5: 0xffc2, F6: 0xffc3,
+	F7: 0xffc4, F8: 0xffc5, F9: 0xffc6, F10: 0xffc7, F11: 0xffc8, F12: 0xffc9
+};
+const lwjglKeyByCode = {
+	Escape:1, Digit1:2, Digit2:3, Digit3:4, Digit4:5, Digit5:6, Digit6:7, Digit7:8, Digit8:9, Digit9:10, Digit0:11,
+	Minus:12, Equal:13, Backspace:14, Tab:15,
+	KeyQ:16, KeyW:17, KeyE:18, KeyR:19, KeyT:20, KeyY:21, KeyU:22, KeyI:23, KeyO:24, KeyP:25,
+	BracketLeft:26, BracketRight:27, Enter:28, ControlLeft:29,
+	KeyA:30, KeyS:31, KeyD:32, KeyF:33, KeyG:34, KeyH:35, KeyJ:36, KeyK:37, KeyL:38,
+	Semicolon:39, Quote:40, Backquote:41, ShiftLeft:42, Backslash:43,
+	KeyZ:44, KeyX:45, KeyC:46, KeyV:47, KeyB:48, KeyN:49, KeyM:50,
+	Comma:51, Period:52, Slash:53, ShiftRight:54, NumpadMultiply:55, AltLeft:56, Space:57, CapsLock:58,
+	F1:59, F2:60, F3:61, F4:62, F5:63, F6:64, F7:65, F8:66, F9:67, F10:68,
+	NumLock:69, ScrollLock:70, Numpad7:71, Numpad8:72, Numpad9:73, NumpadSubtract:74,
+	Numpad4:75, Numpad5:76, Numpad6:77, NumpadAdd:78, Numpad1:79, Numpad2:80, Numpad3:81,
+	Numpad0:82, NumpadDecimal:83, F11:87, F12:88, F13:100, F14:101, F15:102,
+	NumpadEnter:156, ControlRight:157, NumpadDivide:181, AltRight:184,
+	Home:199, ArrowUp:200, PageUp:201, ArrowLeft:203, ArrowRight:205,
+	End:207, ArrowDown:208, PageDown:209, Insert:210, Delete:211,
+	MetaLeft:219, MetaRight:220, ContextMenu:221, Pause:197
+};
+function lwjglKeyForEvent(e)
+{
+	return lwjglKeyByCode[e.code] || 0;
+}
+function keySymForEvent(e)
+{
+	if(x11KeySyms[e.key] !== undefined) return x11KeySyms[e.key];
+	if(e.code && /^Key[A-Z]$/.test(e.code)) return e.code.charCodeAt(3) + 32; // X11 lowercase letter keysym
+	if(e.code && /^Digit[0-9]$/.test(e.code)) return e.code.charCodeAt(5);
+	if(typeof e.key === "string" && e.key.length === 1) return e.key.codePointAt(0);
+	return e.keyCode || 0;
+}
+function modifierMaskForEvent(e)
+{
+	// X11 ShiftMask=1, ControlMask=4, Mod1Mask(Alt)=8, Mod4Mask(Meta)=64.
+	return (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 4 : 0) | (e.altKey ? 8 : 0) | (e.metaKey ? 64 : 0);
+}
 /** @param {KeyboardEvent} e */
 function keyHandler(e)
 {
-	// Convert to LinuxKeycodes.java keycodes
-	// https://github.com/LWJGL/lwjgl/blob/master/src/java/org/lwjgl/opengl/LinuxKeycodes.java
-	let keyCode = e.keyCode || e.key.charCodeAt(0); // most map to ASCII
-	switch (e.key) {
-		case "Escape": // note will have to press twice if pointer is locked
-			keyCode = 0xff1b;
-			break;
-		case "Shift":
-			keyCode = 0xffe1;
-			break;
-		case "Control":
-			keyCode = 0xffe3;
-			break;
-		case "Meta":
-			keyCode = 0xffe7;
-			break;
-		case "Alt":
-			keyCode = 0xffe9;
-			break;
-	}
-	console.log(e.key, keyCode);
-
-	eventQueue.push({ type: e.type, keyCode });
+	if(document.activeElement !== glCanvas && document.pointerLockElement !== glCanvas) return;
+	const keySym = keySymForEvent(e);
+	const lwjglKey = lwjglKeyForEvent(e);
+	const charCode = typeof e.key === "string" && e.key.length === 1 ? e.key.codePointAt(0) : 0;
+	const down = e.type === "keydown";
+	if(lwjglKey > 0 && lwjglKey < keyboardInputState.down.length) keyboardInputState.down[lwjglKey] = down ? 1 : 0;
+	enqueueKeyboardDirect({key:lwjglKey, state:down, charCode, nanos:inputEventNanos(), repeat:!!e.repeat});
+	enqueueInputEvent({
+		type: e.type,
+		keySym,
+		keyCode: keySym,
+		keyState: modifierMaskForEvent(e),
+		charCode,
+		time: performance.now(),
+		repeat: !!e.repeat
+	}, false);
 	e.preventDefault();
 }
-glCanvas.addEventListener("keydown", keyHandler);
-glCanvas.addEventListener("keyup", keyHandler);
+window.addEventListener("keydown", keyHandler, true);
+window.addEventListener("keyup", keyHandler, true);
+
+// Direct org.lwjgl.input.Keyboard bridge.
+function Java_org_lwjgl_input_Keyboard_nReset()
+{
+	keyboardInputState.down.fill(0);
+	keyboardInputState.queue.length = 0;
+	keyboardInputState.current = null;
+}
+function Java_org_lwjgl_input_Keyboard_nPoll() {}
+function Java_org_lwjgl_input_Keyboard_nIsKeyDown(lib, key)
+{
+	inputStats.keyboardStateQueries++;
+	var down = key >= 0 && key < keyboardInputState.down.length && keyboardInputState.down[key] !== 0;
+	if(down) inputStats.keyboardPressedQueries++;
+	return down;
+}
+function Java_org_lwjgl_input_Keyboard_nNext()
+{
+	keyboardInputState.current = keyboardInputState.queue.shift() || null;
+	if(keyboardInputState.current) inputStats.directKeyboardDelivered++;
+	return keyboardInputState.current != null;
+}
+function Java_org_lwjgl_input_Keyboard_nGetEventKey() { return keyboardInputState.current ? keyboardInputState.current.key : 0; }
+function Java_org_lwjgl_input_Keyboard_nGetEventKeyState() { return !!(keyboardInputState.current && keyboardInputState.current.state); }
+function Java_org_lwjgl_input_Keyboard_nGetEventCharacter() { return keyboardInputState.current ? keyboardInputState.current.charCode : 0; }
+function Java_org_lwjgl_input_Keyboard_nGetEventNanoseconds() { return keyboardInputState.current ? keyboardInputState.current.nanos : inputEventNanos(); }
+function Java_org_lwjgl_input_Keyboard_nIsRepeatEvent() { return !!(keyboardInputState.current && keyboardInputState.current.repeat); }
+function Java_org_lwjgl_input_Keyboard_nSetRepeatEvents(lib, enabled) { keyboardInputState.repeatEvents = !!enabled; }
+
+// Direct org.lwjgl.input.Mouse bridge.
+function Java_org_lwjgl_input_Mouse_nReset()
+{
+	mouseInputState.dx = mouseInputState.dy = mouseInputState.wheel = 0;
+	mouseInputState.buttons.fill(0);
+	mouseInputState.queue.length = 0;
+	mouseInputState.current = null;
+	mouseInputState.lastX = mouseInputState.lastY = null;
+}
+function Java_org_lwjgl_input_Mouse_nPoll() {}
+function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
+{
+	inputStats.mouseButtonQueries++;
+	var down = button >= 0 && button < mouseInputState.buttons.length && mouseInputState.buttons[button] !== 0;
+	if(down) inputStats.mousePressedQueries++;
+	return down;
+}
+function Java_org_lwjgl_input_Mouse_nNext()
+{
+	mouseInputState.current = mouseInputState.queue.shift() || null;
+	if(mouseInputState.current) inputStats.directMouseDelivered++;
+	return mouseInputState.current != null;
+}
+function Java_org_lwjgl_input_Mouse_nGetEventButton() { return mouseInputState.current ? mouseInputState.current.button : -1; }
+function Java_org_lwjgl_input_Mouse_nGetEventButtonState() { return !!(mouseInputState.current && mouseInputState.current.state); }
+function Java_org_lwjgl_input_Mouse_nGetEventDX() { return mouseInputState.current ? mouseInputState.current.dx : 0; }
+function Java_org_lwjgl_input_Mouse_nGetEventDY() { return mouseInputState.current ? mouseInputState.current.dy : 0; }
+function Java_org_lwjgl_input_Mouse_nGetEventX() { return mouseInputState.current ? mouseInputState.current.x : mouseInputState.x; }
+function Java_org_lwjgl_input_Mouse_nGetEventY() { return mouseInputState.current ? mouseInputState.current.y : mouseInputState.y; }
+function Java_org_lwjgl_input_Mouse_nGetEventDWheel() { return mouseInputState.current ? mouseInputState.current.wheel : 0; }
+function Java_org_lwjgl_input_Mouse_nGetEventNanoseconds() { return mouseInputState.current ? mouseInputState.current.nanos : inputEventNanos(); }
+function Java_org_lwjgl_input_Mouse_nGetX() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.x); }
+function Java_org_lwjgl_input_Mouse_nGetY() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.y); }
+function Java_org_lwjgl_input_Mouse_nGetDX() { var value=Math.round(mouseInputState.dx); mouseInputState.dx=0; return value; }
+function Java_org_lwjgl_input_Mouse_nGetDY() { var value=Math.round(mouseInputState.dy); mouseInputState.dy=0; return value; }
+function Java_org_lwjgl_input_Mouse_nGetDWheel() { var value=Math.round(mouseInputState.wheel); mouseInputState.wheel=0; return value; }
+function Java_org_lwjgl_input_Mouse_nSetGrabbed(lib, grabbed)
+{
+	mouseInputState.grabbed = !!grabbed;
+	if(grabbed)
+	{
+		lockedMousePos = {x:getCanvasWidth()/2, y:getCanvasHeight()/2};
+		requestGamePointerLock();
+	}
+	else
+	{
+		lockedMousePos = null;
+		try { if(document.pointerLockElement === glCanvas) document.exitPointerLock(); } catch(_) {}
+	}
+}
+function Java_org_lwjgl_input_Mouse_nSetCursorPosition(lib, x, y)
+{
+	mouseInputState.x = mouseInputState.lastX = Number(x) || 0;
+	mouseInputState.y = mouseInputState.lastY = Number(y) || 0;
+	if(lockedMousePos) lockedMousePos = {x:mouseInputState.x, y:getCanvasHeight()-1-mouseInputState.y};
+}
+function Java_org_lwjgl_input_Mouse_nIsInsideWindow() { return mouseInputState.inside; }
+
 function Java_org_lwjgl_DefaultSysImplementation_getPointerSize()
 {
 	return 4;
@@ -1122,6 +1409,15 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	ensureFramebufferSize();
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	presentationStats.swapCount++;
+	var swapNow = performance.now();
+	recentSwapTimes.push(swapNow);
+	if(recentSwapTimes.length > 121) recentSwapTimes.shift();
+	if(recentSwapTimes.length >= 2)
+	{
+		var recentDuration = recentSwapTimes[recentSwapTimes.length - 1] - recentSwapTimes[0];
+		presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimes.length - 1) * 1000 / recentDuration : 0;
+		presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;
+	}
 	if(presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
 	{
 		try
@@ -1769,18 +2065,33 @@ function Java_org_lwjgl_opengl_GL13_nglClientActiveTexture()
 		console.log("glClientActiveTexture");
 }
 
-function Java_org_lwjgl_opengl_GL11_nglLineWidth()
+// LWJGL_RASTER_STATE_COMPAT_V1
+function Java_org_lwjgl_opengl_GL11_nglScissor(lib, x, y, width, height, funcPtr)
 {
-	checkNoList(curList);
-	if(verboseLog)
-		console.log("glLineWidth");
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScissor);
+	glCtx.scissor(x, y, Math.max(0, width), Math.max(0, height));
+}
+function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilFunc);
+	glCtx.stencilFunc(func, ref, mask >>> 0);
+}
+function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilOp);
+	glCtx.stencilOp(sfail, dpfail, dppass);
 }
 
-function Java_org_lwjgl_opengl_GL11_nglPolygonOffset()
+function Java_org_lwjgl_opengl_GL11_nglLineWidth(lib, width, funcPtr)
 {
-	checkNoList(curList);
-	if(verboseLog)
-		console.log("glPolygonOffset");
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLineWidth);
+	try { glCtx.lineWidth(width); } catch(_) {}
+}
+
+function Java_org_lwjgl_opengl_GL11_nglPolygonOffset(lib, factor, units, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPolygonOffset);
+	glCtx.polygonOffset(factor, units);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
@@ -1805,26 +2116,43 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 	immediateModeData.texCoordPos = curPos + 2;
 }
 
-function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
+// LWJGL_IMMEDIATE_VERTEX_BATCH_V1
+function appendImmediateVertex(x, y, z, texS, texT)
 {
-	if(curList)
-		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
 	var curPos = immediateModeData.vertexPos;
-	immediateModeData.vertexBuf =
-		ensureImmediateArrayCapacity(immediateModeData.vertexBuf, curPos + 3);
+	immediateModeData.vertexBuf = ensureImmediateArrayCapacity(immediateModeData.vertexBuf, curPos + 3);
 	immediateModeData.vertexBuf[curPos] = x;
 	immediateModeData.vertexBuf[curPos + 1] = y;
 	immediateModeData.vertexBuf[curPos + 2] = z;
 	immediateModeData.vertexPos = curPos + 3;
-
+	var texPos = immediateModeData.texCoordPos;
+	immediateModeData.texCoordBuf = ensureImmediateArrayCapacity(immediateModeData.texCoordBuf, texPos + 2);
+	immediateModeData.texCoordBuf[texPos] = texS;
+	immediateModeData.texCoordBuf[texPos + 1] = texT;
+	immediateModeData.texCoordPos = texPos + 2;
 	var colorPos = immediateModeData.colorPos;
-	immediateModeData.colorBuf =
-		ensureImmediateArrayCapacity(immediateModeData.colorBuf, colorPos + 4);
+	immediateModeData.colorBuf = ensureImmediateArrayCapacity(immediateModeData.colorBuf, colorPos + 4);
 	immediateModeData.colorBuf[colorPos] = immediateModeData.currentColor[0];
 	immediateModeData.colorBuf[colorPos + 1] = immediateModeData.currentColor[1];
 	immediateModeData.colorBuf[colorPos + 2] = immediateModeData.currentColor[2];
 	immediateModeData.colorBuf[colorPos + 3] = immediateModeData.currentColor[3];
 	immediateModeData.colorPos = colorPos + 4;
+}
+function Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord(lib, x, y, z, texS, texT, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord);
+	appendImmediateVertex(x, y, z, texS, texT);
+}
+
+function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
+	var texPos = immediateModeData.texCoordPos;
+	var texS = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0;
+	var texT = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0;
+	appendImmediateVertex(x, y, z, texS, texT);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
@@ -1885,209 +2213,121 @@ async function Java_org_lwjgl_opengl_LinuxEvent_createEventBuffer(lib)
 
 async function Java_org_lwjgl_opengl_LinuxEvent_nNextEvent(lib, windowId, buffer)
 {
-	// Resolve the address and directly access the JNI memory
 	var bufferAddr = Number(await buffer.address());
 	var v = lib.getJNIDataView();
 	var e = eventQueue.shift();
+	if(!e) return;
+	inputStats.deliveredEvents++;
+	const writeI32 = (off, value) => v.setInt32(bufferAddr + off, Number(value || 0), true);
+	writeI32(16, Math.floor(e.time || performance.now()));
 	switch(e.type)
 	{
-		case "focus":
-			v.setInt32(0, /*FocusIn*/9, true);
-			break;
+		case "focus": writeI32(0, 9/*FocusIn*/); break;
+		case "blur": writeI32(0, 10/*FocusOut*/); break;
 		case "mousedown":
-			v.setInt32(0, /*ButtonPress*/4, true);
-			v.setInt32(4, e.x, true);
-			v.setInt32(8, e.y, true);
-			v.setInt32(12, e.button, true);
-			break;
+			writeI32(0, 4/*ButtonPress*/); writeI32(4, e.x); writeI32(8, e.y); writeI32(12, e.button); break;
 		case "mouseup":
-			v.setInt32(0, /*ButtonRelease*/5, true);
-			v.setInt32(4, e.x, true);
-			v.setInt32(8, e.y, true);
-			v.setInt32(12, e.button, true);
-			break;
+			writeI32(0, 5/*ButtonRelease*/); writeI32(4, e.x); writeI32(8, e.y); writeI32(12, e.button); break;
 		case "mousemove":
-			v.setInt32(0, /*MotionNotify*/6, true);
-			v.setInt32(4, e.x, true);
-			v.setInt32(8, e.y, true);
-			break;
+			writeI32(0, 6/*MotionNotify*/); writeI32(4, e.x); writeI32(8, e.y); break;
 		case "keydown":
-			v.setInt32(0, /*KeyPress*/2, true);
-			v.setInt32(4, e.keyCode, true);
-			break;
+			writeI32(0, 2/*KeyPress*/); writeI32(4, e.keySym); writeI32(8, e.keyCode); writeI32(12, e.keyState); writeI32(20, e.charCode); break;
 		case "keyup":
-			v.setInt32(0, /*KeyRelease*/3, true);
-			v.setInt32(4, e.keyCode, true);
-			break;
+			writeI32(0, 3/*KeyRelease*/); writeI32(4, e.keySym); writeI32(8, e.keyCode); writeI32(12, e.keyState); writeI32(20, e.charCode); break;
 		default:
 			warnOnce(unsupportedEventTypes, e.type, "Unsupported X11 event type=" + e.type);
 	}
 }
 
-function Java_org_lwjgl_opengl_LinuxEvent_nGetWindow()
+async function linuxEventBufferView(lib, buffer)
 {
-	// Only a single window is emulated
-	return 0;
+	const bufferAddr = Number(await buffer.address());
+	return {addr: bufferAddr, view: lib.getJNIDataView()};
 }
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetType(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(0, true);
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nFilterEvent()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonTime()
-{
-	// TODO: Event timestamps
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonRoot()
-{
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonXRoot(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(4, true);
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonYRoot(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(8, true);
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonX(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(4, true);
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonY(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(8, true);
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nGetFocusDetail()
-{
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonType(lib, buffer)
-{
-	// Same as type, apparently
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(0, true);
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonButton(lib, buffer)
-{
-	const v = lib.getJNIDataView();
-	return v.getInt32(12, true);
-}
+function Java_org_lwjgl_opengl_LinuxEvent_nGetWindow() { return 0; }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetType(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+0,true); }
+function Java_org_lwjgl_opengl_LinuxEvent_nFilterEvent() { return false; }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonTime(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+16,true); }
+function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonRoot() { return 0; }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonXRoot(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+4,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonYRoot(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+8,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonX(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+4,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonY(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+8,true); }
+function Java_org_lwjgl_opengl_LinuxEvent_nGetFocusDetail() { return 0; }
+function Java_org_lwjgl_opengl_LinuxEvent_nGetFocusMode() { return 0; }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonType(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+0,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonButton(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+12,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetButtonState(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+12,true); }
 
 function Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer()
 {
-	glCanvas.requestPointerLock();
-	lockedMousePos = { x: 0, y: 0 };
+	if(!lockedMousePos) lockedMousePos = { x: getCanvasWidth()/2, y: getCanvasHeight()/2 };
+	requestGamePointerLock();
 }
-
 function Java_org_lwjgl_opengl_LinuxDisplay_nUngrabPointer()
 {
-	document.exitPointerLock();
+	try { if(document.pointerLockElement === glCanvas) document.exitPointerLock(); } catch(_) {}
 	lockedMousePos = null;
 }
-
-function Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxDisplay_getRootWindow()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowIcon()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxMouse_nGetWindowWidth()
-{
-	return getCanvasWidth();
-}
-
-function Java_org_lwjgl_opengl_LinuxMouse_nSendWarpEvent()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxMouse_nWarpCursor()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nSetWindow()
-{
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nSendEvent()
-{
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyAddress(lib, buffer)
-{
-	// Should probably be a pointer, cheat and use directly the value
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(4, true);
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyTime()
-{
-	// TODO: Event timestamps
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyType(lib, buffer)
-{
-	// Same as type, apparently
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(0, true);
-}
-
-async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyKeyCode(lib, buffer)
-{
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	return v.getInt32(4, true);
-}
-
-function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyState()
-{
-}
-
+function Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor() {}
+function Java_org_lwjgl_opengl_LinuxDisplay_getRootWindow() { return 0; }
+function Java_org_lwjgl_opengl_LinuxDisplay_nSetWindowIcon() {}
+function Java_org_lwjgl_opengl_LinuxMouse_nGetWindowWidth() { return getCanvasWidth(); }
+function Java_org_lwjgl_opengl_LinuxMouse_nSendWarpEvent() {}
+function Java_org_lwjgl_opengl_LinuxMouse_nWarpCursor(lib, display, window, x, y) { lockedMousePos = {x:Number(x)||0, y:Number(y)||0}; }
+function Java_org_lwjgl_opengl_LinuxEvent_nSetWindow() {}
+function Java_org_lwjgl_opengl_LinuxEvent_nSendEvent() {}
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyAddress(lib, buffer) { return Number(await buffer.address()); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyTime(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+16,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyType(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+0,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyKeyCode(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+8,true); }
+async function Java_org_lwjgl_opengl_LinuxEvent_nGetKeyState(lib, buffer) { const b=await linuxEventBufferView(lib,buffer); return b.view.getInt32(b.addr+12,true); }
 function Java_org_lwjgl_opengl_LinuxKeyboard_lookupKeysym(lib, eventPtr, index)
 {
-	return Number(eventPtr);
+	const v = lib.getJNIDataView();
+	return v.getInt32(Number(eventPtr) + 4, true);
 }
-
 async function Java_org_lwjgl_opengl_LinuxKeyboard_lookupString(lib, eventPtr, buffer)
 {
-	// Only support single chars
-	var bufferAddr = Number(await buffer.address());
-	var v = lib.getJNIDataView();
-	v.setInt8(bufferAddr, Number(eventPtr));
+	const dstAddr = Number(await buffer.address());
+	const v = lib.getJNIDataView();
+	const charCode = v.getInt32(Number(eventPtr) + 20, true);
+	if(!charCode) return 0;
+	v.setInt8(dstAddr, charCode & 0xff);
 	return 1;
 }
 
 export default {
+	Java_org_lwjgl_input_Keyboard_nReset,
+	Java_org_lwjgl_input_Keyboard_nPoll,
+	Java_org_lwjgl_input_Keyboard_nIsKeyDown,
+	Java_org_lwjgl_input_Keyboard_nNext,
+	Java_org_lwjgl_input_Keyboard_nGetEventKey,
+	Java_org_lwjgl_input_Keyboard_nGetEventKeyState,
+	Java_org_lwjgl_input_Keyboard_nGetEventCharacter,
+	Java_org_lwjgl_input_Keyboard_nGetEventNanoseconds,
+	Java_org_lwjgl_input_Keyboard_nIsRepeatEvent,
+	Java_org_lwjgl_input_Keyboard_nSetRepeatEvents,
+	Java_org_lwjgl_input_Mouse_nReset,
+	Java_org_lwjgl_input_Mouse_nPoll,
+	Java_org_lwjgl_input_Mouse_nIsButtonDown,
+	Java_org_lwjgl_input_Mouse_nNext,
+	Java_org_lwjgl_input_Mouse_nGetEventButton,
+	Java_org_lwjgl_input_Mouse_nGetEventButtonState,
+	Java_org_lwjgl_input_Mouse_nGetEventDX,
+	Java_org_lwjgl_input_Mouse_nGetEventDY,
+	Java_org_lwjgl_input_Mouse_nGetEventX,
+	Java_org_lwjgl_input_Mouse_nGetEventY,
+	Java_org_lwjgl_input_Mouse_nGetEventDWheel,
+	Java_org_lwjgl_input_Mouse_nGetEventNanoseconds,
+	Java_org_lwjgl_input_Mouse_nGetX,
+	Java_org_lwjgl_input_Mouse_nGetY,
+	Java_org_lwjgl_input_Mouse_nGetDX,
+	Java_org_lwjgl_input_Mouse_nGetDY,
+	Java_org_lwjgl_input_Mouse_nGetDWheel,
+	Java_org_lwjgl_input_Mouse_nSetGrabbed,
+	Java_org_lwjgl_input_Mouse_nSetCursorPosition,
+	Java_org_lwjgl_input_Mouse_nIsInsideWindow,
 	Java_org_lwjgl_DefaultSysImplementation_getPointerSize,
 	Java_org_lwjgl_DefaultSysImplementation_getJNIVersion,
 	Java_org_lwjgl_DefaultSysImplementation_setDebug,
@@ -2193,6 +2433,10 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglNormalPointer,
 	Java_org_lwjgl_opengl_GL13_nglMultiTexCoord2f,
 	Java_org_lwjgl_opengl_GL13_nglClientActiveTexture,
+	Java_org_lwjgl_opengl_GL11_nglScissor,
+	Java_org_lwjgl_opengl_GL11_nglStencilFunc,
+	Java_org_lwjgl_opengl_GL11_nglStencilOp,
+	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
 	Java_org_lwjgl_opengl_GL11_nglPolygonOffset,
 	Java_org_lwjgl_opengl_GL11_nglBegin,
@@ -2217,8 +2461,10 @@ export default {
 	Java_org_lwjgl_opengl_LinuxEvent_nGetButtonX,
 	Java_org_lwjgl_opengl_LinuxEvent_nGetButtonY,
 	Java_org_lwjgl_opengl_LinuxEvent_nGetFocusDetail,
+	Java_org_lwjgl_opengl_LinuxEvent_nGetFocusMode,
 	Java_org_lwjgl_opengl_LinuxEvent_nGetButtonType,
 	Java_org_lwjgl_opengl_LinuxEvent_nGetButtonButton,
+	Java_org_lwjgl_opengl_LinuxEvent_nGetButtonState,
 	Java_org_lwjgl_opengl_LinuxDisplay_nGrabPointer,
 	Java_org_lwjgl_opengl_LinuxDisplay_nUngrabPointer,
 	Java_org_lwjgl_opengl_LinuxDisplay_nDefineCursor,

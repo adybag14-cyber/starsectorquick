@@ -28,6 +28,11 @@ public final class GL11 {
     public static final int GL_VIEWPORT = 2978;
 
     private static int nextTextureId = 1;
+    private static float currentTexCoordS = 0.0f;
+    private static float currentTexCoordT = 0.0f;
+    private static float savedListTexCoordS = 0.0f;
+    private static float savedListTexCoordT = 0.0f;
+    private static boolean compilingList = false;
     private static final Set<Integer> liveTextureIds = new HashSet<Integer>();
 
     private GL11() {}
@@ -214,7 +219,14 @@ public final class GL11 {
     public static void glEnd() { nglEnd(0L); }
     static native void nglEnd(long p0);
 
-    public static void glEndList() { nglEndList(0L); }
+    public static void glEndList() {
+        nglEndList(0L);
+        if (compilingList) {
+            currentTexCoordS = savedListTexCoordS;
+            currentTexCoordT = savedListTexCoordT;
+            compilingList = false;
+        }
+    }
     static native void nglEndList(long p0);
 
     public static void glFinish() { nglFlush(0L); }
@@ -320,7 +332,12 @@ public final class GL11 {
     }
     static native void nglMatrixMode(int p0, long p1);
 
-    public static void glNewList(int p0, int p1) { nglNewList(p0, p1, 0L); }
+    public static void glNewList(int p0, int p1) {
+        savedListTexCoordS = currentTexCoordS;
+        savedListTexCoordT = currentTexCoordT;
+        compilingList = true;
+        nglNewList(p0, p1, 0L);
+    }
     static native void nglNewList(int p0, int p1, long p2);
 
     public static void glNormal3f(float p0, float p1, float p2) { nglNormal3f(p0, p1, p2, 0L); }
@@ -383,15 +400,24 @@ public final class GL11 {
     public static void glScalef(float p0, float p1, float p2) { nglScalef(p0, p1, p2, 0L); }
     static native void nglScalef(float p0, float p1, float p2, long p3);
 
-    public static void glScissor(int p0, int p1, int p2, int p3) {}
+    public static void glScissor(int p0, int p1, int p2, int p3) { nglScissor(p0, p1, p2, p3, 0L); }
+    static native void nglScissor(int p0, int p1, int p2, int p3, long p4);
 
     public static void glShadeModel(int p0) { nglShadeModel(p0, 0L); }
     static native void nglShadeModel(int p0, long p1);
 
-    public static void glStencilFunc(int p0, int p1, int p2) {}
-    public static void glStencilOp(int p0, int p1, int p2) {}
+    public static void glStencilFunc(int p0, int p1, int p2) { nglStencilFunc(p0, p1, p2, 0L); }
+    static native void nglStencilFunc(int p0, int p1, int p2, long p3);
+    public static void glStencilOp(int p0, int p1, int p2) { nglStencilOp(p0, p1, p2, 0L); }
+    static native void nglStencilOp(int p0, int p1, int p2, long p3);
 
-    public static void glTexCoord2f(float p0, float p1) { nglTexCoord2f(p0, p1, 0L); }
+    // Texture coordinates are current fixed-function state. Keep them on the
+    // Java side and send them together with each vertex, cutting the hottest
+    // CheerpJ JNI path from two native crossings per vertex to one.
+    public static void glTexCoord2f(float p0, float p1) {
+        currentTexCoordS = p0;
+        currentTexCoordT = p1;
+    }
     static native void nglTexCoord2f(float p0, float p1, long p2);
 
     public static void glTexCoordPointer(int p0, int p1, FloatBuffer p2) { nglTexCoordPointer(p0, 5126 /* GL_FLOAT */, p1, addr(p2), 0L); }
@@ -429,13 +455,18 @@ public final class GL11 {
     public static void glTranslatef(float p0, float p1, float p2) { nglTranslatef(p0, p1, p2, 0L); }
     static native void nglTranslatef(float p0, float p1, float p2, long p3);
 
-    public static void glVertex2f(float p0, float p1) { glVertex3f(p0, p1, 0.0f); }
+    public static void glVertex2f(float p0, float p1) {
+        nglVertex3fTexCoord(p0, p1, 0.0f, currentTexCoordS, currentTexCoordT, 0L);
+    }
     static native void nglVertex2f(float p0, float p1, long p2);
 
     public static void glVertex3d(double p0, double p1, double p2) { glVertex3f((float) p0, (float) p1, (float) p2); }
 
-    public static void glVertex3f(float p0, float p1, float p2) { nglVertex3f(p0, p1, p2, 0L); }
+    public static void glVertex3f(float p0, float p1, float p2) {
+        nglVertex3fTexCoord(p0, p1, p2, currentTexCoordS, currentTexCoordT, 0L);
+    }
     static native void nglVertex3f(float p0, float p1, float p2, long p3);
+    static native void nglVertex3fTexCoord(float p0, float p1, float p2, float p3, float p4, long p5);
 
     public static void glVertexPointer(int p0, int p1, FloatBuffer p2) { nglVertexPointer(p0, 5126 /* GL_FLOAT */, p1, addr(p2), 0L); }
     public static void glVertexPointer(int p0, int p1, IntBuffer p2) { nglVertexPointer(p0, 5124 /* GL_INT */, p1, addr(p2), 0L); }
