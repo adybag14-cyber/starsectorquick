@@ -79,7 +79,7 @@ jobs:
           bash ci/run-campaign-experiment.sh \
             'campaign-direct-main-thread-java17' \
             'sync' \
-            'false' \
+            'true' \
             'campaign' \
             "$EXPERIMENT_CONFIG"
           status=$?
