@@ -203,8 +203,7 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-title-create-guard.jar jars/starfarer.api.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
-  javac --release 17 -cp .ci-build/asm/asm.jar -d .ci-build/transform \
-    ci/PatchBaseGameState.java ci/BrowserFramePacer.java
+  javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
   java -cp .ci-build/asm/asm.jar:.ci-build/transform \
     PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer-no-sleep.jar
   mv .ci-build/starfarer-no-sleep.jar jars/starfarer_obf.jar
