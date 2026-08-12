@@ -162,6 +162,11 @@ if ! verify_asm_jar; then
   [[ "$asm_downloaded" == "true" ]] || { echo 'Unable to download verified ASM 9.7.1.' >&2; exit 1; }
 fi
 verify_asm_jar || { echo 'ASM 9.7.1 SHA-256 verification failed.' >&2; exit 1; }
+rm -rf .ci-build/script-plugin-helper
+mkdir -p .ci-build/script-plugin-helper
+javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
+  -d .ci-build/script-plugin-helper ci/BrowserScriptPluginResolver.java
+
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
   ci/PatchCoreLifecycleBrowserWorld.java \
@@ -171,7 +176,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
-  ci/PatchTitleScreenCampaignCreateGuard.java
+  ci/PatchTitleScreenCampaignCreateGuard.java \
+  ci/PatchScriptStorePluginFallback.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -193,6 +199,11 @@ mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
+  PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
+mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -c com.fs.starfarer.loading.scripts.ScriptStore \
+  | grep -q 'BrowserScriptPluginResolver.resolve'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
@@ -213,6 +224,12 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTran
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
 mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
+
+mkdir -p .ci-build/verify-script-plugin
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/starfarer_obf.jar:$CP" \
+  -d .ci-build/verify-script-plugin ci/VerifyScriptPluginFallback.java
+java -Xverify:all -cp ".ci-build/verify-script-plugin:jars/starfarer_obf.jar:$CP" \
+  VerifyScriptPluginFallback
 
 # Every transformed JAR must advertise its post-transform size to the HTTP mount.
 # This avoids stale directory metadata causing CheerpJ range/read mismatches.
