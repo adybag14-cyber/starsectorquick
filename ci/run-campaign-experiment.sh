@@ -60,6 +60,7 @@ grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
+python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
 
 # Rebuild the browser-facing LWJGL bridge classes. GL11 owns the fixed-function
@@ -135,10 +136,32 @@ p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 PY
 
 mkdir -p .ci-build/asm .ci-build/transform
-if [[ ! -s .ci-build/asm/asm.jar ]]; then
-  curl -fsSL -o .ci-build/asm/asm.jar \
-    https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar
+ASM_JAR=.ci-build/asm/asm.jar
+ASM_SHA256=8cadd43ac5eb6d09de05faecca38b917a040bb9139c7edeb4cc81c740b713281
+verify_asm_jar() {
+  [[ -s "$ASM_JAR" ]] && printf '%s  %s\n' "$ASM_SHA256" "$ASM_JAR" | sha256sum -c --status
+}
+if ! verify_asm_jar; then
+  rm -f "$ASM_JAR" "$ASM_JAR.tmp"
+  asm_downloaded=false
+  for asm_url in \
+    'https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar' \
+    'https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar'; do
+    echo "Downloading ASM 9.7.1 from $asm_url"
+    if curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 300 \
+         --connect-timeout 20 --max-time 180 -o "$ASM_JAR.tmp" "$asm_url"; then
+      if printf '%s  %s\n' "$ASM_SHA256" "$ASM_JAR.tmp" | sha256sum -c --status; then
+        mv "$ASM_JAR.tmp" "$ASM_JAR"
+        asm_downloaded=true
+        break
+      fi
+      echo 'Downloaded ASM JAR failed SHA-256 verification; trying fallback.' >&2
+    fi
+    rm -f "$ASM_JAR.tmp"
+  done
+  [[ "$asm_downloaded" == "true" ]] || { echo 'Unable to download verified ASM 9.7.1.' >&2; exit 1; }
 fi
+verify_asm_jar || { echo 'ASM 9.7.1 SHA-256 verification failed.' >&2; exit 1; }
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
   ci/PatchCoreLifecycleBrowserWorld.java \
