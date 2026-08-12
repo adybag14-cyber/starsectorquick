@@ -47,7 +47,6 @@ def main() -> int:
     require(text, "LWJGL_INTEGER_PIXEL_STORE_COMPAT_V1", "module")
     require(text, "LWJGL_GENERATE_MIPMAP_COMPAT_V1", "module")
     require(text, "LWJGL_IMMEDIATE_VERTEX_BATCH_V1", "module")
-    require(text, "LWJGL_IMMEDIATE_BUFFER_BATCH_V2", "module")
     require(text, "LWJGL_RASTER_STATE_COMPAT_V1", "module")
     require(text, "LWJGL_POINT_SIZE_COMPAT_V1", "module")
     require(text, "preserveDrawingBuffer: false", "production WebGL context")
@@ -69,7 +68,6 @@ def main() -> int:
     tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexImage2D")
     tex_sub_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexSubImage2D")
     vertex_batch = function_block(text, "Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord")
-    immediate_batch = function_block(text, "Java_org_lwjgl_opengl_GL11_nglDrawImmediate")
     scissor = function_block(text, "Java_org_lwjgl_opengl_GL11_nglScissor")
     stencil_func = function_block(text, "Java_org_lwjgl_opengl_GL11_nglStencilFunc")
     stencil_op = function_block(text, "Java_org_lwjgl_opengl_GL11_nglStencilOp")
@@ -91,8 +89,6 @@ def main() -> int:
     require(tex_image, "glCtx.generateMipmap(target);", "level-0 texture upload mipmaps")
     require(tex_sub_image, "glCtx.generateMipmap(target);", "level-0 texture sub-upload mipmaps")
     require(vertex_batch, "appendImmediateVertex", "combined immediate-mode vertex path")
-    require(immediate_batch, "new Float32Array", "buffered immediate-mode draw")
-    require(immediate_batch, "drawArraysImpl(mode, 0, count)", "buffered immediate-mode draw")
     require(scissor, "glCtx.scissor", "scissor state")
     require(stencil_func, "glCtx.stencilFunc", "stencil comparison state")
     require(stencil_op, "glCtx.stencilOp", "stencil operations")
@@ -126,7 +122,6 @@ def main() -> int:
         "Java_org_lwjgl_opengl_GL11_nglPopAttrib,",
         "Java_org_lwjgl_opengl_GL11_nglPixelStorei,",
         "Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,",
-        "Java_org_lwjgl_opengl_GL11_nglDrawImmediate,",
         "Java_org_lwjgl_opengl_GL11_nglScissor,",
         "Java_org_lwjgl_opengl_GL11_nglStencilFunc,",
         "Java_org_lwjgl_opengl_GL11_nglStencilOp,",

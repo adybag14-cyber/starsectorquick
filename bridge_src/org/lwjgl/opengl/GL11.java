@@ -32,21 +32,7 @@ public final class GL11 {
     private static float currentTexCoordT = 0.0f;
     private static float savedListTexCoordS = 0.0f;
     private static float savedListTexCoordT = 0.0f;
-    private static float savedListColorR = 1.0f;
-    private static float savedListColorG = 1.0f;
-    private static float savedListColorB = 1.0f;
-    private static float savedListColorA = 1.0f;
-    private static float currentColorR = 1.0f;
-    private static float currentColorG = 1.0f;
-    private static float currentColorB = 1.0f;
-    private static float currentColorA = 1.0f;
     private static boolean compilingList = false;
-    private static boolean immediateActive = false;
-    private static int immediateMode = 0;
-    private static int immediateVertexCount = 0;
-    private static FloatBuffer immediateVertices = newFloatBuffer(4096 * 3);
-    private static FloatBuffer immediateColors = newFloatBuffer(4096 * 4);
-    private static FloatBuffer immediateTexCoords = newFloatBuffer(4096 * 2);
     private static final Set<Integer> liveTextureIds = new HashSet<Integer>();
 
     private GL11() {}
@@ -71,42 +57,6 @@ public final class GL11 {
 
     private static IntBuffer newIntBuffer(int count) {
         return ByteBuffer.allocateDirect(Math.max(1, count) * 4).order(ByteOrder.nativeOrder()).asIntBuffer();
-    }
-
-    private static FloatBuffer newFloatBuffer(int count) {
-        return ByteBuffer.allocateDirect(Math.max(1, count) * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-    }
-
-    private static FloatBuffer growFloatBuffer(FloatBuffer old, int needed) {
-        if (old.capacity() >= needed) return old;
-        int next = Math.max(1, old.capacity());
-        while (next < needed) next <<= 1;
-        FloatBuffer replacement = newFloatBuffer(next);
-        for (int i = 0; i < old.capacity(); i++) replacement.put(i, old.get(i));
-        return replacement;
-    }
-
-    private static void ensureImmediateCapacity(int vertices) {
-        immediateVertices = growFloatBuffer(immediateVertices, vertices * 3);
-        immediateColors = growFloatBuffer(immediateColors, vertices * 4);
-        immediateTexCoords = growFloatBuffer(immediateTexCoords, vertices * 2);
-    }
-
-    private static void appendImmediateVertex(float x, float y, float z) {
-        int vertexIndex = immediateVertexCount++;
-        ensureImmediateCapacity(immediateVertexCount);
-        int vp = vertexIndex * 3;
-        immediateVertices.put(vp, x);
-        immediateVertices.put(vp + 1, y);
-        immediateVertices.put(vp + 2, z);
-        int cp = vertexIndex * 4;
-        immediateColors.put(cp, currentColorR);
-        immediateColors.put(cp + 1, currentColorG);
-        immediateColors.put(cp + 2, currentColorB);
-        immediateColors.put(cp + 3, currentColorA);
-        int tp = vertexIndex * 2;
-        immediateTexCoords.put(tp, currentTexCoordS);
-        immediateTexCoords.put(tp + 1, currentTexCoordT);
     }
 
     private static boolean isSupportedTexParameterName(int pname) {
@@ -167,15 +117,7 @@ public final class GL11 {
 
     public static void glArrayElement(int p0) {}
 
-    public static void glBegin(int p0) {
-        if (compilingList) {
-            nglBegin(p0, 0L);
-            return;
-        }
-        immediateMode = p0;
-        immediateVertexCount = 0;
-        immediateActive = true;
-    }
+    public static void glBegin(int p0) { nglBegin(p0, 0L); }
     static native void nglBegin(int p0, long p1);
 
     public static void glBindTexture(int p0, int p1) {
@@ -200,24 +142,12 @@ public final class GL11 {
 
     public static void glColor3d(double p0, double p1, double p2) { glColor3f((float) p0, (float) p1, (float) p2); }
 
-    public static void glColor3f(float p0, float p1, float p2) {
-        currentColorR = p0;
-        currentColorG = p1;
-        currentColorB = p2;
-        currentColorA = 1.0f;
-        nglColor3f(p0, p1, p2, 0L);
-    }
+    public static void glColor3f(float p0, float p1, float p2) { nglColor3f(p0, p1, p2, 0L); }
     static native void nglColor3f(float p0, float p1, float p2, long p3);
 
     public static void glColor3ub(byte p0, byte p1, byte p2) { glColor4ub(p0, p1, p2, (byte) 255); }
 
-    public static void glColor4f(float p0, float p1, float p2, float p3) {
-        currentColorR = p0;
-        currentColorG = p1;
-        currentColorB = p2;
-        currentColorA = p3;
-        nglColor4f(p0, p1, p2, p3, 0L);
-    }
+    public static void glColor4f(float p0, float p1, float p2, float p3) { nglColor4f(p0, p1, p2, p3, 0L); }
     static native void nglColor4f(float p0, float p1, float p2, float p3, long p4);
 
     public static void glColor4ub(byte p0, byte p1, byte p2, byte p3) {
@@ -286,34 +216,14 @@ public final class GL11 {
     public static void glEnableClientState(int p0) { nglEnableClientState(p0, 0L); }
     static native void nglEnableClientState(int p0, long p1);
 
-    public static void glEnd() {
-        if (compilingList) {
-            nglEnd(0L);
-            return;
-        }
-        if (!immediateActive) return;
-        immediateActive = false;
-        if (immediateVertexCount <= 0) return;
-        nglDrawImmediate(
-                immediateMode,
-                immediateVertexCount,
-                addr(immediateVertices),
-                addr(immediateColors),
-                addr(immediateTexCoords),
-                0L);
-    }
+    public static void glEnd() { nglEnd(0L); }
     static native void nglEnd(long p0);
-    static native void nglDrawImmediate(int mode, int count, long vertices, long colors, long texCoords, long funcPtr);
 
     public static void glEndList() {
         nglEndList(0L);
         if (compilingList) {
             currentTexCoordS = savedListTexCoordS;
             currentTexCoordT = savedListTexCoordT;
-            currentColorR = savedListColorR;
-            currentColorG = savedListColorG;
-            currentColorB = savedListColorB;
-            currentColorA = savedListColorA;
             compilingList = false;
         }
     }
@@ -425,10 +335,6 @@ public final class GL11 {
     public static void glNewList(int p0, int p1) {
         savedListTexCoordS = currentTexCoordS;
         savedListTexCoordT = currentTexCoordT;
-        savedListColorR = currentColorR;
-        savedListColorG = currentColorG;
-        savedListColorB = currentColorB;
-        savedListColorA = currentColorA;
         compilingList = true;
         nglNewList(p0, p1, 0L);
     }
@@ -551,26 +457,14 @@ public final class GL11 {
     static native void nglTranslatef(float p0, float p1, float p2, long p3);
 
     public static void glVertex2f(float p0, float p1) {
-        if (compilingList) {
-            nglVertex3fTexCoord(p0, p1, 0.0f, currentTexCoordS, currentTexCoordT, 0L);
-        } else if (immediateActive) {
-            appendImmediateVertex(p0, p1, 0.0f);
-        } else {
-            nglVertex3fTexCoord(p0, p1, 0.0f, currentTexCoordS, currentTexCoordT, 0L);
-        }
+        nglVertex3fTexCoord(p0, p1, 0.0f, currentTexCoordS, currentTexCoordT, 0L);
     }
     static native void nglVertex2f(float p0, float p1, long p2);
 
     public static void glVertex3d(double p0, double p1, double p2) { glVertex3f((float) p0, (float) p1, (float) p2); }
 
     public static void glVertex3f(float p0, float p1, float p2) {
-        if (compilingList) {
-            nglVertex3fTexCoord(p0, p1, p2, currentTexCoordS, currentTexCoordT, 0L);
-        } else if (immediateActive) {
-            appendImmediateVertex(p0, p1, p2);
-        } else {
-            nglVertex3fTexCoord(p0, p1, p2, currentTexCoordS, currentTexCoordT, 0L);
-        }
+        nglVertex3fTexCoord(p0, p1, p2, currentTexCoordS, currentTexCoordT, 0L);
     }
     static native void nglVertex3f(float p0, float p1, float p2, long p3);
     static native void nglVertex3fTexCoord(float p0, float p1, float p2, float p3, float p4, long p5);

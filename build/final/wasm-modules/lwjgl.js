@@ -2164,22 +2164,6 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord(lib, x, y, z, texS, texT
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
-// LWJGL_IMMEDIATE_BUFFER_BATCH_V2
-function Java_org_lwjgl_opengl_GL11_nglDrawImmediate(lib, mode, count, vertexPtr, colorPtr, texCoordPtr, funcPtr)
-{
-	checkNoList(curList);
-	count = Number(count) | 0;
-	if(count <= 0) return;
-	var v = lib.getJNIDataView();
-	var vertices = new Float32Array(v.buffer, Number(vertexPtr), count * 3);
-	var colors = new Float32Array(v.buffer, Number(colorPtr), count * 4);
-	var texCoords = new Float32Array(v.buffer, Number(texCoordPtr), count * 2);
-	uploadDataImpl(vertices, vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4, count);
-	uploadDataImpl(colors, colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4, count);
-	uploadDataImpl(texCoords, texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4, count);
-	drawArraysImpl(mode, 0, count);
-}
-
 function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 {
 	if(curList)
@@ -2472,7 +2456,6 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglStencilFunc,
 	Java_org_lwjgl_opengl_GL11_nglStencilOp,
 	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
-	Java_org_lwjgl_opengl_GL11_nglDrawImmediate,
 	Java_org_lwjgl_opengl_GL11_nglPointSize,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
 	Java_org_lwjgl_opengl_GL11_nglPolygonOffset,
