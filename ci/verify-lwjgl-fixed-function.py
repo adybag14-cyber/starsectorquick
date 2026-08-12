@@ -48,6 +48,9 @@ def main() -> int:
     require(text, "LWJGL_GENERATE_MIPMAP_COMPAT_V1", "module")
     require(text, "LWJGL_IMMEDIATE_VERTEX_BATCH_V1", "module")
     require(text, "LWJGL_RASTER_STATE_COMPAT_V1", "module")
+    require(text, "LWJGL_POINT_SIZE_COMPAT_V1", "module")
+    require(text, "preserveDrawingBuffer: false", "production WebGL context")
+    require(text, 'powerPreference: "high-performance"', "production WebGL context")
     require(text, "DEPTH24_STENCIL8", "stencil-capable framebuffer")
     require(text, "DEPTH_STENCIL_ATTACHMENT", "stencil-capable framebuffer")
 
@@ -68,6 +71,7 @@ def main() -> int:
     scissor = function_block(text, "Java_org_lwjgl_opengl_GL11_nglScissor")
     stencil_func = function_block(text, "Java_org_lwjgl_opengl_GL11_nglStencilFunc")
     stencil_op = function_block(text, "Java_org_lwjgl_opengl_GL11_nglStencilOp")
+    point_size = function_block(text, "Java_org_lwjgl_opengl_GL11_nglPointSize")
     copy_tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D")
 
     require(enable, "setTexture2DEnabled(true);", "glEnable")
@@ -88,6 +92,7 @@ def main() -> int:
     require(scissor, "glCtx.scissor", "scissor state")
     require(stencil_func, "glCtx.stencilFunc", "stencil comparison state")
     require(stencil_op, "glCtx.stencilOp", "stencil operations")
+    require(point_size, "glCtx.uniform1f(pointSizeLocation", "point-size state")
     require(snapshot, "0x0400/*GL_STENCIL_BUFFER_BIT*/", "attribute snapshot stencil state")
     require(restore, "glCtx.stencilFunc", "attribute restoration stencil state")
     require(copy_tex_image, "glCtx.copyTexImage2D", "texture framebuffer copy")
@@ -120,6 +125,7 @@ def main() -> int:
         "Java_org_lwjgl_opengl_GL11_nglScissor,",
         "Java_org_lwjgl_opengl_GL11_nglStencilFunc,",
         "Java_org_lwjgl_opengl_GL11_nglStencilOp,",
+        "Java_org_lwjgl_opengl_GL11_nglPointSize,",
         "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D,",
     ):
         require(text, export, "module exports")

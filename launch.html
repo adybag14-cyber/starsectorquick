@@ -759,8 +759,10 @@
                     lastName: null,
                     lastAt: 0
                 };
+                const collectNativeStats = window.__LWJGL_COLLECT_NATIVE_STATS__ === true;
+                nativeStats.enabled = collectNativeStats;
                 window.__lwjglNativeStats = nativeStats;
-                const enableNativeTraceLog = !!window.__LWJGL_NATIVE_TRACE_LOG__;
+                const enableNativeTraceLog = collectNativeStats && !!window.__LWJGL_NATIVE_TRACE_LOG__;
                 const nativeTraceLimit = Math.max(0, Number(window.__LWJGL_NATIVE_TRACE_LIMIT__ || 24));
                 const firstLogLimit = Math.max(0, Number(window.__LWJGL_FIRST_LOG_LIMIT__ || 256));
                 let firstLogCount = 0;
@@ -787,6 +789,12 @@
                                 console.warn(`[LWJGL SYS ALERT suppressed] ${safeTitle}: ${safeMessage}`);
                                 return;
                             };
+                            continue;
+                        }
+                        if (!collectNativeStats) {
+                            // Production fast path: no Date.now(), histograms, maps, or
+                            // per-call wrapper bookkeeping on the millions-of-calls JNI path.
+                            lwjglNatives[key] = value;
                             continue;
                         }
                         lwjglNatives[key] = (...args) => {

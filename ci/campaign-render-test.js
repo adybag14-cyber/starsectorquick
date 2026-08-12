@@ -359,6 +359,7 @@ function pixelStats(buffer) {
     inputResponsive,
     inputBefore,
     inputAfter,
+    nativeStatsEnabled,
     immediateBridgeEfficient,
     legacyTexCoordCalls,
     batchedVertexCalls,

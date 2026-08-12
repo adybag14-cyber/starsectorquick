@@ -3,7 +3,13 @@ const { default: glMatrix } = await import("./gl-matrix-loader.js");
 
 const glCanvas = window.lwjglCanvasElement;
 if (!(glCanvas instanceof HTMLCanvasElement)) throw new Error("window.lwjglCanvasElement is not set or is not a canvas");
-const glCtx = glCanvas.getContext("webgl2", {antialias: false, alpha: false, preserveDrawingBuffer: true});
+const glCtx = glCanvas.getContext("webgl2", {
+	antialias: false,
+	alpha: false,
+	preserveDrawingBuffer: false,
+	desynchronized: true,
+	powerPreference: "high-performance"
+});
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 
@@ -182,10 +188,12 @@ var vertexShaderSrc = `
 	attribute vec2 aTexCoord;
 	uniform mat4 modelView;
 	uniform mat4 projection;
+	uniform float uPointSize;
 	varying vec2 vTexCoord;
 	varying vec4 vColor;
 	void main() {
 		gl_Position = projection * modelView * aVertexPosition;
+		gl_PointSize = uPointSize;
 		vTexCoord = aTexCoord;
 		vColor = aColor;
 	}
@@ -238,6 +246,8 @@ var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
 var mvLocation = glCtx.getUniformLocation(program, "modelView");
 var projLocation = glCtx.getUniformLocation(program, "projection");
+var pointSizeLocation = glCtx.getUniformLocation(program, "uPointSize");
+var pointSizeState = 1.0;
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
 var samplerLocation2 = glCtx.getUniformLocation(program, "uSampler2");
 var texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask");
@@ -757,6 +767,7 @@ function drawArraysInList(mode, first, count, capturedVertexData, capturedColorD
 }
 // Fix the sampler to texture unit 0
 glCtx.uniform1i(samplerLocation, 0);
+glCtx.uniform1f(pointSizeLocation, pointSizeState);
 glCtx.uniform1f(texMaskLocation, 0);
 syncAlphaTestUniforms();
 var curList = null;
@@ -2082,6 +2093,14 @@ function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, fun
 	glCtx.stencilOp(sfail, dpfail, dppass);
 }
 
+// LWJGL_POINT_SIZE_COMPAT_V1
+function Java_org_lwjgl_opengl_GL11_nglPointSize(lib, size, funcPtr)
+{
+	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPointSize);
+	pointSizeState = Math.max(1, Number(size) || 1);
+	glCtx.uniform1f(pointSizeLocation, pointSizeState);
+}
+
 function Java_org_lwjgl_opengl_GL11_nglLineWidth(lib, width, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLineWidth);
@@ -2437,6 +2456,7 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglStencilFunc,
 	Java_org_lwjgl_opengl_GL11_nglStencilOp,
 	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
+	Java_org_lwjgl_opengl_GL11_nglPointSize,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
 	Java_org_lwjgl_opengl_GL11_nglPolygonOffset,
 	Java_org_lwjgl_opengl_GL11_nglBegin,
