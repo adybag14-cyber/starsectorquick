@@ -42,7 +42,13 @@ def main() -> int:
     require_native_call(text, "public static boolean glIsEnabled(int);", "nglIsEnabled")
     require_native_call(text, "public static void glPushAttrib(int);", "nglPushAttrib")
     require_native_call(text, "public static void glPopAttrib();", "nglPopAttrib")
-    print("Verified LWJGL client-array and fixed-function attribute-state bridge wiring.")
+    for token in (
+        "nglDrawImmediate:(IIJJJJ)V",
+        "appendImmediateVertex:(FFF)V",
+    ):
+        if token not in text:
+            raise RuntimeError(f"missing Java-side immediate batching token: {token}")
+    print("Verified LWJGL client arrays, attribute state, and Java-side buffered immediate rendering.")
     return 0
 
 
