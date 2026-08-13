@@ -123,6 +123,13 @@
             if (resourceLoaderStage) {
                 markBootPhase(`resource-loader-${resourceLoaderStage[1].toLowerCase()}`);
             }
+            const specStoreStage = text.match(/BrowserSpecStoreStage:\s*(\d+):(before|after):(.+)$/i);
+            if (specStoreStage) {
+                markBootPhase(
+                    `spec-store-${specStoreStage[1]}-${specStoreStage[2].toLowerCase()}`,
+                    specStoreStage[3]
+                );
+            }
 
             if (/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i.test(text)) {
                 markBootPhase('campaign-state');
