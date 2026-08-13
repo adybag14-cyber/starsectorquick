@@ -215,7 +215,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchScriptStorePluginFallback.java \
   ci/PatchResourceLoaderQuickStart.java \
   ci/PatchSpecStoreDiagnostics.java \
-  ci/PatchLoadingUtilsBulkSpecCache.java
+  ci/PatchLoadingUtilsBulkSpecCache.java \
+  ci/PatchStaticResourceDiagnostics.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -302,6 +303,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch .ci-build/starfarer-bulk-spec-cache-repeat.jar
+# Profiling-only wrapper: preserve load order and time each synchronous static
+# image/font load inside ResourceLoaderState.init().
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchStaticResourceDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-static-resource-diag.jar
+mv .ci-build/starfarer-static-resource-diag.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
+  | grep -q 'cheerpj\$profileImageLoad'
+javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
+  | grep -q 'cheerpj\$profileFontLoad'
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -376,3 +386,5 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
+grep -q 'BrowserStaticResourceLoad: image:' "$OUT/browser.log"
+grep -q 'BrowserStaticResourceLoad: font:' "$OUT/browser.log"
