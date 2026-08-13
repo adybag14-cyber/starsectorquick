@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260813-runtime-miss-v7';
+const ALIAS_WORKER_VERSION = '20260813-runtime-jarpack-v8';
 const PROJECT_PREFIX = '/starsectorquick/';
 const CONTENT_RUNTIME_PREFIX = `${PROJECT_PREFIX}starsector/starsector/`;
 const LEGACY_REWRITES = [
@@ -19,8 +19,11 @@ const DATA_PACK_BINARY_URL = `${PROJECT_PREFIX}starsector-data-pack-v1.bin?sw=${
 const GRAPHICS_PACK_INDEX_URL = `${PROJECT_PREFIX}starsector-graphics-pack-v1.json?sw=${ALIAS_WORKER_VERSION}`;
 const GRAPHICS_PACK_DIR = `${PROJECT_PREFIX}starsector-graphics-pack-v1/`;
 const GRAPHICS_RUNTIME_PREFIX = `${PROJECT_PREFIX}starsector/starsector/graphics/`;
+const JAR_PACK_INDEX_URL = `${PROJECT_PREFIX}starsector-jar-pack-v1.json?sw=${ALIAS_WORKER_VERSION}`;
+const JAR_PACK_BINARY_URL = `${PROJECT_PREFIX}starsector-jar-pack-v1.bin?sw=${ALIAS_WORKER_VERSION}`;
 const rangeBodyCache = new Map();
 let dataPackPromise = null;
+let jarPackPromise = null;
 let graphicsPackIndexPromise = null;
 const graphicsPackPromises = new Map();
 
@@ -87,6 +90,29 @@ const loadDataPack = () => {
     return { manifest, body };
   });
   return dataPackPromise;
+};
+
+const loadJarPack = () => {
+  if (jarPackPromise) return jarPackPromise;
+  jarPackPromise = Promise.all([
+    fetch(JAR_PACK_INDEX_URL, { cache: 'force-cache', credentials: 'same-origin' }),
+    fetch(JAR_PACK_BINARY_URL, { cache: 'force-cache', credentials: 'same-origin' })
+  ]).then(async ([indexResponse, binaryResponse]) => {
+    if (!indexResponse.ok) throw new Error(`jar-pack index HTTP ${indexResponse.status}`);
+    if (!binaryResponse.ok) throw new Error(`jar-pack binary HTTP ${binaryResponse.status}`);
+    const [manifest, body] = await Promise.all([indexResponse.json(), binaryResponse.arrayBuffer()]);
+    if (!manifest || manifest.version !== 1 || !manifest.jars || typeof manifest.jars !== 'object') {
+      throw new Error('invalid jar-pack manifest');
+    }
+    if (Number(manifest.bytes) !== body.byteLength) {
+      throw new Error(`jar-pack length mismatch manifest=${manifest.bytes} body=${body.byteLength}`);
+    }
+    return { manifest, body };
+  }).catch(error => {
+    jarPackPromise = null;
+    throw error;
+  });
+  return jarPackPromise;
 };
 
 const fetchResponseWithRetry = async (requestUrl, options = {}) => {
@@ -302,6 +328,87 @@ const respondFromDataPack = async (url, request) => {
   return new Response(body, { status: 200, statusText: 'OK', headers: packedDataHeaders(entry, length) });
 };
 
+const runtimeJarRelativePath = url => {
+  if (!url.pathname.startsWith(JAR_RANGE_PREFIX) || !JAR_FILE.test(url.pathname)) return null;
+  try {
+    const relative = decodeURIComponent(url.pathname.slice(JAR_RANGE_PREFIX.length));
+    if (!relative || relative.startsWith('/') || relative.split('/').includes('..')) return null;
+    return relative;
+  } catch {
+    return null;
+  }
+};
+
+const packedJarHeaders = (entry, length) => {
+  const headers = new Headers();
+  headers.set('accept-ranges', 'bytes');
+  headers.set('cache-control', 'public, max-age=600');
+  headers.set('content-length', String(length));
+  headers.set('content-type', entry.type || 'application/java-archive');
+  if (entry.sha256) headers.set('etag', `\"jarpack-${entry.sha256}\"`);
+  headers.set('x-starsectorquick-sw-version', ALIAS_WORKER_VERSION);
+  headers.set('x-starsectorquick-jar-pack', 'v1');
+  return headers;
+};
+
+const respondFromJarPack = async (url, request) => {
+  const relative = runtimeJarRelativePath(url);
+  if (!relative) return null;
+  let pack;
+  try {
+    pack = await loadJarPack();
+  } catch {
+    return null;
+  }
+  const entry = pack.manifest.jars[relative];
+  if (!entry) return null;
+  const offset = Number(entry.offset);
+  const length = Number(entry.length);
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length <= 0 || offset + length > pack.body.byteLength) {
+    return null;
+  }
+  if (request.method === 'HEAD') {
+    return new Response(null, { status: 200, statusText: 'OK', headers: packedJarHeaders(entry, length) });
+  }
+  const rangeHeader = request.headers.get('range');
+  if (rangeHeader) {
+    const range = parseByteRange(rangeHeader, length);
+    if (!range) {
+      return new Response(null, {
+        status: 416,
+        statusText: 'Range Not Satisfiable',
+        headers: {
+          'content-range': `bytes */${length}`,
+          'x-starsectorquick-sw-version': ALIAS_WORKER_VERSION,
+          'x-starsectorquick-jar-pack': 'v1'
+        }
+      });
+    }
+    const slice = pack.body.slice(offset + range.start, offset + range.end + 1);
+    const headers = packedJarHeaders(entry, slice.byteLength);
+    headers.set('content-range', `bytes ${range.start}-${range.end}/${length}`);
+    return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+  }
+  const body = pack.body.slice(offset, offset + length);
+  return new Response(body, { status: 200, statusText: 'OK', headers: packedJarHeaders(entry, length) });
+};
+
+const respondWithPackedJarOrFallback = async (url, request) => {
+  const packed = await respondFromJarPack(url, request);
+  if (packed) return packed;
+  if (shouldProxyJarRange(url, request)) return respondWithJarRange(url, request);
+  return fetch(url.toString(), {
+    method: request.method,
+    headers: request.headers,
+    credentials: request.credentials,
+    cache: request.cache,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    integrity: request.integrity
+  });
+};
+
 const fetchFullBody = async requestUrl => {
   const cacheKey = requestUrl.toString();
   const cached = rangeBodyCache.get(cacheKey);
@@ -505,8 +612,12 @@ const respondWithPackedGraphicsOrFallback = async (url, request) => {
 
 self.addEventListener('message', event => {
   if (!event.data) return;
-  if (event.data.type === 'warm-starsector-data-pack') {
-    event.waitUntil(Promise.all([loadDataPack().catch(() => null), loadGraphicsPackIndex().catch(() => null)]));
+  if (event.data.type === 'warm-starsector-data-pack' || event.data.type === 'warm-starsector-runtime-packs') {
+    event.waitUntil(Promise.all([
+      loadDataPack().catch(() => null),
+      loadJarPack().catch(() => null),
+      loadGraphicsPackIndex().catch(() => null)
+    ]));
   }
 });
 
@@ -516,8 +627,8 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (shouldProxyJarRange(url, event.request)) {
-    event.respondWith(respondWithJarRange(url, event.request));
+  if (runtimeJarRelativePath(url)) {
+    event.respondWith(respondWithPackedJarOrFallback(url, event.request));
     return;
   }
 

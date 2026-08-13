@@ -84,6 +84,11 @@ jobs:
           python3 ci/build-pages-data-pack.py --root .pages-worktree
           test -s .pages-worktree/starsector-data-pack-v1.bin
           test -s .pages-worktree/starsector-data-pack-v1.json
+          # Pack the exact individual JAR byte streams too. The service worker
+          # reconstructs their original URLs/ranges locally for CheerpJ.
+          python3 ci/build-pages-jar-pack.py --root .pages-worktree
+          test -s .pages-worktree/starsector-jar-pack-v1.bin
+          test -s .pages-worktree/starsector-jar-pack-v1.json
           python3 ci/build-pages-graphics-packs.py --root .pages-worktree
           test -s .pages-worktree/starsector-graphics-pack-v1.json
           test -d .pages-worktree/starsector-graphics-pack-v1
