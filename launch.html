@@ -1115,8 +1115,6 @@
                         : false;
                 const autoCampaignDirectNonBlockingWorker =
                     window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
-                const browserQuickResourceLoad =
-                    window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const autoCampaignSkipDirectUiPreflight =
                     window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ !== false;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
@@ -1131,6 +1129,9 @@
                     || autoCampaignMode.indexOf('menuonly') >= 0;
                 const autoCampaignUsesDirectPath =
                     !modeDisablesDirectPath && autoCampaignMode.indexOf('direct') >= 0;
+                const browserQuickResourceLoad =
+                    autoCampaign && autoCampaignUsesDirectPath
+                    && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -1229,10 +1230,12 @@
                     `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
                     `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
                     `-Dstarsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
-                    `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`
+                    `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
+                    `-Dstarsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
+                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`
                 ];
                 if (browserQuickResourceLoad) {
-                    log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload.', '#00ff88');
+                    log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
                 }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);

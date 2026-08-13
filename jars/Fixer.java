@@ -1996,6 +1996,10 @@ public class Fixer {
                     }
                 }
                 if (isCampaignState(stateId, currentState)) {
+                    try {
+                        System.setProperty("starsector.browserQuickTitleHandoff", "false");
+                    } catch (Throwable ignored) {
+                    }
                     if (normalizedMode.indexOf("new") >= 0) {
                         ensureAutoCampaignPlayerSupplies();
                     }

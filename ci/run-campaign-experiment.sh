@@ -113,6 +113,8 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
 jar cf jars/fixer_patch.jar -C .ci-build/fixer .
 javap -verbose -classpath jars/fixer_patch.jar Fixer | grep 'major version: 52'
+javap -classpath jars/fixer_patch.jar -c -p Fixer \
+  | grep -q 'starsector.browserQuickTitleHandoff'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Fields \
   | grep 'public class com.thoughtworks.xstream.core.util.Fields'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.SerializationMembers \
@@ -239,6 +241,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTran
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
 mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.BaseGameState \
+  | grep -q 'starsector.browserQuickTitleHandoff'
 
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderQuickStart jars/starfarer_obf.jar .ci-build/starfarer-resource-quick.jar
