@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "e1c7bd0f89d15b3e14930a15381f585c79b9b86c",
-    "workflowRunId": "31722172104",
-    "generatedAt": "2026-08-13T16:45:20.693810+00:00",
+    "sourceSha": "288c2c3d25193eded49b054d6b4e3cb8943ebcf0",
+    "workflowRunId": "31730439795",
+    "generatedAt": "2026-08-13T18:24:04.134970+00:00",
     "overlayFiles": 834,
     "dataPack": {
       "version": 1,
@@ -506,23 +506,23 @@
     },
     {
       "path": "jars/Fixer.java",
-      "bytes": 953825,
-      "sha256": "be17494daf0250bdc78a85b01e812a28cc67d178843ad74fca451b9dba5ea701"
+      "bytes": 953912,
+      "sha256": "8b717a9e8b2397790ed230bf04a1124383fb5e39055c48c95389f8c245a6a56d"
     },
     {
       "path": "jars/bridge.jar",
       "bytes": 89817,
-      "sha256": "78ad80b6f0b7a05606e2709704ddd237a313d347a12fc0f33bf8fdf03a0571a4"
+      "sha256": "97ed2d62734c2164bfda57afa9b5e090b788728bb0bcaf36c5f3cbb34689fd19"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 217452,
-      "sha256": "94ab0fc00e68e94f00cb4c1cd5b03345858ce575f0e6bbb469f72d314f4cf4ef"
+      "bytes": 217640,
+      "sha256": "441666195d22fddd5ee8a26cceb63bde7bdccccfe9af4f0994bcca41d3fe8105"
     },
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "44efb299422b5e20781ea46f772deeaa45eb0c1a0d0f73357bc44663ac8f4509"
+      "sha256": "40a43b7e7a9c49adf1712f85a015c5bbc297cfcdb0774a66f3a06a6cd348da95"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -531,13 +531,13 @@
     },
     {
       "path": "jars/starfarer.api.jar",
-      "bytes": 7239799,
-      "sha256": "073a74693c0042123e7941d435c16681b62e32c6eb1cc022ce2f690b66c6c884"
+      "bytes": 7239822,
+      "sha256": "738e9e27ac1a59f359fe92d4c763a9ab3515b3ea3e123aa87075feb1ef075e24"
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6019799,
-      "sha256": "d8eb930e8a8172c5d3b14284da70f282de911c7d0798a2c91b3b82c346370e2b"
+      "bytes": 6020021,
+      "sha256": "aa1fd277edbbe6601a47f8565f89165ea426d8a879f8a1af24e36aadda3f0f05"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -546,8 +546,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 93111,
-      "sha256": "7c234898d864074881cb7c59b2c83658c5026202e8eaf0d2931cf42e90048a96"
+      "bytes": 94456,
+      "sha256": "8a886d2646818223ef485e47929e9fc444cab89cfdb086536d69cf0ef14a3f78"
     },
     {
       "path": "starsector-data-pack-v1.bin",

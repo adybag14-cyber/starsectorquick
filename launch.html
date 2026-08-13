@@ -119,6 +119,10 @@
             if (/BrowserResourceLoader: deferred eager ship\/weapon\/projectile sprite preload/i.test(text)) {
                 markBootPhase('dynamic-sprite-preload-deferred');
             }
+            const resourceLoaderStage = text.match(/BrowserResourceLoaderStage:\s*([a-z0-9-]+)/i);
+            if (resourceLoaderStage) {
+                markBootPhase(`resource-loader-${resourceLoaderStage[1].toLowerCase()}`);
+            }
 
             if (/watcher state=Campaign State|reached Campaign State/i.test(text)) {
                 markBootPhase('campaign-state');
@@ -1097,6 +1101,15 @@
                     8000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_POST_INIT_WAIT_MS__ || 45000) || 45000
                 );
+                const autoCampaignDirectCreateSettleOverride =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000;
+                const parsedAutoCampaignDirectCreateSettleMs = Number(autoCampaignDirectCreateSettleOverride);
+                const autoCampaignDirectCreateSettleMs = Math.max(
+                    5000,
+                    Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)
+                        ? parsedAutoCampaignDirectCreateSettleMs
+                        : 15000
+                );
                 const autoCampaignDirectTimeoutFailureLimit = Math.max(
                     1,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
@@ -1107,8 +1120,6 @@
                         : false;
                 const autoCampaignDirectNonBlockingWorker =
                     window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
-                const browserQuickResourceLoad =
-                    window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const autoCampaignSkipDirectUiPreflight =
                     window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ === true;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
@@ -1123,6 +1134,9 @@
                     || autoCampaignMode.indexOf('menuonly') >= 0;
                 const autoCampaignUsesDirectPath =
                     !modeDisablesDirectPath && autoCampaignMode.indexOf('direct') >= 0;
+                const browserQuickResourceLoad =
+                    autoCampaign && autoCampaignUsesDirectPath
+                    && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -1221,10 +1235,12 @@
                     `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
                     `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
                     `-Dstarsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
-                    `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`
+                    `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
+                    `-Dstarsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
+                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`
                 ];
                 if (browserQuickResourceLoad) {
-                    log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload.', '#00ff88');
+                    log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
                 }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
@@ -1254,6 +1270,8 @@
                     javaProperties.push(`starsector.autoCampaignDirectAttemptTimeoutMs=${autoCampaignDirectAttemptTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
+                    javaProperties.push(`starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`starsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectUseWorkerThread=${autoCampaignDirectUseWorkerThread}`);
