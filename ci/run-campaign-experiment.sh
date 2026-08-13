@@ -202,8 +202,12 @@ mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
+jar uf jars/starfarer_obf.jar \
+  -C .ci-build/script-plugin-helper com/fs/starfarer/loading/scripts/BrowserScriptPluginResolver.class
 javap -classpath jars/starfarer_obf.jar -c com.fs.starfarer.loading.scripts.ScriptStore \
   | grep -q 'BrowserScriptPluginResolver.resolve'
+javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.scripts.BrowserScriptPluginResolver \
+  | grep -q 'major version: 52'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
