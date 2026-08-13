@@ -1137,6 +1137,9 @@
                 const browserQuickResourceLoad =
                     autoCampaign && autoCampaignUsesDirectPath
                     && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
+                const browserQuickVariantIndex =
+                    browserQuickResourceLoad
+                    && window.__STARSECTOR_BROWSER_QUICK_VARIANT_INDEX__ !== false;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -1237,10 +1240,15 @@
                     `-Dstarsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
                     `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
                     `-Dstarsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
-                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`
+                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
+                    `-Dstarsector.browserQuickVariantIndex=${browserQuickVariantIndex}`,
+                    `starsector.browserQuickVariantIndex=${browserQuickVariantIndex}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
+                }
+                if (browserQuickVariantIndex) {
+                    log('Browser variant index enabled: core variant discovery will use index.list manifests with stock fallback.', '#00ff88');
                 }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);

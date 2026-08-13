@@ -127,6 +127,13 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
   | grep 'public static boolean isTitleHandoffActive()'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void disableTitleHandoff()'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserVariantIndex \
+  | grep 'major version: 52'
+mkdir -p .ci-build/verify-variant-index
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-variant-index ci/VerifyBrowserVariantIndex.java
+java -cp ".ci-build/verify-variant-index:jars/fixer_patch.jar:$CP" \
+  com.fs.starfarer.loading.VerifyBrowserVariantIndex starsector/starsector
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
@@ -197,7 +204,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
-  ci/PatchResourceLoaderQuickStart.java
+  ci/PatchResourceLoaderQuickStart.java \
+  ci/PatchLoadingUtilsVariantIndex.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -259,6 +267,13 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-resource-quick.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
   | grep -q 'starsector.browserQuickResourceLoad'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchLoadingUtilsVariantIndex jars/starfarer_obf.jar .ci-build/starfarer-variant-index.jar
+mv .ci-build/starfarer-variant-index.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.LoadingUtils \
+  | grep -q 'BrowserVariantIndex.tryListVariants'
+javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.LoadingUtils \
+  | grep -q 'BrowserVariantIndex.tryListDirectories'
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -294,6 +309,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl \
   com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2 \
   com.fs.starfarer.api.impl.campaign.fleets.misc.MiscAcademyFleetCreator \
+  com.fs.starfarer.loading.LoadingUtils \
   com.fs.starfarer.util.O \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
