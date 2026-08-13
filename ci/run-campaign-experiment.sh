@@ -244,6 +244,14 @@ java -Xverify:all -cp ".ci-build/verify-script-plugin:jars/starfarer_obf.jar:$CP
 # This avoids stale directory metadata causing CheerpJ range/read mismatches.
 python3 ci/refresh-runtime-jar-index.py
 
+# Verify that the exact post-transform classpath can be reconstructed from one
+# contiguous Pages payload before the expensive browser launch.
+rm -rf .ci-build/jar-pack-test
+python3 ci/build-pages-jar-pack.py --root . --output-dir .ci-build/jar-pack-test
+test -s .ci-build/jar-pack-test/starsector-jar-pack-v1.bin
+test -s .ci-build/jar-pack-test/starsector-jar-pack-v1.json
+rm -rf .ci-build/jar-pack-test
+
 # Fail before the expensive browser launch if ASM produced bytecode rejected by
 # the stock JVM verifier. Static initialization remains disabled so native/GL
 # startup does not run here.

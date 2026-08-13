@@ -43,6 +43,20 @@ const manifest = {
       type: 'text/plain; charset=utf-8'
     }
   }
+ };
+const jarPayload = new TextEncoder().encode('0123456789');
+const jarManifest = {
+  version: 1,
+  bytes: jarPayload.byteLength,
+  order: ['bridge.jar'],
+  jars: {
+    'bridge.jar': {
+      offset: 2,
+      length: 5,
+      sha256: 'synthetic',
+      type: 'application/java-archive'
+    }
+  }
 };
 
 const selfObject = {
@@ -66,6 +80,12 @@ async function mockFetch(input) {
       headers: { 'content-type': 'application/octet-stream' }
     });
   }
+  if (url.includes('/starsectorquick/starsector-jar-pack-v1.json')) {
+    return new Response(JSON.stringify(jarManifest), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
+  if (url.includes('/starsectorquick/starsector-jar-pack-v1.bin')) {
+    return new Response(jarPayload, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
+  }
   unexpectedNetwork.push(url);
   return new Response('network fallback', { status: 200 });
 }
@@ -87,9 +107,9 @@ vm.runInContext(source, context, { filename: 'starsectorquick-sw.js' });
 
 if (typeof listeners.fetch !== 'function') throw new Error('service worker fetch handler not registered');
 
-async function dispatch(url, method = 'GET') {
+async function dispatch(url, method = 'GET', headers = {}) {
   let responsePromise = null;
-  const request = new Request(url, { method });
+  const request = new Request(url, { method, headers });
   listeners.fetch({
     request,
     respondWith(value) { responsePromise = Promise.resolve(value); }
@@ -127,8 +147,29 @@ function assert(condition, message) {
   assert(directoryMiss && directoryMiss.status === 404, 'directory probe no longer handled locally');
   assert(directoryMiss.headers.get('x-starsectorquick-directory-probe') === 'direct-404', 'directory probe compatibility header missing');
 
+  const packedJar = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar');
+  assert(packedJar && packedJar.status === 200, 'packed JAR full response failed');
+  assert(await packedJar.text() === '23456', 'packed JAR full payload mismatch');
+  assert(packedJar.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR marker missing');
+
+  const packedJarRange = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar', 'GET', { Range: 'bytes=1-3' });
+  assert(packedJarRange && packedJarRange.status === 206, 'packed JAR range response failed');
+  assert(await packedJarRange.text() === '345', 'packed JAR range payload mismatch');
+  assert(packedJarRange.headers.get('content-range') === 'bytes 1-3/5', 'packed JAR content-range mismatch');
+  assert(packedJarRange.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR range marker missing');
+
+  const packedJarHead = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar', 'HEAD');
+  assert(packedJarHead && packedJarHead.status === 200, 'packed JAR HEAD response failed');
+  assert(packedJarHead.headers.get('content-length') === '5', 'packed JAR HEAD content-length mismatch');
+  assert(packedJarHead.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR HEAD marker missing');
+
+  const packedJarBadRange = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar', 'GET', { Range: 'bytes=99-120' });
+  assert(packedJarBadRange && packedJarBadRange.status === 416, 'packed JAR invalid range status mismatch');
+  assert(packedJarBadRange.headers.get('content-range') === 'bytes */5', 'packed JAR invalid range content-range mismatch');
+  assert(packedJarBadRange.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR invalid range marker missing');
+
   assert(unexpectedNetwork.length === 0, `known misses escaped to network: ${unexpectedNetwork.join(', ')}`);
-  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} root-java, legacy-java, packed-java, data-miss, legacy-data-miss, directory-miss`);
+  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} root-java, legacy-java, packed-java, packed-jar, packed-jar-range, packed-jar-head, packed-jar-416, data-miss, legacy-data-miss, directory-miss`);
 })().catch(error => {
   console.error(error && (error.stack || error.message) || error);
   process.exitCode = 1;

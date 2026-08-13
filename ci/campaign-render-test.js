@@ -102,6 +102,8 @@ function pixelStats(buffer) {
   let startingSuppliesTarget = null;
   let startingSuppliesAfter = null;
   let startingSuppliesReady = false;
+  let jarPackResponses = 0;
+  let jarPackResponseBytes = 0;
   let browser;
 
   const flushLogs = () => {
@@ -180,9 +182,13 @@ function pixelStats(buffer) {
     logs.push(`[requestfailed] ${request.url()} :: ${failure ? failure.errorText : 'unknown'}`);
   });
   page.on('response', response => {
+    const headers = response.headers();
+    if (headers['x-starsectorquick-jar-pack'] === 'v1') {
+      jarPackResponses += 1;
+      jarPackResponseBytes += Number(headers['content-length'] || 0) || 0;
+    }
     if (response.status() >= 400) {
       const item = `${response.status()} ${response.url()}`;
-      const headers = response.headers();
       const negativeReason = headers['x-starsectorquick-negative-cache'] || '';
       if (negativeReason) {
         localNegativeMisses.push(`${item} reason=${negativeReason}`);
@@ -194,7 +200,8 @@ function pixelStats(buffer) {
     }
   });
 
-  const target = `${baseUrl}?autostart=1&ci=${Date.now()}`;
+  const navigationStartedAt = Date.now();
+  const target = `${baseUrl}?autostart=1&ci=${navigationStartedAt}`;
   console.log(`Opening ${target}`);
   console.log(`Expected state=${expectedState} config=${JSON.stringify(windowConfig)}`);
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -396,6 +403,7 @@ function pixelStats(buffer) {
     nativeStats: window.__lwjglNativeStats || null,
     presentationStats: window.__lwjglPresentationStats || null,
     inputStats: window.__lwjglInputStats || null,
+    bootTiming: window.__STARSECTOR_BOOT_TIMING__ || null,
     webglState: (() => {
       const canvas = document.querySelector('#game-container canvas');
       const gl = canvas && canvas.getContext('webgl2');
@@ -485,8 +493,11 @@ function pixelStats(buffer) {
     windowConfig,
     campaign,
     campaignSeenAt,
+    navigationStartedAt,
+    timeToCampaignMs: campaignSeenAt ? campaignSeenAt - navigationStartedAt : null,
     title,
     titleSeenAt,
+    timeToTitleMs: titleSeenAt ? titleSeenAt - navigationStartedAt : null,
     fatalSeenAt,
     disallowedRecoverySeenAt,
     disallowedRecovery,
@@ -503,6 +514,9 @@ function pixelStats(buffer) {
     shortcutResults,
     shortcutBefore,
     shortcutAfter,
+    jarPackResponses,
+    jarPackResponseBytes,
+    bootTiming: state.bootTiming || null,
     startingResourcesReady,
     startingSuppliesTarget,
     startingSuppliesAfter,

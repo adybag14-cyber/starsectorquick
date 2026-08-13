@@ -54,6 +54,27 @@
             __STARSECTOR_ORIGINAL_CONSOLE__.log(m);
         }
 
+        function beginBootTiming() {
+            const timing = {
+                startEpochMs: Date.now(),
+                startPerfMs: performance.now(),
+                phases: []
+            };
+            window.__STARSECTOR_BOOT_TIMING__ = timing;
+            markBootPhase('start');
+            return timing;
+        }
+
+        function markBootPhase(name, detail = '') {
+            const timing = window.__STARSECTOR_BOOT_TIMING__;
+            if (!timing || !Number.isFinite(timing.startPerfMs)) return;
+            if (timing.phases.some(phase => phase.name === name)) return;
+            const atMs = performance.now() - timing.startPerfMs;
+            const phase = { name: String(name), atMs, detail: detail ? String(detail) : '' };
+            timing.phases.push(phase);
+            __STARSECTOR_ORIGINAL_CONSOLE__.log(`[boot-timing] phase=${phase.name} ms=${atMs.toFixed(1)}${phase.detail ? ` detail=${phase.detail}` : ''}`);
+        }
+
         // Starsector can emit engine-fatal lines through System.out, which CheerpJ
         // surfaces as console.log rather than console.error. Classify by content,
         // not by browser console level, and tolerate the engine's "Fatal :" spacing.
@@ -86,18 +107,22 @@
             }
 
             if (/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i.test(text)) {
+                markBootPhase('campaign-state');
                 updateRuntimeState('campaign', 'Main campaign view');
                 if (btn) {
                     btn.disabled = true;
                     btn.textContent = 'CAMPAIGN RUNNING';
                 }
             } else if (/direct new-game init succeeded|campaign transition UI preflight ready/i.test(text)) {
+                markBootPhase('direct-new-game-ready');
                 updateRuntimeState('campaign-loading', 'Entering campaign');
                 if (btn) btn.textContent = 'ENTERING CAMPAIGN...';
             } else if (/direct new-game attempt|synthetic player fleet|minimal fallback market/i.test(text)) {
+                markBootPhase('direct-new-game-start');
                 updateRuntimeState('campaign-initializing', 'Building campaign');
                 if (btn) btn.textContent = 'BUILDING CAMPAIGN...';
             } else if (/watcher state=Title Screen State|reached Title Screen State/i.test(text)) {
+                markBootPhase('title-state');
                 updateRuntimeState('title', 'Preparing campaign');
                 if (btn) btn.textContent = 'PREPARING CAMPAIGN...';
             }
@@ -564,6 +589,7 @@
         async function startGame() {
             if (window.__STARSECTOR_STARTING__) return;
             window.__STARSECTOR_STARTING__ = true;
+            beginBootTiming();
             const btn = document.getElementById('startBtn');
             const renderWidth = Math.max(1, Number(window.__STARSECTOR_RENDER_WIDTH__ || 1024) || 1024);
             const renderHeight = Math.max(1, Number(window.__STARSECTOR_RENDER_HEIGHT__ || 768) || 768);
@@ -592,7 +618,8 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260813-runtime-miss-v7';
+                    const aliasWorkerVersion = '20260813-runtime-jarpack-v8';
+                    window.__STARSECTOR_ALIAS_WORKER_VERSION__ = aliasWorkerVersion;
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -722,7 +749,9 @@
                 };
 
                 await maybeResetCheerpJPersistentStorage();
+                markBootPhase('storage-ready');
                 await ensureRemotePathAliasWorker();
+                markBootPhase('service-worker-ready');
 
                 const dataUrl = siteRootUrl + 'starsector/starsector/';
                 const contentRoot = `${fullAppPath}starsector/starsector/`;
@@ -752,6 +781,7 @@
                 }
                 const lwjglNativeSource = (lwjglModule && (lwjglModule.default || lwjglModule)) || {};
                 log(`LWJGL module selected: ${lwjglModuleName}`, '#888');
+                markBootPhase('lwjgl-module-ready', lwjglModuleName);
                 const serialLen = (window.__STARSECTOR_SERIAL__ || '').trim().length;
                 log(`Serial provided: ${serialLen > 0} (len=${serialLen})`, '#888');
                 const lwjglNatives = {};
@@ -1265,6 +1295,7 @@
                 // Captured from a complete Title -> Campaign session with CheerpJ 4.3 / Java 17.
                 // CheerpJ uses this profile to fetch runtime modules in parallel on cold starts.
                 const cheerpjPreloadResources = {"/lt/17/lib/modules":[0,131072,1179648,6291456,6422528,7340032,7602176,8519680,9437184,10223616,19005440,19136512,19660800,20447232,21102592,22413312,22937600,23199744,25165824,25559040,26083328,26607616,26738688,27394048,29360128,29491200,30277632,30408704,31326208,31588352,31850496,32505856,32636928,32768000,33030144,33423360,33554432,33947648,34209792,34865152,35258368,35389440,35520512,35651584,37617664,37748736,37879808,38273024],"/lt/etc/users":[0,131072],"/lt/etc/localtime":[],"/lt/17/jre/lib/cheerpj-handlers.jar":[0,131072],"/lt/17/jre/lib/cheerpj-awt.jar":[0,131072],"/lt/17/jre/lib/cheerpj-jsobject.jar":[0,131072],"/lt/17/lib/tzdb.dat":[0,131072],"/lt/17/conf/security/java.security":[0,131072],"/lt/17/conf/accessibility.properties":[],"/lt/17/conf/jaxp.properties":[],"/lt/17/lib/currency.properties":[],"/lt/17/conf/chronology":[],"/lt/17/conf/stax.properties":[]};
+                markBootPhase('cheerpj-init-start');
                 await cheerpjInit({
                     version: 17,
                     enableX11: true,
@@ -1302,6 +1333,7 @@
                         { type: 'http', path: '/starfarer.res/res/', url: starfarerResUrl }
                     ]
                 });
+                markBootPhase('cheerpj-init-ready');
 
                 const installCheerpJDownloaderGuard = () => {
                     if (window.__STARSECTOR_CHEERPJ_DOWNLOADER_GUARD__) return;
@@ -1350,6 +1382,7 @@
                 const gameContainer = document.getElementById('game-container');
                 cheerpjCreateDisplay(renderWidth, renderHeight, gameContainer);
                 ensureLwjglCanvas(gameContainer, renderWidth, renderHeight);
+                markBootPhase('display-ready');
 
                 // Use stock LWJGL classes by default; opt into loading_patch explicitly.
                 const useLoadingPatch = window.__USE_LOADING_PATCH__ === true;
@@ -1368,6 +1401,7 @@
                         .map(line => line.split(/\s+/)[0])
                         .filter(Boolean);
                     log(`Loaded ${jarFiles.length} jar entr${jarFiles.length === 1 ? 'y' : 'ies'} from jars/index.list`, '#888');
+                    markBootPhase('jar-index-ready', String(jarFiles.length));
                 } catch (jarIndexError) {
                     log(`Jar index load failed; using fallback list (${jarIndexError.message})`, '#ffaa00');
                     jarFiles = [
@@ -1428,41 +1462,60 @@
                     classPathEntries.push(`${contentRoot}data/config/`);
                 }
 
-                // Warm fresh range/etag entries for runtime JARs to reduce stale If-Range
-                // mismatch responses (200 instead of 206) across rapid GitHub Pages deploys.
-                // CheerpJ later loads query-free classpath URLs, so probe those exact URLs too.
-                try {
-                    let ok = 0;
-                    let warn = 0;
-                    let classpathOk = 0;
-                    let classpathWarn = 0;
-                    const primeJarRange = async (url, cacheMode) => fetch(url, {
-                        method: 'GET',
-                        headers: { Range: 'bytes=0-0' },
-                        cache: cacheMode
-                    });
-                    for (const jar of jarFiles) {
-                        const baseJarUrl = `${siteRootUrl}jars/${jar}`;
-                        const rangePrimeResp = await primeJarRange(withJarCacheBust(baseJarUrl), 'no-store');
-                        if (rangePrimeResp.status === 206) {
-                            ok += 1;
-                        } else {
-                            warn += 1;
-                            log(`Range prime ${rangePrimeResp.status}: ${jar}`, '#ffaa00');
+                // Prime one JAR range first. On Pages, the service worker answers it from the
+                // monolithic JAR pack. Verify the pack manifest covers every classpath JAR before
+                // declaring the runtime local; otherwise fall back to parallel per-JAR primes.
+                const primeJarRange = async (url, cacheMode) => fetch(url, {
+                    method: 'GET',
+                    headers: { Range: 'bytes=0-0' },
+                    cache: cacheMode
+                });
+                let jarPackReady = false;
+                if (jarFiles.length > 0) {
+                    try {
+                        const firstJarUrl = `${siteRootUrl}jars/${jarFiles[0]}`;
+                        const firstResp = await primeJarRange(firstJarUrl, 'reload');
+                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20260813-runtime-jarpack-v8';
+                        const manifestResp = await fetch(`${siteRootUrl}starsector-jar-pack-v1.json?sw=${encodeURIComponent(workerVersion)}`, {
+                            cache: 'force-cache'
+                        });
+                        let uncovered = jarFiles.slice();
+                        if (manifestResp.ok) {
+                            const manifest = await manifestResp.json();
+                            const packedJars = manifest && manifest.version === 1 && manifest.jars ? manifest.jars : {};
+                            uncovered = jarFiles.filter(jar => !Object.prototype.hasOwnProperty.call(packedJars, jar));
                         }
-
-                        const classpathRangeResp = await primeJarRange(baseJarUrl, 'reload');
-                        if (classpathRangeResp.status === 206) {
-                            classpathOk += 1;
-                        } else {
-                            classpathWarn += 1;
-                            log(`Classpath range prime ${classpathRangeResp.status}: ${jar}`, '#ffaa00');
+                        const servedFromPack = firstResp.status === 206
+                            && firstResp.headers.get('x-starsectorquick-jar-pack') === 'v1';
+                        jarPackReady = servedFromPack && manifestResp.ok && uncovered.length === 0;
+                        if (uncovered.length > 0) {
+                            log(`JAR pack coverage incomplete: ${uncovered.slice(0, 8).join(', ')}${uncovered.length > 8 ? ` (+${uncovered.length - 8} more)` : ''}`, '#ffaa00');
                         }
+                        if (jarPackReady) {
+                            log(`JAR pack ready via ${jarFiles[0]}; manifest covers all ${jarFiles.length} classpath JARs.`, '#00ff88');
+                            markBootPhase('jar-runtime-ready', `jar-pack:${jarFiles.length}`);
+                        }
+                    } catch (probeError) {
+                        log(`JAR pack probe failed; using parallel fallback: ${probeError && probeError.message ? probeError.message : probeError}`, '#ffaa00');
                     }
-                    const rangeColor = (warn || classpathWarn) ? '#ffaa00' : '#888';
-                    log(`Range prime summary: ok=${ok} warn=${warn} classpathOk=${classpathOk} classpathWarn=${classpathWarn}`, rangeColor);
-                } catch (e) {
-                    log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
+                }
+                if (!jarPackReady) {
+                    const results = await Promise.all(jarFiles.map(async jar => {
+                        const baseJarUrl = `${siteRootUrl}jars/${jar}`;
+                        try {
+                            const response = await primeJarRange(baseJarUrl, 'reload');
+                            return { jar, status: response.status };
+                        } catch (error) {
+                            return { jar, status: 0, error };
+                        }
+                    }));
+                    const ok = results.filter(item => item.status === 206).length;
+                    const warn = results.length - ok;
+                    for (const item of results.filter(item => item.status !== 206).slice(0, 8)) {
+                        log(`Classpath range prime ${item.status || 'failed'}: ${item.jar}`, '#ffaa00');
+                    }
+                    log(`Parallel range prime fallback: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
+                    markBootPhase('jar-runtime-ready', `fallback:${ok}/${results.length}`);
                 }
 
                 const finalClassPath = classPathEntries.join(':');
@@ -1470,6 +1523,7 @@
                 log('Final ClassPath: ' + finalClassPath, '#888');
 
                 log('Starting Main Class: Fixer', '#00d9ff');
+                markBootPhase('run-main-start');
                 updateRuntimeState('running', 'Fixer');
                 await cheerpjRunMain('Fixer', finalClassPath);
                 updateRuntimeState('main-returned', 'Fixer returned');
