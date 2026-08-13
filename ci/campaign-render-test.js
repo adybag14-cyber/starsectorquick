@@ -2,6 +2,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
+const { campaignCenterSubjectGate } = require('./campaign-visual-gate');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -447,17 +448,14 @@ function pixelStats(buffer) {
   const campaignTextureRichness = expectedState !== 'campaign' || Boolean(secondStats
     && secondStats.quantizedColorCount >= 200
     && secondStats.variance >= 400);
-  const hasCampaignCenterSubject = stats => Boolean(stats
-    && stats.centerBrightPixels >= 150
-    && (stats.centerWarmPixels >= 8 || stats.centerBrightPixels >= 350));
   // The starter ship can rotate between captures, changing how much warm engine
   // glow lands inside the 96px center box. Accept either independently captured
   // frame, while still requiring the original warm signature or a substantially
   // larger bright centered subject. Texture richness/variance remain separate gates.
-  const campaignCenterSubjectFirst = expectedState !== 'campaign' || hasCampaignCenterSubject(firstStats);
-  const campaignCenterSubjectSecond = expectedState !== 'campaign' || hasCampaignCenterSubject(secondStats);
-  const campaignCenterSubject = expectedState !== 'campaign'
-    || campaignCenterSubjectFirst || campaignCenterSubjectSecond;
+  const campaignCenterGate = campaignCenterSubjectGate(expectedState, firstStats, secondStats);
+  const campaignCenterSubjectFirst = campaignCenterGate.first;
+  const campaignCenterSubjectSecond = campaignCenterGate.second;
+  const campaignCenterSubject = campaignCenterGate.overall;
   const campaignVisualQuality = expectedState !== 'campaign' || Boolean(secondStats
     && secondStats.nonBlackRatio > 0.03
     && secondStats.darkRatio < 0.94

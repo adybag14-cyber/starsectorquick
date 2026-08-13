@@ -1101,9 +1101,14 @@
                     8000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_POST_INIT_WAIT_MS__ || 45000) || 45000
                 );
+                const autoCampaignDirectCreateSettleOverride =
+                    window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000;
+                const parsedAutoCampaignDirectCreateSettleMs = Number(autoCampaignDirectCreateSettleOverride);
                 const autoCampaignDirectCreateSettleMs = Math.max(
                     5000,
-                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ || 15000) || 15000
+                    Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)
+                        ? parsedAutoCampaignDirectCreateSettleMs
+                        : 15000
                 );
                 const autoCampaignDirectTimeoutFailureLimit = Math.max(
                     1,

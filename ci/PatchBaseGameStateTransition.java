@@ -43,7 +43,6 @@ public final class PatchBaseGameStateTransition {
     private static final String GUARDED_RENDER_DESC =
             "(Lcom/fs/starfarer/BaseGameState;F)V";
     private static final String CREATE_PROPERTY = "starsector.campaignCreateInProgress";
-    private static final String TITLE_HANDOFF_PROPERTY = "starsector.browserQuickTitleHandoff";
     private static final String TITLE_ID = "Title Screen State";
 
     public static void main(String[] args) throws Exception {
@@ -205,12 +204,11 @@ public final class PatchBaseGameStateTransition {
                 "(Ljava/lang/String;)Z",
                 false);
         mv.visitJumpInsn(Opcodes.IFNE, checkTitle);
-        mv.visitLdcInsn(TITLE_HANDOFF_PROPERTY);
         mv.visitMethodInsn(
                 Opcodes.INVOKESTATIC,
-                "java/lang/Boolean",
-                "getBoolean",
-                "(Ljava/lang/String;)Z",
+                "com/fs/starfarer/MainThreadTransitionBridge",
+                "isTitleHandoffActive",
+                "()Z",
                 false);
         mv.visitJumpInsn(Opcodes.IFEQ, invokeAdvance);
 
@@ -262,12 +260,11 @@ public final class PatchBaseGameStateTransition {
                 "(Ljava/lang/String;)Z",
                 false);
         mv.visitJumpInsn(Opcodes.IFNE, checkTitle);
-        mv.visitLdcInsn(TITLE_HANDOFF_PROPERTY);
         mv.visitMethodInsn(
                 Opcodes.INVOKESTATIC,
-                "java/lang/Boolean",
-                "getBoolean",
-                "(Ljava/lang/String;)Z",
+                "com/fs/starfarer/MainThreadTransitionBridge",
+                "isTitleHandoffActive",
+                "()Z",
                 false);
         mv.visitJumpInsn(Opcodes.IFEQ, invokeRender);
 

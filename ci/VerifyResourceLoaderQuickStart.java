@@ -1,7 +1,7 @@
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.objectweb.asm.ClassReader;
@@ -19,7 +19,7 @@ public final class VerifyResourceLoaderQuickStart {
     private static final String PROPERTY = "starsector.browserQuickResourceLoad";
     private static final String MARKER =
             "BrowserResourceLoader: deferred eager ship/weapon/projectile sprite preload.";
-    private static final Set<String> EXPECTED_STAGES = Set.of(
+    private static final List<String> EXPECTED_STAGES = List.of(
             "init-start",
             "settings-resource-queue-ready",
             "spec-store-ready",
@@ -41,7 +41,7 @@ public final class VerifyResourceLoaderQuickStart {
         int[] markerLoads = {0};
         int[] returns = {0};
         int[] stockSpecCalls = {0};
-        Set<String> stages = new HashSet<>();
+        List<String> stages = new ArrayList<>();
 
         try (JarFile jar = new JarFile(Path.of(args[0]).toFile())) {
             JarEntry entry = jar.getJarEntry(TARGET);
