@@ -106,6 +106,20 @@
                 return;
             }
 
+            if (/CheerpJ runtime preload complete/i.test(text)) markBootPhase('runtime-preload-ready');
+            if (/Fixer: build marker/i.test(text)) markBootPhase('fixer-enter');
+            if (/Fixer: mirrored core specs into \/files/i.test(text)) markBootPhase('spec-mirror-ready');
+            if (/Fixer: rule command preload complete/i.test(text)) markBootPhase('rule-preload-ready');
+            if (/Fixer: auto campaign watcher started/i.test(text)) markBootPhase('watcher-started');
+            if (/Fixer: StarfarerSettings preload invoked/i.test(text)) markBootPhase('settings-preload-ready');
+            if (/Fixer: Global settings api wired/i.test(text)) markBootPhase('settings-api-ready');
+            if (/Fixer: graphics init probe completed/i.test(text)) markBootPhase('graphics-probe-ready');
+            if (/Fixer: Launch config/i.test(text)) markBootPhase('launch-config-ready');
+            if (/Bridge Display\.update\(true\) count=1/i.test(text)) markBootPhase('resource-loader-first-display');
+            if (/BrowserResourceLoader: deferred eager ship\/weapon\/projectile sprite preload/i.test(text)) {
+                markBootPhase('dynamic-sprite-preload-deferred');
+            }
+
             if (/watcher state=Campaign State|reached Campaign State/i.test(text)) {
                 markBootPhase('campaign-state');
                 updateRuntimeState('campaign', 'Main campaign view');
@@ -1093,6 +1107,8 @@
                         : false;
                 const autoCampaignDirectNonBlockingWorker =
                     window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_NONBLOCKING_WORKER__ !== false;
+                const browserQuickResourceLoad =
+                    window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const autoCampaignSkipDirectUiPreflight =
                     window.__STARSECTOR_AUTO_CAMPAIGN_SKIP_DIRECT_UI_PREFLIGHT__ === true;
                 const autoCampaignCoreSpecBaselineNonMutatingWaitMs = Math.max(
@@ -1203,8 +1219,13 @@
                     `-DstartSound=false`,
                     `startSound=false`,
                     `-Dstarsector.serial=${window.__STARSECTOR_SERIAL__ || ''}`,
-                    `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`
+                    `-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true`,
+                    `-Dstarsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
+                    `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`
                 ];
+                if (browserQuickResourceLoad) {
+                    log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload.', '#00ff88');
+                }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
                     javaProperties.push(`starsector.disableShipHullPostPass=true`);

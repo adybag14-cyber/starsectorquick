@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "1b67401e4fb29ef8f41b8395765499a74dc1b69d",
-    "workflowRunId": "31718546745",
-    "generatedAt": "2026-08-13T16:02:38.270192+00:00",
+    "sourceSha": "e1c7bd0f89d15b3e14930a15381f585c79b9b86c",
+    "workflowRunId": "31722172104",
+    "generatedAt": "2026-08-13T16:45:20.693810+00:00",
     "overlayFiles": 834,
     "dataPack": {
       "version": 1,
@@ -512,17 +512,17 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 89817,
-      "sha256": "452e6d6bd179905db8e7efddde419f1326aeb68d198b3091de1b5f3e819b126c"
+      "sha256": "78ad80b6f0b7a05606e2709704ddd237a313d347a12fc0f33bf8fdf03a0571a4"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 217452,
-      "sha256": "c57e5d132c46265620b3b14a2f93917d948c104b3071127252f904291e6ca69b"
+      "sha256": "94ab0fc00e68e94f00cb4c1cd5b03345858ce575f0e6bbb469f72d314f4cf4ef"
     },
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "e3c7abfdaf851b9d562fb75dd6e43406918622602c4ab6983119c7cf5fb1ca08"
+      "sha256": "44efb299422b5e20781ea46f772deeaa45eb0c1a0d0f73357bc44663ac8f4509"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -536,8 +536,8 @@
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6019619,
-      "sha256": "2ab74df15684361abfefa63babc9f72c90e11700dbf1ec42d97ca0f3a779eea9"
+      "bytes": 6019799,
+      "sha256": "d8eb930e8a8172c5d3b14284da70f282de911c7d0798a2c91b3b82c346370e2b"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -546,8 +546,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 91394,
-      "sha256": "0cd3f8deb48e4f7d9f70cb51b2dfd8bcc39fb8625f783f9f87bc2e55b1677be0"
+      "bytes": 93111,
+      "sha256": "7c234898d864074881cb7c59b2c83658c5026202e8eaf0d2931cf42e90048a96"
     },
     {
       "path": "starsector-data-pack-v1.bin",
