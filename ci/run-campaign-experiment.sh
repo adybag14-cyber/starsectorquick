@@ -39,6 +39,11 @@ python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
 if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" ]]; then
   python3 ci/prepare-browser-minimal-economy.py | tee "$OUT/browser-economy.log"
 fi
+# Collapse the stock ship/weapon JSON-like spec files into one small browser cache.
+# LoadingUtils still parses and registers every spec normally; this removes the
+# per-file HTTP filesystem round trip for the stock no-mod quick-start path.
+python3 ci/build-browser-spec-cache.py --root starsector/starsector
+test -s starsector/starsector/data/browser-spec-cache-v1.json
 if grep -RIl $'\xEF\xBB\xBF' starsector/starsector --include='index.list' > "$OUT/index-bom-files.txt"; then
   echo 'UTF-8 BOM remains in runtime index files:' >&2
   cat "$OUT/index-bom-files.txt" >&2
@@ -68,6 +73,8 @@ python3 ci/verify-fatal-console-classification.py
 grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.html
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
+grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q 'starsector.browserSpecCachePath=${contentRoot}data/browser-spec-cache-v1.json' launch.html
 node ci/verify-service-worker-negative-cache.js
 node ci/verify-campaign-center-subject.js
 
@@ -110,6 +117,14 @@ python3 ci/set-cheerpj-version.py
 
 CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
 javap -classpath "$CP" com.sun.xml.txw2.output.IndentingXMLStreamWriter >/dev/null
+rm -rf .ci-build/spec-cache-helper .ci-build/verify-bulk-spec-cache
+mkdir -p .ci-build/spec-cache-helper .ci-build/verify-bulk-spec-cache
+javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
+  -d .ci-build/spec-cache-helper ci/BrowserSpecCache.java
+javac -encoding UTF-8 -source 8 -target 8 -cp ".ci-build/spec-cache-helper:$CP" \
+  -d .ci-build/verify-bulk-spec-cache ci/VerifyBulkSpecCache.java
+java -cp ".ci-build/verify-bulk-spec-cache:.ci-build/spec-cache-helper:$CP" \
+  VerifyBulkSpecCache "$PWD/starsector/starsector/data/browser-spec-cache-v1.json"
 mapfile -t COMPAT_SOURCES < <(find ci/java17-xstream -type f -name '*.java' -print | sort)
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
@@ -198,7 +213,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
   ci/PatchResourceLoaderQuickStart.java \
-  ci/PatchSpecStoreDiagnostics.java
+  ci/PatchSpecStoreDiagnostics.java \
+  ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -265,6 +281,20 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
   | grep -q 'BrowserSpecStoreStage:'
+# Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
+# insert a cache hit before LoadingUtils performs its normal resource-manager read.
+jar uf jars/starfarer_obf.jar \
+  -C .ci-build/spec-cache-helper com/fs/starfarer/loading/BrowserSpecCache.class
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache.jar
+mv .ci-build/starfarer-bulk-spec-cache.jar jars/starfarer_obf.jar
+javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.BrowserSpecCache \
+  | grep -q 'major version: 52'
+mkdir -p .ci-build/verify-bulk-spec-patch
+javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-bulk-spec-patch \
+  ci/VerifyLoadingUtilsBulkSpecPatch.java
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifyLoadingUtilsBulkSpecPatch jars/starfarer_obf.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -335,3 +365,7 @@ STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
+# The optimized run is only valid if the real game loaded and used the bulk spec
+# cache. This prevents a transparent fallback from being mistaken for a speedup.
+grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
+grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
