@@ -870,6 +870,7 @@ inputStats.mousePressedQueries = 0;
 inputStats.mousePositionQueries = 0;
 inputStats.keyboardQueueHighWater = 0;
 inputStats.mouseQueueHighWater = 0;
+inputStats.keyboardGlobalCaptures = 0;
 
 function inputEventNanos()
 {
@@ -1073,10 +1074,31 @@ function modifierMaskForEvent(e)
 	// X11 ShiftMask=1, ControlMask=4, Mod1Mask(Alt)=8, Mod4Mask(Meta)=64.
 	return (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 4 : 0) | (e.altKey ? 8 : 0) | (e.metaKey ? 64 : 0);
 }
+function shouldCaptureGameKeyboard(e)
+{
+	if(!glCanvas || !glCanvas.isConnected) return false;
+	if(document.activeElement === glCanvas || document.pointerLockElement === glCanvas) return true;
+	const active = document.activeElement;
+	if(active)
+	{
+		const tag = String(active.tagName || "").toUpperCase();
+		if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || active.isContentEditable) return false;
+	}
+	// Desktop LWJGL owns the native keyboard window even when an in-game panel
+	// changes focus. Once Starsector has started, preserve that contract instead
+	// of silently dropping shortcuts until the player clicks the canvas again.
+	const runtimeState = document.body && document.body.dataset ? String(document.body.dataset.runtimeState || "") : "";
+	const gameStarted = !!window.__STARSECTOR_STARTING__ || runtimeState === "running" || runtimeState === "campaign";
+	return gameStarted && glCanvas.getClientRects().length > 0;
+}
 /** @param {KeyboardEvent} e */
 function keyHandler(e)
 {
-	if(document.activeElement !== glCanvas && document.pointerLockElement !== glCanvas) return;
+	if(!shouldCaptureGameKeyboard(e)) return;
+	if(document.activeElement !== glCanvas && document.pointerLockElement !== glCanvas)
+	{
+		inputStats.keyboardGlobalCaptures++;
+	}
 	const keySym = keySymForEvent(e);
 	const lwjglKey = lwjglKeyForEvent(e);
 	const charCode = typeof e.key === "string" && e.key.length === 1 ? e.key.codePointAt(0) : 0;

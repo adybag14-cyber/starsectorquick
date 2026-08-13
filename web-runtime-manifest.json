@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "25c3c8ab171d96ee3d91a0431ca236d919d14f12",
-    "workflowRunId": "31703299612",
-    "generatedAt": "2026-08-13T13:08:04.504028+00:00",
+    "sourceSha": "e784579024e73afef4d7389e1156494f5ffca241",
+    "workflowRunId": "31711761322",
+    "generatedAt": "2026-08-13T14:47:28.180857+00:00",
     "overlayFiles": 834,
     "dataPack": {
       "version": 1,
@@ -31,8 +31,8 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 88563,
-      "sha256": "c40b19669286a16cc3adf5ef2b0f7bd2b7c716f9b27c4a73b65681f3dfd3e610"
+      "bytes": 89626,
+      "sha256": "5be4806b1eca199ed2da7501b93f0a0c8c31ddc49cbc3ebb304a33575862661e"
     },
     {
       "path": "data/campaign/econ/corvus.json",
@@ -506,23 +506,23 @@
     },
     {
       "path": "jars/Fixer.java",
-      "bytes": 948418,
-      "sha256": "edefb68b6642a5709e492d7b91c9f1c45a2423a70c99acb57515bc2f7d375076"
+      "bytes": 953825,
+      "sha256": "be17494daf0250bdc78a85b01e812a28cc67d178843ad74fca451b9dba5ea701"
     },
     {
       "path": "jars/bridge.jar",
       "bytes": 89817,
-      "sha256": "e0e531d314e8eb3226266475c197d5bfdeb090290f44638ddbedcf699ce3178e"
+      "sha256": "7c1a371c7ac63abf15a0815ef7c7df585ad56c785df8177ee5cec2adcd8863ba"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 216412,
-      "sha256": "4fde4d35758f3fbb375fe420bf013c3d40859ff97e94bb4f39654bff91409ee4"
+      "bytes": 217452,
+      "sha256": "6eda15a915cbcf375eeb36d02e43d4e7d6d9acddd5f7450d85616e19e5f86160"
     },
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "59703b9dcba8d02e065c6ae0c88729ced95e70f32b36ede6ddb076e63c30f4ed"
+      "sha256": "e3c7abfdaf851b9d562fb75dd6e43406918622602c4ab6983119c7cf5fb1ca08"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -537,7 +537,7 @@
     {
       "path": "jars/starfarer_obf.jar",
       "bytes": 6019619,
-      "sha256": "5bdd23192a0a741d7704375d88ef4b8304a6b584d8ddc3d4d16daf13d0ca29ec"
+      "sha256": "f64407b67a6dbafc7bab310b15c235b2ac6b92bd57e25a5330f20e8a319d1399"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -546,8 +546,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 87929,
-      "sha256": "5fa2e45060cc036be5be5f016ddcafa212a52264fa9e7c4eb23fbf927dff6d16"
+      "bytes": 87926,
+      "sha256": "2414d800022a9f0efe17fcecd9d919920ffacbd671011c7124eee271c3e4a2f3"
     },
     {
       "path": "starsector-data-pack-v1.bin",
@@ -4186,8 +4186,8 @@
     },
     {
       "path": "starsectorquick-sw.js",
-      "bytes": 20764,
-      "sha256": "bfb251b4ae69386b1b0e9ab061555fd7ed0c0341b3c2b4f47f1c48634ddc2b06"
+      "bytes": 21741,
+      "sha256": "5c0e107b83d0c51cf33cea3a9e76258f88f314ed61300bb365d85583375dc655"
     }
   ]
 }
