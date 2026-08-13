@@ -71,6 +71,8 @@ public class Fixer {
     private static final String AUTO_CAMPAIGN_MODE_PROPERTY = "starsector.autoCampaignMode";
     private static final String AUTO_CAMPAIGN_START_VARIANT_PROPERTY =
             "starsector.autoCampaignStartVariant";
+    private static final String AUTO_CAMPAIGN_START_SUPPLIES_PROPERTY =
+            "starsector.autoCampaignStartSupplies";
     private static final String AUTO_CAMPAIGN_TIMEOUT_MS_PROPERTY =
             "starsector.autoCampaignTimeoutMs";
     private static final String AUTO_CAMPAIGN_POLL_MS_PROPERTY = "starsector.autoCampaignPollMs";
@@ -1994,6 +1996,9 @@ public class Fixer {
                     }
                 }
                 if (isCampaignState(stateId, currentState)) {
+                    if (normalizedMode.indexOf("new") >= 0) {
+                        ensureAutoCampaignPlayerSupplies();
+                    }
                     if (!enableColonyVisit) {
                         System.out.println("Fixer: auto campaign watcher reached Campaign State.");
                         return;
@@ -17600,6 +17605,7 @@ public class Fixer {
             }
 
             boolean fleetMemberAdded = addStartingFleetMemberSafely(dataClass, data, startVariant);
+            seedAutoCampaignStartingCargo(data);
             if (!fleetMemberAdded) {
                 System.out.println(
                         "Fixer: auto campaign warning: addStartingFleetMember unavailable for "
@@ -17764,6 +17770,129 @@ public class Fixer {
         } catch (Throwable t) {
             System.out.println("Fixer: auto campaign data build failure: " + stackTraceToString(t));
             return null;
+        }
+    }
+
+
+    private static float getAutoCampaignStartingSuppliesTarget(Object cargo) {
+        float ceiling = Math.max(0f, parseFloatProperty(AUTO_CAMPAIGN_START_SUPPLIES_PROPERTY, 80f));
+        if (ceiling <= 0f) {
+            return 0f;
+        }
+        float maxCapacity = -1f;
+        if (cargo != null) {
+            try {
+                Method getMaxCapacity = findMethodRecursive(cargo.getClass(), "getMaxCapacity");
+                if (getMaxCapacity != null) {
+                    getMaxCapacity.setAccessible(true);
+                    Object value = getMaxCapacity.invoke(cargo);
+                    if (value instanceof Number) {
+                        maxCapacity = ((Number) value).floatValue();
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        if (maxCapacity > 0f) {
+            return Math.min(ceiling, Math.max(1f, maxCapacity * 0.75f));
+        }
+        // CharacterCreationData's detached starting Cargo may not know the final
+        // fleet capacity yet. The default Lasher has 40 cargo, so 30 supplies
+        // matches the same 75% rule without starting the fleet overloaded.
+        return Math.min(ceiling, 30f);
+    }
+
+    private static float readCargoSupplies(Object cargo) {
+        if (cargo == null) {
+            return -1f;
+        }
+        try {
+            Method getSupplies = findMethodRecursive(cargo.getClass(), "getSupplies");
+            if (getSupplies == null) {
+                return -1f;
+            }
+            getSupplies.setAccessible(true);
+            Object value = getSupplies.invoke(cargo);
+            return value instanceof Number ? ((Number) value).floatValue() : -1f;
+        } catch (Throwable ignored) {
+            return -1f;
+        }
+    }
+
+    private static boolean topUpCargoSupplies(Object cargo, float target) {
+        if (cargo == null || target <= 0f) {
+            return false;
+        }
+        float before = readCargoSupplies(cargo);
+        if (before < 0f || before >= target) {
+            return before >= target;
+        }
+        try {
+            Method addSupplies = findMethodRecursive(cargo.getClass(), "addSupplies", Float.TYPE);
+            if (addSupplies == null) {
+                return false;
+            }
+            addSupplies.setAccessible(true);
+            addSupplies.invoke(cargo, Float.valueOf(target - before));
+            return readCargoSupplies(cargo) >= target - 0.01f;
+        } catch (Throwable t) {
+            System.out.println("Fixer: auto campaign starting supplies top-up failed: " + describeThrowableChain(t));
+            return false;
+        }
+    }
+
+    private static void seedAutoCampaignStartingCargo(Object data) {
+        if (data == null) {
+            return;
+        }
+        try {
+            Object cargo = invokeNoArgIfPresent(data, "getStartingCargo");
+            float before = readCargoSupplies(cargo);
+            float target = getAutoCampaignStartingSuppliesTarget(cargo);
+            boolean ready = topUpCargoSupplies(cargo, target);
+            float after = readCargoSupplies(cargo);
+            System.out.println(
+                    "Fixer: auto campaign starting cargo supplies before="
+                            + before
+                            + " target="
+                            + target
+                            + " after="
+                            + after
+                            + " ready="
+                            + ready);
+        } catch (Throwable t) {
+            System.out.println("Fixer: auto campaign starting cargo setup failed: " + describeThrowableChain(t));
+        }
+    }
+
+    private static boolean ensureAutoCampaignPlayerSupplies() {
+        try {
+            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method getSector = findMethodRecursive(globalClass, "getSector");
+            if (getSector == null) {
+                return false;
+            }
+            getSector.setAccessible(true);
+            Object sector = getSector.invoke(null);
+            Object fleet = sector == null ? null : invokeNoArgIfPresent(sector, "getPlayerFleet");
+            Object cargo = fleet == null ? null : invokeNoArgIfPresent(fleet, "getCargo");
+            float target = getAutoCampaignStartingSuppliesTarget(cargo);
+            float before = readCargoSupplies(cargo);
+            boolean ready = topUpCargoSupplies(cargo, target);
+            float after = readCargoSupplies(cargo);
+            System.out.println(
+                    "Fixer: auto campaign playable starting supplies before="
+                            + before
+                            + " target="
+                            + target
+                            + " after="
+                            + after
+                            + " ready="
+                            + ready);
+            return ready;
+        } catch (Throwable t) {
+            System.out.println("Fixer: auto campaign playable starting supplies check failed: " + describeThrowableChain(t));
+            return false;
         }
     }
 

@@ -99,6 +99,9 @@ function pixelStats(buffer) {
   let disallowedRecoverySeenAt = 0;
   let updateMax = 0;
   let swapMax = 0;
+  let startingSuppliesTarget = null;
+  let startingSuppliesAfter = null;
+  let startingSuppliesReady = false;
   let browser;
 
   const flushLogs = () => {
@@ -138,6 +141,14 @@ function pixelStats(buffer) {
     if (update) updateMax = Math.max(updateMax, Number(update[1]));
     const swap = text.match(/Bridge Display\.swapBuffers count=(\d+)/i);
     if (swap) swapMax = Math.max(swapMax, Number(swap[1]));
+    const supplies = text.match(/Fixer: auto campaign playable starting supplies .*?target=([0-9.+-]+)\s+after=([0-9.+-]+)\s+ready=(true|false)/i);
+    if (supplies) {
+      startingSuppliesTarget = Number(supplies[1]);
+      startingSuppliesAfter = Number(supplies[2]);
+      startingSuppliesReady = supplies[3].toLowerCase() === 'true'
+        && Number.isFinite(startingSuppliesTarget)
+        && Number.isFinite(startingSuppliesAfter);
+    }
     if (/watcher state=Campaign State|reached Campaign State/i.test(text) && !campaignSeenAt) {
       campaignSeenAt = Date.now();
     }
@@ -321,6 +332,62 @@ function pixelStats(buffer) {
     && !fatalSeenAt
   );
 
+  // Reproduce a real browser focus transition before testing campaign shortcuts.
+  // The old bridge dropped every key unless the canvas itself was active, while
+  // desktop LWJGL continues to own the keyboard across in-game UI panels.
+  const shortcutKeys = [
+    ['Cargo', 'i'],
+    ['Intel', 'e'],
+    ['Map', 'Tab'],
+  ];
+  const shortcutResults = [];
+  const shortcutBefore = await withTimeout(
+    page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) })),
+    5000,
+    'shortcut input baseline'
+  ).catch(() => ({}));
+  if (expectedState === 'campaign' && !fatalSeenAt) {
+    try {
+      for (const [name, key] of shortcutKeys) {
+        await page.evaluate(() => {
+          document.body.tabIndex = -1;
+          document.body.focus({ preventScroll: true });
+        });
+        const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+        const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
+        await page.keyboard.press(key);
+        await sleep(1600);
+        const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+        const runtime = await page.evaluate(() => ({
+          bodyState: document.body.dataset.runtimeState || '',
+          runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
+        }));
+        const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
+        const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
+        const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
+          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState);
+        shortcutResults.push({ name, key, activeBefore, deliveredDelta, globalDelta, failed });
+        logs.push(`[shortcut-probe] ${name} key=${key} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} failed=${failed}`);
+        flushLogs();
+        if (failed) break;
+        await page.keyboard.press('Escape');
+        await sleep(900);
+      }
+    } catch (error) {
+      errors.push(`campaign shortcut probe failed: ${error.message || error}`);
+    }
+  }
+  const shortcutAfter = await withTimeout(
+    page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) })),
+    5000,
+    'shortcut input result'
+  ).catch(() => ({}));
+  const shortcutsResponsive = expectedState !== 'campaign' || Boolean(
+    shortcutResults.length === shortcutKeys.length
+    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= 2 && item.globalDelta >= 2)
+    && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
+  );
+
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',
@@ -396,8 +463,16 @@ function pixelStats(buffer) {
     batchedVertexCalls >= 1000
     && legacyTexCoordCalls <= Math.max(100, batchedVertexCalls * 0.05)
   );
+  const directNewCampaign = expectedState === 'campaign'
+    && String(windowConfig.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || '').toLowerCase().includes('new');
+  const startingResourcesReady = !directNewCampaign || Boolean(
+    startingSuppliesReady
+    && startingSuppliesTarget > 0
+    && startingSuppliesAfter >= startingSuppliesTarget - 0.1
+  );
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
-    && inputResponsive && uiControlsSafe && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
+    && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
+    && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -424,6 +499,14 @@ function pixelStats(buffer) {
     inputResponsive,
     uiControlsSafe,
     uiControlResults,
+    shortcutsResponsive,
+    shortcutResults,
+    shortcutBefore,
+    shortcutAfter,
+    startingResourcesReady,
+    startingSuppliesTarget,
+    startingSuppliesAfter,
+    startingSuppliesReady,
     inputBefore,
     inputAfter,
     nativeStatsEnabled,
