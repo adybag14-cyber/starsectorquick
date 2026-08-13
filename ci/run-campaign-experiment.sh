@@ -197,7 +197,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
-  ci/PatchResourceLoaderQuickStart.java
+  ci/PatchResourceLoaderQuickStart.java \
+  ci/PatchSpecStoreDiagnostics.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -259,6 +260,11 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-resource-quick.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
   | grep -q 'starsector.browserQuickResourceLoad'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
+mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
+  | grep -q 'BrowserSpecStoreStage:'
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
