@@ -182,7 +182,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
-  ci/PatchScriptStorePluginFallback.java
+  ci/PatchScriptStorePluginFallback.java \
+  ci/PatchResourceLoaderQuickStart.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -233,6 +234,17 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTran
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
 mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
+
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceLoaderQuickStart jars/starfarer_obf.jar .ci-build/starfarer-resource-quick.jar
+mv .ci-build/starfarer-resource-quick.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
+  | grep -q 'starsector.browserQuickResourceLoad'
+mkdir -p .ci-build/verify-resource-loader
+javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
+  ci/VerifyResourceLoaderQuickStart.java
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-resource-loader \
+  VerifyResourceLoaderQuickStart jars/starfarer_obf.jar
 
 mkdir -p .ci-build/verify-script-plugin
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/starfarer_obf.jar:$CP" \
