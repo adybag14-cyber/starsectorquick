@@ -263,13 +263,15 @@ function pixelStats(buffer) {
   // Exercise the actual bottom campaign controls. A map-only input probe missed a
   // production crash where the first Character click reached ScriptStore with an
   // empty LevelupPlugin repository and terminated the whole game.
-  const campaignUiControls = [
-    ['Character', 0.085, 0.976],
-    ['Fleet', 0.205, 0.976],
-    ['Cargo', 0.490, 0.976],
-    ['Map', 0.610, 0.976],
-    ['Command', 0.805, 0.976],
-  ];
+  // CampaignState's bottom bar is seven 125px buttons separated by 6px,
+  // inset 6px from the left and 10px from the bottom of the 1024x768 logical
+  // viewport. Slot 1 is Character (the exact reproduced crash); sweeping every
+  // slot avoids silently missing controls whose live labels differ by game state.
+  const campaignUiControls = Array.from({ length: 7 }, (_, slot) => [
+    `bottom-slot-${slot + 1}`,
+    (68.5 + 131 * slot) / 1024,
+    748 / 768,
+  ]);
   const uiControlResults = [];
   if (expectedState === 'campaign' && !fatalSeenAt) {
     try {
