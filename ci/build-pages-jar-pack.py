@@ -83,17 +83,30 @@ def main() -> int:
     manifest = {"version": 1, "bytes": offset, "order": ordered, "jars": entries}
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    body = pack_path.read_bytes()
-    if len(body) != offset:
-        raise RuntimeError(f"JAR pack size mismatch expected={offset} actual={len(body)}")
-    for name in ordered:
-        entry = entries[name]
-        start = int(entry["offset"])
-        end = start + int(entry["length"])
-        if sha256_bytes(body[start:end]) != entry["sha256"]:
-            raise RuntimeError(f"JAR pack reconstruction mismatch: {name}")
+    actual_size = pack_path.stat().st_size
+    if actual_size != offset:
+        raise RuntimeError(f"JAR pack size mismatch expected={offset} actual={actual_size}")
+    with pack_path.open("rb") as body:
+        for name in ordered:
+            entry = entries[name]
+            body.seek(int(entry["offset"]))
+            remaining = int(entry["length"])
+            entry_digest = hashlib.sha256()
+            while remaining:
+                chunk = body.read(min(remaining, 1 << 20))
+                if not chunk:
+                    raise RuntimeError(f"JAR pack truncated: {name}")
+                entry_digest.update(chunk)
+                remaining -= len(chunk)
+            if entry_digest.hexdigest() != entry["sha256"]:
+                raise RuntimeError(f"JAR pack reconstruction mismatch: {name}")
 
-    print(f"Pages JAR pack prepared jars={len(ordered)} bytes={offset} sha256={sha256_bytes(body)} output={pack_path}")
+        body.seek(0)
+        pack_digest = hashlib.sha256()
+        for chunk in iter(lambda: body.read(1 << 20), b""):
+            pack_digest.update(chunk)
+
+    print(f"Pages JAR pack prepared jars={len(ordered)} bytes={offset} sha256={pack_digest.hexdigest()} output={pack_path}")
     return 0
 
 

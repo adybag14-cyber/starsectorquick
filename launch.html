@@ -619,6 +619,7 @@
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
                     const aliasWorkerVersion = '20260813-runtime-jarpack-v8';
+                    window.__STARSECTOR_ALIAS_WORKER_VERSION__ = aliasWorkerVersion;
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
                     const reloadKey = 'starsectorquickAliasWorkerReloaded';
@@ -1462,45 +1463,59 @@
                 }
 
                 // Prime one JAR range first. On Pages, the service worker answers it from the
-                // monolithic JAR pack; completing this request means every classpath JAR is already
-                // resident locally. If the pack is unavailable, fall back to parallel per-JAR primes.
-                try {
-                    const primeJarRange = async (url, cacheMode) => fetch(url, {
-                        method: 'GET',
-                        headers: { Range: 'bytes=0-0' },
-                        cache: cacheMode
-                    });
-                    let jarPackReady = false;
-                    if (jarFiles.length > 0) {
+                // monolithic JAR pack. Verify the pack manifest covers every classpath JAR before
+                // declaring the runtime local; otherwise fall back to parallel per-JAR primes.
+                const primeJarRange = async (url, cacheMode) => fetch(url, {
+                    method: 'GET',
+                    headers: { Range: 'bytes=0-0' },
+                    cache: cacheMode
+                });
+                let jarPackReady = false;
+                if (jarFiles.length > 0) {
+                    try {
                         const firstJarUrl = `${siteRootUrl}jars/${jarFiles[0]}`;
                         const firstResp = await primeJarRange(firstJarUrl, 'reload');
-                        jarPackReady = firstResp.status === 206 && firstResp.headers.get('x-starsectorquick-jar-pack') === 'v1';
+                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20260813-runtime-jarpack-v8';
+                        const manifestResp = await fetch(`${siteRootUrl}starsector-jar-pack-v1.json?sw=${encodeURIComponent(workerVersion)}`, {
+                            cache: 'force-cache'
+                        });
+                        let uncovered = jarFiles.slice();
+                        if (manifestResp.ok) {
+                            const manifest = await manifestResp.json();
+                            const packedJars = manifest && manifest.version === 1 && manifest.jars ? manifest.jars : {};
+                            uncovered = jarFiles.filter(jar => !Object.prototype.hasOwnProperty.call(packedJars, jar));
+                        }
+                        const servedFromPack = firstResp.status === 206
+                            && firstResp.headers.get('x-starsectorquick-jar-pack') === 'v1';
+                        jarPackReady = servedFromPack && manifestResp.ok && uncovered.length === 0;
+                        if (uncovered.length > 0) {
+                            log(`JAR pack coverage incomplete: ${uncovered.slice(0, 8).join(', ')}${uncovered.length > 8 ? ` (+${uncovered.length - 8} more)` : ''}`, '#ffaa00');
+                        }
                         if (jarPackReady) {
-                            log(`JAR pack ready via ${jarFiles[0]}; ${jarFiles.length} classpath JARs now local.`, '#00ff88');
-                            markBootPhase('jar-runtime-ready', 'jar-pack');
+                            log(`JAR pack ready via ${jarFiles[0]}; manifest covers all ${jarFiles.length} classpath JARs.`, '#00ff88');
+                            markBootPhase('jar-runtime-ready', `jar-pack:${jarFiles.length}`);
                         }
+                    } catch (probeError) {
+                        log(`JAR pack probe failed; using parallel fallback: ${probeError && probeError.message ? probeError.message : probeError}`, '#ffaa00');
                     }
-                    if (!jarPackReady) {
-                        const results = await Promise.all(jarFiles.map(async jar => {
-                            const baseJarUrl = `${siteRootUrl}jars/${jar}`;
-                            try {
-                                const response = await primeJarRange(baseJarUrl, 'reload');
-                                return { jar, status: response.status };
-                            } catch (error) {
-                                return { jar, status: 0, error };
-                            }
-                        }));
-                        const ok = results.filter(item => item.status === 206).length;
-                        const warn = results.length - ok;
-                        for (const item of results.filter(item => item.status !== 206).slice(0, 8)) {
-                            log(`Classpath range prime ${item.status || 'failed'}: ${item.jar}`, '#ffaa00');
+                }
+                if (!jarPackReady) {
+                    const results = await Promise.all(jarFiles.map(async jar => {
+                        const baseJarUrl = `${siteRootUrl}jars/${jar}`;
+                        try {
+                            const response = await primeJarRange(baseJarUrl, 'reload');
+                            return { jar, status: response.status };
+                        } catch (error) {
+                            return { jar, status: 0, error };
                         }
-                        log(`Parallel range prime fallback: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
-                        markBootPhase('jar-runtime-ready', `fallback:${ok}/${results.length}`);
+                    }));
+                    const ok = results.filter(item => item.status === 206).length;
+                    const warn = results.length - ok;
+                    for (const item of results.filter(item => item.status !== 206).slice(0, 8)) {
+                        log(`Classpath range prime ${item.status || 'failed'}: ${item.jar}`, '#ffaa00');
                     }
-                } catch (e) {
-                    log(`Range prime skipped: ${e && e.message ? e.message : e}`, '#ffaa00');
-                    markBootPhase('jar-runtime-ready', 'prime-error');
+                    log(`Parallel range prime fallback: ok=${ok} warn=${warn}`, warn ? '#ffaa00' : '#888');
+                    markBootPhase('jar-runtime-ready', `fallback:${ok}/${results.length}`);
                 }
 
                 const finalClassPath = classPathEntries.join(':');

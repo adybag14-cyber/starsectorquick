@@ -250,6 +250,7 @@ rm -rf .ci-build/jar-pack-test
 python3 ci/build-pages-jar-pack.py --root . --output-dir .ci-build/jar-pack-test
 test -s .ci-build/jar-pack-test/starsector-jar-pack-v1.bin
 test -s .ci-build/jar-pack-test/starsector-jar-pack-v1.json
+rm -rf .ci-build/jar-pack-test
 
 # Fail before the expensive browser launch if ASM produced bytecode rejected by
 # the stock JVM verifier. Static initialization remains disabled so native/GL

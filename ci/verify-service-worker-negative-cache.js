@@ -158,8 +158,18 @@ function assert(condition, message) {
   assert(packedJarRange.headers.get('content-range') === 'bytes 1-3/5', 'packed JAR content-range mismatch');
   assert(packedJarRange.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR range marker missing');
 
+  const packedJarHead = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar', 'HEAD');
+  assert(packedJarHead && packedJarHead.status === 200, 'packed JAR HEAD response failed');
+  assert(packedJarHead.headers.get('content-length') === '5', 'packed JAR HEAD content-length mismatch');
+  assert(packedJarHead.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR HEAD marker missing');
+
+  const packedJarBadRange = await dispatch('https://adybag14-cyber.github.io/starsectorquick/jars/bridge.jar', 'GET', { Range: 'bytes=99-120' });
+  assert(packedJarBadRange && packedJarBadRange.status === 416, 'packed JAR invalid range status mismatch');
+  assert(packedJarBadRange.headers.get('content-range') === 'bytes */5', 'packed JAR invalid range content-range mismatch');
+  assert(packedJarBadRange.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR invalid range marker missing');
+
   assert(unexpectedNetwork.length === 0, `known misses escaped to network: ${unexpectedNetwork.join(', ')}`);
-  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} root-java, legacy-java, packed-java, packed-jar, packed-jar-range, data-miss, legacy-data-miss, directory-miss`);
+  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} root-java, legacy-java, packed-java, packed-jar, packed-jar-range, packed-jar-head, packed-jar-416, data-miss, legacy-data-miss, directory-miss`);
 })().catch(error => {
   console.error(error && (error.stack || error.message) || error);
   process.exitCode = 1;

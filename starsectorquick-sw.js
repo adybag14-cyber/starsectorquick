@@ -100,12 +100,12 @@ const loadJarPack = () => {
   ]).then(async ([indexResponse, binaryResponse]) => {
     if (!indexResponse.ok) throw new Error(`jar-pack index HTTP ${indexResponse.status}`);
     if (!binaryResponse.ok) throw new Error(`jar-pack binary HTTP ${binaryResponse.status}`);
-    const [manifest, body] = await Promise.all([indexResponse.json(), binaryResponse.arrayBuffer()]);
+    const [manifest, body] = await Promise.all([indexResponse.json(), binaryResponse.blob()]);
     if (!manifest || manifest.version !== 1 || !manifest.jars || typeof manifest.jars !== 'object') {
       throw new Error('invalid jar-pack manifest');
     }
-    if (Number(manifest.bytes) !== body.byteLength) {
-      throw new Error(`jar-pack length mismatch manifest=${manifest.bytes} body=${body.byteLength}`);
+    if (Number(manifest.bytes) !== body.size) {
+      throw new Error(`jar-pack length mismatch manifest=${manifest.bytes} body=${body.size}`);
     }
     return { manifest, body };
   }).catch(error => {
@@ -228,7 +228,7 @@ const respondFromGraphicsPack = async (url, request) => {
   }
   const offset = Number(entry.offset);
   const length = Number(entry.length);
-  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length < 0 || offset + length > pack.body.byteLength) {
+  if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length < 0 || offset + length > pack.body.size) {
     return null;
   }
 
@@ -384,12 +384,12 @@ const respondFromJarPack = async (url, request) => {
         }
       });
     }
-    const slice = pack.body.slice(offset + range.start, offset + range.end + 1);
-    const headers = packedJarHeaders(entry, slice.byteLength);
+    const slice = pack.body.slice(offset + range.start, offset + range.end + 1, entry.type || 'application/java-archive');
+    const headers = packedJarHeaders(entry, slice.size);
     headers.set('content-range', `bytes ${range.start}-${range.end}/${length}`);
     return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
   }
-  const body = pack.body.slice(offset, offset + length);
+  const body = pack.body.slice(offset, offset + length, entry.type || 'application/java-archive');
   return new Response(body, { status: 200, statusText: 'OK', headers: packedJarHeaders(entry, length) });
 };
 
@@ -397,16 +397,7 @@ const respondWithPackedJarOrFallback = async (url, request) => {
   const packed = await respondFromJarPack(url, request);
   if (packed) return packed;
   if (shouldProxyJarRange(url, request)) return respondWithJarRange(url, request);
-  return fetch(url.toString(), {
-    method: request.method,
-    headers: request.headers,
-    credentials: request.credentials,
-    cache: request.cache,
-    redirect: request.redirect,
-    referrer: request.referrer,
-    referrerPolicy: request.referrerPolicy,
-    integrity: request.integrity
-  });
+  return fetch(request);
 };
 
 const fetchFullBody = async requestUrl => {
