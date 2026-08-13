@@ -1996,6 +1996,7 @@ public class Fixer {
                     }
                 }
                 if (isCampaignState(stateId, currentState)) {
+                    com.fs.starfarer.MainThreadTransitionBridge.disableTitleHandoff();
                     if (normalizedMode.indexOf("new") >= 0) {
                         ensureAutoCampaignPlayerSupplies();
                     }

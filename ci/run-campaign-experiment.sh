@@ -62,7 +62,14 @@ grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
+# The browser quick-start keeps the stock 45s fallback available via override,
+# but defaults the successful create-settle gate to 15s. Guard both the default
+# and Java property propagation so this latency win cannot silently regress.
+grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.html
+grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
+grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 node ci/verify-service-worker-negative-cache.js
+node ci/verify-campaign-center-subject.js
 
 # Rebuild the browser-facing LWJGL bridge classes. GL11 owns the fixed-function
 # compatibility/fast paths; Display and the input classes own live DOM-backed
@@ -108,12 +115,18 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
 jar cf jars/fixer_patch.jar -C .ci-build/fixer .
 javap -verbose -classpath jars/fixer_patch.jar Fixer | grep 'major version: 52'
+javap -classpath jars/fixer_patch.jar -c -p Fixer \
+  | grep -q 'MainThreadTransitionBridge.disableTitleHandoff'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Fields \
   | grep 'public class com.thoughtworks.xstream.core.util.Fields'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.SerializationMembers \
   | grep 'public class com.thoughtworks.xstream.core.util.SerializationMembers'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void drain(java.lang.Object)'
+javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
+  | grep 'public static boolean isTitleHandoffActive()'
+javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
+  | grep 'public static void disableTitleHandoff()'
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
@@ -176,6 +189,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
   ci/PatchCoreLifecycleBrowserWorld.java \
   ci/PatchCoreLifecycleDiagnostics.java \
+  ci/PatchMiscAcademyFleetCreator.java \
   ci/PatchTextureUploadRaster.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
@@ -193,6 +207,9 @@ mv .ci-build/starfarer-api-browser-world.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCoreLifecycleDiagnostics jars/starfarer.api.jar .ci-build/starfarer-api-lifecycle-diag.jar
 mv .ci-build/starfarer-api-lifecycle-diag.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchMiscAcademyFleetCreator jars/starfarer.api.jar .ci-build/starfarer-api-academy-null.jar
+mv .ci-build/starfarer-api-academy-null.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSlipstreamBrowserAdvance jars/starfarer.api.jar .ci-build/starfarer-api-slipstream-guard.jar
 mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
@@ -234,6 +251,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTran
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseGameStateTransition jars/starfarer_obf.jar .ci-build/starfarer-transition.jar
 mv .ci-build/starfarer-transition.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.BaseGameState \
+  | grep -q 'MainThreadTransitionBridge.isTitleHandoffActive'
 
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderQuickStart jars/starfarer_obf.jar .ci-build/starfarer-resource-quick.jar
@@ -274,6 +293,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   data.scripts.world.SectorGen \
   com.fs.starfarer.api.impl.campaign.CoreLifecyclePluginImpl \
   com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2 \
+  com.fs.starfarer.api.impl.campaign.fleets.misc.MiscAcademyFleetCreator \
   com.fs.starfarer.util.O \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState

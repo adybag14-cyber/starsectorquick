@@ -12,6 +12,7 @@ import java.lang.reflect.Method;
  */
 public final class MainThreadTransitionBridge {
     private static final java.lang.String KEY = "starsector.pendingStateTransition";
+    private static final java.lang.String TITLE_HANDOFF_KEY = "starsector.browserQuickTitleHandoff";
     private static final java.lang.String CONSUMED = "__consumed__";
     private static final Object INVOCATION_LOCK = new Object();
 
@@ -19,8 +20,19 @@ public final class MainThreadTransitionBridge {
     private static Thread renderThread;
     private static boolean successLogged;
     private static boolean invocationWaitLogged;
+    private static volatile boolean titleHandoffActive = Boolean.getBoolean(TITLE_HANDOFF_KEY);
 
     private MainThreadTransitionBridge() {}
+
+    /** Return whether browser quick-start should suppress Title background combat. */
+    public static boolean isTitleHandoffActive() {
+        return titleHandoffActive;
+    }
+
+    /** Disable Title suppression after Campaign State is confirmed active. */
+    public static void disableTitleHandoff() {
+        titleHandoffActive = false;
+    }
 
     /**
      * Submit a two-argument static method to the AppDriver/render thread.

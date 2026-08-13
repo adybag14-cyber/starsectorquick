@@ -20,10 +20,11 @@ import org.objectweb.asm.Opcodes;
  * In addition to draining queued state transitions immediately before
  * Display.update(), this patch replaces the one virtual advance(float,input)
  * call in traverse() with a small static method injected into BaseGameState.
- * While Fixer is creating a campaign on its worker, that method suppresses only
- * the Title Screen State's background-combat advance and render paths. The fader
- * and Display.update() continue, so CheerpJ/browser event processing stays live
- * without allowing TitleScreenState's CombatEngine to race CampaignGameManager.
+ * During browser quick direct-launch handoff, and while Fixer is creating a
+ * campaign, those methods suppress only the Title Screen State's background-
+ * combat advance/render paths. The fader and Display.update() continue, so
+ * CheerpJ/browser event processing stays live without touching deferred ship
+ * sprites or racing TitleScreenState's CombatEngine with CampaignGameManager.
  *
  * Existing stack-map frames are preserved verbatim. Only max-stack values are
  * recomputed, and the one branch target in the injected helper gets an explicit
@@ -191,8 +192,10 @@ public final class PatchBaseGameStateTransition {
         mv.visitCode();
         Label invokeAdvance = new Label();
 
-        // Fast path: when no campaign create is in progress, preserve the exact
-        // original virtual advance() call.
+        // Suppress title background combat from the moment browser quick-start
+        // enters Title State until Campaign State is active. Keep the older
+        // campaign-create guard as an independent safety net for other modes.
+        Label checkTitle = new Label();
         mv.visitLdcInsn(CREATE_PROPERTY);
         mv.visitMethodInsn(
                 Opcodes.INVOKESTATIC,
@@ -200,11 +203,17 @@ public final class PatchBaseGameStateTransition {
                 "getBoolean",
                 "(Ljava/lang/String;)Z",
                 false);
+        mv.visitJumpInsn(Opcodes.IFNE, checkTitle);
+        mv.visitMethodInsn(
+                Opcodes.INVOKESTATIC,
+                "com/fs/starfarer/MainThreadTransitionBridge",
+                "isTitleHandoffActive",
+                "()Z",
+                false);
         mv.visitJumpInsn(Opcodes.IFEQ, invokeAdvance);
 
-        // During campaign creation, suppress only the active title state. This
-        // uses the stable state ID instead of the title implementation's
-        // physical/obfuscated class name.
+        mv.visitLabel(checkTitle);
+        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         mv.visitVarInsn(Opcodes.ALOAD, 0);
         mv.visitMethodInsn(
                 Opcodes.INVOKEVIRTUAL,
@@ -242,6 +251,7 @@ public final class PatchBaseGameStateTransition {
         mv.visitCode();
         Label invokeRender = new Label();
 
+        Label checkTitle = new Label();
         mv.visitLdcInsn(CREATE_PROPERTY);
         mv.visitMethodInsn(
                 Opcodes.INVOKESTATIC,
@@ -249,8 +259,17 @@ public final class PatchBaseGameStateTransition {
                 "getBoolean",
                 "(Ljava/lang/String;)Z",
                 false);
+        mv.visitJumpInsn(Opcodes.IFNE, checkTitle);
+        mv.visitMethodInsn(
+                Opcodes.INVOKESTATIC,
+                "com/fs/starfarer/MainThreadTransitionBridge",
+                "isTitleHandoffActive",
+                "()Z",
+                false);
         mv.visitJumpInsn(Opcodes.IFEQ, invokeRender);
 
+        mv.visitLabel(checkTitle);
+        mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         mv.visitVarInsn(Opcodes.ALOAD, 0);
         mv.visitMethodInsn(
                 Opcodes.INVOKEVIRTUAL,
