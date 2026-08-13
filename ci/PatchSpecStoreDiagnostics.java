@@ -24,6 +24,8 @@ public final class PatchSpecStoreDiagnostics {
     private static final String METHOD = "public";
     private static final String DESC = "(Lcom/fs/starfarer/loading/ResourceLoaderState;)V";
     private static final String MARKER = "BrowserSpecStoreStage: ";
+    private static final String HELPER = "cheerpj$specStage";
+    private static final String HELPER_DESC = "(Ljava/lang/String;)V";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -72,9 +74,14 @@ public final class PatchSpecStoreDiagnostics {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
+            private boolean helperExists;
+
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor,
                                              String signature, String[] exceptions) {
+                if (HELPER.equals(name) && HELPER_DESC.equals(descriptor)) {
+                    helperExists = true;
+                }
                 MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
                 if (!METHOD.equals(name) || !DESC.equals(descriptor)) return delegate;
                 methods[0]++;
@@ -112,15 +119,44 @@ public final class PatchSpecStoreDiagnostics {
                     }
                 };
             }
+
+            @Override
+            public void visitEnd() {
+                if (!helperExists) {
+                    emitTimestampHelper(super.visitMethod(
+                            Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+                            HELPER, HELPER_DESC, null, null));
+                }
+                super.visitEnd();
+            }
         };
         reader.accept(visitor, 0);
         return writer.toByteArray();
     }
 
     private static void emitMarker(MethodVisitor mv, String id, String direction, String label) {
+        mv.visitLdcInsn(id + ":" + direction + ":" + label);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, SPECSTORE, HELPER, HELPER_DESC, false);
+    }
+
+    private static void emitTimestampHelper(MethodVisitor mv) {
+        mv.visitCode();
         mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        mv.visitLdcInsn(MARKER + id + ":" + direction + ":" + label);
+        mv.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+        mv.visitInsn(Opcodes.DUP);
+        mv.visitLdcInsn(MARKER);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V", false);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "currentTimeMillis", "()J", false);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(J)Ljava/lang/StringBuilder;", false);
+        mv.visitLdcInsn(":");
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
         mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
     }
 
     private static String shortOwner(String owner) {
