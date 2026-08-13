@@ -260,6 +260,59 @@ function pixelStats(buffer) {
   );
   const inputResponsive = inputKeyboardResponsive && inputMouseResponsive;
 
+  // Exercise the actual bottom campaign controls. A map-only input probe missed a
+  // production crash where the first Character click reached ScriptStore with an
+  // empty LevelupPlugin repository and terminated the whole game.
+  // CampaignState's bottom bar is seven 125px buttons separated by 6px,
+  // inset 6px from the left and 10px from the bottom of the 1024x768 logical
+  // viewport. Slot 1 is Character (the exact reproduced crash); sweeping every
+  // slot avoids silently missing controls whose live labels differ by game state.
+  const campaignUiControls = Array.from({ length: 7 }, (_, slot) => [
+    `bottom-slot-${slot + 1}`,
+    (68.5 + 131 * slot) / 1024,
+    748 / 768,
+  ]);
+  const uiControlResults = [];
+  if (expectedState === 'campaign' && !fatalSeenAt) {
+    try {
+      const box = await gameCanvas.boundingBox();
+      if (!box) throw new Error('campaign canvas has no bounding box');
+      for (const [name, nx, ny] of campaignUiControls) {
+        if (fatalSeenAt || errors.length > 0) break;
+        const x = box.x + box.width * nx;
+        const y = box.y + box.height * ny;
+        logs.push(`[ui-probe] click ${name} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
+        await page.mouse.move(x, y);
+        await page.mouse.click(x, y, { button: 'left', delay: 80 });
+        await sleep(2200);
+        const afterClick = await withTimeout(page.evaluate(() => ({
+          bodyState: document.body.dataset.runtimeState || '',
+          bodyDetail: document.body.dataset.runtimeDetail || '',
+          runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
+        })), 5000, `${name} UI state`).catch(error => ({
+          bodyState: 'unresponsive',
+          bodyDetail: error.message || String(error),
+          runtime: null,
+        }));
+        const failed = Boolean(fatalSeenAt)
+          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(afterClick.bodyState)
+          || afterClick.runtime?.state === 'fatal';
+        uiControlResults.push({ name, failed, ...afterClick });
+        flushLogs();
+        if (failed) break;
+        await page.keyboard.press('Escape');
+        await sleep(900);
+      }
+    } catch (error) {
+      errors.push(`campaign UI control probe failed: ${error.message || error}`);
+    }
+  }
+  const uiControlsSafe = expectedState !== 'campaign' || Boolean(
+    uiControlResults.length === campaignUiControls.length
+    && uiControlResults.every(item => !item.failed)
+    && !fatalSeenAt
+  );
+
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',
@@ -336,7 +389,7 @@ function pixelStats(buffer) {
     && legacyTexCoordCalls <= Math.max(100, batchedVertexCalls * 0.05)
   );
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
-    && inputResponsive && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
+    && inputResponsive && uiControlsSafe && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -361,6 +414,8 @@ function pixelStats(buffer) {
     inputKeyboardResponsive,
     inputMouseResponsive,
     inputResponsive,
+    uiControlsSafe,
+    uiControlResults,
     inputBefore,
     inputAfter,
     nativeStatsEnabled,
