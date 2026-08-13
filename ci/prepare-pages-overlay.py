@@ -40,6 +40,7 @@ REQUIRED_FILES = {
     "data/scripts/world/SectorGen.java",
     "starsector/starsector/data/campaign/econ/economy.json",
     "starsector/starsector/data/campaign/econ/corvus.json",
+    "starsector/starsector/data/browser-spec-cache-v1.json",
     "starsector/starsector/data/scripts/world/SectorGen.java",
 }
 

@@ -119,15 +119,21 @@
             if (/BrowserResourceLoader: deferred eager ship\/weapon\/projectile sprite preload/i.test(text)) {
                 markBootPhase('dynamic-sprite-preload-deferred');
             }
+            if (/BrowserSpecCache:\s*ready/i.test(text)) {
+                markBootPhase('browser-spec-cache-ready', text);
+            }
+            if (/BrowserSpecCache:\s*first-hit/i.test(text)) {
+                markBootPhase('browser-spec-cache-first-hit', text);
+            }
             const resourceLoaderStage = text.match(/BrowserResourceLoaderStage:\s*([a-z0-9-]+)/i);
             if (resourceLoaderStage) {
                 markBootPhase(`resource-loader-${resourceLoaderStage[1].toLowerCase()}`);
             }
-            const specStoreStage = text.match(/BrowserSpecStoreStage:\s*(\d+):(before|after):(.+)$/i);
+            const specStoreStage = text.match(/BrowserSpecStoreStage:\s*(\d+):(\d+):(before|after):(.+)$/i);
             if (specStoreStage) {
                 markBootPhase(
-                    `spec-store-${specStoreStage[1]}-${specStoreStage[2].toLowerCase()}`,
-                    specStoreStage[3]
+                    `spec-store-${specStoreStage[2]}-${specStoreStage[3].toLowerCase()}`,
+                    specStoreStage[4]
                 );
             }
 
@@ -1144,6 +1150,11 @@
                 const browserQuickResourceLoad =
                     autoCampaign && autoCampaignUsesDirectPath
                     && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
+                const browserBulkSpecCache =
+                    browserQuickResourceLoad && window.__STARSECTOR_BROWSER_BULK_SPEC_CACHE__ !== false;
+                // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
+                // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
+                const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -1244,10 +1255,17 @@
                     `-Dstarsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
                     `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
                     `-Dstarsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
-                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`
+                    `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
+                    `-Dstarsector.browserBulkSpecCache=${browserBulkSpecCache}`,
+                    `starsector.browserBulkSpecCache=${browserBulkSpecCache}`,
+                    `-Dstarsector.browserSpecCachePath=${browserSpecCachePath}`,
+                    `starsector.browserSpecCachePath=${browserSpecCachePath}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
+                }
+                if (browserBulkSpecCache) {
+                    log('Browser bulk spec cache enabled for stock ship/weapon/variant JSON-like files.', '#00ff88');
                 }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
