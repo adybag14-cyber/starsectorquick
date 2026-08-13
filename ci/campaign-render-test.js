@@ -89,6 +89,7 @@ function pixelStats(buffer) {
   const logs = [];
   const errors = [];
   const httpErrors = [];
+  const localNegativeMisses = [];
   const screenshotErrors = [];
   const graphicsErrors = [];
   const disallowedRecovery = [];
@@ -170,8 +171,15 @@ function pixelStats(buffer) {
   page.on('response', response => {
     if (response.status() >= 400) {
       const item = `${response.status()} ${response.url()}`;
-      httpErrors.push(item);
-      logs.push(`[http] ${item}`);
+      const headers = response.headers();
+      const negativeReason = headers['x-starsectorquick-negative-cache'] || '';
+      if (negativeReason) {
+        localNegativeMisses.push(`${item} reason=${negativeReason}`);
+        logs.push(`[http-local-miss] ${item} reason=${negativeReason}`);
+      } else {
+        httpErrors.push(item);
+        logs.push(`[http] ${item}`);
+      }
     }
   });
 
@@ -432,6 +440,7 @@ function pixelStats(buffer) {
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
     httpErrors: [...new Set(httpErrors)],
+    localNegativeMisses: [...new Set(localNegativeMisses)],
     state,
     logTail: logs.slice(-500)
   };

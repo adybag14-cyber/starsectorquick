@@ -1,5 +1,6 @@
-const ALIAS_WORKER_VERSION = '20260810-campaign-render-v6';
+const ALIAS_WORKER_VERSION = '20260813-runtime-miss-v7';
 const PROJECT_PREFIX = '/starsectorquick/';
+const CONTENT_RUNTIME_PREFIX = `${PROJECT_PREFIX}starsector/starsector/`;
 const LEGACY_REWRITES = [
   ['/starsector/starsector/', `${PROJECT_PREFIX}starsector/starsector/`],
   ['/starfarer.res/res/', `${PROJECT_PREFIX}starsector/starsector/`]
@@ -265,7 +266,7 @@ const respondFromDataPack = async (url, request) => {
     return null;
   }
   const entry = pack.manifest.files[relative];
-  if (!entry) return null;
+  if (!entry) return respondWithKnownMissingRuntimePath(request, 'data-pack-miss');
 
   const offset = Number(entry.offset);
   const length = Number(entry.length);
@@ -360,15 +361,27 @@ const isRuntimeDirectoryProbe = url => {
   return leaf.length > 0 && !leaf.includes('.');
 };
 
-const respondWithMissingRuntimeDirectory = request => {
+const respondWithKnownMissingRuntimePath = (request, reason) => {
   const headers = new Headers({
     'cache-control': 'no-store',
     'content-type': 'text/plain; charset=utf-8',
     'x-starsectorquick-sw-version': ALIAS_WORKER_VERSION,
-    'x-starsectorquick-directory-probe': 'direct-404'
+    'x-starsectorquick-negative-cache': reason
   });
   const body = request.method === 'HEAD' ? null : 'Not found';
   return new Response(body, { status: 404, statusText: 'Not Found', headers });
+};
+
+const respondWithMissingRuntimeDirectory = request => {
+  const response = respondWithKnownMissingRuntimePath(request, 'directory-probe');
+  response.headers.set('x-starsectorquick-directory-probe', 'direct-404');
+  return response;
+};
+
+const isKnownMissingRuntimeJavaSource = url => {
+  if (!url.pathname.startsWith(CONTENT_RUNTIME_PREFIX)) return false;
+  if (url.pathname.startsWith(`${CONTENT_RUNTIME_PREFIX}data/`)) return false;
+  return /\.java$/i.test(url.pathname);
 };
 
 const shouldNormalizeFullIndexList = (url, request) => {
@@ -513,6 +526,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (isKnownMissingRuntimeJavaSource(url)) {
+    event.respondWith(Promise.resolve(respondWithKnownMissingRuntimePath(event.request, 'java-source-outside-data')));
+    return;
+  }
+
   if (runtimeDataRelativePath(url)) {
     event.respondWith(respondWithPackedDataOrFallback(url, event.request));
     return;
@@ -542,6 +560,11 @@ self.addEventListener('fetch', event => {
 
   if (isRuntimeDirectoryProbe(target)) {
     event.respondWith(Promise.resolve(respondWithMissingRuntimeDirectory(event.request)));
+    return;
+  }
+
+  if (isKnownMissingRuntimeJavaSource(target)) {
+    event.respondWith(Promise.resolve(respondWithKnownMissingRuntimePath(event.request, 'java-source-outside-data')));
     return;
   }
 
