@@ -19,13 +19,24 @@ import org.objectweb.asm.Opcodes;
  * the browser quick-start path, and emits coarse loader-stage timing markers.
  *
  * The stock loader still performs settings/spec/script/plugin initialization and
- * its normal static UI/font/resource setup. Only queueShipAndWeaponSprites() is
- * guarded. Runtime sprite lookup remains available for assets encountered later.
+ * keeps startup-critical UI/font/portrait/cursor/ship/terrain/FX resources. In
+ * quick-start mode it also defers a small set of combat/war-room-only static
+ * categories that are not needed before the first campaign frame. Property-off
+ * behavior remains byte-for-byte equivalent to the original loader body.
  */
 public final class PatchResourceLoaderQuickStart {
     private static final String TARGET = "com/fs/starfarer/loading/ResourceLoaderState.class";
     private static final String QUICK_METHOD = "queueShipAndWeaponSprites";
     private static final String QUICK_DESC = "()V";
+    private static final String QUEUE_METHOD = "queueResource";
+    private static final String QUEUE_DESC =
+            "(Lcom/fs/starfarer/loading/ResourceLoaderState$o;Ljava/lang/String;I)V";
+    private static final String[] DEFERRED_STATIC_PREFIXES = {
+            "graphics/damage/",
+            "graphics/debris/",
+            "graphics/asteroids/",
+            "graphics/warroom/"
+    };
     private static final String INIT_METHOD = "init";
     private static final String INIT_DESC = "(Ljava/util/Map;)V";
     private static final String PROPERTY = "starsector.browserQuickResourceLoad";
@@ -39,6 +50,7 @@ public final class PatchResourceLoaderQuickStart {
         Path output = Path.of(args[1]);
         int[] classes = new int[] {0};
         int[] quickMethods = new int[] {0};
+        int[] queueMethods = new int[] {0};
         int[] initMethods = new int[] {0};
         int[] stageMarkers = new int[] {0};
 
@@ -56,29 +68,32 @@ public final class PatchResourceLoaderQuickStart {
                 }
                 if (TARGET.equals(entry.getName())) {
                     classes[0]++;
-                    bytes = patch(bytes, quickMethods, initMethods, stageMarkers);
+                    bytes = patch(bytes, quickMethods, queueMethods, initMethods, stageMarkers);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        if (classes[0] != 1 || quickMethods[0] != 1 || initMethods[0] != 1
-                || stageMarkers[0] != EXPECTED_STAGE_MARKERS) {
+        if (classes[0] != 1 || quickMethods[0] != 1 || queueMethods[0] != 1
+                || initMethods[0] != 1 || stageMarkers[0] != EXPECTED_STAGE_MARKERS) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "ResourceLoaderState quick-start patch incomplete: classes=" + classes[0]
                             + " quickMethods=" + quickMethods[0]
+                            + " queueMethods=" + queueMethods[0]
                             + " initMethods=" + initMethods[0]
                             + " stageMarkers=" + stageMarkers[0]);
         }
         System.out.println(
                 "Patched ResourceLoaderState quick-start guards=" + quickMethods[0]
+                        + " static-queue guards=" + queueMethods[0]
+                        + " deferred-prefixes=" + DEFERRED_STATIC_PREFIXES.length
                         + " loader-stage markers=" + stageMarkers[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] quickMethods, int[] initMethods,
-                                int[] stageMarkers) {
+    private static byte[] patch(byte[] input, int[] quickMethods, int[] queueMethods,
+                                int[] initMethods, int[] stageMarkers) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -89,6 +104,10 @@ public final class PatchResourceLoaderQuickStart {
                 if (QUICK_METHOD.equals(name) && QUICK_DESC.equals(descriptor)) {
                     quickMethods[0]++;
                     return quickGuard(delegate);
+                }
+                if (QUEUE_METHOD.equals(name) && QUEUE_DESC.equals(descriptor)) {
+                    queueMethods[0]++;
+                    return staticQueueGuard(delegate);
                 }
                 if (INIT_METHOD.equals(name) && INIT_DESC.equals(descriptor)) {
                     initMethods[0]++;
@@ -118,6 +137,49 @@ public final class PatchResourceLoaderQuickStart {
                 emitPrint(super.mv,
                         "BrowserResourceLoader: deferred eager ship/weapon/projectile sprite preload.");
                 super.visitInsn(Opcodes.RETURN);
+                super.visitLabel(stockPath);
+                super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            }
+        };
+    }
+
+    private static MethodVisitor staticQueueGuard(MethodVisitor delegate) {
+        return new MethodVisitor(Opcodes.ASM9, delegate) {
+            @Override
+            public void visitCode() {
+                super.visitCode();
+                Label stockPath = new Label();
+                Label defer = new Label();
+
+                super.visitLdcInsn(PROPERTY);
+                super.visitMethodInsn(
+                        Opcodes.INVOKESTATIC,
+                        "java/lang/Boolean",
+                        "getBoolean",
+                        "(Ljava/lang/String;)Z",
+                        false);
+                super.visitJumpInsn(Opcodes.IFEQ, stockPath);
+
+                // local 2 is the resource path in queueResource(type, path, weight).
+                super.visitVarInsn(Opcodes.ALOAD, 2);
+                super.visitJumpInsn(Opcodes.IFNULL, stockPath);
+                for (String prefix : DEFERRED_STATIC_PREFIXES) {
+                    super.visitVarInsn(Opcodes.ALOAD, 2);
+                    super.visitLdcInsn(prefix);
+                    super.visitMethodInsn(
+                            Opcodes.INVOKEVIRTUAL,
+                            "java/lang/String",
+                            "startsWith",
+                            "(Ljava/lang/String;)Z",
+                            false);
+                    super.visitJumpInsn(Opcodes.IFNE, defer);
+                }
+                super.visitJumpInsn(Opcodes.GOTO, stockPath);
+
+                super.visitLabel(defer);
+                super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+                super.visitInsn(Opcodes.RETURN);
+
                 super.visitLabel(stockPath);
                 super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
             }
