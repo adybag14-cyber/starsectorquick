@@ -119,6 +119,10 @@
             if (/BrowserResourceLoader: deferred eager ship\/weapon\/projectile sprite preload/i.test(text)) {
                 markBootPhase('dynamic-sprite-preload-deferred');
             }
+            const resourceLoaderStage = text.match(/BrowserResourceLoaderStage:\s*([a-z0-9-]+)/i);
+            if (resourceLoaderStage) {
+                markBootPhase(`resource-loader-${resourceLoaderStage[1].toLowerCase()}`);
+            }
 
             if (/watcher state=Campaign State|reached Campaign State|Campaign State transition fallback succeeded/i.test(text)) {
                 markBootPhase('campaign-state');
@@ -1097,6 +1101,10 @@
                     8000,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_POST_INIT_WAIT_MS__ || 45000) || 45000
                 );
+                const autoCampaignDirectCreateSettleMs = Math.max(
+                    5000,
+                    Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ || 15000) || 15000
+                );
                 const autoCampaignDirectTimeoutFailureLimit = Math.max(
                     1,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_DIRECT_TIMEOUT_FAILURE_LIMIT__ || 3) || 3
@@ -1254,6 +1262,8 @@
                     javaProperties.push(`starsector.autoCampaignDirectAttemptTimeoutMs=${autoCampaignDirectAttemptTimeoutMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
                     javaProperties.push(`starsector.autoCampaignDirectPostInitWaitMs=${autoCampaignDirectPostInitWaitMs}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
+                    javaProperties.push(`starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`starsector.autoCampaignDirectTimeoutFailureLimit=${autoCampaignDirectTimeoutFailureLimit}`);
                     javaProperties.push(`-Dstarsector.autoCampaignDirectUseWorkerThread=${autoCampaignDirectUseWorkerThread}`);
