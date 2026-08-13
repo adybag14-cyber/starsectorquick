@@ -61,6 +61,16 @@ public final class PatchLoadingUtilsBulkSpecCache {
     }
 
     private static byte[] patch(byte[] input, int[] methods) {
+        int existingFastPaths = countExistingFastPaths(input);
+        if (existingFastPaths > 1) {
+            throw new IllegalStateException("LoadingUtils already contains duplicate bulk-cache fast paths=" + existingFastPaths);
+        }
+        if (existingFastPaths == 1) {
+            methods[0]++;
+            System.out.println("LoadingUtils bulk spec cache fast path already present; leaving bytecode unchanged.");
+            return input;
+        }
+
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -102,6 +112,31 @@ public final class PatchLoadingUtilsBulkSpecCache {
         };
         reader.accept(visitor, 0);
         return writer.toByteArray();
+    }
+
+
+    private static int countExistingFastPaths(byte[] input) {
+        int[] matches = {0};
+        new ClassReader(input).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor,
+                                             String signature, String[] exceptions) {
+                if (!METHOD.equals(name) || !DESC.equals(descriptor)) return null;
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                String methodDescriptor, boolean isInterface) {
+                        if (opcode == Opcodes.INVOKESTATIC
+                                && CACHE.equals(owner)
+                                && "getRaw".equals(methodName)
+                                && "(Ljava/lang/String;)Ljava/lang/String;".equals(methodDescriptor)) {
+                            matches[0]++;
+                        }
+                    }
+                };
+            }
+        }, 0);
+        return matches[0];
     }
 
     private static byte[] readAll(InputStream in) throws IOException {

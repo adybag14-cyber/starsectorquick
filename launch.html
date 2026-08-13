@@ -129,11 +129,11 @@
             if (resourceLoaderStage) {
                 markBootPhase(`resource-loader-${resourceLoaderStage[1].toLowerCase()}`);
             }
-            const specStoreStage = text.match(/BrowserSpecStoreStage:\s*(\d+):(before|after):(.+)$/i);
+            const specStoreStage = text.match(/BrowserSpecStoreStage:\s*(\d+):(\d+):(before|after):(.+)$/i);
             if (specStoreStage) {
                 markBootPhase(
-                    `spec-store-${specStoreStage[1]}-${specStoreStage[2].toLowerCase()}`,
-                    specStoreStage[3]
+                    `spec-store-${specStoreStage[2]}-${specStoreStage[3].toLowerCase()}`,
+                    specStoreStage[4]
                 );
             }
 
@@ -1152,6 +1152,9 @@
                     && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const browserBulkSpecCache =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_BULK_SPEC_CACHE__ !== false;
+                // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
+                // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
+                const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
                 const autoCampaignAllowDirectEscape =
                     window.__STARSECTOR_AUTO_CAMPAIGN_ALLOW_DIRECT_ESCAPE__ === true
                     || (!modeDisablesDirectPath
@@ -1255,8 +1258,8 @@
                     `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
                     `-Dstarsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `starsector.browserBulkSpecCache=${browserBulkSpecCache}`,
-                    `-Dstarsector.browserSpecCachePath=${contentRoot}data/browser-spec-cache-v1.json`,
-                    `starsector.browserSpecCachePath=${contentRoot}data/browser-spec-cache-v1.json`
+                    `-Dstarsector.browserSpecCachePath=${browserSpecCachePath}`,
+                    `starsector.browserSpecCachePath=${browserSpecCachePath}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');

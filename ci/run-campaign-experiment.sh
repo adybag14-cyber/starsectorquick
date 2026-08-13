@@ -74,7 +74,8 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
-grep -q 'starsector.browserSpecCachePath=${contentRoot}data/browser-spec-cache-v1.json' launch.html
+grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
+grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 node ci/verify-service-worker-negative-cache.js
 node ci/verify-campaign-center-subject.js
 
@@ -119,9 +120,9 @@ CP=$(find jars -maxdepth 1 -type f -name '*.jar' -printf '%p:' | sed 's/:$//')
 javap -classpath "$CP" com.sun.xml.txw2.output.IndentingXMLStreamWriter >/dev/null
 rm -rf .ci-build/spec-cache-helper .ci-build/verify-bulk-spec-cache
 mkdir -p .ci-build/spec-cache-helper .ci-build/verify-bulk-spec-cache
-javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
+javac -encoding UTF-8 --release 8 -cp "$CP" \
   -d .ci-build/spec-cache-helper ci/BrowserSpecCache.java
-javac -encoding UTF-8 -source 8 -target 8 -cp ".ci-build/spec-cache-helper:$CP" \
+javac -encoding UTF-8 --release 8 -cp ".ci-build/spec-cache-helper:$CP" \
   -d .ci-build/verify-bulk-spec-cache ci/VerifyBulkSpecCache.java
 java -cp ".ci-build/verify-bulk-spec-cache:.ci-build/spec-cache-helper:$CP" \
   VerifyBulkSpecCache "$PWD/starsector/starsector/data/browser-spec-cache-v1.json"
@@ -295,6 +296,12 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-bulk-spec-patch \
   ci/VerifyLoadingUtilsBulkSpecPatch.java
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch jars/starfarer_obf.jar
+# Prove the transformer is idempotent so repeated local/CI preparation cannot
+# accumulate a second fast path in the obfuscated LoadingUtils method.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifyLoadingUtilsBulkSpecPatch .ci-build/starfarer-bulk-spec-cache-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java

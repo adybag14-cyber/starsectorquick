@@ -8,7 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
 
 /** Browser-only read-through cache for stock small spec files. */
@@ -18,8 +21,9 @@ public final class BrowserSpecCache {
     private static final String SKIP_MOD_CHECK_PROPERTY = "starsector.browserBulkSpecCacheSkipModCheck";
     private static volatile Map<String, String> files;
     private static volatile boolean disabled;
-    private static volatile long hits;
-    private static volatile long misses;
+    private static final AtomicLong HITS = new AtomicLong();
+    private static final AtomicLong MISSES = new AtomicLong();
+    private static final AtomicBoolean FIRST_HIT_LOGGED = new AtomicBoolean();
     private static volatile long loadMs;
 
     private BrowserSpecCache() {}
@@ -36,13 +40,13 @@ public final class BrowserSpecCache {
             if (current == null || current.isEmpty()) return null;
             String value = current.get(normalize(path));
             if (value != null) {
-                hits++;
-                if (hits == 1L) {
+                HITS.incrementAndGet();
+                if (FIRST_HIT_LOGGED.compareAndSet(false, true)) {
                     System.out.println("BrowserSpecCache: first-hit path=" + normalize(path));
                 }
                 return value;
             }
-            misses++;
+            MISSES.incrementAndGet();
             return null;
         } catch (Throwable error) {
             disabled = true;
@@ -52,11 +56,11 @@ public final class BrowserSpecCache {
     }
 
     public static long getHitCount() {
-        return hits;
+        return HITS.get();
     }
 
     public static long getMissCount() {
-        return misses;
+        return MISSES.get();
     }
 
     public static long getLoadMs() {
@@ -127,7 +131,7 @@ public final class BrowserSpecCache {
     }
 
     private static boolean isEligible(String path) {
-        String value = normalize(path).toLowerCase();
+        String value = normalize(path).toLowerCase(Locale.ROOT);
         return value.endsWith(".variant")
                 || value.endsWith(".ship")
                 || value.endsWith(".skin")
