@@ -114,6 +114,10 @@ javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Seriali
   | grep 'public class com.thoughtworks.xstream.core.util.SerializationMembers'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void drain(java.lang.Object)'
+mkdir -p .ci-build/verify-starting-supplies
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
+java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
