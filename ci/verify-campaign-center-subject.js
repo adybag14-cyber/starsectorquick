@@ -3,6 +3,7 @@
 const assert = require('assert');
 const {
   hasCampaignCenterSubject,
+  isCampaignFramePlayable,
   campaignCenterSubjectGate,
 } = require('./campaign-visual-gate');
 
@@ -41,4 +42,13 @@ assert.deepStrictEqual(
   'non-campaign states should bypass the center-subject gate',
 );
 
-console.log('CampaignCenterSubjectGate: OK first/second, warm, bright-fallback, failure, non-campaign');
+
+const playableStats = {
+  centerBrightPixels: 160, centerWarmPixels: 12, nonBlackRatio: 0.2,
+  darkRatio: 0.7, midToneRatio: 0.1, quantizedColorCount: 500, variance: 900
+};
+assert.strictEqual(isCampaignFramePlayable(playableStats), true, 'full playable frame should pass');
+assert.strictEqual(isCampaignFramePlayable({ ...playableStats, quantizedColorCount: 199 }), false, 'texture-poor frame must fail playable gate');
+assert.strictEqual(isCampaignFramePlayable({ ...playableStats, centerWarmPixels: 9, centerBrightPixels: 131 }), false, 'known broken ship signature must fail playable gate');
+
+console.log('CampaignCenterSubjectGate: OK center subject and first-playable-frame gates');

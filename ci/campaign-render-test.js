@@ -2,7 +2,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
-const { campaignCenterSubjectGate } = require('./campaign-visual-gate');
+const { campaignCenterSubjectGate, isCampaignFramePlayable } = require('./campaign-visual-gate');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -239,8 +239,10 @@ function pixelStats(buffer) {
   };
 
   const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
+  const firstFrameCapturedAt = first ? Date.now() : null;
   await sleep(settleMs);
   const second = await safeScreenshot(`${outputDir}/frame-second.png`, 'second frame screenshot');
+  const secondFrameCapturedAt = second ? Date.now() : null;
 
   // Exercise real input only after the visual evidence has been captured so the
   // probe cannot alter the screenshot gate. This catches the previous failure
@@ -443,6 +445,14 @@ function pixelStats(buffer) {
 
   const firstStats = pixelStats(first);
   const secondStats = pixelStats(second);
+  const firstFramePlayable = expectedState !== 'campaign' || isCampaignFramePlayable(firstStats);
+  const secondFramePlayable = expectedState !== 'campaign' || isCampaignFramePlayable(secondStats);
+  const firstPlayableFrameAt = expectedState !== 'campaign' ? null
+    : (firstFramePlayable ? firstFrameCapturedAt
+      : (secondFramePlayable ? secondFrameCapturedAt : null));
+  const timeToFirstPlayableFrameMs = firstPlayableFrameAt
+    ? firstPlayableFrameAt - navigationStartedAt
+    : null;
   const frameChanged = Boolean(firstStats && secondStats && firstStats.sha256 !== secondStats.sha256);
   const rendered = Boolean(secondStats && secondStats.nonBlackRatio > 0.01 && secondStats.variance > 2);
   const campaignTextureRichness = expectedState !== 'campaign' || Boolean(secondStats
@@ -501,6 +511,12 @@ function pixelStats(buffer) {
     campaignSeenAt,
     navigationStartedAt,
     timeToCampaignMs: campaignSeenAt ? campaignSeenAt - navigationStartedAt : null,
+    firstFrameCapturedAt,
+    secondFrameCapturedAt,
+    firstFramePlayable,
+    secondFramePlayable,
+    firstPlayableFrameAt,
+    timeToFirstPlayableFrameMs,
     title,
     titleSeenAt,
     timeToTitleMs: titleSeenAt ? titleSeenAt - navigationStartedAt : null,
