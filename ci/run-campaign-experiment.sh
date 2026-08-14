@@ -76,6 +76,8 @@ grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateS
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
 grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
 grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
+grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
+grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
@@ -241,6 +243,14 @@ rm -rf .ci-build/script-plugin-helper
 mkdir -p .ci-build/script-plugin-helper
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
   -d .ci-build/script-plugin-helper ci/BrowserScriptPluginResolver.java
+rm -rf .ci-build/rules-duplicate-helper .ci-build/verify-rules-duplicate-helper
+mkdir -p .ci-build/rules-duplicate-helper .ci-build/verify-rules-duplicate-helper
+javac -encoding UTF-8 --release 8 \
+  -d .ci-build/rules-duplicate-helper ci/BrowserRuleDuplicateIndex.java
+javac -encoding UTF-8 --release 8 -cp .ci-build/rules-duplicate-helper \
+  -d .ci-build/verify-rules-duplicate-helper ci/TestBrowserRuleDuplicateIndex.java
+java -Xverify:all -cp ".ci-build/verify-rules-duplicate-helper:.ci-build/rules-duplicate-helper" \
+  TestBrowserRuleDuplicateIndex
 
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignOrbitalJunk.java \
@@ -266,6 +276,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSpecStoreDiagnostics.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
+  ci/PatchRulesDuplicateIndex.java \
+  ci/VerifyRulesDuplicateIndexPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -386,6 +398,26 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesVariableDiagnosticsPatch .ci-build/starfarer-rules-no-variable-diag.jar
 mv .ci-build/starfarer-rules-no-variable-diag.jar jars/starfarer_obf.jar
+# Preserve Rules' duplicate-id exception while replacing the O(n^2) per-trigger scan
+# with a per-load O(1) trigger/id index in browser mode. The original scan remains
+# in bytecode and executes unchanged when the browser property is disabled.
+jar uf jars/starfarer_obf.jar \
+  -C .ci-build/rules-duplicate-helper com/fs/starfarer/campaign/rules/BrowserRuleDuplicateIndex.class
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDuplicateIndexPatch .ci-build/starfarer-rules-duplicate-index.jar
+mv .ci-build/starfarer-rules-duplicate-index.jar jars/starfarer_obf.jar
+javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
+  | grep -q 'major version: 52'
+# Both Rules transforms must remain idempotent and compatible in their final order.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDuplicateIndexPatch .ci-build/starfarer-rules-duplicate-index-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesVariableDiagnosticsPatch jars/starfarer_obf.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
@@ -464,6 +496,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.BrowserDeferredTextureQueue \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
+  com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   com.fs.starfarer.BaseGameState
 
 # Rules itself is valid HotSpot bytecode, but its method descriptor references
@@ -515,4 +548,5 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
+grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
