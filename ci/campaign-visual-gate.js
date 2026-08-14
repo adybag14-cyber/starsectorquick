@@ -8,6 +8,16 @@ function hasCampaignCenterSubject(stats) {
     || (bright >= 120 && warm >= 12);
 }
 
+function isCampaignFramePlayable(stats) {
+  return Boolean(stats
+    && Number(stats.nonBlackRatio || 0) > 0.03
+    && Number(stats.darkRatio || 1) < 0.94
+    && Number(stats.midToneRatio || 0) > 0.025
+    && Number(stats.quantizedColorCount || 0) >= 200
+    && Number(stats.variance || 0) >= 400
+    && hasCampaignCenterSubject(stats));
+}
+
 function campaignCenterSubjectGate(expectedState, firstStats, secondStats) {
   if (String(expectedState || '').toLowerCase() !== 'campaign') {
     return { first: true, second: true, overall: true };
@@ -19,5 +29,6 @@ function campaignCenterSubjectGate(expectedState, firstStats, secondStats) {
 
 module.exports = {
   hasCampaignCenterSubject,
+  isCampaignFramePlayable,
   campaignCenterSubjectGate,
 };
