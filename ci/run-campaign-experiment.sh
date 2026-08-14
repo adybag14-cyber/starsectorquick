@@ -74,6 +74,8 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
+grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
@@ -258,6 +260,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
+  ci/PatchJaninoNegativeSourceCache.java \
+  ci/VerifyJaninoNegativeSourceCachePatch.java \
   ci/PatchResourceLoaderQuickStart.java \
   ci/PatchSpecStoreDiagnostics.java \
   ci/PatchRulesVariableDiagnostics.java \
@@ -314,6 +318,30 @@ javap -classpath jars/starfarer_obf.jar -c com.fs.starfarer.loading.scripts.Scri
   | grep -q 'BrowserScriptPluginResolver.resolve'
 javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.scripts.BrowserScriptPluginResolver \
   | grep -q 'major version: 52'
+# Janino repeatedly asks its source ResourceFinder for the same missing Java source.
+# Cache only failures within one finder instance, and only when the browser property
+# is enabled. Successful source reads and the stock disabled-property path are unchanged.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchJaninoNegativeSourceCache jars/starfarer_obf.jar .ci-build/starfarer-janino-negative-cache.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyJaninoNegativeSourceCachePatch .ci-build/starfarer-janino-negative-cache.jar
+mv .ci-build/starfarer-janino-negative-cache.jar jars/starfarer_obf.jar
+# The transform must be byte-for-byte idempotent on a prepared candidate.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchJaninoNegativeSourceCache jars/starfarer_obf.jar .ci-build/starfarer-janino-negative-cache-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyJaninoNegativeSourceCachePatch .ci-build/starfarer-janino-negative-cache-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-janino-negative-cache-repeat.jar
+# Directly prove the property gate: disabled mode retries every miss; enabled mode
+# memoizes only failed names on that finder; successful source reads always repeat.
+rm -rf .ci-build/verify-janino-negative-behavior
+mkdir -p .ci-build/verify-janino-negative-behavior
+javac -encoding UTF-8 --release 8 -cp "jars/starfarer_obf.jar:$CP" \
+  -d .ci-build/verify-janino-negative-behavior \
+  ci/janino-negative-test/com/fs/starfarer/loading/LoadingUtils.java \
+  ci/TestJaninoNegativeSourceCache.java
+java -Xverify:all -cp ".ci-build/verify-janino-negative-behavior:jars/starfarer_obf.jar:$CP" \
+  TestJaninoNegativeSourceCache
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
@@ -435,6 +463,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
   com.fs.starfarer.campaign.save.CampaignGameManager \
+  com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.BaseGameState
 
 # Rules itself is valid HotSpot bytecode, but its method descriptor references
@@ -485,4 +514,5 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
+grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
