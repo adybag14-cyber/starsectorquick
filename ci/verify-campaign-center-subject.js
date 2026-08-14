@@ -10,10 +10,14 @@ const fail = { centerBrightPixels: 149, centerWarmPixels: 7 };
 const warmPass = { centerBrightPixels: 150, centerWarmPixels: 8 };
 const brightPass = { centerBrightPixels: 350, centerWarmPixels: 0 };
 const brightNearMiss = { centerBrightPixels: 349, centerWarmPixels: 7 };
+const strongWarmPass = { centerBrightPixels: 120, centerWarmPixels: 12 };
+const knownBrokenTextureFrame = { centerBrightPixels: 131, centerWarmPixels: 9 };
 
 assert.strictEqual(hasCampaignCenterSubject(warmPass), true, 'warm-pixel path should pass');
 assert.strictEqual(hasCampaignCenterSubject(brightPass), true, 'bright centered-subject fallback should pass');
 assert.strictEqual(hasCampaignCenterSubject(brightNearMiss), false, 'bright fallback boundary should remain strict');
+assert.strictEqual(hasCampaignCenterSubject(strongWarmPass), true, 'strong warm-centered subject should pass with lower brightness');
+assert.strictEqual(hasCampaignCenterSubject(knownBrokenTextureFrame), false, 'known broken missing-ship texture frame must remain rejected');
 assert.strictEqual(hasCampaignCenterSubject(fail), false, 'sub-threshold frame should fail');
 
 assert.deepStrictEqual(

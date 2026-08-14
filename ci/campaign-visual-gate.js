@@ -1,10 +1,11 @@
 'use strict';
 
 function hasCampaignCenterSubject(stats) {
-  return Boolean(stats
-    && Number(stats.centerBrightPixels || 0) >= 150
-    && (Number(stats.centerWarmPixels || 0) >= 8
-      || Number(stats.centerBrightPixels || 0) >= 350));
+  if (!stats) return false;
+  const bright = Number(stats.centerBrightPixels || 0);
+  const warm = Number(stats.centerWarmPixels || 0);
+  return (bright >= 150 && (warm >= 8 || bright >= 350))
+    || (bright >= 120 && warm >= 12);
 }
 
 function campaignCenterSubjectGate(expectedState, firstStats, secondStats) {
