@@ -401,9 +401,21 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
-  com.fs.starfarer.campaign.rules.Rules \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
+
+# Rules itself is valid HotSpot bytecode, but its method descriptor references
+# stock ResourceLoaderState, whose obfuscated method name `if.new` HotSpot rejects
+# before Rules method resolution completes. Verify Rules against a descriptor-only
+# stub on a separate classpath. The stub never enters any runtime JAR/package.
+rm -rf .ci-build/verify-rules-hotspot-stub
+mkdir -p .ci-build/verify-rules-hotspot-stub
+javac -encoding UTF-8 --release 8 \
+  -d .ci-build/verify-rules-hotspot-stub \
+  ci/hotspot-verify-stubs/com/fs/starfarer/loading/ResourceLoaderState.java
+java -Xverify:all -cp \
+  ".ci-build/verify:.ci-build/verify-rules-hotspot-stub:jars/fixer_patch.jar:$CP" \
+  VerifyPatchedRuntimeClasses com.fs.starfarer.campaign.rules.Rules
 
 if [[ "${STARSECTOR_PREPARE_ONLY:-false}" == "true" ]]; then
   echo "Prepared verified campaign runtime candidate; browser execution skipped by STARSECTOR_PREPARE_ONLY=true."
