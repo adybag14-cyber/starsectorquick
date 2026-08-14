@@ -1,19 +1,52 @@
 package com.fs.starfarer;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.ComponentSampleModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-/** Canonicalizes Java ImageIO byte-backed rasters into OpenGL RGBA8 order. */
+/** Canonicalizes Java ImageIO byte-backed rasters into browser-friendly upload buffers. */
 public final class TextureUploadCompat {
     private static final int[] BGR_BAND_OFFSETS = {2, 1, 0};
     private static final int[] ABGR_BAND_OFFSETS = {3, 2, 1, 0};
 
     private TextureUploadCompat() {}
+
+    /** Prepared equivalent of TextureLoader's stock per-pixel buffer + color analysis. */
+    public static final class PreparedTexture {
+        private final ByteBuffer buffer;
+        private final Color averageColor;
+        private final Color medianColor;
+        private final Color accentColor;
+
+        private PreparedTexture(ByteBuffer buffer, Color averageColor, Color medianColor, Color accentColor) {
+            this.buffer = buffer;
+            this.averageColor = averageColor;
+            this.medianColor = medianColor;
+            this.accentColor = accentColor;
+        }
+
+        public ByteBuffer getBuffer() {
+            return buffer;
+        }
+
+        public Color getAverageColor() {
+            return averageColor;
+        }
+
+        public Color getMedianColor() {
+            return medianColor;
+        }
+
+        public Color getAccentColor() {
+            return accentColor;
+        }
+    }
 
     public static byte[] canonicalizeImageBytes(byte[] raw, BufferedImage image) {
         if (image == null) {
@@ -60,6 +93,126 @@ public final class TextureUploadCompat {
             out[dst + 3] = (byte) ((pixel >>> 24) & 0xff);
         }
         return out;
+    }
+
+    /**
+     * Reproduces TextureLoader's stock power-of-two padding, vertical flip,
+     * transparent-pixel handling and three derived colors using primitive arrays
+     * instead of Raster.getPixel() and indexed direct-buffer writes per pixel.
+     */
+    public static PreparedTexture prepareTexture(BufferedImage image) {
+        if (image == null) {
+            throw new IllegalArgumentException("image must not be null");
+        }
+        final int width = image.getWidth();
+        final int height = image.getHeight();
+        final int paddedWidth = nextPowerOfTwo(width);
+        final int paddedHeight = nextPowerOfTwo(height);
+        final boolean hasAlpha = image.getColorModel().hasAlpha();
+        final int channels = hasAlpha ? 4 : 3;
+        final int capacity = Math.multiplyExact(Math.multiplyExact(paddedWidth, paddedHeight), channels);
+
+        DataBuffer dataBuffer = image.getRaster().getDataBuffer();
+        byte[] raw = dataBuffer instanceof DataBufferByte ? ((DataBufferByte) dataBuffer).getData() : null;
+        byte[] rgba = canonicalizeImageBytes(raw, image);
+        byte[] packed = new byte[capacity];
+
+        float sumR = 0f;
+        float sumG = 0f;
+        float sumB = 0f;
+        float count = 0f;
+        float[] histR = new float[256];
+        float[] histG = new float[256];
+        float[] histB = new float[256];
+
+        for (int y = 0; y < height; y++) {
+            int sourceRow = height - y - 1;
+            int src = sourceRow * width * 4;
+            int dst = y * paddedWidth * channels;
+            for (int x = 0; x < width; x++, src += 4, dst += channels) {
+                int r = rgba[src] & 0xff;
+                int g = rgba[src + 1] & 0xff;
+                int b = rgba[src + 2] & 0xff;
+                int a = rgba[src + 3] & 0xff;
+                if (hasAlpha && a == 0) {
+                    continue;
+                }
+
+                packed[dst] = (byte) r;
+                packed[dst + 1] = (byte) g;
+                packed[dst + 2] = (byte) b;
+                if (hasAlpha) packed[dst + 3] = (byte) a;
+
+                sumR += r;
+                sumG += g;
+                sumB += b;
+                histR[r] += 1f;
+                histG[g] += 1f;
+                histB[b] += 1f;
+                count += 1f;
+            }
+        }
+
+        Color average = Color.white;
+        Color median = Color.white;
+        Color accent = Color.white;
+        if (count > 0f) {
+            average = new Color(
+                    clamp((int) (sumR / count)),
+                    clamp((int) (sumG / count)),
+                    clamp((int) (sumB / count)),
+                    255);
+            float half = count * 0.5f;
+            median = new Color(
+                    clamp((int) percentileLow(histR, half)),
+                    clamp((int) percentileLow(histG, half)),
+                    clamp((int) percentileLow(histB, half)),
+                    255);
+            accent = new Color(
+                    clamp((int) weightedHigh(histR, count)),
+                    clamp((int) weightedHigh(histG, count)),
+                    clamp((int) percentileLow(histB, count)),
+                    255);
+        }
+
+        ByteBuffer buffer = ByteBuffer.allocateDirect(capacity);
+        buffer.put(packed);
+        buffer.position(0);
+        buffer.limit(capacity);
+        return new PreparedTexture(buffer, average, median, accent);
+    }
+
+    private static int nextPowerOfTwo(int value) {
+        int out = 2;
+        while (out < value) out *= 2;
+        return out;
+    }
+
+    private static int clamp(int value) {
+        return value < 0 ? 0 : (value > 255 ? 255 : value);
+    }
+
+    private static float percentileLow(float[] histogram, float threshold) {
+        float accumulated = 0f;
+        for (int i = 0; i <= 255; i++) {
+            accumulated += histogram[i];
+            if (accumulated >= threshold) return i;
+        }
+        return 0f;
+    }
+
+    private static float weightedHigh(float[] histogram, float threshold) {
+        float consumed = 0f;
+        float weighted = 0f;
+        for (int i = 255; i >= 0; i--) {
+            float available = histogram[i];
+            float take = available;
+            if (consumed + available > threshold) take = threshold - consumed;
+            consumed += take;
+            weighted += i * take;
+            if (consumed >= threshold) break;
+        }
+        return consumed > 0f ? weighted / consumed : 0f;
     }
 
     private static boolean isTightlyPackedByteRaster(BufferedImage image, byte[] raw,

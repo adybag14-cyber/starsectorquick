@@ -29,6 +29,7 @@ REQUIRED_FILES = {
     "build/final/wasm-modules/lwjgl.js",
     "jars/Fixer.java",
     "jars/fixer_patch.jar",
+    "jars/fs.common_obf.jar",
     "jars/bridge.jar",
     "jars/index.list",
     "jars/scripts-precompiled.jar",
