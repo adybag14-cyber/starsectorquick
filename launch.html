@@ -1152,6 +1152,8 @@
                     && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const browserBulkSpecCache =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_BULK_SPEC_CACHE__ !== false;
+                const browserDeferredTextures =
+                    browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
@@ -1259,13 +1261,18 @@
                     `-Dstarsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `starsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `-Dstarsector.browserSpecCachePath=${browserSpecCachePath}`,
-                    `starsector.browserSpecCachePath=${browserSpecCachePath}`
+                    `starsector.browserSpecCachePath=${browserSpecCachePath}`,
+                    `-Dstarsector.browserDeferredTextures=${browserDeferredTextures}`,
+                    `starsector.browserDeferredTextures=${browserDeferredTextures}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
                 }
                 if (browserBulkSpecCache) {
                     log('Browser bulk spec cache enabled for stock ship/weapon/variant JSON-like files.', '#00ff88');
+                }
+                if (browserDeferredTextures) {
+                    log('Browser deferred textures enabled: illustrations/portraits load on first real lookup.', '#00ff88');
                 }
                 if (disableShipHullPostPass) {
                     javaProperties.push(`-Dstarsector.disableShipHullPostPass=true`);
