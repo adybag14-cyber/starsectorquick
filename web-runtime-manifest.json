@@ -1,15 +1,15 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "35a66e947359c28cdedcb454b5f1d4e43ffeda18",
-    "workflowRunId": "31841135508",
-    "generatedAt": "2026-08-14T21:10:24.456888+00:00",
+    "sourceSha": "2a9f2c289789f3ae517414dc3915df19e1b2fca7",
+    "workflowRunId": "31843909831",
+    "generatedAt": "2026-08-14T21:48:48.892241+00:00",
     "overlayFiles": 836,
     "dataPack": {
       "version": 1,
       "fileCount": 1696,
-      "bytes": 9985592,
-      "sha256": "d3a65a5ce1748caa93886d599d4c1dfee9c2fe769608a7ec07b296cc94b30a79"
+      "bytes": 10095995,
+      "sha256": "939f6e090d3402393ba5881469cba56f8505665834cf7b77d5223ac136813ec0"
     },
     "graphicsPack": {
       "version": 1,
@@ -512,12 +512,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "da812441bc9f5e08f74793fbf31d31f2eea7404373cd91c8b1730b6cc8251043"
+      "sha256": "a0abc25765511801016fed4d879aa5fea3d0ea4ff9679b363ebb4ec5943c98a9"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 223266,
-      "sha256": "e834f46e5b8b4e6eecb08ec5c61685f99cf3c012aa21304d0a1f353e376eb824"
+      "sha256": "ab1301788cdafc2a4e76a99035eb20230c82a13be259012601984d51a719458d"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -527,7 +527,7 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "0092c614b9f84badf5d6507ff486690192851d8e455057bec9da3b93d5758822"
+      "sha256": "f21a2c97184206dc3ac57c278e613e267c855daa31ea3b487d3cc4779e0a45d3"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -541,8 +541,8 @@
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6025721,
-      "sha256": "23c6450d0bb86f916106a4d9e2285fbeb7b9acae7f6b52d3348f9e0f12e3cf71"
+      "bytes": 6026258,
+      "sha256": "c39f2734cbcda56b6e843a99a8ef5f317b145b9133c7eb98859cd6e0ffe593ce"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -551,18 +551,18 @@
     },
     {
       "path": "launch.html",
-      "bytes": 96529,
-      "sha256": "7ae2721d074d8c08f9388e09dca8414bc1e348760c267a87c701d857ee04dba3"
+      "bytes": 97048,
+      "sha256": "e983838119a7661890b2a026f1fbd7f85389f6602cd96ac50bbf628c10f102cf"
     },
     {
       "path": "starsector-data-pack-v1.bin",
-      "bytes": 9985592,
-      "sha256": "d3a65a5ce1748caa93886d599d4c1dfee9c2fe769608a7ec07b296cc94b30a79"
+      "bytes": 10095995,
+      "sha256": "939f6e090d3402393ba5881469cba56f8505665834cf7b77d5223ac136813ec0"
     },
     {
       "path": "starsector-data-pack-v1.json",
-      "bytes": 176527,
-      "sha256": "7f1d23c3c4def28e68df1a0a9ddd9d86b7c46297cc234a3ef02dacd0f252400c"
+      "bytes": 176546,
+      "sha256": "8d16782c8f3e2c4381d3b04653c484299c38a325c36e8baef4b661ce40de8cab"
     },
     {
       "path": "starsector-graphics-pack-v1.json",
@@ -696,8 +696,8 @@
     },
     {
       "path": "starsector/starsector/data/browser-spec-cache-v1.json",
-      "bytes": 1877782,
-      "sha256": "752d1f25f23ca87b4c17795a6f7b791e55a51a438ac7d27567cb19af1480e2bb"
+      "bytes": 1988185,
+      "sha256": "bc7a43c9170ed397ca3ecf408780db6a832207074f0db2fbbbf103911c87362f"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/corvus.json",

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "bytes": 20297077,
+  "bytes": 20297614,
   "order": [
     "fixer_patch.jar",
     "bridge.jar",
@@ -28,13 +28,13 @@
     "fixer_patch.jar": {
       "offset": 0,
       "length": 223266,
-      "sha256": "e834f46e5b8b4e6eecb08ec5c61685f99cf3c012aa21304d0a1f353e376eb824",
+      "sha256": "ab1301788cdafc2a4e76a99035eb20230c82a13be259012601984d51a719458d",
       "type": "application/java-archive"
     },
     "bridge.jar": {
       "offset": 223266,
       "length": 93475,
-      "sha256": "da812441bc9f5e08f74793fbf31d31f2eea7404373cd91c8b1730b6cc8251043",
+      "sha256": "a0abc25765511801016fed4d879aa5fea3d0ea4ff9679b363ebb4ec5943c98a9",
       "type": "application/java-archive"
     },
     "fixer.jar": {
@@ -69,84 +69,84 @@
     },
     "starfarer_obf.jar": {
       "offset": 11146798,
-      "length": 6025721,
-      "sha256": "23c6450d0bb86f916106a4d9e2285fbeb7b9acae7f6b52d3348f9e0f12e3cf71",
+      "length": 6026258,
+      "sha256": "c39f2734cbcda56b6e843a99a8ef5f317b145b9133c7eb98859cd6e0ffe593ce",
       "type": "application/java-archive"
     },
     "jogg-0.0.7.jar": {
-      "offset": 17172519,
+      "offset": 17173056,
       "length": 6839,
       "sha256": "ed7946260897d97c468a4749b3d9d5e436a268fa948bc32e75a7487130e89379",
       "type": "application/java-archive"
     },
     "jorbis-0.0.15.jar": {
-      "offset": 17179358,
+      "offset": 17179895,
       "length": 58917,
       "sha256": "d049b2a1c6ddefde3a5cbff320c96fdd5aefa09b0d3bbea3fe44839f7e6713f9",
       "type": "application/java-archive"
     },
     "json.jar": {
-      "offset": 17238275,
+      "offset": 17238812,
       "length": 44055,
       "sha256": "63c3541f323f3dfdd595da9257a2099b6a6c39f35a6b3909d86c48a8aa456911",
       "type": "application/java-archive"
     },
     "lwjgl.jar": {
-      "offset": 17282330,
+      "offset": 17282867,
       "length": 1063148,
       "sha256": "1bcb134a828051d2d4673c94ed4b8cbb4894ec7a32dbba15f782b891d3953b3c",
       "type": "application/java-archive"
     },
     "jinput.jar": {
-      "offset": 18345478,
+      "offset": 18346015,
       "length": 214859,
       "sha256": "36b6fbede7a2d2f00949a87b9de83007a1c6b4ce5a96978279c0cc612a9adef5",
       "type": "application/java-archive"
     },
     "log4j-1.2.9.jar": {
-      "offset": 18560337,
+      "offset": 18560874,
       "length": 352291,
       "sha256": "d2b9dfb297bcaa7be1fcdd702642a9c9713d7847dca8704e9c15bd829f0ab1bf",
       "type": "application/java-archive"
     },
     "lwjgl_util.jar": {
-      "offset": 18912628,
+      "offset": 18913165,
       "length": 173911,
       "sha256": "6f4a261384e1688a3359420efce5275c8693b822a8c6eaa1e20d5cc126a51571",
       "type": "application/java-archive"
     },
     "fs.sound_obf.jar": {
-      "offset": 19086539,
+      "offset": 19087076,
       "length": 35387,
       "sha256": "c2d071f24b84e7227fced0a43d0f531f133b7d979d7c7784f66af11ce436cf21",
       "type": "application/java-archive"
     },
     "fs.common_obf.jar": {
-      "offset": 19121926,
+      "offset": 19122463,
       "length": 311570,
       "sha256": "45e147ec9600b4899f9474680a16cc3e48e8fa7f09b95dc59f87f37ea1faadd0",
       "type": "application/java-archive"
     },
     "xstream-1.4.10.jar": {
-      "offset": 19433496,
+      "offset": 19434033,
       "length": 589803,
       "sha256": "a1587f35fa617513607c86ec9e6e4de5eb8acdf9a3a6d7f7458f8a8c40b00858",
       "type": "application/java-archive"
     },
     "txw2-2.3.1.jar": {
-      "offset": 20023299,
+      "offset": 20023836,
       "length": 70288,
       "sha256": "34975dde1c6920f1a39791142235689bc3cd357e24d05edd8ff93b885bd68d60",
       "type": "application/java-archive"
     },
     "starfarer.res.jar": {
-      "offset": 20093587,
+      "offset": 20094124,
       "length": 51512,
       "sha256": "308d0bd3d75c12e85471b0dee558f09598157deed62467cf0b4c56fd65eb85c0",
       "type": "application/java-archive"
     },
     "scripts-precompiled.jar": {
-      "offset": 20145099,
+      "offset": 20145636,
       "length": 151978,
       "sha256": "dc5b8fb97dda10c19b1c2f85f83dfc22ddd461dec9711dc623a2e42d98166ec6",
       "type": "application/java-archive"
