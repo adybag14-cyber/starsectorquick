@@ -73,7 +73,18 @@ public final class BrowserDeferredTextureQueue {
         if (path == null) return false;
         java.lang.String value = path.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
         while (value.startsWith("/")) value = value.substring(1);
-        return value.startsWith("graphics/illustrations/") || value.startsWith("graphics/portraits/");
+        return value.startsWith("graphics/illustrations/")
+                || value.startsWith("graphics/portraits/")
+                || value.startsWith("graphics/hullmods/")
+                || value.startsWith("graphics/icons/markets/")
+                || value.startsWith("graphics/icons/cargo/")
+                || value.startsWith("graphics/icons/intel/")
+                || value.startsWith("graphics/icons/skills/")
+                || value.startsWith("graphics/icons/missions/")
+                || value.startsWith("graphics/icons/hullsys/")
+                || value.startsWith("graphics/icons/industry/")
+                || value.startsWith("graphics/icons/codex/")
+                || value.startsWith("graphics/icons/reports/");
     }
 
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
