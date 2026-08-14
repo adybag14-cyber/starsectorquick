@@ -84,7 +84,10 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/icons/hullsys/")
                 || value.startsWith("graphics/icons/industry/")
                 || value.startsWith("graphics/icons/codex/")
-                || value.startsWith("graphics/icons/reports/");
+                || value.startsWith("graphics/icons/reports/")
+                || value.startsWith("graphics/factions/")
+                || value.startsWith("graphics/planets/")
+                || value.startsWith("graphics/stations/");
     }
 
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
