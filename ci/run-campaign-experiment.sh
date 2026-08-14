@@ -156,6 +156,11 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-assets ci/VerifyTextureAssets.java
 java -Xmx3g -cp ".ci-build/verify-texture-assets:jars/fixer_patch.jar:$CP" \
   VerifyTextureAssets starsector/starsector/graphics
+mkdir -p .ci-build/verify-texture-prepared-assets
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-texture-prepared-assets ci/VerifyTexturePreparedAssets.java
+java -Xmx2g -cp ".ci-build/verify-texture-prepared-assets:jars/fixer_patch.jar:$CP" \
+  VerifyTexturePreparedAssets starsector/starsector/graphics
 mkdir -p .ci-build/verify-xstream
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-xstream ci/VerifyJava17XStreamCompat.java
@@ -244,14 +249,18 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
 # Replace fs.common TextureLoader's per-pixel Raster.getPixel()/indexed-ByteBuffer loop
 # with the verified Java-8 bulk converter in fixer_patch.jar. All textures, padding,
-# vertical flip and derived color metadata remain intact.
+# vertical flip, texture-object dimensions, reusable scratch state and derived colors remain intact.
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/TextureUploadCompat.class'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/TextureUploadCompat$PreparedTexture.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureLoaderBulkUpload jars/fs.common_obf.jar .ci-build/fs-common-texture-bulk.jar
-mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
+# Verify the candidate before replacing the runtime JAR, so a bad transform never
+# becomes the input to later packaging or browser checks.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  VerifyTextureLoaderBulkUploadPatch jars/fs.common_obf.jar
-javap -classpath jars/fs.common_obf.jar -c -p com.fs.graphics.TextureLoader \
+  VerifyTextureLoaderBulkUploadPatch .ci-build/fs-common-texture-bulk.jar
+javap -classpath .ci-build/fs-common-texture-bulk.jar -c -p com.fs.graphics.TextureLoader \
   | grep -q 'TextureUploadCompat.prepareTexture'
+mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar

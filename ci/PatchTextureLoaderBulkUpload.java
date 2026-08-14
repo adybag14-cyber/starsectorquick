@@ -21,9 +21,13 @@ public final class PatchTextureLoaderBulkUpload {
     private static final String DESC = "(Ljava/awt/image/BufferedImage;Lcom/fs/graphics/Object;)Ljava/nio/ByteBuffer;";
     private static final String COMPAT = "com/fs/starfarer/TextureUploadCompat";
     private static final String PREPARED = "com/fs/starfarer/TextureUploadCompat$PreparedTexture";
-    private static final String PREPARE_DESC = "(Ljava/awt/image/BufferedImage;)Lcom/fs/starfarer/TextureUploadCompat$PreparedTexture;";
+    private static final String PREPARE_DESC = "(Ljava/awt/image/BufferedImage;Ljava/nio/ByteBuffer;)Lcom/fs/starfarer/TextureUploadCompat$PreparedTexture;";
     private static final String COLOR_DESC = "Ljava/awt/Color;";
     private static final String BUFFER_DESC = "Ljava/nio/ByteBuffer;";
+    private static final String OBJECT = "com/fs/graphics/Object";
+    private static final String PADDED_HEIGHT_SETTER = "\u00d400000";
+    private static final String PADDED_WIDTH_SETTER = "Object";
+    private static final String REUSE_FIELD = "oO0000";
 
     // Exact stock 0.98a-RC8 obfuscated field names. Fail closed if they drift.
     private static final String AVERAGE_FIELD = "\u00f500000";
@@ -39,6 +43,7 @@ public final class PatchTextureLoaderBulkUpload {
         int[] classes = {0};
         int[] methods = {0};
         int[] expectedFields = {0};
+        int[] reuseFields = {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -54,25 +59,26 @@ public final class PatchTextureLoaderBulkUpload {
                 }
                 if (TARGET_ENTRY.equals(entry.getName())) {
                     classes[0]++;
-                    bytes = patch(bytes, methods, expectedFields);
+                    bytes = patch(bytes, methods, expectedFields, reuseFields);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        if (classes[0] != 1 || methods[0] != 1 || expectedFields[0] != 3) {
+        if (classes[0] != 1 || methods[0] != 1 || expectedFields[0] != 3 || reuseFields[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "TextureLoader bulk patch mismatch classes=" + classes[0]
                             + " methods=" + methods[0]
-                            + " colorFields=" + expectedFields[0]);
+                            + " colorFields=" + expectedFields[0]
+                            + " reuseFields=" + reuseFields[0]);
         }
         System.out.println("Patched TextureLoader bulk upload methods=" + methods[0]
                 + " colorFields=" + expectedFields[0]);
     }
 
-    private static byte[] patch(byte[] input, int[] methods, int[] expectedFields) {
+    private static byte[] patch(byte[] input, int[] methods, int[] expectedFields, int[] reuseFields) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -81,7 +87,16 @@ public final class PatchTextureLoaderBulkUpload {
                                                               String signature, Object value) {
                 if (COLOR_DESC.equals(descriptor)
                         && (AVERAGE_FIELD.equals(name) || MEDIAN_FIELD.equals(name) || ACCENT_FIELD.equals(name))) {
+                    if ((access & (Opcodes.ACC_FINAL | Opcodes.ACC_STATIC)) != 0) {
+                        throw new IllegalStateException("unexpected access flags for color field " + name);
+                    }
                     expectedFields[0]++;
+                }
+                if (REUSE_FIELD.equals(name) && BUFFER_DESC.equals(descriptor)) {
+                    if ((access & Opcodes.ACC_STATIC) == 0 || (access & Opcodes.ACC_FINAL) != 0) {
+                        throw new IllegalStateException("unexpected access flags for reusable buffer field " + name);
+                    }
+                    reuseFields[0]++;
                 }
                 return super.visitField(access, name, descriptor, signature, value);
             }
@@ -107,8 +122,28 @@ public final class PatchTextureLoaderBulkUpload {
     private static void emitReplacement(MethodVisitor mv) {
         mv.visitCode();
         mv.visitVarInsn(Opcodes.ALOAD, 1);
+        mv.visitFieldInsn(Opcodes.GETSTATIC, TARGET, REUSE_FIELD, BUFFER_DESC);
         mv.visitMethodInsn(Opcodes.INVOKESTATIC, COMPAT, "prepareTexture", PREPARE_DESC, false);
         mv.visitVarInsn(Opcodes.ASTORE, 3);
+
+        // Preserve stock TextureLoader side effects: the texture object stores
+        // padded backing dimensions before callers calculate UV coordinates.
+        mv.visitVarInsn(Opcodes.ALOAD, 2);
+        mv.visitVarInsn(Opcodes.ALOAD, 3);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, PREPARED, "getPaddedHeight", "()I", false);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, OBJECT, PADDED_HEIGHT_SETTER, "(I)V", false);
+        mv.visitVarInsn(Opcodes.ALOAD, 2);
+        mv.visitVarInsn(Opcodes.ALOAD, 3);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, PREPARED, "getPaddedWidth", "()I", false);
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, OBJECT, PADDED_WIDTH_SETTER, "(I)V", false);
+
+        // Preserve the stock 2048x2048 opaque-RGB static scratch buffer. The
+        // selector returns the old field unchanged for every other texture.
+        mv.visitVarInsn(Opcodes.ALOAD, 3);
+        mv.visitFieldInsn(Opcodes.GETSTATIC, TARGET, REUSE_FIELD, BUFFER_DESC);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, COMPAT, "selectReusable2048Rgb",
+                "(" + "L" + PREPARED + ";" + BUFFER_DESC + ")" + BUFFER_DESC, false);
+        mv.visitFieldInsn(Opcodes.PUTSTATIC, TARGET, REUSE_FIELD, BUFFER_DESC);
 
         putColor(mv, AVERAGE_FIELD, "getAverageColor");
         putColor(mv, MEDIAN_FIELD, "getMedianColor");

@@ -65,20 +65,23 @@ public final class VerifyTextureUploadCompat {
         if (count > 0f) {
             avg = new Color((int)(sumR/count), (int)(sumG/count), (int)(sumB/count), 255);
             float half = count * 0.5f;
-            median = new Color((int)low(hr,half), (int)low(hg,half), (int)low(hb,half), 255);
-            accent = new Color((int)high(hr,count), (int)high(hg,count), (int)low(hb,count), 255);
+            median = new Color((int)high(hr,half), (int)high(hg,half), (int)high(hb,half), 255);
+            accent = new Color((int)low(hr,half), (int)low(hg,half), (int)high(hb,count), 255);
         }
         ByteBuffer buffer = ByteBuffer.allocateDirect(out.length);
         buffer.put(out).position(0);
-        return makeReference(buffer, avg, median, accent);
+        return makeReference(buffer, avg, median, accent, paddedWidth, paddedHeight, !alpha && width == 2048 && height == 2048);
     }
 
-    private static TextureUploadCompat.PreparedTexture makeReference(ByteBuffer buffer, Color avg, Color median, Color accent) {
+    private static TextureUploadCompat.PreparedTexture makeReference(ByteBuffer buffer, Color avg, Color median, Color accent,
+                                                                       int paddedWidth, int paddedHeight, boolean reusable2048Rgb) {
         try {
             java.lang.reflect.Constructor<?> c = TextureUploadCompat.PreparedTexture.class
-                    .getDeclaredConstructor(ByteBuffer.class, Color.class, Color.class, Color.class);
+                    .getDeclaredConstructor(ByteBuffer.class, Color.class, Color.class, Color.class,
+                            int.class, int.class, boolean.class);
             c.setAccessible(true);
-            return (TextureUploadCompat.PreparedTexture)c.newInstance(buffer, avg, median, accent);
+            return (TextureUploadCompat.PreparedTexture)c.newInstance(
+                    buffer, avg, median, accent, paddedWidth, paddedHeight, reusable2048Rgb);
         } catch (Exception e) {
             throw new AssertionError(e);
         }
@@ -98,6 +101,10 @@ public final class VerifyTextureUploadCompat {
         assertColor(label + " average", actual.getAverageColor(), expected.getAverageColor());
         assertColor(label + " median", actual.getMedianColor(), expected.getMedianColor());
         assertColor(label + " accent", actual.getAccentColor(), expected.getAccentColor());
+        if (actual.getPaddedWidth() != expected.getPaddedWidth() || actual.getPaddedHeight() != expected.getPaddedHeight())
+            throw new AssertionError(label + " padded dimensions actual=" + actual.getPaddedWidth() + "x" + actual.getPaddedHeight()
+                    + " expected=" + expected.getPaddedWidth() + "x" + expected.getPaddedHeight());
+        if (actual.isReusable2048Rgb() != expected.isReusable2048Rgb()) throw new AssertionError(label + " reusable flag");
         if (actual.getBuffer().position() != 0) throw new AssertionError(label + " buffer position");
     }
 
@@ -124,6 +131,20 @@ public final class VerifyTextureUploadCompat {
         BufferedImage abgrParent = new BufferedImage(5,4,BufferedImage.TYPE_4BYTE_ABGR);
         for(int y=0;y<4;y++) for(int x=0;x<5;x++) abgrParent.setRGB(x,y,((x+y)%3==0?0:0x80)<<24 | ((x*41+y*7)&255)<<16 | ((x*13+y*37)&255)<<8 | ((x*17+y*29)&255));
         assertPrepared("ABGR child", abgrParent.getSubimage(1,1,3,2));
+
+        BufferedImage premultiplied = new BufferedImage(3,2,BufferedImage.TYPE_INT_ARGB_PRE);
+        premultiplied.setRGB(0,0,0x40102030); premultiplied.setRGB(1,0,0x8080a0c0); premultiplied.setRGB(2,0,0xff123456);
+        premultiplied.setRGB(0,1,0x00010203); premultiplied.setRGB(1,1,0xc0abcdef); premultiplied.setRGB(2,1,0x7f557799);
+        assertPrepared("TYPE_INT_ARGB_PRE fallback", premultiplied);
+
+        BufferedImage gray = new BufferedImage(3,2,BufferedImage.TYPE_BYTE_GRAY);
+        gray.getRaster().setSample(0,0,0,12); gray.getRaster().setSample(1,0,0,128); gray.getRaster().setSample(2,0,0,240);
+        gray.getRaster().setSample(0,1,0,64); gray.getRaster().setSample(1,1,0,192); gray.getRaster().setSample(2,1,0,255);
+        assertPrepared("TYPE_BYTE_GRAY fallback", gray);
+
+        BufferedImage transparent = new BufferedImage(3,2,BufferedImage.TYPE_4BYTE_ABGR);
+        transparent.setRGB(0,0,0x00112233); transparent.setRGB(1,1,0x00abcdef);
+        assertPrepared("fully transparent ABGR", transparent);
 
         System.out.println("Verified canonical and bulk texture upload conversion.");
     }

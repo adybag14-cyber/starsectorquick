@@ -23,29 +23,28 @@ public final class TextureUploadCompat {
         private final Color averageColor;
         private final Color medianColor;
         private final Color accentColor;
+        private final int paddedWidth;
+        private final int paddedHeight;
+        private final boolean reusable2048Rgb;
 
-        private PreparedTexture(ByteBuffer buffer, Color averageColor, Color medianColor, Color accentColor) {
+        private PreparedTexture(ByteBuffer buffer, Color averageColor, Color medianColor, Color accentColor,
+                                int paddedWidth, int paddedHeight, boolean reusable2048Rgb) {
             this.buffer = buffer;
             this.averageColor = averageColor;
             this.medianColor = medianColor;
             this.accentColor = accentColor;
+            this.paddedWidth = paddedWidth;
+            this.paddedHeight = paddedHeight;
+            this.reusable2048Rgb = reusable2048Rgb;
         }
 
-        public ByteBuffer getBuffer() {
-            return buffer;
-        }
-
-        public Color getAverageColor() {
-            return averageColor;
-        }
-
-        public Color getMedianColor() {
-            return medianColor;
-        }
-
-        public Color getAccentColor() {
-            return accentColor;
-        }
+        public ByteBuffer getBuffer() { return buffer; }
+        public Color getAverageColor() { return averageColor; }
+        public Color getMedianColor() { return medianColor; }
+        public Color getAccentColor() { return accentColor; }
+        public int getPaddedWidth() { return paddedWidth; }
+        public int getPaddedHeight() { return paddedHeight; }
+        public boolean isReusable2048Rgb() { return reusable2048Rgb; }
     }
 
     public static byte[] canonicalizeImageBytes(byte[] raw, BufferedImage image) {
@@ -101,9 +100,16 @@ public final class TextureUploadCompat {
      * instead of Raster.getPixel() and indexed direct-buffer writes per pixel.
      */
     public static PreparedTexture prepareTexture(BufferedImage image) {
-        if (image == null) {
-            throw new IllegalArgumentException("image must not be null");
-        }
+        return prepareTexture(image, null);
+    }
+
+    /**
+     * Stock-equivalent texture preparation with an optional reusable buffer for
+     * the original 2048x2048 opaque-RGB scratch-buffer special case.
+     */
+    public static PreparedTexture prepareTexture(BufferedImage image, ByteBuffer reusable2048RgbBuffer) {
+        if (image == null) throw new IllegalArgumentException("image must not be null");
+
         final int width = image.getWidth();
         final int height = image.getHeight();
         final int paddedWidth = nextPowerOfTwo(width);
@@ -111,75 +117,105 @@ public final class TextureUploadCompat {
         final boolean hasAlpha = image.getColorModel().hasAlpha();
         final int channels = hasAlpha ? 4 : 3;
         final int capacity = Math.multiplyExact(Math.multiplyExact(paddedWidth, paddedHeight), channels);
+        final boolean reusable2048Rgb = !hasAlpha && width == 2048 && height == 2048;
+
+        ByteBuffer buffer;
+        if (reusable2048Rgb && reusable2048RgbBuffer != null
+                && reusable2048RgbBuffer.capacity() >= capacity) {
+            buffer = reusable2048RgbBuffer;
+            buffer.clear();
+            buffer.limit(capacity);
+        } else {
+            buffer = ByteBuffer.allocateDirect(capacity);
+        }
+
+        float sumR = 0f, sumG = 0f, sumB = 0f, count = 0f;
+        float[] histR = new float[256], histG = new float[256], histB = new float[256];
+        byte[] row = new byte[Math.multiplyExact(width, channels)];
 
         DataBuffer dataBuffer = image.getRaster().getDataBuffer();
         byte[] raw = dataBuffer instanceof DataBufferByte ? ((DataBufferByte) dataBuffer).getData() : null;
-        byte[] rgba = canonicalizeImageBytes(raw, image);
-        byte[] packed = new byte[capacity];
+        int type = image.getType();
+        boolean fastBgr = raw != null && type == BufferedImage.TYPE_3BYTE_BGR
+                && isTightlyPackedByteRaster(image, raw, 3, BGR_BAND_OFFSETS);
+        boolean fastAbgr = raw != null && type == BufferedImage.TYPE_4BYTE_ABGR
+                && isTightlyPackedByteRaster(image, raw, 4, ABGR_BAND_OFFSETS);
 
-        float sumR = 0f;
-        float sumG = 0f;
-        float sumB = 0f;
-        float count = 0f;
-        float[] histR = new float[256];
-        float[] histG = new float[256];
-        float[] histB = new float[256];
-
-        for (int y = 0; y < height; y++) {
-            int sourceRow = height - y - 1;
-            int src = sourceRow * width * 4;
-            int dst = y * paddedWidth * channels;
-            for (int x = 0; x < width; x++, src += 4, dst += channels) {
-                int r = rgba[src] & 0xff;
-                int g = rgba[src + 1] & 0xff;
-                int b = rgba[src + 2] & 0xff;
-                int a = rgba[src + 3] & 0xff;
-                if (hasAlpha && a == 0) {
-                    continue;
+        if (fastBgr || fastAbgr) {
+            final int sourceStride = fastBgr ? 3 : 4;
+            for (int y = 0; y < height; y++) {
+                if (hasAlpha) Arrays.fill(row, (byte) 0);
+                int src = (height - y - 1) * width * sourceStride;
+                int dst = 0;
+                for (int x = 0; x < width; x++, src += sourceStride, dst += channels) {
+                    int r, g, b, a;
+                    if (fastBgr) {
+                        b = raw[src] & 0xff; g = raw[src + 1] & 0xff; r = raw[src + 2] & 0xff; a = 255;
+                    } else {
+                        a = raw[src] & 0xff; b = raw[src + 1] & 0xff; g = raw[src + 2] & 0xff; r = raw[src + 3] & 0xff;
+                    }
+                    if (hasAlpha && a == 0) continue;
+                    row[dst] = (byte) r; row[dst + 1] = (byte) g; row[dst + 2] = (byte) b;
+                    if (hasAlpha) row[dst + 3] = (byte) a;
+                    sumR += r; sumG += g; sumB += b;
+                    histR[r] += 1f; histG[g] += 1f; histB[b] += 1f; count += 1f;
                 }
-
-                packed[dst] = (byte) r;
-                packed[dst + 1] = (byte) g;
-                packed[dst + 2] = (byte) b;
-                if (hasAlpha) packed[dst + 3] = (byte) a;
-
-                sumR += r;
-                sumG += g;
-                sumB += b;
-                histR[r] += 1f;
-                histG[g] += 1f;
-                histB[b] += 1f;
-                count += 1f;
+                buffer.position(y * paddedWidth * channels);
+                buffer.put(row, 0, row.length);
+            }
+        } else {
+            // Preserve the stock loader's Raster-band semantics for unusual,
+            // premultiplied, indexed, grayscale and child-raster image types.
+            // This fallback is intentionally slower but exact; all 0.98a-RC8
+            // shipped textures are covered by the BGR/ABGR fast paths above.
+            Raster raster = image.getData();
+            int[] pixel = new int[channels];
+            for (int y = 0; y < height; y++) {
+                if (hasAlpha) Arrays.fill(row, (byte) 0);
+                int sourceY = height - y - 1;
+                int dst = 0;
+                for (int x = 0; x < width; x++, dst += channels) {
+                    raster.getPixel(x, sourceY, pixel);
+                    int r = pixel[0];
+                    int g = channels > 1 ? pixel[1] : 0;
+                    int b = channels > 2 ? pixel[2] : 0;
+                    int a = hasAlpha && pixel.length > 3 ? pixel[3] : 255;
+                    if (hasAlpha && a == 0) continue;
+                    row[dst] = (byte) r; row[dst + 1] = (byte) g; row[dst + 2] = (byte) b;
+                    if (hasAlpha) row[dst + 3] = (byte) a;
+                    sumR += r; sumG += g; sumB += b;
+                    if (r >= 0 && r < 256) histR[r] += 1f;
+                    if (g >= 0 && g < 256) histG[g] += 1f;
+                    if (b >= 0 && b < 256) histB[b] += 1f;
+                    count += 1f;
+                }
+                buffer.position(y * paddedWidth * channels);
+                buffer.put(row, 0, row.length);
             }
         }
 
-        Color average = Color.white;
-        Color median = Color.white;
-        Color accent = Color.white;
+        Color average = Color.white, median = Color.white, accent = Color.white;
         if (count > 0f) {
-            average = new Color(
-                    clamp((int) (sumR / count)),
-                    clamp((int) (sumG / count)),
-                    clamp((int) (sumB / count)),
-                    255);
+            average = new Color(clamp((int) (sumR / count)), clamp((int) (sumG / count)),
+                    clamp((int) (sumB / count)), 255);
             float half = count * 0.5f;
-            median = new Color(
-                    clamp((int) percentileLow(histR, half)),
+            median = new Color(clamp((int) weightedHigh(histR, half)),
+                    clamp((int) weightedHigh(histG, half)),
+                    clamp((int) weightedHigh(histB, half)), 255);
+            accent = new Color(clamp((int) percentileLow(histR, half)),
                     clamp((int) percentileLow(histG, half)),
-                    clamp((int) percentileLow(histB, half)),
-                    255);
-            accent = new Color(
-                    clamp((int) weightedHigh(histR, count)),
-                    clamp((int) weightedHigh(histG, count)),
-                    clamp((int) percentileLow(histB, count)),
-                    255);
+                    clamp((int) weightedHigh(histB, count)), 255);
         }
 
-        ByteBuffer buffer = ByteBuffer.allocateDirect(capacity);
-        buffer.put(packed);
         buffer.position(0);
         buffer.limit(capacity);
-        return new PreparedTexture(buffer, average, median, accent);
+        return new PreparedTexture(buffer, average, median, accent,
+                paddedWidth, paddedHeight, reusable2048Rgb);
+    }
+
+    /** Preserve TextureLoader's stock static scratch-buffer reuse without branching in obfuscated bytecode. */
+    public static ByteBuffer selectReusable2048Rgb(PreparedTexture prepared, ByteBuffer existing) {
+        return prepared != null && prepared.isReusable2048Rgb() ? prepared.getBuffer() : existing;
     }
 
     private static int nextPowerOfTwo(int value) {
