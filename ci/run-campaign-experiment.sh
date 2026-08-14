@@ -74,8 +74,10 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
+grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
 node ci/verify-service-worker-negative-cache.js
 node ci/verify-campaign-center-subject.js
 
@@ -143,6 +145,21 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
   | grep 'public static boolean isTitleHandoffActive()'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void disableTitleHandoff()'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
+  | grep -q 'major version: 52'
+mkdir -p .ci-build/verify-deferred-texture-policy
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-deferred-texture-policy ci/VerifyDeferredTexturePolicy.java
+java -cp ".ci-build/verify-deferred-texture-policy:jars/fixer_patch.jar:$CP" VerifyDeferredTexturePolicy
+rm -rf .ci-build/verify-deferred-texture-behavior
+mkdir -p .ci-build/verify-deferred-texture-behavior
+javac -encoding UTF-8 --release 8 -d .ci-build/verify-deferred-texture-behavior \
+  ci/deferred-texture-test/com/fs/graphics/oOoO.java
+javac -encoding UTF-8 --release 8 \
+  -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-deferred-texture-behavior ci/VerifyDeferredTextureBehavior.java
+java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
+  VerifyDeferredTextureBehavior
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
@@ -214,6 +231,9 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTextureUploadRaster.java \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
+  ci/PatchTextureRegistryDeferredLookup.java \
+  ci/PatchResourceLoaderDeferredTextures.java \
+  ci/VerifyDeferredTexturePatches.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -261,6 +281,9 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 javap -classpath .ci-build/fs-common-texture-bulk.jar -c -p com.fs.graphics.TextureLoader \
   | grep -q 'TextureUploadCompat.prepareTexture'
 mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchTextureRegistryDeferredLookup jars/fs.common_obf.jar .ci-build/fs-common-deferred.jar
+mv .ci-build/fs-common-deferred.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
@@ -299,6 +322,9 @@ mv .ci-build/starfarer-resource-quick.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceLoaderState \
   | grep -q 'starsector.browserQuickResourceLoad'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceLoaderDeferredTextures jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred.jar
+mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
@@ -328,6 +354,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-resource-loader \
   VerifyResourceLoaderQuickStart jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyDeferredTexturePatches jars/starfarer_obf.jar jars/fs.common_obf.jar
 
 mkdir -p .ci-build/verify-script-plugin
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/starfarer_obf.jar:$CP" \
@@ -360,6 +388,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.api.impl.campaign.fleets.misc.MiscAcademyFleetCreator \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
+  com.fs.starfarer.BrowserDeferredTextureQueue \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
 
@@ -398,3 +427,4 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
+grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
