@@ -110,6 +110,22 @@ python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-mouse.javap \
   build/final/wasm-modules/lwjgl.js
 
+# Keep Keyboard.getKeyName/getKeyIndex byte-for-byte behavior aligned with the
+# stock LWJGL 2 table. Starsector renders these names directly in campaign HUD
+# shortcut labels; placeholder names such as unknown_33 are therefore visible UI
+# regressions even when keyboard events themselves still work.
+rm -rf .ci-build/keyboard-keyname-probe
+mkdir -p .ci-build/keyboard-keyname-probe
+javac -encoding UTF-8 -source 8 -target 8 \
+  -cp "jars/lwjgl.jar" \
+  -d .ci-build/keyboard-keyname-probe \
+  ci/ProbeKeyboardKeyNames.java
+java -cp ".ci-build/keyboard-keyname-probe:jars/lwjgl.jar" \
+  ProbeKeyboardKeyNames > .ci-build/keyboard-keynames-stock.tsv
+java -cp ".ci-build/keyboard-keyname-probe:jars/bridge.jar:jars/lwjgl.jar" \
+  ProbeKeyboardKeyNames > .ci-build/keyboard-keynames-bridge.tsv
+diff -u .ci-build/keyboard-keynames-stock.tsv .ci-build/keyboard-keynames-bridge.tsv
+
 SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 python3 ci/require-owned-title-state.py
