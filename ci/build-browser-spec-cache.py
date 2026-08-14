@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the stock-browser bulk cache for small JSON-like ship/weapon spec files."""
+"""Build the stock-browser bulk cache for small JSON-like gameplay spec files."""
 from __future__ import annotations
 
 import argparse
@@ -7,7 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 
-EXTENSIONS = {".variant", ".ship", ".skin", ".wpn", ".proj"}
+EXTENSIONS = {".variant", ".ship", ".skin", ".wpn", ".proj", ".system", ".skill"}
 VERSION = 1
 
 
