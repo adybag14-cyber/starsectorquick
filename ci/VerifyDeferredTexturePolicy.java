@@ -20,6 +20,9 @@ public final class VerifyDeferredTexturePolicy {
         expect("graphics/icons/industry/heavyindustry.png", true);
         expect("graphics/icons/codex/ship.png", true);
         expect("graphics/icons/reports/report.png", true);
+        expect("graphics/factions/hegemony.png", true);
+        expect("graphics/planets/terran.jpg", true);
+        expect("graphics/stations/station_mining00.png", true);
         expect("graphics/icons/campaign/burn.png", false);
         expect("graphics/icons/abilities/emergency_burn.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
