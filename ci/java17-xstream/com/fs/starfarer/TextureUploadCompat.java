@@ -3,6 +3,7 @@ package com.fs.starfarer;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.ComponentSampleModel;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
@@ -79,17 +80,21 @@ public final class TextureUploadCompat {
             return out;
         }
 
-        // Child rasters can keep the parent's backing array, scanline stride and
-        // non-zero sample-model translation. Reading those bytes from offset zero
-        // uploads an unrelated region, so use the logical pixels for any layout
-        // that is not the exact packed ImageIO form handled above.
-        int[] argb = image.getRGB(0, 0, width, height, null, 0, width);
-        for (int i = 0, dst = 0; i < argb.length; i++, dst += 4) {
-            int pixel = argb[i];
-            out[dst] = (byte) ((pixel >>> 16) & 0xff);
-            out[dst + 1] = (byte) ((pixel >>> 8) & 0xff);
-            out[dst + 2] = (byte) (pixel & 0xff);
-            out[dst + 3] = (byte) ((pixel >>> 24) & 0xff);
+        // Child/custom rasters can keep parent strides/translations or use
+        // grayscale/indexed/premultiplied layouts. Convert through the image's
+        // ColorModel instead of assuming raster bands are always RGBA.
+        Raster raster = image.getRaster();
+        ColorModel colorModel = image.getColorModel();
+        Object dataElements = null;
+        for (int y = 0, dst = 0; y < height; y++) {
+            for (int x = 0; x < width; x++, dst += 4) {
+                dataElements = raster.getDataElements(x, y, dataElements);
+                int pixel = colorModel.getRGB(dataElements);
+                out[dst] = (byte) ((pixel >>> 16) & 0xff);
+                out[dst + 1] = (byte) ((pixel >>> 8) & 0xff);
+                out[dst + 2] = (byte) (pixel & 0xff);
+                out[dst + 3] = (byte) ((pixel >>> 24) & 0xff);
+            }
         }
         return out;
     }
@@ -164,30 +169,28 @@ public final class TextureUploadCompat {
                 buffer.put(row, 0, row.length);
             }
         } else {
-            // Preserve the stock loader's Raster-band semantics for unusual,
-            // premultiplied, indexed, grayscale and child-raster image types.
-            // This fallback is intentionally slower but exact; all 0.98a-RC8
-            // shipped textures are covered by the BGR/ABGR fast paths above.
-            Raster raster = image.getData();
-            int[] pixel = new int[channels];
+            // Custom/premultiplied/indexed/grayscale layouts are uncommon in the
+            // shipped runtime, but map them through ColorModel so grayscale+alpha
+            // expands gray into RGB and keeps the actual alpha component.
+            Raster raster = image.getRaster();
+            ColorModel colorModel = image.getColorModel();
+            Object dataElements = null;
             for (int y = 0; y < height; y++) {
                 if (hasAlpha) Arrays.fill(row, (byte) 0);
                 int sourceY = height - y - 1;
                 int dst = 0;
                 for (int x = 0; x < width; x++, dst += channels) {
-                    raster.getPixel(x, sourceY, pixel);
-                    int r = pixel[0];
-                    int g = channels > 1 ? pixel[1] : 0;
-                    int b = channels > 2 ? pixel[2] : 0;
-                    int a = hasAlpha && pixel.length > 3 ? pixel[3] : 255;
+                    dataElements = raster.getDataElements(x, sourceY, dataElements);
+                    int argb = colorModel.getRGB(dataElements);
+                    int a = (argb >>> 24) & 0xff;
+                    int r = (argb >>> 16) & 0xff;
+                    int g = (argb >>> 8) & 0xff;
+                    int b = argb & 0xff;
                     if (hasAlpha && a == 0) continue;
                     row[dst] = (byte) r; row[dst + 1] = (byte) g; row[dst + 2] = (byte) b;
                     if (hasAlpha) row[dst + 3] = (byte) a;
                     sumR += r; sumG += g; sumB += b;
-                    if (r >= 0 && r < 256) histR[r] += 1f;
-                    if (g >= 0 && g < 256) histG[g] += 1f;
-                    if (b >= 0 && b < 256) histB[b] += 1f;
-                    count += 1f;
+                    histR[r] += 1f; histG[g] += 1f; histB[b] += 1f; count += 1f;
                 }
                 buffer.position(y * paddedWidth * channels);
                 buffer.put(row, 0, row.length);
