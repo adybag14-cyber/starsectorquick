@@ -15,12 +15,17 @@ public final class VerifyDeferredTexturePatches {
     public static void main(String[] args)throws Exception{
         if(args.length!=2)throw new IllegalArgumentException("usage: VerifyDeferredTexturePatches starfarer_obf.jar fs.common_obf.jar");
         verifyResourceLoader(Path.of(args[0])); verifyRegistry(Path.of(args[1]));
-        System.out.println("VerifyDeferredTexturePatches: OK resource helpers=2 direct=5 lazy-before-map=true");
+        System.out.println("VerifyDeferredTexturePatches: OK resource helpers=2 direct=5 predecode-helper=1 lazy-before-map=true");
     }
     private static void verifyResourceLoader(Path jarPath)throws Exception{
-        int[] methods={0},helper={0},direct={0};List<String> order=new ArrayList<String>();
-        try(JarFile jar=new JarFile(jarPath.toFile())){JarEntry e=jar.getJarEntry("com/fs/starfarer/loading/ResourceLoaderState.class");if(e==null)throw new AssertionError("missing ResourceLoaderState");try(InputStream in=jar.getInputStream(e)){new ClassReader(in).accept(new ClassVisitor(Opcodes.ASM9){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[] ex){if(!"init".equals(n)||!"(Ljava/util/Map;)V".equals(d))return null;methods[0]++;return new MethodVisitor(Opcodes.ASM9){@Override public void visitMethodInsn(int op,String owner,String name,String desc,boolean itf){if(op==Opcodes.INVOKESTATIC&&"(Ljava/lang/String;Ljava/lang/String;)V".equals(desc)){if("com/fs/graphics/oOoO".equals(owner)&&"o00000".equals(name)){direct[0]++;order.add("direct");}if(HELPER.equals(owner)&&"loadOrDefer".equals(name)){helper[0]++;order.add("helper");}}}};}},0);}}
-        if(methods[0]!=1||helper[0]!=2||direct[0]!=5)throw new AssertionError("ResourceLoader deferred patch mismatch methods="+methods[0]+" helper="+helper[0]+" direct="+direct[0]+" order="+order);
+        int[] methods={0},helper={0},direct={0},predecodeHelper={0},stockImagePredecode={0},ordinalCalls={0};List<String> order=new ArrayList<String>();
+        try(JarFile jar=new JarFile(jarPath.toFile())){JarEntry e=jar.getJarEntry("com/fs/starfarer/loading/ResourceLoaderState.class");if(e==null)throw new AssertionError("missing ResourceLoaderState");try(InputStream in=jar.getInputStream(e)){new ClassReader(in).accept(new ClassVisitor(Opcodes.ASM9){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[] ex){if(!"init".equals(n)||!"(Ljava/util/Map;)V".equals(d))return null;methods[0]++;return new MethodVisitor(Opcodes.ASM9){@Override public void visitMethodInsn(int op,String owner,String name,String desc,boolean itf){if(op==Opcodes.INVOKESTATIC&&"(Ljava/lang/String;Ljava/lang/String;)V".equals(desc)){if("com/fs/graphics/oOoO".equals(owner)&&"o00000".equals(name)){direct[0]++;order.add("direct");}if(HELPER.equals(owner)&&"loadOrDefer".equals(name)){helper[0]++;order.add("helper");}}
+                        if(op==Opcodes.INVOKESTATIC&&HELPER.equals(owner)&&"queueImagePredecode".equals(name)&&"(Ljava/lang/String;I)V".equals(desc))predecodeHelper[0]++;
+                        if(op==Opcodes.INVOKESTATIC&&"com/fs/graphics/L".equals(owner)&&"\u00d600000".equals(name)&&"(Ljava/lang/String;)V".equals(desc))stockImagePredecode[0]++;
+                        if(op==Opcodes.INVOKEVIRTUAL&&"com/fs/starfarer/loading/ResourceLoaderState$o".equals(owner)&&"ordinal".equals(name)&&"()I".equals(desc))ordinalCalls[0]++;}};}},0);}}
+        if(methods[0]!=1||helper[0]!=2||direct[0]!=5||predecodeHelper[0]!=1||stockImagePredecode[0]!=0||ordinalCalls[0]<2)
+            throw new AssertionError("ResourceLoader deferred patch mismatch methods="+methods[0]+" helper="+helper[0]+" direct="+direct[0]
+                    +" predecodeHelper="+predecodeHelper[0]+" stockImagePredecode="+stockImagePredecode[0]+" ordinalCalls="+ordinalCalls[0]+" order="+order);
         List<String> expected=java.util.Arrays.asList("direct","direct","direct","direct","helper","direct","helper");
         if(!order.equals(expected))throw new AssertionError("ResourceLoader image-call order mismatch actual="+order+" expected="+expected);
     }
