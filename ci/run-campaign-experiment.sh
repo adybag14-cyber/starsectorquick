@@ -13,7 +13,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -156,6 +156,11 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-assets ci/VerifyTextureAssets.java
 java -Xmx3g -cp ".ci-build/verify-texture-assets:jars/fixer_patch.jar:$CP" \
   VerifyTextureAssets starsector/starsector/graphics
+mkdir -p .ci-build/verify-texture-prepared-assets
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-texture-prepared-assets ci/VerifyTexturePreparedAssets.java
+java -Xmx2g -cp ".ci-build/verify-texture-prepared-assets:jars/fixer_patch.jar:$CP" \
+  VerifyTexturePreparedAssets starsector/starsector/graphics
 mkdir -p .ci-build/verify-xstream
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-xstream ci/VerifyJava17XStreamCompat.java
@@ -207,6 +212,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCoreLifecycleDiagnostics.java \
   ci/PatchMiscAcademyFleetCreator.java \
   ci/PatchTextureUploadRaster.java \
+  ci/PatchTextureLoaderBulkUpload.java \
+  ci/VerifyTextureLoaderBulkUploadPatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -240,6 +247,20 @@ mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
+# Replace fs.common TextureLoader's per-pixel Raster.getPixel()/indexed-ByteBuffer loop
+# with the verified Java-8 bulk converter in fixer_patch.jar. All textures, padding,
+# vertical flip, texture-object dimensions, reusable scratch state and derived colors remain intact.
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/TextureUploadCompat.class'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/TextureUploadCompat$PreparedTexture.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchTextureLoaderBulkUpload jars/fs.common_obf.jar .ci-build/fs-common-texture-bulk.jar
+# Verify the candidate before replacing the runtime JAR, so a bad transform never
+# becomes the input to later packaging or browser checks.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyTextureLoaderBulkUploadPatch .ci-build/fs-common-texture-bulk.jar
+javap -classpath .ci-build/fs-common-texture-bulk.jar -c -p com.fs.graphics.TextureLoader \
+  | grep -q 'TextureUploadCompat.prepareTexture'
+mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
@@ -338,6 +359,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2 \
   com.fs.starfarer.api.impl.campaign.fleets.misc.MiscAcademyFleetCreator \
   com.fs.starfarer.util.O \
+  com.fs.graphics.TextureLoader \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.BaseGameState
 

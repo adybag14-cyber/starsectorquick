@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 index = ROOT / 'jars' / 'index.list'
 tracked = {
     'fixer_patch.jar',
+    'fs.common_obf.jar',
     'starfarer.api.jar',
     'starfarer_obf.jar',
     'scripts-precompiled.jar',
