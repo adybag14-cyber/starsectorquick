@@ -151,6 +151,15 @@ mkdir -p .ci-build/verify-deferred-texture-policy
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-deferred-texture-policy ci/VerifyDeferredTexturePolicy.java
 java -cp ".ci-build/verify-deferred-texture-policy:jars/fixer_patch.jar:$CP" VerifyDeferredTexturePolicy
+rm -rf .ci-build/verify-deferred-texture-behavior
+mkdir -p .ci-build/verify-deferred-texture-behavior
+javac -encoding UTF-8 --release 8 -d .ci-build/verify-deferred-texture-behavior \
+  ci/deferred-texture-test/com/fs/graphics/oOoO.java
+javac -encoding UTF-8 --release 8 \
+  -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-deferred-texture-behavior ci/VerifyDeferredTextureBehavior.java
+java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
+  VerifyDeferredTextureBehavior
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
