@@ -28,6 +28,10 @@ public final class VerifyTexturePreparedAssets {
             TextureUploadCompat.PreparedTexture actual = TextureUploadCompat.prepareTexture(image);
             Expected expected = stockReference(image);
             assertBuffer(path.toString(), actual.getBuffer(), expected.buffer);
+            if (actual.getPaddedWidth() != expected.paddedWidth || actual.getPaddedHeight() != expected.paddedHeight) {
+                throw new AssertionError(path + " padded dimensions actual=" + actual.getPaddedWidth() + "x"
+                        + actual.getPaddedHeight() + " expected=" + expected.paddedWidth + "x" + expected.paddedHeight);
+            }
             assertColor(path + " average", actual.getAverageColor(), expected.average);
             assertColor(path + " median", actual.getMedianColor(), expected.median);
             assertColor(path + " accent", actual.getAccentColor(), expected.accent);
@@ -58,7 +62,7 @@ public final class VerifyTexturePreparedAssets {
             median=new Color(clamp((int)weightedHigh(hr,half)),clamp((int)weightedHigh(hg,half)),clamp((int)weightedHigh(hb,half)),255);
             accent=new Color(clamp((int)low(hr,half)),clamp((int)low(hg,half)),clamp((int)weightedHigh(hb,count)),255);
         }
-        out.position(0); out.limit(out.capacity()); return new Expected(out,avg,median,accent);
+        out.position(0); out.limit(out.capacity()); return new Expected(out,avg,median,accent,pw,ph);
     }
 
     private static void assertBuffer(String label, ByteBuffer a, ByteBuffer e) {
@@ -70,5 +74,8 @@ public final class VerifyTexturePreparedAssets {
     private static int clamp(int v){return v<0?0:(v>255?255:v);}
     private static float low(float[] h,float threshold){float a=0;for(int i=0;i<=255;i++){a+=h[i];if(a>=threshold)return i;}return 0;}
     private static float weightedHigh(float[] h,float threshold){float a=0,w=0;for(int i=255;i>=0;i--){float v=h[i],take=v;if(a+v>threshold)take=threshold-a;a+=take;w+=i*take;if(a>=threshold)break;}return a>0?w/a:0;}
-    private static final class Expected { final ByteBuffer buffer; final Color average,median,accent; Expected(ByteBuffer b,Color a,Color m,Color c){buffer=b;average=a;median=m;accent=c;} }
+    private static final class Expected {
+        final ByteBuffer buffer; final Color average,median,accent; final int paddedWidth,paddedHeight;
+        Expected(ByteBuffer b,Color a,Color m,Color c,int pw,int ph){buffer=b;average=a;median=m;accent=c;paddedWidth=pw;paddedHeight=ph;}
+    }
 }

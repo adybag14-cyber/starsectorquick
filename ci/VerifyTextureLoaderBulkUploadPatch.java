@@ -25,7 +25,7 @@ public final class VerifyTextureLoaderBulkUploadPatch {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) throw new IllegalArgumentException("usage: VerifyTextureLoaderBulkUploadPatch patched.jar");
         int[] methods={0}, prepareCalls={0}, selectorCalls={0}, colorPuts={0}, bufferGets={0};
-        int[] widthGets={0}, heightGets={0}, dimensionSetters={0}, reuseGets={0}, reusePuts={0};
+        int[] widthGets={0}, heightGets={0}, dimensionSetters={0}, widthPairs={0}, heightPairs={0}, reuseGets={0}, reusePuts={0};
         int[] rasterPixelCalls={0}, indexedBufferPuts={0}, instructions={0}, controlFlow={0};
         try (JarFile jar = new JarFile(Path.of(args[0]).toFile())) {
             JarEntry entry = jar.getJarEntry(TARGET_ENTRY);
@@ -36,6 +36,7 @@ public final class VerifyTextureLoaderBulkUploadPatch {
                         if (!"super".equals(name) || !DESC.equals(descriptor)) return null;
                         methods[0]++;
                         return new MethodVisitor(Opcodes.ASM9) {
+                            private java.lang.String pendingDimensionGetter;
                             private void insn(){ instructions[0]++; }
                             @Override public void visitInsn(int opcode){insn();}
                             @Override public void visitIntInsn(int opcode,int operand){insn();}
@@ -52,13 +53,23 @@ public final class VerifyTextureLoaderBulkUploadPatch {
                             }
                             @Override public void visitMethodInsn(int opcode,String owner,String methodName,String methodDescriptor,boolean isInterface){
                                 insn();
-                                if(opcode==Opcodes.INVOKESTATIC && COMPAT.equals(owner) && "prepareTexture".equals(methodName)) prepareCalls[0]++;
-                                if(opcode==Opcodes.INVOKESTATIC && COMPAT.equals(owner) && "selectReusable2048Rgb".equals(methodName)) selectorCalls[0]++;
-                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getBuffer".equals(methodName)) bufferGets[0]++;
-                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getPaddedWidth".equals(methodName)) widthGets[0]++;
-                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getPaddedHeight".equals(methodName)) heightGets[0]++;
+                                if(opcode==Opcodes.INVOKESTATIC && COMPAT.equals(owner) && "prepareTexture".equals(methodName)
+                                        && ("(Ljava/awt/image/BufferedImage;Ljava/nio/ByteBuffer;)L" + PREPARED + ";").equals(methodDescriptor)) prepareCalls[0]++;
+                                if(opcode==Opcodes.INVOKESTATIC && COMPAT.equals(owner) && "selectReusable2048Rgb".equals(methodName)
+                                        && ("(L" + PREPARED + ";Ljava/nio/ByteBuffer;)Ljava/nio/ByteBuffer;").equals(methodDescriptor)) selectorCalls[0]++;
+                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getBuffer".equals(methodName)
+                                        && "()Ljava/nio/ByteBuffer;".equals(methodDescriptor)) bufferGets[0]++;
+                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getPaddedWidth".equals(methodName)
+                                        && "()I".equals(methodDescriptor)) { widthGets[0]++; pendingDimensionGetter = "width"; }
+                                if(opcode==Opcodes.INVOKEVIRTUAL && PREPARED.equals(owner) && "getPaddedHeight".equals(methodName)
+                                        && "()I".equals(methodDescriptor)) { heightGets[0]++; pendingDimensionGetter = "height"; }
                                 if(opcode==Opcodes.INVOKEVIRTUAL && OBJECT.equals(owner) && "(I)V".equals(methodDescriptor)
-                                        && ("Object".equals(methodName)||"\u00d400000".equals(methodName))) dimensionSetters[0]++;
+                                        && ("Object".equals(methodName)||"\u00d400000".equals(methodName))) {
+                                    dimensionSetters[0]++;
+                                    if ("width".equals(pendingDimensionGetter) && "Object".equals(methodName)) widthPairs[0]++;
+                                    if ("height".equals(pendingDimensionGetter) && "\u00d400000".equals(methodName)) heightPairs[0]++;
+                                    pendingDimensionGetter = null;
+                                }
                                 if(owner.endsWith("Raster") && "getPixel".equals(methodName)) rasterPixelCalls[0]++;
                                 if("java/nio/ByteBuffer".equals(owner)&&"put".equals(methodName)&&"(IB)Ljava/nio/ByteBuffer;".equals(methodDescriptor)) indexedBufferPuts[0]++;
                             }
@@ -75,14 +86,15 @@ public final class VerifyTextureLoaderBulkUploadPatch {
             }
         }
         boolean ok=methods[0]==1&&prepareCalls[0]==1&&selectorCalls[0]==1&&colorPuts[0]==3&&bufferGets[0]==1
-                &&widthGets[0]==1&&heightGets[0]==1&&dimensionSetters[0]==2&&reuseGets[0]==2&&reusePuts[0]==1
+                &&widthGets[0]==1&&heightGets[0]==1&&dimensionSetters[0]==2&&widthPairs[0]==1&&heightPairs[0]==1&&reuseGets[0]==2&&reusePuts[0]==1
                 &&rasterPixelCalls[0]==0&&indexedBufferPuts[0]==0&&controlFlow[0]==0&&instructions[0]<=48;
         if(!ok) throw new AssertionError("texture bulk patch mismatch methods="+methods[0]+" prepareCalls="+prepareCalls[0]
                 +" selectorCalls="+selectorCalls[0]+" colorPuts="+colorPuts[0]+" bufferGets="+bufferGets[0]
                 +" widthGets="+widthGets[0]+" heightGets="+heightGets[0]+" dimensionSetters="+dimensionSetters[0]
-                +" reuseGets="+reuseGets[0]+" reusePuts="+reusePuts[0]+" rasterPixelCalls="+rasterPixelCalls[0]
+                +" widthPairs="+widthPairs[0]+" heightPairs="+heightPairs[0]+" reuseGets="+reuseGets[0]+" reusePuts="+reusePuts[0]+" rasterPixelCalls="+rasterPixelCalls[0]
                 +" indexedBufferPuts="+indexedBufferPuts[0]+" controlFlow="+controlFlow[0]+" instructions="+instructions[0]);
         System.out.println("VerifyTextureLoaderBulkUploadPatch: OK instructions="+instructions[0]+" prepareCalls="+prepareCalls[0]
-                +" dimensions="+dimensionSetters[0]+" colors="+colorPuts[0]+" reuse="+reuseGets[0]+"/"+reusePuts[0]);
+                +" dimensions="+dimensionSetters[0]+" widthPair="+widthPairs[0]+" heightPair="+heightPairs[0]
+                +" colors="+colorPuts[0]+" reuse="+reuseGets[0]+"/"+reusePuts[0]);
     }
 }

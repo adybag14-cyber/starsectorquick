@@ -2,6 +2,12 @@ import com.fs.starfarer.TextureUploadCompat;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
+import java.awt.color.ColorSpace;
+import java.awt.Transparency;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -47,18 +53,31 @@ public final class VerifyTextureUploadCompat {
         byte[] out = new byte[paddedWidth * paddedHeight * channels];
         float sumR = 0f, sumG = 0f, sumB = 0f, count = 0f;
         float[] hr = new float[256], hg = new float[256], hb = new float[256];
+        boolean stockByteLayout = image.getType() == BufferedImage.TYPE_3BYTE_BGR
+                || image.getType() == BufferedImage.TYPE_4BYTE_ABGR;
         int[] pixel = new int[alpha ? 4 : 3];
+        Raster raster = image.getRaster();
+        ColorModel colorModel = image.getColorModel();
+        Object dataElements = null;
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                image.getRaster().getPixel(x, height - y - 1, pixel);
-                if (alpha && pixel[3] == 0) continue;
+                int sourceY = height - y - 1;
+                int r, g, b, a;
+                if (stockByteLayout) {
+                    raster.getPixel(x, sourceY, pixel);
+                    r = pixel[0]; g = pixel[1]; b = pixel[2]; a = alpha ? pixel[3] : 255;
+                } else {
+                    dataElements = raster.getDataElements(x, sourceY, dataElements);
+                    int argb = colorModel.getRGB(dataElements);
+                    a = (argb >>> 24) & 0xff; r = (argb >>> 16) & 0xff;
+                    g = (argb >>> 8) & 0xff; b = argb & 0xff;
+                }
+                if (alpha && a == 0) continue;
                 int dst = (y * paddedWidth + x) * channels;
-                out[dst] = (byte) pixel[0];
-                out[dst + 1] = (byte) pixel[1];
-                out[dst + 2] = (byte) pixel[2];
-                if (alpha) out[dst + 3] = (byte) pixel[3];
-                sumR += pixel[0]; sumG += pixel[1]; sumB += pixel[2];
-                hr[pixel[0]] += 1f; hg[pixel[1]] += 1f; hb[pixel[2]] += 1f; count += 1f;
+                out[dst] = (byte) r; out[dst + 1] = (byte) g; out[dst + 2] = (byte) b;
+                if (alpha) out[dst + 3] = (byte) a;
+                sumR += r; sumG += g; sumB += b;
+                hr[r] += 1f; hg[g] += 1f; hb[b] += 1f; count += 1f;
             }
         }
         Color avg = Color.white, median = Color.white, accent = Color.white;
@@ -145,6 +164,37 @@ public final class VerifyTextureUploadCompat {
         BufferedImage transparent = new BufferedImage(3,2,BufferedImage.TYPE_4BYTE_ABGR);
         transparent.setRGB(0,0,0x00112233); transparent.setRGB(1,1,0x00abcdef);
         assertPrepared("fully transparent ABGR", transparent);
+
+        ColorSpace graySpace = ColorSpace.getInstance(ColorSpace.CS_GRAY);
+        ColorModel grayAlphaModel = new ComponentColorModel(graySpace, new int[] {8, 8}, true, false,
+                Transparency.TRANSLUCENT, java.awt.image.DataBuffer.TYPE_BYTE);
+        WritableRaster grayAlphaRaster = Raster.createInterleavedRaster(
+                java.awt.image.DataBuffer.TYPE_BYTE, 3, 2, 2, null);
+        BufferedImage grayAlpha = new BufferedImage(grayAlphaModel, grayAlphaRaster, false, null);
+        grayAlphaRaster.setPixel(0,0,new int[]{32,255}); grayAlphaRaster.setPixel(1,0,new int[]{128,128});
+        grayAlphaRaster.setPixel(2,0,new int[]{240,64}); grayAlphaRaster.setPixel(0,1,new int[]{64,0});
+        grayAlphaRaster.setPixel(1,1,new int[]{192,200}); grayAlphaRaster.setPixel(2,1,new int[]{255,255});
+        assertPrepared("gray+alpha ColorModel fallback", grayAlpha);
+
+        BufferedImage reusableImage = new BufferedImage(2048, 2048, BufferedImage.TYPE_3BYTE_BGR);
+        reusableImage.setRGB(0, 0, 0xff112233);
+        int reusableCapacity = 2048 * 2048 * 3;
+        ByteBuffer reusable = ByteBuffer.allocateDirect(reusableCapacity);
+        for (int i = 0; i < 128; i++) reusable.put(i, (byte) 0x7f);
+        TextureUploadCompat.PreparedTexture reused = TextureUploadCompat.prepareTexture(reusableImage, reusable);
+        if (reused.getBuffer() != reusable) throw new AssertionError("2048 RGB buffer identity was not reused");
+        if (!reused.isReusable2048Rgb() || reused.getBuffer().limit() != reusableCapacity)
+            throw new AssertionError("2048 RGB reuse contract flags/limit");
+        if ((reused.getBuffer().get(0) & 0xff) == 0x7f) throw new AssertionError("stale reusable bytes were not overwritten");
+        if (TextureUploadCompat.selectReusable2048Rgb(reused, null) != reusable)
+            throw new AssertionError("selector did not retain reused buffer");
+
+        BufferedImage smallRgb = new BufferedImage(8, 8, BufferedImage.TYPE_3BYTE_BGR);
+        TextureUploadCompat.PreparedTexture notReused = TextureUploadCompat.prepareTexture(smallRgb, reusable);
+        if (notReused.getBuffer() == reusable || notReused.isReusable2048Rgb())
+            throw new AssertionError("small RGB image incorrectly reused 2048 scratch buffer");
+        if (TextureUploadCompat.selectReusable2048Rgb(notReused, reusable) != reusable)
+            throw new AssertionError("selector should preserve existing scratch buffer for non-2048 texture");
 
         System.out.println("Verified canonical and bulk texture upload conversion.");
     }
