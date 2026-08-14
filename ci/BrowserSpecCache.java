@@ -26,6 +26,8 @@ public final class BrowserSpecCache {
     private static final AtomicLong HITS = new AtomicLong();
     private static final AtomicLong MISSES = new AtomicLong();
     private static final AtomicBoolean FIRST_HIT_LOGGED = new AtomicBoolean();
+    private static final AtomicBoolean SYSTEM_HIT_LOGGED = new AtomicBoolean();
+    private static final AtomicBoolean SKILL_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean VARIANT_DISCOVERY_LOGGED = new AtomicBoolean();
     private static volatile long loadMs;
 
@@ -41,11 +43,18 @@ public final class BrowserSpecCache {
                 current = ensureLoaded();
             }
             if (current == null || current.isEmpty()) return null;
-            String value = current.get(normalize(path));
+            String normalized = normalize(path);
+            String value = current.get(normalized);
             if (value != null) {
                 HITS.incrementAndGet();
                 if (FIRST_HIT_LOGGED.compareAndSet(false, true)) {
-                    System.out.println("BrowserSpecCache: first-hit path=" + normalize(path));
+                    System.out.println("BrowserSpecCache: first-hit path=" + normalized);
+                }
+                if (normalized.endsWith(".system") && SYSTEM_HIT_LOGGED.compareAndSet(false, true)) {
+                    System.out.println("BrowserSpecCache: first-system-hit path=" + normalized);
+                }
+                if (normalized.endsWith(".skill") && SKILL_HIT_LOGGED.compareAndSet(false, true)) {
+                    System.out.println("BrowserSpecCache: first-skill-hit path=" + normalized);
                 }
                 return value;
             }
@@ -195,7 +204,9 @@ public final class BrowserSpecCache {
                 || value.endsWith(".ship")
                 || value.endsWith(".skin")
                 || value.endsWith(".wpn")
-                || value.endsWith(".proj");
+                || value.endsWith(".proj")
+                || value.endsWith(".system")
+                || value.endsWith(".skill");
     }
 
     private static String normalize(String path) {

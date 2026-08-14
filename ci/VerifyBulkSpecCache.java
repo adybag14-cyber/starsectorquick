@@ -16,6 +16,8 @@ public final class VerifyBulkSpecCache {
 
         String lasher = BrowserSpecCache.getRaw("data/variants/lasher_Standard.variant");
         String ziggurat = BrowserSpecCache.getRaw("data/variants/ziggurat_HF.variant");
+        String system = BrowserSpecCache.getRaw("data/shipsystems/acausaldisruptor.system");
+        String skill = BrowserSpecCache.getRaw("data/characters/skills/advanced_countermeasures.skill");
         if (lasher == null || !lasher.contains("\"variantId\": \"lasher_Standard\"")) {
             throw new AssertionError("lasher variant was not reconstructed from cache");
         }
@@ -25,10 +27,25 @@ public final class VerifyBulkSpecCache {
         if (!ziggurat.contains("\"fluxbreakers\",")) {
             throw new AssertionError("non-standard trailing-comma source text was not preserved");
         }
+        if (system == null || !system.contains("\"id\":\"acausaldisruptor\"")
+                || !system.contains("# handled in the script instead of here")) {
+            throw new AssertionError("ship-system source text was not reconstructed from cache");
+        }
+        if (skill == null || !skill.contains("\"id\":\"advanced_countermeasures\"")
+                || !skill.contains("AdvancedCountermeasures$Level3B")) {
+            throw new AssertionError("skill source text was not reconstructed from cache");
+        }
 
         JSONObject payload = new JSONObject(new String(
                 Files.readAllBytes(Paths.get(args[0])), StandardCharsets.UTF_8));
-        int expectedVariants = payload.getJSONObject("extensions").getInt(".variant");
+        JSONObject extensions = payload.getJSONObject("extensions");
+        int expectedVariants = extensions.getInt(".variant");
+        int expectedSystems = extensions.getInt(".system");
+        int expectedSkills = extensions.getInt(".skill");
+        if (expectedSystems != 63 || expectedSkills != 70) {
+            throw new AssertionError(
+                    "unexpected stock system/skill counts systems=" + expectedSystems + " skills=" + expectedSkills);
+        }
         List<String> rootOnly = Arrays.asList("data/variants/sentinel-root.variant");
         List<String> expanded = BrowserSpecCache.expandVariantPaths(rootOnly);
         if (expanded == rootOnly || expanded.size() != expectedVariants) {
@@ -54,16 +71,20 @@ public final class VerifyBulkSpecCache {
         System.setProperty("starsector.browserBulkSpecCache", "true");
 
         if (BrowserSpecCache.getFileCount() < 1000
-                || BrowserSpecCache.getHitCount() != 2L
+                || BrowserSpecCache.getHitCount() != 4L
                 || BrowserSpecCache.getVariantPathCount() != expectedVariants) {
             throw new AssertionError(
                     "unexpected cache state files=" + BrowserSpecCache.getFileCount()
                             + " hits=" + BrowserSpecCache.getHitCount()
-                            + " variants=" + BrowserSpecCache.getVariantPathCount());
+                            + " variants=" + BrowserSpecCache.getVariantPathCount()
+                            + " systems=" + expectedSystems
+                            + " skills=" + expectedSkills);
         }
         System.out.println(
                 "VerifyBulkSpecCache: OK files=" + BrowserSpecCache.getFileCount()
                         + " variants=" + BrowserSpecCache.getVariantPathCount()
+                        + " systems=" + expectedSystems
+                        + " skills=" + expectedSkills
                         + " hits=" + BrowserSpecCache.getHitCount()
                         + " loadMs=" + BrowserSpecCache.getLoadMs());
     }
