@@ -154,7 +154,8 @@ java -cp ".ci-build/verify-deferred-texture-policy:jars/fixer_patch.jar:$CP" Ver
 rm -rf .ci-build/verify-deferred-texture-behavior
 mkdir -p .ci-build/verify-deferred-texture-behavior
 javac -encoding UTF-8 --release 8 -d .ci-build/verify-deferred-texture-behavior \
-  ci/deferred-texture-test/com/fs/graphics/oOoO.java
+  ci/deferred-texture-test/com/fs/graphics/oOoO.java \
+  ci/deferred-texture-test/com/fs/graphics/L.java
 javac -encoding UTF-8 --release 8 \
   -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-deferred-texture-behavior ci/VerifyDeferredTextureBehavior.java
@@ -233,6 +234,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
   ci/PatchTextureRegistryDeferredLookup.java \
   ci/PatchResourceLoaderDeferredTextures.java \
+  ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
@@ -324,6 +326,9 @@ javap -classpath jars/starfarer_obf.jar -p -c com.fs.starfarer.loading.ResourceL
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderDeferredTextures jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred.jar
 mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceLoaderDeferredPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred-predecode.jar
+mv .ci-build/starfarer-resource-deferred-predecode.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar

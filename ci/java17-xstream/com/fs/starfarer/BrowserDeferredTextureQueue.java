@@ -38,6 +38,16 @@ public final class BrowserDeferredTextureQueue {
         }
     }
 
+    /**
+     * Queue stock ImageIO predecode unless this exact resource will be deferred.
+     * ResourceLoaderState$o ordinals are TEXTURE=0, TEXTURE_OPTIONAL=1,
+     * TEXTURE_ALPHA_ADDER=2; the alpha-adder path must keep its stock predecode.
+     */
+    public static void queueImagePredecode(java.lang.String path, int resourceTypeOrdinal) {
+        if (ENABLED && resourceTypeOrdinal != 2 && shouldDeferPath(path)) return;
+        com.fs.graphics.L.\u00d600000(path);
+    }
+
     /** Called before oOoO.new(key) checks the registry. */
     public static void ensureLoaded(java.lang.String key) {
         if (!ENABLED || key == null || DEFERRED.get(key) == null) return;

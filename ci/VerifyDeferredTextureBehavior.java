@@ -1,4 +1,5 @@
 import com.fs.graphics.oOoO;
+import com.fs.graphics.L;
 import com.fs.starfarer.BrowserDeferredTextureQueue;
 
 public final class VerifyDeferredTextureBehavior {
@@ -6,6 +7,16 @@ public final class VerifyDeferredTextureBehavior {
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     public static void main(String[] args) throws Exception {
         System.setProperty("starsector.browserDeferredTextures", "true");
+
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/portraits/deferred.png", 0);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/illustrations/optional.jpg", 1);
+        require(L.PREDECODE.isEmpty(), "normal/optional deferred textures should skip image predecode: " + L.PREDECODE);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/portraits/alpha.png", 2);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/player_status_bg2.png", 0);
+        require(L.PREDECODE.size() == 2
+                && L.PREDECODE.get(0).equals("graphics/portraits/alpha.png")
+                && L.PREDECODE.get(1).equals("graphics/hud/player_status_bg2.png"),
+                "alpha-adder and nondeferred images must keep stock predecode: " + L.PREDECODE);
 
         BrowserDeferredTextureQueue.loadOrDefer("hud", "graphics/hud/player_status_bg2.png");
         require(oOoO.LOADS.size() == 1 && oOoO.LOADS.get(0).startsWith("hud="), "HUD should load immediately: " + oOoO.LOADS);
