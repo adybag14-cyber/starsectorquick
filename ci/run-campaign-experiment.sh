@@ -262,6 +262,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSpecStoreDiagnostics.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
+  ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -364,19 +365,35 @@ jar uf jars/starfarer_obf.jar \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache.jar
 mv .ci-build/starfarer-bulk-spec-cache.jar jars/starfarer_obf.jar
+# SpecStore's stock variant loader discovers 645 files by synchronously walking
+# data/variants and every child directory. The generated BrowserSpecCache already
+# contains those exact paths and contents, so expand the root result from that
+# manifest and suppress only the now-redundant child-directory loop.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpecStoreVariantDiscovery jars/starfarer_obf.jar .ci-build/starfarer-variant-discovery.jar
+mv .ci-build/starfarer-variant-discovery.jar jars/starfarer_obf.jar
 javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.BrowserSpecCache \
   | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-bulk-spec-patch
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-bulk-spec-patch \
-  ci/VerifyLoadingUtilsBulkSpecPatch.java
+  ci/VerifyLoadingUtilsBulkSpecPatch.java \
+  ci/VerifySpecStoreVariantDiscoveryPatch.java
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifySpecStoreVariantDiscoveryPatch jars/starfarer_obf.jar
 # Prove the transformer is idempotent so repeated local/CI preparation cannot
 # accumulate a second fast path in the obfuscated LoadingUtils method.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch .ci-build/starfarer-bulk-spec-cache-repeat.jar
+# The SpecStore transform is independently idempotent as well. Reapplying it must
+# preserve exactly one manifest expansion and one directory filter.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpecStoreVariantDiscovery jars/starfarer_obf.jar .ci-build/starfarer-variant-discovery-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifySpecStoreVariantDiscoveryPatch .ci-build/starfarer-variant-discovery-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
