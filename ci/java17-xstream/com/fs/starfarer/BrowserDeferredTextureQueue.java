@@ -87,7 +87,15 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/icons/reports/")
                 || value.startsWith("graphics/factions/")
                 || value.startsWith("graphics/planets/")
-                || value.startsWith("graphics/stations/");
+                || value.startsWith("graphics/stations/")
+                || value.startsWith("graphics/warroom/")
+                || value.startsWith("graphics/weapons/")
+                || value.startsWith("graphics/damage/")
+                || value.startsWith("graphics/icons/tactical/")
+                || value.startsWith("graphics/debris/")
+                || value.startsWith("graphics/missiles/")
+                || value.startsWith("graphics/asteroids/")
+                || value.startsWith("data/missions/");
     }
 
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
