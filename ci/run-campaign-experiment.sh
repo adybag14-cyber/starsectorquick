@@ -261,6 +261,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
   ci/PatchTextureRegistryDeferredLookup.java \
+  ci/PatchFontUsageTrace.java \
+  ci/VerifyFontUsageTracePatch.java \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
@@ -321,6 +323,19 @@ mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureRegistryDeferredLookup jars/fs.common_obf.jar .ci-build/fs-common-deferred.jar
 mv .ci-build/fs-common-deferred.jar jars/fs.common_obf.jar
+# Diagnostic only: record the first lookup of each font key without changing font loading.
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserFontUsageTrace.class'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserFontUsageTrace | grep -q 'major version: 52'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchFontUsageTrace jars/fs.common_obf.jar .ci-build/fs-common-font-usage-trace.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyFontUsageTracePatch .ci-build/fs-common-font-usage-trace.jar
+mv .ci-build/fs-common-font-usage-trace.jar jars/fs.common_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchFontUsageTrace jars/fs.common_obf.jar .ci-build/fs-common-font-usage-trace-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyFontUsageTracePatch .ci-build/fs-common-font-usage-trace-repeat.jar
+cmp -s jars/fs.common_obf.jar .ci-build/fs-common-font-usage-trace-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
@@ -494,6 +509,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
+  com.fs.starfarer.BrowserFontUsageTrace \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
@@ -550,3 +566,4 @@ grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
+grep -q 'BrowserFontUsageTrace: first-use' "$OUT/browser.log"
