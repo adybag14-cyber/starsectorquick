@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "4e61e4a7aba203430173dedc110062bebb4215dc",
-    "workflowRunId": "31885411508",
-    "generatedAt": "2026-08-15T12:47:19.779772+00:00",
+    "sourceSha": "2d058c0b50092e4f43d4736321e3496130e8f784",
+    "workflowRunId": "31887190508",
+    "generatedAt": "2026-08-15T13:27:39.086857+00:00",
     "overlayFiles": 836,
     "dataPack": {
       "version": 1,
@@ -512,12 +512,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "2ac4717d7df448c035e864f4da5f1a38d7669f781396f9d742e481886fde120e"
+      "sha256": "6eb26c60938467f49f48e8a02c2b63dbf462644961e871e0cb35086bf2e77110"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 223464,
-      "sha256": "65edf5fbf9be6013614e761a335a5904b607b7217efb33c34664044431116318"
+      "bytes": 224163,
+      "sha256": "ce249b6b2f3eb4b61ec0c80ffec8c2f519b73c4dafab076fe0cbe5b7a30a0a86"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -527,7 +527,7 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "07e8a6ae4b09ed8b594b52849da2dd2c9bbbd7afcd50ed5c412cb4dde88874ba"
+      "sha256": "6a28d7a4c9fe46891f0bd6222d281a9ea8fd846134af399340d4e72ba0e9f66f"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -542,7 +542,7 @@
     {
       "path": "jars/starfarer_obf.jar",
       "bytes": 6027863,
-      "sha256": "05e5e32f97b1d67db78c870631cc56c9880e2a1717d89e0884e48dbc4b4e602d"
+      "sha256": "650ec78ff87c11894a0a8aa44068c66df3929f26b187cf498ef4b50156d0adde"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
