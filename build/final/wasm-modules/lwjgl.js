@@ -10,6 +10,30 @@ const glCtx = glCanvas.getContext("webgl2", {
 	desynchronized: true,
 	powerPreference: "high-performance"
 });
+
+window.__lwjglGraphicsInfo = (() => {
+	if(!glCtx) return null;
+	try {
+		const extensions = glCtx.getSupportedExtensions() || [];
+		return {
+			backend: "webgl2",
+			version: glCtx.getParameter(glCtx.VERSION),
+			shadingLanguageVersion: glCtx.getParameter(glCtx.SHADING_LANGUAGE_VERSION),
+			vendor: glCtx.getParameter(glCtx.VENDOR),
+			renderer: glCtx.getParameter(glCtx.RENDERER),
+			maxTextureSize: glCtx.getParameter(glCtx.MAX_TEXTURE_SIZE),
+			maxVertexAttribs: glCtx.getParameter(glCtx.MAX_VERTEX_ATTRIBS),
+			maxCombinedTextureUnits: glCtx.getParameter(glCtx.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
+			maxDrawBuffers: glCtx.getParameter(glCtx.MAX_DRAW_BUFFERS),
+			maxSamples: glCtx.getParameter(glCtx.MAX_SAMPLES),
+			extensionCount: extensions.length,
+			extensions,
+			contextAttributes: glCtx.getContextAttributes()
+		};
+	} catch(error) {
+		return { backend: "webgl2", error: String(error && (error.message || error) || error) };
+	}
+})();
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 

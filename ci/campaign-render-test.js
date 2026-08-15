@@ -112,6 +112,43 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
   return total > 0 ? changed / total : 0;
 }
 
+async function waitForVisualTransition(canvas, baseline, options = {}) {
+  const region = options.region || { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
+  const threshold = Number(options.threshold ?? 0.025);
+  const timeoutMs = Number(options.timeoutMs ?? 8000);
+  const pollMs = Math.max(100, Number(options.pollMs ?? 400));
+  const started = Date.now();
+  let bestDiff = 0;
+  let lastFrame = null;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    const visualDiff = pixelDiffRatio(baseline, lastFrame, region);
+    bestDiff = Math.max(bestDiff, visualDiff);
+    if (visualDiff >= threshold) {
+      return { opened: true, openMs: Date.now() - started, visualDiff, bestDiff, frame: lastFrame };
+    }
+  }
+  return { opened: false, openMs: null, visualDiff: bestDiff, bestDiff, frame: lastFrame };
+}
+
+async function waitForCampaignFrame(canvas, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 8000);
+  const pollMs = Math.max(100, Number(options.pollMs ?? 400));
+  const started = Date.now();
+  let lastFrame = null;
+  let lastStats = null;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastStats = pixelStats(lastFrame);
+    if (isCampaignFramePlayable(lastStats)) {
+      return { ready: true, readyMs: Date.now() - started, frame: lastFrame, stats: lastStats };
+    }
+  }
+  return { ready: false, readyMs: null, frame: lastFrame, stats: lastStats };
+}
+
 (async () => {
   const logs = [];
   const errors = [];
@@ -361,11 +398,17 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
         logs.push(`[ui-probe] click ${name} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
         await page.mouse.move(x, y);
         await page.mouse.click(x, y, { button: 'left', delay: 80 });
-        await sleep(deepGameplay ? 3000 : 2200);
-        const panelFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        let panelTransition = null;
+        if (deepGameplay) {
+          panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, { timeoutMs: 10000, pollMs: 500, threshold: 0.08 });
+        } else {
+          await sleep(2200);
+        }
+        const panelFrame = deepGameplay ? panelTransition?.frame : null;
         if (panelFrame) fs.writeFileSync(`${outputDir}/gameplay-panel-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, panelFrame);
-        const panelVisualDiff = deepGameplay ? pixelDiffRatio(beforePanel, panelFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 }) : null;
-        const panelOpened = !deepGameplay || panelVisualDiff >= 0.025;
+        const panelVisualDiff = deepGameplay ? panelTransition?.visualDiff ?? 0 : null;
+        const panelOpened = !deepGameplay || Boolean(panelTransition?.opened);
+        const panelOpenMs = deepGameplay ? panelTransition?.openMs ?? null : null;
         const afterClick = await withTimeout(page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
           bodyDetail: document.body.dataset.runtimeDetail || '',
@@ -379,9 +422,9 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(afterClick.bodyState)
           || afterClick.runtime?.state === 'fatal'
           || !panelOpened;
-        const controlResult = { name, failed, panelOpened, panelVisualDiff, returnedToCampaign: !deepGameplay, returnVisualDiff: null, ...afterClick };
+        const controlResult = { name, failed, panelOpened, panelOpenMs, panelVisualDiff, returnedToCampaign: !deepGameplay, returnReadyMs: null, returnVisualDiff: null, ...afterClick };
         uiControlResults.push(controlResult);
-        logs.push(`[ui-probe] result ${name} panelOpened=${panelOpened} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
+        logs.push(`[ui-probe] result ${name} panelOpened=${panelOpened} openMs=${panelOpenMs ?? 'n/a'} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
         if (failed) break;
         if (deepGameplay) {
@@ -390,16 +433,19 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
           await sleep(500);
         }
         await page.keyboard.press('Escape');
-        await sleep(deepGameplay ? 1300 : 900);
         if (deepGameplay) {
-          const returnFrame = await gameCanvas.screenshot({ timeout: 10000 });
-          fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
-          controlResult.returnVisualDiff = pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 });
-          controlResult.returnedToCampaign = controlResult.returnVisualDiff >= 0.025 && !fatalSeenAt;
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 10000, pollMs: 400 });
+          const returnFrame = returned.frame;
+          if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
+          controlResult.returnReadyMs = returned.readyMs;
+          controlResult.returnVisualDiff = returnFrame ? pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 }) : 0;
+          controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
           controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
-          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
+          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
           flushLogs();
           if (controlResult.failed) break;
+        } else {
+          await sleep(900);
         }
       }
     } catch (error) {
@@ -416,9 +462,13 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
   // The old bridge dropped every key unless the canvas itself was active, while
   // desktop LWJGL continues to own the keyboard across in-game UI panels.
   const shortcutKeys = [
-    ['Cargo', 'i'],
-    ['Intel', 'e'],
+    ['Character', 'c'],
+    ['Fleet', 'f'],
+    ['Refit', 'r'],
+    ['Crew/Cargo', 'i'],
     ['Map', 'Tab'],
+    ['Intel', 'e'],
+    ['Command', 'd'],
   ];
   const shortcutResults = [];
   const shortcutBefore = await withTimeout(
@@ -435,8 +485,11 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
         });
         const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
+        const beforeFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
         await page.keyboard.press(key);
-        await sleep(1600);
+        let transition = null;
+        if (deepGameplay) transition = await waitForVisualTransition(gameCanvas, beforeFrame, { timeoutMs: 8000, pollMs: 500, threshold: 0.08 });
+        else await sleep(1600);
         const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const runtime = await page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
@@ -444,14 +497,21 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
         }));
         const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
         const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
+        const semanticOpened = !deepGameplay || Boolean(transition?.opened);
         const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
-          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState);
-        shortcutResults.push({ name, key, activeBefore, deliveredDelta, globalDelta, failed });
-        logs.push(`[shortcut-probe] ${name} key=${key} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} failed=${failed}`);
+          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState)
+          || deliveredDelta < 2 || globalDelta < 2 || !semanticOpened;
+        shortcutResults.push({ name, key, activeBefore, deliveredDelta, globalDelta, semanticOpened, openMs: transition?.openMs ?? null, visualDiff: transition?.visualDiff ?? null, failed });
+        logs.push(`[shortcut-probe] ${name} key=${key} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} openMs=${transition?.openMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
         if (failed) break;
         await page.keyboard.press('Escape');
-        await sleep(900);
+        if (deepGameplay) {
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 350 });
+          shortcutResults[shortcutResults.length - 1].returnedToCampaign = returned.ready;
+          shortcutResults[shortcutResults.length - 1].returnReadyMs = returned.readyMs;
+          if (!returned.ready) { shortcutResults[shortcutResults.length - 1].failed = true; break; }
+        } else await sleep(900);
       }
     } catch (error) {
       errors.push(`campaign shortcut probe failed: ${error.message || error}`);
@@ -539,7 +599,8 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
     inputStats: window.__lwjglInputStats || null,
     bootTiming: window.__STARSECTOR_BOOT_TIMING__ || null,
     webglState: (() => {
-      const canvas = document.querySelector('#game-container canvas');
+      if (window.__lwjglGraphicsInfo) return window.__lwjglGraphicsInfo;
+      const canvas = document.getElementById('lwjglCanvas') || document.querySelector('#game-container canvas');
       const gl = canvas && canvas.getContext('webgl2');
       if (!gl) return null;
       try {
