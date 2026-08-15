@@ -34,7 +34,8 @@ public final class VerifyDeferredTexturePolicy {
         expect("graphics/ui/bgs/panel01_top_left.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
         expect("graphics/ships/hound/hound_base.png", true);
-        expect("graphics/fx/slipstream_layer1.png", false);
+        expect("graphics/fx/slipstream_layer1.png", true);
+        expect("graphics/fx/radial_fx.png", true);
         expect("graphics/backgrounds/hyperspace_bg_cool.jpg", false);
         expect("graphics/terrain/deep_hyperspace2.png", false);
         expect("graphics/icons/campaign/burn.png", false);
