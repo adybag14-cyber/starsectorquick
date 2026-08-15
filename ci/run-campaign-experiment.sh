@@ -134,6 +134,7 @@ SWAP_YIELD_MODE="$SWAP_MODE" KEEP_UNSAFE_FORCE_ACTIVATION=0 \
   python3 ci/apply-campaign-runtime-fix.py
 python3 ci/require-owned-title-state.py
 python3 ci/enable-direct-ui-preflight.py
+python3 ci/narrow-direct-font-preflight.py
 python3 ci/reject-partial-campaign-create.py
 python3 ci/harden-settings-api-proxy.py
 python3 ci/set-cheerpj-version.py
