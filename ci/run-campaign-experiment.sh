@@ -285,6 +285,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesDeadVariableWritesPatch.java \
   ci/PatchRulesDeadVariableTraversal.java \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
+  ci/PatchRulesPhaseDiagnostics.java \
+  ci/VerifyRulesPhaseDiagnosticsPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -446,6 +448,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDeadVariableTraversalPatch .ci-build/starfarer-rules-no-variable-traversal.jar
 mv .ci-build/starfarer-rules-no-variable-traversal.jar jars/starfarer_obf.jar
+# Diagnostic-only aggregate Rules profiler. It records nanosecond totals for setup,
+# conditions, options, scripts and registration without per-rule logging.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-phase-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesPhaseDiagnosticsPatch .ci-build/starfarer-rules-phase-diag.jar
+mv .ci-build/starfarer-rules-phase-diag.jar jars/starfarer_obf.jar
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.campaign.rules.BrowserRulesPhaseDiag \
+  | grep -q 'major version: 52'
 # All Rules transforms must remain idempotent and compatible in their final order.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
@@ -481,6 +492,14 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDuplicateIndexPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesPhaseDiagnosticsPatch jars/starfarer_obf.jar
+# The diagnostic profiler is independently idempotent too.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-phase-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesPhaseDiagnosticsPatch .ci-build/starfarer-rules-phase-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-phase-diag-repeat.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
@@ -612,4 +631,5 @@ grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserRulesPhase: rows=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
