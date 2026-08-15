@@ -152,8 +152,10 @@ async function waitForCampaignFrame(canvas, options = {}) {
 async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   const timeoutMs = Number(options.timeoutMs ?? 10000);
   const pollMs = Math.max(25, Number(options.pollMs ?? 100));
+  const pump = typeof options.pump === 'function' ? options.pump : null;
   const started = Date.now();
   while (Date.now() - started <= timeoutMs) {
+    if (pump) await pump().catch(() => undefined);
     for (let i = startIndex; i < logs.length; i++) {
       const line = logs[i];
       const match = line.match(pattern);
@@ -432,7 +434,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         let panelOpened = !deepGameplay;
         if (deepGameplay) {
           const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
-          tabReady = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 10000, pollMs: 100 });
+          tabReady = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 10000, pollMs: 100, pump: () => page.evaluate(() => 0) });
           listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
           if (tabReady.matched) {
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
@@ -552,7 +554,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         let shortcutFrame = null;
         if (deepGameplay) {
           const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
-          const ready = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 8000, pollMs: 100 });
+          const ready = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 8000, pollMs: 100, pump: () => page.evaluate(() => 0) });
           const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
           if (ready.matched) {
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
