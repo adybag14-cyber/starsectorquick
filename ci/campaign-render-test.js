@@ -820,10 +820,49 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
       if (stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate' && event.active === 'true')) {
         const cleanupStart = gameplayEvents.length;
         await page.keyboard.press(key);
-        await sleep(350);
+        await sleep(300);
         if (expectedId === 'transponder' && !gameplayEvents.slice(cleanupStart).some(event => event.id === expectedId && event.event === 'ability-deactivate')) {
           await page.keyboard.press(key);
         }
+        const deactivated = await waitForGameplayEvent(
+          gameplayEvents, cleanupStart,
+          event => event.id === expectedId && event.event === 'ability-deactivate',
+          { timeoutMs: 5000, pollMs: 100 }
+        );
+        let fullySettled = false;
+        let toggleSettleMs = null;
+        let toggleFastForwardInput = null;
+        if (deactivated.matched) {
+          const settleStart = gameplayEvents.length;
+          const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          let settled;
+          try {
+            await page.keyboard.down('Shift');
+            settled = await waitForGameplayEvent(
+              gameplayEvents, settleStart,
+              event => event.id === expectedId && event.event === 'ability-settled',
+              { timeoutMs: 15000, pollMs: 100 }
+            );
+          } finally {
+            await page.keyboard.up('Shift').catch(() => undefined);
+          }
+          const fastAfter = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          toggleFastForwardInput = {
+            deliveredDelta: Number(fastAfter.directKeyboardDelivered || 0) - Number(fastBefore.directKeyboardDelivered || 0),
+            globalDelta: Number(fastAfter.keyboardGlobalCaptures || 0) - Number(fastBefore.keyboardGlobalCaptures || 0),
+          };
+          fullySettled = Boolean(settled && settled.matched);
+          toggleSettleMs = settled ? settled.elapsedMs : 15000;
+        }
+        const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+        currentResult.toggleDeactivated = deactivated.matched;
+        currentResult.toggleSettled = fullySettled;
+        currentResult.toggleSettleMs = toggleSettleMs;
+        currentResult.toggleFastForwardInput = toggleFastForwardInput;
+        if (!deactivated.matched || !fullySettled) currentResult.failed = true;
+        logs.push(`[ability-toggle-cleanup] key=${digit} id=${expectedId} deactivated=${deactivated.matched} settled=${fullySettled} settleMs=${toggleSettleMs ?? 'n/a'} fastForwardDelivered=${toggleFastForwardInput?.deliveredDelta ?? 0} fastForwardGlobal=${toggleFastForwardInput?.globalDelta ?? 0} failed=${currentResult.failed}`);
+        flushLogs();
+        if (currentResult.failed) break;
         await sleep(500);
       }
     }

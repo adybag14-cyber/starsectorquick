@@ -12,7 +12,7 @@ public final class PatchAbilityGameplayProbe {
     private static final Map<String, Set<String>> TARGETS = new HashMap<String, Set<String>>();
     static {
         TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseAbilityPlugin.class", new HashSet<String>(Arrays.asList("activate", "deactivate")));
-        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseToggleAbility.class", new HashSet<String>(Arrays.asList("pressButton")));
+        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseToggleAbility.class", new HashSet<String>(Arrays.asList("pressButton", "advance")));
         TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseDurationAbility.class", new HashSet<String>(Arrays.asList("pressButton")));
         TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/TransponderAbility.class", new HashSet<String>(Arrays.asList("pressButton")));
     }
@@ -29,8 +29,8 @@ public final class PatchAbilityGameplayProbe {
                 jos.write(bytes); jos.closeEntry();
             }
         }
-        if(classes[0]!=4||methods[0]!=5||inserted[0]!=5){Files.deleteIfExists(out);throw new IllegalStateException("gameplay probe mismatch classes="+classes[0]+" methods="+methods[0]+" inserted="+inserted[0]);}
-        System.out.println("Patched ability gameplay probe classes=4 methods=5 inserted=5");
+        if(classes[0]!=4||methods[0]!=6||inserted[0]!=6){Files.deleteIfExists(out);throw new IllegalStateException("gameplay probe mismatch classes="+classes[0]+" methods="+methods[0]+" inserted="+inserted[0]);}
+        System.out.println("Patched ability gameplay probe classes=4 methods=6 inserted=6");
     }
     private static byte[] patch(byte[] input, Set<String> names, int[] methods, int[] inserted){
         if(countProbeCalls(input)>0){
@@ -38,7 +38,21 @@ public final class PatchAbilityGameplayProbe {
         }
         ClassReader r=new ClassReader(input); ClassWriter w=new ClassWriter(r,ClassWriter.COMPUTE_MAXS);
         r.accept(new ClassVisitor(Opcodes.ASM9,w){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[] ex){
-            MethodVisitor mv=super.visitMethod(a,n,d,s,ex); if(!VOID.equals(d)||!names.contains(n))return mv; methods[0]++;
+            MethodVisitor mv=super.visitMethod(a,n,d,s,ex);
+            boolean advance = "advance".equals(n) && "(F)V".equals(d) && names.contains(n);
+            boolean simple = VOID.equals(d) && names.contains(n);
+            if(!advance && !simple)return mv;
+            methods[0]++;
+            if(advance){
+                return new MethodVisitor(Opcodes.ASM9,mv){@Override public void visitInsn(int opcode){
+                    if(opcode==Opcodes.RETURN){
+                        super.visitVarInsn(Opcodes.ALOAD,0);
+                        super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,"abilityAdvance","(L"+ABILITY+";)V",false);
+                        inserted[0]++;
+                    }
+                    super.visitInsn(opcode);
+                }};
+            }
             final String probeMethod="pressButton".equals(n)?"abilityPress":("activate".equals(n)?"abilityActivate":"abilityDeactivate");
             return new MethodVisitor(Opcodes.ASM9,mv){@Override public void visitCode(){super.visitCode();super.visitVarInsn(Opcodes.ALOAD,0);super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,probeMethod,"(L"+ABILITY+";)V",false);inserted[0]++;}};
         }},0); return w.toByteArray();

@@ -2,18 +2,37 @@ package com.fs.starfarer;
 
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.loading.AbilitySpecAPI;
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Test-only browser gameplay telemetry. Disabled unless explicitly enabled. */
 public final class BrowserGameplayProbe {
     private static final java.lang.String ENABLE_PROPERTY = "starsector.browserGameplayProbe";
     private static final AtomicLong SEQ = new AtomicLong();
+    private static final Map<AbilityPlugin, Boolean> SETTLED =
+            Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
 
     private BrowserGameplayProbe() {}
 
     public static void abilityPress(AbilityPlugin ability) { emit("ability-press", ability); }
-    public static void abilityActivate(AbilityPlugin ability) { emit("ability-activate", ability); }
+    public static void abilityActivate(AbilityPlugin ability) {
+        if (Boolean.getBoolean(ENABLE_PROPERTY) && ability != null) SETTLED.put(ability, Boolean.FALSE);
+        emit("ability-activate", ability);
+    }
     public static void abilityDeactivate(AbilityPlugin ability) { emit("ability-deactivate", ability); }
+    public static void abilityAdvance(AbilityPlugin ability) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || ability == null) return;
+        boolean settled;
+        try {
+            settled = !ability.isActive() && !ability.isInProgress() && ability.getLevel() <= 0.0001f;
+        } catch (Throwable ignored) {
+            return;
+        }
+        Boolean previous = SETTLED.put(ability, Boolean.valueOf(settled));
+        if (settled && Boolean.FALSE.equals(previous)) emit("ability-settled", ability);
+    }
 
     public static void coreTabStart(Object tab) { emitCore("core-tab-start", tab); }
     public static void coreTabReady(Object tab) { emitCore("core-tab-ready", tab); }
