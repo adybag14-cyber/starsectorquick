@@ -35,7 +35,8 @@ public final class VerifyDeferredTexturePolicy {
         expect("graphics/hud/player_status_bg2.png", false);
         expect("graphics/ships/hound/hound_base.png", true);
         expect("graphics/ui/icons/damagetype_kinetic.png", false);
-        expect("graphics/ui/icons/fleettab/refit.png", false);
+        expect("graphics/ui/icons/fleettab/refit.png", true);
+        expect("graphics/ui/icons/icon_op.png", false);
         expect("graphics/ui/buttons/codex_arrow_up_category.png", true);
         expect("graphics/ui/buttons/toggleA20x_on.png", true);
         expect("graphics/ui/campaign_abilities.png", false);
