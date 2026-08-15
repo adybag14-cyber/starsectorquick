@@ -74,6 +74,8 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q '__STARSECTOR_BROWSER_FAST_CSV_PARSER__' launch.html
+grep -q 'starsector.browserFastCsvParser=${browserFastCsvParser}' launch.html
 grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
 grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
@@ -149,6 +151,18 @@ javac -encoding UTF-8 --release 8 -cp ".ci-build/spec-cache-helper:$CP" \
   -d .ci-build/verify-bulk-spec-cache ci/VerifyBulkSpecCache.java
 java -cp ".ci-build/verify-bulk-spec-cache:.ci-build/spec-cache-helper:$CP" \
   VerifyBulkSpecCache "$PWD/starsector/starsector/data/browser-spec-cache-v1.json"
+# Prove the browser CSV parser is byte-for-byte semantic-equivalent at the data
+# model level to Starsector's real parser for every restored stock CSV before
+# allowing the runtime hook to be compiled or applied.
+rm -rf .ci-build/fast-csv-helper .ci-build/verify-fast-csv
+mkdir -p .ci-build/fast-csv-helper .ci-build/verify-fast-csv
+javac -encoding UTF-8 --release 8 -cp "$CP" \
+  -d .ci-build/fast-csv-helper \
+  ci/java17-xstream/com/fs/starfarer/loading/BrowserFastCsvParser.java
+javac -encoding UTF-8 --release 8 -cp ".ci-build/fast-csv-helper:$CP" \
+  -d .ci-build/verify-fast-csv ci/VerifyBrowserFastCsvParser.java
+java -Xverify:all -cp ".ci-build/verify-fast-csv:.ci-build/fast-csv-helper:$CP" \
+  VerifyBrowserFastCsvParser "$PWD/starsector/starsector"
 mapfile -t COMPAT_SOURCES < <(find ci/java17-xstream -type f -name '*.java' -print | sort)
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
@@ -167,6 +181,8 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void disableTitleHandoff()'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
+  | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-deferred-texture-policy
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
@@ -265,6 +281,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
+  ci/PatchBrowserFastCsvParser.java \
+  ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -395,6 +413,19 @@ mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderDeferredPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred-predecode.jar
 mv .ci-build/starfarer-resource-deferred-predecode.jar jars/starfarer_obf.jar
+# Use the exact-equivalent browser CSV parser only when its property/no-mod gate
+# succeeds. The full stock oOoO parser stays immediately behind the hook.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBrowserFastCsvParser jars/starfarer_obf.jar .ci-build/starfarer-fast-csv.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyBrowserFastCsvParserPatch .ci-build/starfarer-fast-csv.jar
+mv .ci-build/starfarer-fast-csv.jar jars/starfarer_obf.jar
+# Reapplying the hook must be byte-for-byte idempotent.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBrowserFastCsvParser jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyBrowserFastCsvParserPatch .ci-build/starfarer-fast-csv-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
@@ -559,6 +590,8 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.BrowserDeferredTextureQueue \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
+  com.fs.starfarer.loading.oOoO \
+  com.fs.starfarer.loading.BrowserFastCsvParser \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   com.fs.starfarer.BaseGameState
 
@@ -610,6 +643,7 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
+grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"

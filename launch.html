@@ -1152,6 +1152,8 @@
                     && window.__STARSECTOR_BROWSER_QUICK_RESOURCE_LOAD__ !== false;
                 const browserBulkSpecCache =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_BULK_SPEC_CACHE__ !== false;
+                const browserFastCsvParser =
+                    browserQuickResourceLoad && window.__STARSECTOR_BROWSER_FAST_CSV_PARSER__ !== false;
                 const browserJaninoNegativeCache =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__ !== false;
                 const browserRuleDuplicateIndex =
@@ -1264,6 +1266,8 @@
                     `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
                     `-Dstarsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `starsector.browserBulkSpecCache=${browserBulkSpecCache}`,
+                    `-Dstarsector.browserFastCsvParser=${browserFastCsvParser}`,
+                    `starsector.browserFastCsvParser=${browserFastCsvParser}`,
                     `-Dstarsector.browserSpecCachePath=${browserSpecCachePath}`,
                     `starsector.browserSpecCachePath=${browserSpecCachePath}`,
                     `-Dstarsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}`,
@@ -1278,6 +1282,9 @@
                 }
                 if (browserBulkSpecCache) {
                     log('Browser bulk spec cache enabled for stock gameplay spec files.', '#00ff88');
+                }
+                if (browserFastCsvParser) {
+                    log('Browser fast CSV parser enabled for stock no-mod data tables.', '#00ff88');
                 }
                 if (browserJaninoNegativeCache) {
                     log('Browser Janino negative source cache enabled for repeated missing-source lookups.', '#00ff88');
