@@ -54,6 +54,9 @@ public final class BrowserDeferredTextureQueue {
         synchronized (BrowserDeferredTextureQueue.class) {
             java.lang.String path = DEFERRED.get(key);
             if (path == null) return;
+            if (path.replace('\\', '/').toLowerCase(java.util.Locale.ROOT).startsWith("graphics/ui/icons/fleettab/")) {
+                System.out.println("BrowserDeferredTexture: fleettab-lazy epochMs=" + System.currentTimeMillis() + " key=" + key + " path=" + path);
+            }
             try {
                 oOoO.o00000(key, path);
                 // Keep the map entry visible until registration has completed so
