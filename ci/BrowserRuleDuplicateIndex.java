@@ -25,6 +25,11 @@ public final class BrowserRuleDuplicateIndex {
         return ACTIVE.get() != null;
     }
 
+    /** Reuses the per-Rules-load browser state as a distinct traversal-bypass marker. */
+    public static boolean deadVariableTrackingBypassEnabled() {
+        return ACTIVE.get() != null;
+    }
+
     public static void checkAndRecord(String trigger, String id) {
         Map<String, Set<String>> byTrigger = ACTIVE.get();
         if (byTrigger == null) return;

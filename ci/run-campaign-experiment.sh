@@ -283,6 +283,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesLiteralStringCleanupPatch.java \
   ci/PatchRulesDeadVariableWrites.java \
   ci/VerifyRulesDeadVariableWritesPatch.java \
+  ci/PatchRulesDeadVariableTraversal.java \
+  ci/VerifyRulesDeadVariableTraversalPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -436,6 +438,14 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDeadVariableWritesPatch .ci-build/starfarer-rules-no-variable-writes.jar
 mv .ci-build/starfarer-rules-no-variable-writes.jar jars/starfarer_obf.jar
+# The dead variable-usage analysis now has no reader. In browser mode, bypass its
+# six token/list traversal blocks via one cached per-load browser-state flag. The
+# original IFNULL analysis path remains reachable when browser mode is disabled.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesDeadVariableTraversal jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDeadVariableTraversalPatch .ci-build/starfarer-rules-no-variable-traversal.jar
+mv .ci-build/starfarer-rules-no-variable-traversal.jar jars/starfarer_obf.jar
 # All Rules transforms must remain idempotent and compatible in their final order.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
@@ -448,6 +458,8 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesLiteralStringCleanupPatch jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDeadVariableWritesPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDeadVariableTraversalPatch jars/starfarer_obf.jar
 # Reapplying the literal cleanup must also be byte-for-byte idempotent.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesLiteralStringCleanup jars/starfarer_obf.jar .ci-build/starfarer-rules-literal-cleanup-repeat.jar
@@ -460,6 +472,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDeadVariableWritesPatch .ci-build/starfarer-rules-no-variable-writes-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-writes-repeat.jar
+# The guarded traversal transform is independently idempotent and must preserve
+# the original fallback bodies plus all earlier Rules patches.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesDeadVariableTraversal jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDeadVariableTraversalPatch .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesDuplicateIndexPatch jars/starfarer_obf.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
