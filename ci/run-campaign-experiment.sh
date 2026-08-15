@@ -279,6 +279,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
   ci/VerifyRulesDuplicateIndexPatch.java \
+  ci/PatchRulesLiteralStringCleanup.java \
+  ci/VerifyRulesLiteralStringCleanupPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -411,7 +413,20 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-rules-duplicate-index.jar jars/starfarer_obf.jar
 javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   | grep -q 'major version: 52'
-# Both Rules transforms must remain idempotent and compatible in their final order.
+# Replace only fixed CR/LF regex cleanup with equivalent literal String.replace calls.
+# The genuine trailing-whitespace regex remains replaceAll(), and a direct Java
+# semantics test proves the transformed CR/LF behavior matches the original.
+rm -rf .ci-build/rules-literal-cleanup-test
+mkdir -p .ci-build/rules-literal-cleanup-test
+javac -encoding UTF-8 --release 8 -d .ci-build/rules-literal-cleanup-test \
+  ci/TestRulesLiteralStringCleanup.java
+java -cp .ci-build/rules-literal-cleanup-test TestRulesLiteralStringCleanup
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesLiteralStringCleanup jars/starfarer_obf.jar .ci-build/starfarer-rules-literal-cleanup.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesLiteralStringCleanupPatch .ci-build/starfarer-rules-literal-cleanup.jar
+mv .ci-build/starfarer-rules-literal-cleanup.jar jars/starfarer_obf.jar
+# All Rules transforms must remain idempotent and compatible in their final order.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -419,6 +434,14 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesVariableDiagnosticsPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesLiteralStringCleanupPatch jars/starfarer_obf.jar
+# Reapplying the literal cleanup must also be byte-for-byte idempotent.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesLiteralStringCleanup jars/starfarer_obf.jar .ci-build/starfarer-rules-literal-cleanup-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesLiteralStringCleanupPatch .ci-build/starfarer-rules-literal-cleanup-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-literal-cleanup-repeat.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
