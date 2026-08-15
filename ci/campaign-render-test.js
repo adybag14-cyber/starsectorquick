@@ -224,6 +224,7 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
     __STARSECTOR_DIRECT_LAUNCH__: true,
     __STARSECTOR_AUTO_VISIT_COLONY__: false,
     __STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__: 'small',
+    __STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__: deepGameplay ? 'Corvus' : 'hyperspace',
     __STARSECTOR_AUTO_CAMPAIGN_TIMEOUT_MS__: 900000,
     __STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__: 45000,
     __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: true,

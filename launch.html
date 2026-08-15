@@ -1094,6 +1094,9 @@
                 const autoCampaignSectorSize = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__ || 'small'
                 ).toString().trim().toLowerCase() || 'small';
+                const autoCampaignStartingLocation = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'hyperspace'
+                ).toString().trim() || 'hyperspace';
                 const autoCampaignTitleSettleMs = Math.max(
                     0,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
@@ -1332,6 +1335,8 @@
                     javaProperties.push(`starsector.autoCampaignStartVariant=${autoCampaignVariant}`);
                     javaProperties.push(`-Dstarsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
                     javaProperties.push(`starsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
+                    javaProperties.push(`starsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
                     javaProperties.push(`-Dstarsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`starsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDirectEscape=${autoCampaignAllowDirectEscape}`);

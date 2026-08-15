@@ -75,6 +75,8 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q '__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__' launch.html
+grep -q 'starsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}' launch.html
 grep -q '__STARSECTOR_BROWSER_FAST_CSV_PARSER__' launch.html
 grep -q 'starsector.browserFastCsvParser=${browserFastCsvParser}' launch.html
 grep -q '__STARSECTOR_BROWSER_FAST_TEXT_PREPROCESS__' launch.html
