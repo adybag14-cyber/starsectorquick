@@ -9,6 +9,11 @@ const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
 const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaign-render';
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
+const playablePollMs = Math.max(250, Number(process.env.STARSECTOR_PLAYABLE_POLL_MS || 1000));
+const playablePollTimeoutMs = Math.max(0, Math.min(
+  settleMs,
+  Number(process.env.STARSECTOR_PLAYABLE_POLL_TIMEOUT_MS || settleMs)
+));
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -240,7 +245,52 @@ function pixelStats(buffer) {
 
   const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
   const firstFrameCapturedAt = first ? Date.now() : null;
-  await sleep(settleMs);
+  const firstStatsAtCapture = pixelStats(first);
+  const firstFramePlayableAtCapture = expectedState !== 'campaign' || isCampaignFramePlayable(firstStatsAtCapture);
+  let firstPlayableFrameAt = expectedState !== 'campaign'
+    ? null
+    : (firstFramePlayableAtCapture ? firstFrameCapturedAt : null);
+  let playableProbeCapturedAt = null;
+  let playableProbeStats = null;
+  let playableProbeCount = 0;
+
+  // Keep the existing long second-frame due time for progression evidence, but
+  // sample readiness inside that window so first-playable timing is not quantized
+  // to a 15-30 second jump. Save only the first successful probe.
+  const secondFrameDueAt = (firstFrameCapturedAt || Date.now()) + settleMs;
+  const playablePollDeadline = Math.min(
+    secondFrameDueAt,
+    Date.now() + playablePollTimeoutMs
+  );
+  if (expectedState === 'campaign' && first && !firstPlayableFrameAt) {
+    while (Date.now() < playablePollDeadline && !firstPlayableFrameAt) {
+      const remaining = playablePollDeadline - Date.now();
+      await sleep(Math.min(playablePollMs, Math.max(1, remaining)));
+      const probe = await withTimeout(
+        gameCanvas.screenshot({ timeout: 10000 }),
+        12000,
+        `playable frame probe ${playableProbeCount + 1}`
+      ).catch(error => {
+        screenshotErrors.push(String(error && (error.stack || error.message) || error));
+        logs.push(`[diagnostic] playable frame probe failed: ${error.message || error}`);
+        flushLogs();
+        return null;
+      });
+      if (!probe) break;
+      playableProbeCount += 1;
+      const probeCapturedAt = Date.now();
+      const probeStats = pixelStats(probe);
+      if (isCampaignFramePlayable(probeStats)) {
+        firstPlayableFrameAt = probeCapturedAt;
+        playableProbeCapturedAt = probeCapturedAt;
+        playableProbeStats = probeStats;
+        fs.writeFileSync(`${outputDir}/frame-first-playable.png`, probe);
+        break;
+      }
+    }
+  }
+
+  await sleep(Math.max(0, secondFrameDueAt - Date.now()));
   const second = await safeScreenshot(`${outputDir}/frame-second.png`, 'second frame screenshot');
   const secondFrameCapturedAt = second ? Date.now() : null;
 
@@ -443,13 +493,14 @@ function pixelStats(buffer) {
     };
   });
 
-  const firstStats = pixelStats(first);
+  const firstStats = firstStatsAtCapture;
   const secondStats = pixelStats(second);
-  const firstFramePlayable = expectedState !== 'campaign' || isCampaignFramePlayable(firstStats);
+  const firstFramePlayable = firstFramePlayableAtCapture;
   const secondFramePlayable = expectedState !== 'campaign' || isCampaignFramePlayable(secondStats);
-  const firstPlayableFrameAt = expectedState !== 'campaign' ? null
-    : (firstFramePlayable ? firstFrameCapturedAt
-      : (secondFramePlayable ? secondFrameCapturedAt : null));
+  if (expectedState === 'campaign' && !firstPlayableFrameAt && secondFramePlayable) {
+    firstPlayableFrameAt = secondFrameCapturedAt;
+  }
+  const campaignPlayable = expectedState !== 'campaign' || Boolean(firstPlayableFrameAt);
   const timeToFirstPlayableFrameMs = firstPlayableFrameAt
     ? firstPlayableFrameAt - navigationStartedAt
     : null;
@@ -494,7 +545,7 @@ function pixelStats(buffer) {
     && startingSuppliesTarget > 0
     && startingSuppliesAfter >= startingSuppliesTarget - 0.1
   );
-  const ok = reachedExpected && rendered && campaignVisualQuality && progressing
+  const ok = reachedExpected && campaignPlayable && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
@@ -515,6 +566,10 @@ function pixelStats(buffer) {
     secondFrameCapturedAt,
     firstFramePlayable,
     secondFramePlayable,
+    playableProbeCapturedAt,
+    playableProbeCount,
+    playableProbeStats,
+    campaignPlayable,
     firstPlayableFrameAt,
     timeToFirstPlayableFrameMs,
     title,

@@ -29,6 +29,9 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Verify playable-frame contract
+        run: python3 ci/verify-playable-frame-contract.py
+
       - name: Install Chromium
         run: npx playwright install chromium
 
@@ -37,6 +40,8 @@ jobs:
           STARSECTOR_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
           STARSECTOR_TEST_TIMEOUT_MS: '720000'
           STARSECTOR_FRAME_SETTLE_MS: '30000'
+          STARSECTOR_PLAYABLE_POLL_MS: '1000'
+          STARSECTOR_PLAYABLE_POLL_TIMEOUT_MS: '30000'
           STARSECTOR_EXPECT_STATE: 'campaign'
         run: node ci/campaign-render-test.js
 
