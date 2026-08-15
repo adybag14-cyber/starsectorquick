@@ -1164,8 +1164,10 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
+                // Background bulk predecode is opt-in only. In software-rendered browser
+                // environments a 1000+ image warmup can starve live Campaign/UI work.
                 const browserGameplayPrewarm =
-                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ !== false;
+                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ === true;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;

@@ -722,7 +722,9 @@ grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
-grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
+if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
+  grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
+fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
