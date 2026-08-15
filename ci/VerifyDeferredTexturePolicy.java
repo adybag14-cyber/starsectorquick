@@ -33,14 +33,14 @@ public final class VerifyDeferredTexturePolicy {
         expect("data/missions/forlornhope/icon.jpg", true);
         expect("graphics/ui/bgs/panel01_top_left.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
-        expect("graphics/ships/hound/hound_base.png", false);
+        expect("graphics/ships/hound/hound_base.png", true);
         expect("graphics/fx/slipstream_layer1.png", false);
         expect("graphics/backgrounds/hyperspace_bg_cool.jpg", false);
         expect("graphics/terrain/deep_hyperspace2.png", false);
         expect("graphics/icons/campaign/burn.png", false);
         expect("graphics/icons/abilities/emergency_burn.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
-        expect("graphics/ships/lasher/lasher_base.png", false);
+        expect("graphics/ships/lasher/lasher_base.png", true);
         expect("graphics/fonts/orbitron20aa.fnt", false);
         System.out.println("VerifyDeferredTexturePolicy: OK");
     }
