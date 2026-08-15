@@ -1156,6 +1156,8 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__ !== false;
                 const browserRuleDuplicateIndex =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__ !== false;
+                const browserResourceQueueProfile =
+                    browserQuickResourceLoad && window.__STARSECTOR_BROWSER_RESOURCE_QUEUE_PROFILE__ !== false;
                 const browserDeferredTextures =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
@@ -1270,6 +1272,8 @@
                     `starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}`,
                     `-Dstarsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}`,
                     `starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}`,
+                    `-Dstarsector.browserResourceQueueProfile=${browserResourceQueueProfile}`,
+                    `starsector.browserResourceQueueProfile=${browserResourceQueueProfile}`,
                     `-Dstarsector.browserDeferredTextures=${browserDeferredTextures}`,
                     `starsector.browserDeferredTextures=${browserDeferredTextures}`
                 ];
@@ -1284,6 +1288,9 @@
                 }
                 if (browserRuleDuplicateIndex) {
                     log('Browser Rules duplicate index enabled: preserving duplicate checks without quadratic trigger-list scans.', '#00ff88');
+                }
+                if (browserResourceQueueProfile) {
+                    log('Browser resource queue diagnostic profiler enabled.', '#ffaa00');
                 }
                 if (browserDeferredTextures) {
                     log('Browser deferred textures enabled: illustrations/portraits load on first real lookup.', '#00ff88');

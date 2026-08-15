@@ -1,0 +1,158 @@
+package com.fs.starfarer;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+/** Diagnostic-only aggregate profiler for ResourceLoaderState's startup queue. */
+public final class BrowserResourceQueueProfile {
+    private static final java.lang.String ENABLE_PROPERTY = "starsector.browserResourceQueueProfile";
+    private static final Map<java.lang.String, Stats> QUEUED = new HashMap<java.lang.String, Stats>();
+    private static final Map<java.lang.String, Timing> LOADS = new HashMap<java.lang.String, Timing>();
+    private static final Set<java.lang.String> UNIQUE = new HashSet<java.lang.String>();
+    // beginLoad/endLoad run on ResourceLoaderState.init's serial queue thread.
+    // Keep one active record instead of a ThreadLocal to minimize diagnostic overhead.
+    private static Active activeLoad;
+    private static final List<Slow> SLOW = new ArrayList<Slow>();
+    private static long rawCount;
+    private static long uniqueCount;
+    private static long uniqueWeight;
+
+    private BrowserResourceQueueProfile() {}
+
+    public static void record(Object type, java.lang.String path, int weight) {
+        if (!enabled() || type == null || path == null) return;
+        java.lang.String typeName = java.lang.String.valueOf(type);
+        java.lang.String normalized = normalize(path);
+        if (normalized.isEmpty()) return;
+        java.lang.String group = typeName + "|" + group(normalized);
+        java.lang.String uniqueKey = typeName + "|" + normalized;
+        synchronized (BrowserResourceQueueProfile.class) {
+            rawCount++;
+            Stats s = QUEUED.get(group);
+            if (s == null) { s = new Stats(group); QUEUED.put(group, s); }
+            s.raw++;
+            if (UNIQUE.add(uniqueKey)) {
+                uniqueCount++;
+                uniqueWeight += weight;
+                s.unique++;
+                s.weight += weight;
+            }
+        }
+    }
+
+    public static void beginLoad(Object type, java.lang.String path) {
+        if (!enabled() || type == null || path == null) return;
+        java.lang.String normalized = normalize(path);
+        if (normalized.isEmpty()) return;
+        activeLoad = new Active(java.lang.String.valueOf(type), normalized, System.nanoTime());
+    }
+
+    public static void endLoad(Object type, java.lang.String path) {
+        if (!enabled()) return;
+        Active active = activeLoad;
+        activeLoad = null;
+        if (active == null) return;
+        long elapsed = Math.max(0L, System.nanoTime() - active.startedNs);
+        java.lang.String normalized = path == null ? active.path : normalize(path);
+        if (normalized.isEmpty()) normalized = active.path;
+        java.lang.String typeName = type == null ? active.type : java.lang.String.valueOf(type);
+        java.lang.String key = typeName + "|" + group(normalized);
+        synchronized (BrowserResourceQueueProfile.class) {
+            Timing timing = LOADS.get(key);
+            if (timing == null) { timing = new Timing(key); LOADS.put(key, timing); }
+            timing.calls++;
+            timing.totalNs += elapsed;
+            if (elapsed > timing.maxNs) timing.maxNs = elapsed;
+            if (elapsed >= 1000000L) {
+                SLOW.add(new Slow(typeName, normalized, elapsed));
+                if (SLOW.size() > 120) {
+                    Collections.sort(SLOW, SLOW_DESC);
+                    while (SLOW.size() > 80) SLOW.remove(SLOW.size() - 1);
+                }
+            }
+        }
+    }
+
+    public static void printQueueSummary() {
+        if (!enabled()) return;
+        List<Stats> values;
+        synchronized (BrowserResourceQueueProfile.class) { values = new ArrayList<Stats>(QUEUED.values()); }
+        Collections.sort(values, new Comparator<Stats>() {
+            @Override public int compare(Stats a, Stats b) {
+                int c = b.unique - a.unique;
+                if (c != 0) return c;
+                return a.key.compareTo(b.key);
+            }
+        });
+        System.out.println("BrowserResourceQueueProfile: queued raw=" + rawCount + " unique=" + uniqueCount + " weight=" + uniqueWeight + " groups=" + values.size());
+        for (Stats s : values) {
+            System.out.println("BrowserResourceQueueProfile: queued-group key=" + s.key + " raw=" + s.raw + " unique=" + s.unique + " weight=" + s.weight);
+        }
+    }
+
+    public static void printLoadSummary() {
+        if (!enabled()) return;
+        List<Timing> values;
+        List<Slow> slow;
+        synchronized (BrowserResourceQueueProfile.class) {
+            values = new ArrayList<Timing>(LOADS.values());
+            slow = new ArrayList<Slow>(SLOW);
+        }
+        Collections.sort(values, new Comparator<Timing>() {
+            @Override public int compare(Timing a, Timing b) {
+                if (a.totalNs < b.totalNs) return 1;
+                if (a.totalNs > b.totalNs) return -1;
+                return a.key.compareTo(b.key);
+            }
+        });
+        long totalNs = 0L; long calls = 0L;
+        for (Timing t : values) { totalNs += t.totalNs; calls += t.calls; }
+        System.out.println("BrowserResourceQueueProfile: loaded calls=" + calls + " measuredMs=" + ms(totalNs) + " groups=" + values.size() + " queuedRaw=" + rawCount + " queuedUnique=" + uniqueCount + " queuedWeight=" + uniqueWeight);
+        for (Timing t : values) {
+            System.out.println("BrowserResourceQueueProfile: load-group key=" + t.key + " calls=" + t.calls + " totalMs=" + ms(t.totalNs) + " maxMs=" + ms(t.maxNs));
+        }
+        Collections.sort(slow, SLOW_DESC);
+        int limit = Math.min(40, slow.size());
+        for (int i = 0; i < limit; i++) {
+            Slow s = slow.get(i);
+            System.out.println("BrowserResourceQueueProfile: slow type=" + s.type + " ms=" + ms(s.ns) + " path=" + s.path);
+        }
+    }
+
+    private static boolean enabled() { return Boolean.getBoolean(ENABLE_PROPERTY); }
+    private static long ms(long ns) { return ns / 1000000L; }
+
+    private static java.lang.String normalize(java.lang.String path) {
+        java.lang.String v = path.replace('\\', '/').toLowerCase(Locale.ROOT);
+        while (v.startsWith("/")) v = v.substring(1);
+        return v;
+    }
+
+    private static java.lang.String group(java.lang.String path) {
+        java.lang.String[] p = path.split("/");
+        if (p.length == 0) return "<empty>";
+        if (p.length >= 3 && "graphics".equals(p[0]) && "icons".equals(p[1])) return p[0] + "/" + p[1] + "/" + p[2];
+        if (p.length >= 2) return p[0] + "/" + p[1];
+        return p[0];
+    }
+
+    private static final Comparator<Slow> SLOW_DESC = new Comparator<Slow>() {
+        @Override public int compare(Slow a, Slow b) {
+            if (a.ns < b.ns) return 1;
+            if (a.ns > b.ns) return -1;
+            return a.path.compareTo(b.path);
+        }
+    };
+
+    private static final class Stats { final java.lang.String key; int raw; int unique; long weight; Stats(java.lang.String key){this.key=key;} }
+    private static final class Timing { final java.lang.String key; long calls; long totalNs; long maxNs; Timing(java.lang.String key){this.key=key;} }
+    private static final class Active { final java.lang.String type,path; final long startedNs; Active(java.lang.String type,java.lang.String path,long startedNs){this.type=type;this.path=path;this.startedNs=startedNs;} }
+    private static final class Slow { final java.lang.String type,path; final long ns; Slow(java.lang.String type,java.lang.String path,long ns){this.type=type;this.path=path;this.ns=ns;} }
+}

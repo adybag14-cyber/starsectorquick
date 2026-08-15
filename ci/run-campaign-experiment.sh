@@ -78,6 +78,8 @@ grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
 grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
+grep -q '__STARSECTOR_BROWSER_RESOURCE_QUEUE_PROFILE__' launch.html
+grep -q 'starsector.browserResourceQueueProfile=${browserResourceQueueProfile}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
@@ -264,6 +266,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
+  ci/PatchResourceQueueProfile.java \
+  ci/VerifyResourceQueueProfilePatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -388,6 +392,19 @@ mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderDeferredPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred-predecode.jar
 mv .ci-build/starfarer-resource-deferred-predecode.jar jars/starfarer_obf.jar
+# Diagnostic-only queue aggregation/timing: no resource ordering or load semantics change.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceQueueProfile jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceQueueProfilePatch .ci-build/starfarer-resource-queue-profile.jar
+mv .ci-build/starfarer-resource-queue-profile.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceQueueProfile jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceQueueProfilePatch .ci-build/starfarer-resource-queue-profile-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile-repeat.jar
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserResourceQueueProfile \
+  | grep -q 'major version: 52'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
@@ -494,6 +511,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
+  com.fs.starfarer.BrowserResourceQueueProfile \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
@@ -549,4 +567,6 @@ grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserResourceQueueProfile: queued raw=' "$OUT/browser.log"
+grep -q 'BrowserResourceQueueProfile: loaded calls=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
