@@ -76,6 +76,8 @@ grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateS
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
 grep -q '__STARSECTOR_BROWSER_FAST_CSV_PARSER__' launch.html
 grep -q 'starsector.browserFastCsvParser=${browserFastCsvParser}' launch.html
+grep -q '__STARSECTOR_BROWSER_FAST_TEXT_PREPROCESS__' launch.html
+grep -q 'starsector.browserFastTextPreprocess=${browserFastTextPreprocess}' launch.html
 grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
 grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
@@ -163,6 +165,17 @@ javac -encoding UTF-8 --release 8 -cp ".ci-build/fast-csv-helper:$CP" \
   -d .ci-build/verify-fast-csv ci/VerifyBrowserFastCsvParser.java
 java -Xverify:all -cp ".ci-build/verify-fast-csv:.ci-build/fast-csv-helper:$CP" \
   VerifyBrowserFastCsvParser "$PWD/starsector/starsector"
+# Exact one-pass replacement for SpecStore's two whole-string smart-quote regexes.
+# Verify every restored stock CSV plus deterministic edge/fuzz cases first.
+rm -rf .ci-build/fast-text-helper .ci-build/verify-fast-text
+mkdir -p .ci-build/fast-text-helper .ci-build/verify-fast-text
+javac -encoding UTF-8 --release 8 -cp "$CP" \
+  -d .ci-build/fast-text-helper \
+  ci/java17-xstream/com/fs/starfarer/loading/BrowserTextPreprocessor.java
+javac -encoding UTF-8 --release 8 -cp ".ci-build/fast-text-helper:$CP" \
+  -d .ci-build/verify-fast-text ci/VerifyBrowserTextPreprocessor.java
+java -Xverify:all -cp ".ci-build/verify-fast-text:.ci-build/fast-text-helper:$CP" \
+  VerifyBrowserTextPreprocessor "$PWD/starsector/starsector"
 mapfile -t COMPAT_SOURCES < <(find ci/java17-xstream -type f -name '*.java' -print | sort)
 javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" -d .ci-build/fixer \
   jars/Fixer.java "${COMPAT_SOURCES[@]}"
@@ -183,6 +196,8 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
+  | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
   | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-deferred-texture-policy
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
@@ -283,6 +298,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyDeferredTexturePatches.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
+  ci/PatchBrowserTextPreprocessor.java \
+  ci/VerifyBrowserTextPreprocessorPatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
@@ -429,6 +446,18 @@ cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
+# Fast exact smart-quote normalization before SpecStore's original two regex passes.
+# Null from the property-gated helper falls through to the untouched stock body.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBrowserTextPreprocessor jars/starfarer_obf.jar .ci-build/starfarer-fast-text-preprocess.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyBrowserTextPreprocessorPatch .ci-build/starfarer-fast-text-preprocess.jar
+mv .ci-build/starfarer-fast-text-preprocess.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBrowserTextPreprocessor jars/starfarer_obf.jar .ci-build/starfarer-fast-text-preprocess-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyBrowserTextPreprocessorPatch .ci-build/starfarer-fast-text-preprocess-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-text-preprocess-repeat.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
   | grep -q 'BrowserSpecStoreStage:'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -592,6 +621,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.loading.oOoO \
   com.fs.starfarer.loading.BrowserFastCsvParser \
+  com.fs.starfarer.loading.BrowserTextPreprocessor \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   com.fs.starfarer.BaseGameState
 
@@ -644,6 +674,7 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
+grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
