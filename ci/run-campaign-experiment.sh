@@ -397,6 +397,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyJaninoNegativeSourceCachePatch.java \
   ci/PatchResourceLoaderQuickStart.java \
   ci/PatchSpecStoreDiagnostics.java \
+  ci/PatchVariantPhaseDiagnostics.java \
+  ci/VerifyVariantPhaseDiagnosticsPatch.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
@@ -625,6 +627,19 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-text-preprocess-repeat.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
   | grep -q 'BrowserSpecStoreStage:'
+# Diagnostic-only split of the hot variant stage into JSON/spec construction,
+# relationship/default-module resolution, and finalization. Reuses the existing
+# SpecStore timestamp helper and does not alter control flow or data.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantPhaseDiagnosticsPatch .ci-build/starfarer-variant-phase-diag.jar
+mv .ci-build/starfarer-variant-phase-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantPhaseDiagnosticsPatch .ci-build/starfarer-variant-phase-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesVariableDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-diag.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -864,6 +879,10 @@ grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'variant-phase:entry' "$OUT/browser.log"
+grep -q 'variant-phase:relationships' "$OUT/browser.log"
+grep -q 'variant-phase:finalize' "$OUT/browser.log"
+grep -q 'variant-phase:exit' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
