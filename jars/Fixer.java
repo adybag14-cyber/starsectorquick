@@ -73,6 +73,12 @@ public class Fixer {
             "starsector.autoCampaignStartVariant";
     private static final String AUTO_CAMPAIGN_START_SUPPLIES_PROPERTY =
             "starsector.autoCampaignStartSupplies";
+    private static final String AUTO_CAMPAIGN_START_FUEL_FRACTION_PROPERTY =
+            "starsector.autoCampaignStartFuelFraction";
+    private static final String AUTO_CAMPAIGN_START_CREW_RESERVE_PROPERTY =
+            "starsector.autoCampaignStartCrewReserve";
+    private static final String AUTO_CAMPAIGN_START_CREDITS_PROPERTY =
+            "starsector.autoCampaignStartCredits";
     private static final String AUTO_CAMPAIGN_TIMEOUT_MS_PROPERTY =
             "starsector.autoCampaignTimeoutMs";
     private static final String AUTO_CAMPAIGN_POLL_MS_PROPERTY = "starsector.autoCampaignPollMs";
@@ -1998,7 +2004,7 @@ public class Fixer {
                 if (isCampaignState(stateId, currentState)) {
                     com.fs.starfarer.MainThreadTransitionBridge.disableTitleHandoff();
                     if (normalizedMode.indexOf("new") >= 0) {
-                        ensureAutoCampaignPlayerSupplies();
+                        ensureAutoCampaignPlayerResources();
                     }
                     if (!enableColonyVisit) {
                         System.out.println("Fixer: auto campaign watcher reached Campaign State.");
@@ -17866,33 +17872,120 @@ public class Fixer {
         }
     }
 
-    private static boolean ensureAutoCampaignPlayerSupplies() {
+    private static boolean ensureAutoCampaignPlayerResources() {
         try {
             Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
             Method getSector = findMethodRecursive(globalClass, "getSector");
-            if (getSector == null) {
-                return false;
-            }
+            if (getSector == null) return false;
             getSector.setAccessible(true);
             Object sector = getSector.invoke(null);
             Object fleet = sector == null ? null : invokeNoArgIfPresent(sector, "getPlayerFleet");
             Object cargo = fleet == null ? null : invokeNoArgIfPresent(fleet, "getCargo");
-            float target = getAutoCampaignStartingSuppliesTarget(cargo);
-            float before = readCargoSupplies(cargo);
-            boolean ready = topUpCargoSupplies(cargo, target);
-            float after = readCargoSupplies(cargo);
+            return balanceAutoCampaignPlayerResources(fleet, cargo);
+        } catch (Throwable t) {
+            System.out.println("Fixer: auto campaign playable resources check failed: " + describeThrowableChain(t));
+            return false;
+        }
+    }
+
+    private static boolean balanceAutoCampaignPlayerResources(Object fleet, Object cargo) {
+        if (fleet == null || cargo == null) return false;
+        try {
+            float maxCapacity = readNumberNoArg(cargo, "getMaxCapacity", -1f);
+            float spaceUsedBefore = readNumberNoArg(cargo, "getSpaceUsed", -1f);
+            float suppliesBefore = readCargoSupplies(cargo);
+            float nonSupplySpace = (spaceUsedBefore >= 0f && suppliesBefore >= 0f)
+                    ? Math.max(0f, spaceUsedBefore - suppliesBefore) : 0f;
+            float supplyCapacity = maxCapacity > 0f ? Math.max(0f, maxCapacity - nonSupplySpace) : -1f;
+            float supplyTarget = getAutoCampaignStartingSuppliesTarget(cargo);
+            if (supplyCapacity >= 0f) supplyTarget = Math.min(supplyTarget, supplyCapacity);
+
+            // If a previous bootstrap already overfilled supplies, trim only the
+            // overflow; otherwise preserve existing player cargo.
+            if (supplyCapacity >= 0f && suppliesBefore > supplyCapacity + 0.01f) {
+                invokeNumericOneArg(cargo, "removeSupplies", suppliesBefore - supplyCapacity, Float.TYPE);
+            }
+            boolean suppliesReady = topUpCargoSupplies(cargo, supplyTarget);
+            float suppliesAfter = readCargoSupplies(cargo);
+
+            Object fleetData = invokeNoArgIfPresent(fleet, "getFleetData");
+            float minCrew = readNumberNoArg(fleetData, "getMinCrew", 0f);
+            float maxPersonnel = readNumberNoArg(cargo, "getMaxPersonnel", -1f);
+            float currentCrew = readNumberNoArg(cargo, "getCrew", 0f);
+            float reserve = Math.max(0f, parseFloatProperty(AUTO_CAMPAIGN_START_CREW_RESERVE_PROPERTY, 8f));
+            float crewTarget = Math.max(minCrew, minCrew + reserve);
+            if (maxPersonnel > 0f) crewTarget = Math.min(crewTarget, maxPersonnel);
+            int crewToAdd = Math.max(0, (int)Math.ceil(crewTarget - currentCrew));
+            if (crewToAdd > 0) invokeNumericOneArg(cargo, "addCrew", crewToAdd, Integer.TYPE);
+            float crewAfter = readNumberNoArg(cargo, "getCrew", currentCrew);
+
+            float maxFuel = readNumberNoArg(cargo, "getMaxFuel", -1f);
+            float fuelBefore = readNumberNoArg(cargo, "getFuel", 0f);
+            float fuelFraction = Math.max(0f, Math.min(1f,
+                    parseFloatProperty(AUTO_CAMPAIGN_START_FUEL_FRACTION_PROPERTY, 0.75f)));
+            float fuelTarget = maxFuel > 0f ? maxFuel * fuelFraction : 20f;
+            if (maxFuel > 0f) fuelTarget = Math.min(maxFuel, Math.max(1f, fuelTarget));
+            if (fuelBefore < fuelTarget - 0.01f) {
+                invokeNumericOneArg(cargo, "addFuel", fuelTarget - fuelBefore, Float.TYPE);
+            }
+            float fuelAfter = readNumberNoArg(cargo, "getFuel", fuelBefore);
+
+            float creditsTarget = Math.max(0f, parseFloatProperty(AUTO_CAMPAIGN_START_CREDITS_PROPERTY, 2000f));
+            Object credits = invokeNoArgIfPresent(cargo, "getCredits");
+            float creditsBefore = readNumberNoArg(credits, "get", 0f);
+            if (credits != null && creditsBefore < creditsTarget) {
+                invokeNumericOneArg(credits, "add", creditsTarget - creditsBefore, Float.TYPE);
+            }
+            float creditsAfter = readNumberNoArg(credits, "get", creditsBefore);
+
+            float spaceUsedAfter = readNumberNoArg(cargo, "getSpaceUsed", spaceUsedBefore);
+            boolean cargoWithinCapacity = maxCapacity <= 0f || spaceUsedAfter <= maxCapacity + 0.1f;
+            boolean crewReady = crewAfter + 0.1f >= minCrew;
+            boolean fuelReady = maxFuel <= 0f || fuelAfter > 0f;
+            boolean creditsReady = creditsAfter + 0.1f >= creditsTarget;
+            boolean ready = suppliesReady && cargoWithinCapacity && crewReady && fuelReady && creditsReady;
+
             System.out.println(
                     "Fixer: auto campaign playable starting supplies before="
-                            + before
-                            + " target="
-                            + target
-                            + " after="
-                            + after
-                            + " ready="
-                            + ready);
+                            + suppliesBefore + " target=" + supplyTarget + " after=" + suppliesAfter
+                            + " ready=" + suppliesReady);
+            System.out.println(
+                    "Fixer: auto campaign playable resources supplies=" + suppliesAfter
+                            + " fuel=" + fuelAfter + "/" + maxFuel
+                            + " crew=" + crewAfter + "/min=" + minCrew + "/max=" + maxPersonnel
+                            + " cargo=" + spaceUsedAfter + "/" + maxCapacity
+                            + " credits=" + creditsAfter
+                            + " ready=" + ready);
             return ready;
         } catch (Throwable t) {
-            System.out.println("Fixer: auto campaign playable starting supplies check failed: " + describeThrowableChain(t));
+            System.out.println("Fixer: auto campaign playable resources balance failed: " + describeThrowableChain(t));
+            return false;
+        }
+    }
+
+    private static float readNumberNoArg(Object target, String methodName, float fallback) {
+        if (target == null) return fallback;
+        try {
+            Method method = findMethodRecursive(target.getClass(), methodName);
+            if (method == null) return fallback;
+            method.setAccessible(true);
+            Object value = method.invoke(target);
+            return value instanceof Number ? ((Number)value).floatValue() : fallback;
+        } catch (Throwable ignored) {
+            return fallback;
+        }
+    }
+
+    private static boolean invokeNumericOneArg(Object target, String methodName, Number value, Class<?> primitiveType) {
+        if (target == null || value == null) return false;
+        try {
+            Method method = findMethodRecursive(target.getClass(), methodName, primitiveType);
+            if (method == null) return false;
+            method.setAccessible(true);
+            if (primitiveType == Integer.TYPE) method.invoke(target, Integer.valueOf(value.intValue()));
+            else method.invoke(target, Float.valueOf(value.floatValue()));
+            return true;
+        } catch (Throwable ignored) {
             return false;
         }
     }

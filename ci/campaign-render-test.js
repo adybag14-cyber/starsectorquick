@@ -9,6 +9,7 @@ const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
 const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaign-render';
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
+const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -86,6 +87,31 @@ function pixelStats(buffer) {
   };
 }
 
+function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
+  if (!beforeBuffer || !afterBuffer) return 0;
+  const a = PNG.sync.read(beforeBuffer);
+  const b = PNG.sync.read(afterBuffer);
+  if (a.width !== b.width || a.height !== b.height) return 1;
+  const r = region || { x0: 0, y0: 0, x1: 1, y1: 1 };
+  const x0 = Math.max(0, Math.floor(a.width * r.x0));
+  const x1 = Math.min(a.width, Math.ceil(a.width * r.x1));
+  const y0 = Math.max(0, Math.floor(a.height * r.y0));
+  const y1 = Math.min(a.height, Math.ceil(a.height * r.y1));
+  let changed = 0;
+  let total = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * a.width + x) * 4;
+      const delta = Math.abs(a.data[i] - b.data[i])
+        + Math.abs(a.data[i + 1] - b.data[i + 1])
+        + Math.abs(a.data[i + 2] - b.data[i + 2]);
+      if (delta >= 24) changed += 1;
+      total += 1;
+    }
+  }
+  return total > 0 ? changed / total : 0;
+}
+
 (async () => {
   const logs = [];
   const errors = [];
@@ -93,6 +119,7 @@ function pixelStats(buffer) {
   const localNegativeMisses = [];
   const screenshotErrors = [];
   const graphicsErrors = [];
+  const runtimeErrorSignals = [];
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -103,6 +130,7 @@ function pixelStats(buffer) {
   let startingSuppliesTarget = null;
   let startingSuppliesAfter = null;
   let startingSuppliesReady = false;
+  let playableResources = null;
   let jarPackResponses = 0;
   let jarPackResponseBytes = 0;
   let browser;
@@ -130,7 +158,8 @@ function pixelStats(buffer) {
     __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: true,
     __STARSECTOR_RENDER_WIDTH__: 1024,
     __STARSECTOR_RENDER_HEIGHT__: 768,
-    __LWJGL_FIRST_LOG_LIMIT__: 512
+    __LWJGL_FIRST_LOG_LIMIT__: 512,
+    __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: deepGameplay
   };
   const windowConfig = { ...defaultConfig, ...configOverrides };
   await page.addInitScript(config => {
@@ -152,14 +181,31 @@ function pixelStats(buffer) {
         && Number.isFinite(startingSuppliesTarget)
         && Number.isFinite(startingSuppliesAfter);
     }
+    const resources = text.match(/Fixer: auto campaign playable resources supplies=([0-9.+-]+)\s+fuel=([0-9.+-]+)\/([0-9.+-]+)\s+crew=([0-9.+-]+)\/min=([0-9.+-]+)\/max=([0-9.+-]+)\s+cargo=([0-9.+-]+)\/([0-9.+-]+)\s+credits=([0-9.+-]+)\s+ready=(true|false)/i);
+    if (resources) {
+      playableResources = {
+        supplies: Number(resources[1]),
+        fuel: Number(resources[2]),
+        maxFuel: Number(resources[3]),
+        crew: Number(resources[4]),
+        minCrew: Number(resources[5]),
+        maxPersonnel: Number(resources[6]),
+        cargoUsed: Number(resources[7]),
+        maxCargo: Number(resources[8]),
+        credits: Number(resources[9]),
+        ready: resources[10].toLowerCase() === 'true',
+      };
+    }
     if (/watcher state=Campaign State|reached Campaign State/i.test(text) && !campaignSeenAt) {
       campaignSeenAt = Date.now();
     }
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
-    if (/(?:^|\b)Fatal\s*:\s*|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
-      fatalSeenAt = Date.now();
+    const hardRuntimeError = /fatal\s+starsector\s+null|NullPointerException|Exception in thread|(?:^|\b)Fatal\s*:\s*|auto campaign aborting|exhausted all new-game/i.test(text);
+    if (hardRuntimeError) {
+      runtimeErrorSignals.push(text);
+      if (!fatalSeenAt) fatalSeenAt = Date.now();
     }
     if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
       graphicsErrors.push(text);
@@ -296,8 +342,9 @@ function pixelStats(buffer) {
   // inset 6px from the left and 10px from the bottom of the 1024x768 logical
   // viewport. Slot 1 is Character (the exact reproduced crash); sweeping every
   // slot avoids silently missing controls whose live labels differ by game state.
-  const campaignUiControls = Array.from({ length: 7 }, (_, slot) => [
-    `bottom-slot-${slot + 1}`,
+  const campaignControlNames = ['Character', 'Fleet', 'Refit', 'Crew/Cargo', 'Map', 'Intel', 'Command'];
+  const campaignUiControls = campaignControlNames.map((label, slot) => [
+    label,
     (68.5 + 131 * slot) / 1024,
     748 / 768,
   ]);
@@ -310,10 +357,15 @@ function pixelStats(buffer) {
         if (fatalSeenAt || errors.length > 0) break;
         const x = box.x + box.width * nx;
         const y = box.y + box.height * ny;
+        const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
         logs.push(`[ui-probe] click ${name} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
         await page.mouse.move(x, y);
         await page.mouse.click(x, y, { button: 'left', delay: 80 });
-        await sleep(2200);
+        await sleep(deepGameplay ? 3000 : 2200);
+        const panelFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        if (panelFrame) fs.writeFileSync(`${outputDir}/gameplay-panel-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, panelFrame);
+        const panelVisualDiff = deepGameplay ? pixelDiffRatio(beforePanel, panelFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 }) : null;
+        const panelOpened = !deepGameplay || panelVisualDiff >= 0.025;
         const afterClick = await withTimeout(page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
           bodyDetail: document.body.dataset.runtimeDetail || '',
@@ -325,12 +377,30 @@ function pixelStats(buffer) {
         }));
         const failed = Boolean(fatalSeenAt)
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(afterClick.bodyState)
-          || afterClick.runtime?.state === 'fatal';
-        uiControlResults.push({ name, failed, ...afterClick });
+          || afterClick.runtime?.state === 'fatal'
+          || !panelOpened;
+        const controlResult = { name, failed, panelOpened, panelVisualDiff, returnedToCampaign: !deepGameplay, returnVisualDiff: null, ...afterClick };
+        uiControlResults.push(controlResult);
+        logs.push(`[ui-probe] result ${name} panelOpened=${panelOpened} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
         if (failed) break;
+        if (deepGameplay) {
+          await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.45);
+          await page.mouse.wheel(0, 480);
+          await sleep(500);
+        }
         await page.keyboard.press('Escape');
-        await sleep(900);
+        await sleep(deepGameplay ? 1300 : 900);
+        if (deepGameplay) {
+          const returnFrame = await gameCanvas.screenshot({ timeout: 10000 });
+          fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
+          controlResult.returnVisualDiff = pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 });
+          controlResult.returnedToCampaign = controlResult.returnVisualDiff >= 0.025 && !fatalSeenAt;
+          controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
+          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
+          flushLogs();
+          if (controlResult.failed) break;
+        }
       }
     } catch (error) {
       errors.push(`campaign UI control probe failed: ${error.message || error}`);
@@ -398,6 +468,67 @@ function pixelStats(buffer) {
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
+  const abilityKeyResults = [];
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+    const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
+    for (let digit = 1; digit <= 8 && !fatalSeenAt; digit++) {
+      const key = String(digit);
+      const logStart = logs.length;
+      const beforeInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+      const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      await page.keyboard.press(key);
+      await sleep(1200);
+      const afterFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      fs.writeFileSync(`${outputDir}/gameplay-ability-${digit}.png`, afterFrame);
+      const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+      const eventLines = logs.slice(logStart).filter(line => /BrowserGameplayProbe:/.test(line));
+      const pressLines = eventLines.filter(line => /event=ability-press/.test(line));
+      const stateLines = eventLines.filter(line => /event=ability-(?:activate|deactivate)/.test(line));
+      const ids = [...new Set(pressLines.map(line => (line.match(/\bid=([^\s]+)/) || [])[1]).filter(Boolean))];
+      const usable = pressLines.some(line => /\busable=true\b/.test(line));
+      const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
+      const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
+      const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
+      const mapped = pressLines.length > 0;
+      const animatedOrChanged = !mapped || !usable || stateLines.length > 0 || visualDiff >= 0.002;
+      const failed = deliveredDelta < 2 || globalDelta < 2 || !animatedOrChanged || Boolean(fatalSeenAt);
+      abilityKeyResults.push({ digit, mapped, ids, usable, deliveredDelta, globalDelta, visualDiff, stateEvents: stateLines.length, failed });
+      logs.push(`[ability-key-probe] key=${digit} mapped=${mapped} ids=${ids.join(',') || '-'} usable=${usable} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateEvents=${stateLines.length} failed=${failed}`);
+      flushLogs();
+      if (failed) break;
+      // Toggle-style abilities are pressed a second time to avoid contaminating later tests.
+      if (stateLines.some(line => /event=ability-activate/.test(line) && /\bactive=true\b/.test(line))) {
+        await page.keyboard.press(key);
+        await sleep(700);
+      }
+    }
+  }
+  const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
+    abilityKeyResults.length === 8
+    && abilityKeyResults.every(item => !item.failed)
+    && abilityKeyResults.some(item => item.mapped)
+  );
+
+  let gameplayPerformance = null;
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+    const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const started = Date.now();
+    await page.keyboard.down('w');
+    await sleep(2200);
+    await page.keyboard.up('w');
+    await sleep(5800);
+    const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    gameplayPerformance = {
+      durationMs: Date.now() - started,
+      swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
+      recentFps: Number(perfAfter.recentFps || 0),
+      recentFrameMs: Number(perfAfter.recentFrameMs || 0),
+    };
+    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} responsive=${gameplayPerformance.responsive}`);
+  }
+  const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
+
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',
@@ -419,7 +550,18 @@ function pixelStats(buffer) {
           colorMask: Array.from(gl.getParameter(gl.COLOR_WRITEMASK)),
           clearColor: Array.from(gl.getParameter(gl.COLOR_CLEAR_VALUE)),
           framebufferStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER),
-          contextAttributes: gl.getContextAttributes()
+          contextAttributes: gl.getContextAttributes(),
+          version: gl.getParameter(gl.VERSION),
+          shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+          vendor: gl.getParameter(gl.VENDOR),
+          renderer: gl.getParameter(gl.RENDERER),
+          maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+          maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+          maxCombinedTextureUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
+          maxDrawBuffers: gl.getParameter(gl.MAX_DRAW_BUFFERS),
+          maxSamples: gl.getParameter(gl.MAX_SAMPLES),
+          extensionCount: gl.getSupportedExtensions()?.length || 0,
+          extensions: gl.getSupportedExtensions() || []
         };
       } catch (error) {
         return { error: String(error && (error.message || error) || error) };
@@ -493,10 +635,17 @@ function pixelStats(buffer) {
     startingSuppliesReady
     && startingSuppliesTarget > 0
     && startingSuppliesAfter >= startingSuppliesTarget - 0.1
+    && (!deepGameplay || (playableResources
+      && playableResources.ready
+      && playableResources.fuel > 0
+      && playableResources.crew + 0.1 >= playableResources.minCrew
+      && (playableResources.maxCargo <= 0 || playableResources.cargoUsed <= playableResources.maxCargo + 0.1)
+      && playableResources.credits >= 1999))
   );
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
-    && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
+    && abilityKeysSafe && gameplayPerformanceSafe
+    && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -536,6 +685,11 @@ function pixelStats(buffer) {
     uiControlResults,
     shortcutsResponsive,
     shortcutResults,
+    deepGameplay,
+    abilityKeysSafe,
+    abilityKeyResults,
+    gameplayPerformanceSafe,
+    gameplayPerformance,
     shortcutBefore,
     shortcutAfter,
     jarPackResponses,
@@ -545,6 +699,7 @@ function pixelStats(buffer) {
     startingSuppliesTarget,
     startingSuppliesAfter,
     startingSuppliesReady,
+    playableResources,
     inputBefore,
     inputAfter,
     nativeStatsEnabled,
@@ -560,6 +715,7 @@ function pixelStats(buffer) {
     errors,
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
+    runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
     httpErrors: [...new Set(httpErrors)],
     localNegativeMisses: [...new Set(localNegativeMisses)],
     state,

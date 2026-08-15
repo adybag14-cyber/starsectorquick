@@ -83,6 +83,8 @@ grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' la
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
+grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
@@ -195,6 +197,8 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
   | grep 'public static void disableTitleHandoff()'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
   | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserGameplayProbe \
+  | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
@@ -215,8 +219,11 @@ java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
   VerifyDeferredTextureBehavior
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
-  -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
+  -d .ci-build/verify-starting-supplies \
+  ci/VerifyStartingSupplies.java \
+  ci/VerifyPlayableStartingResources.java
 java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyPlayableStartingResources
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -296,6 +303,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
+  ci/PatchAbilityGameplayProbe.java \
+  ci/VerifyAbilityGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -404,6 +413,18 @@ javap -classpath jars/scripts-precompiled.jar -c data.scripts.world.SectorGen \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleScreenCampaignCreateGuard jars/starfarer.api.jar .ci-build/starfarer-title-create-guard.jar
 mv .ci-build/starfarer-title-create-guard.jar jars/starfarer.api.jar
+# Deep gameplay mode records real Starsector ability button/activation events without
+# changing ability semantics. The helper itself is property-gated and silent otherwise.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityGameplayProbe jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityGameplayProbePatch .ci-build/starfarer-api-gameplay-probe.jar
+mv .ci-build/starfarer-api-gameplay-probe.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityGameplayProbe jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityGameplayProbePatch .ci-build/starfarer-api-gameplay-probe-repeat.jar
+cmp -s jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe-repeat.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
@@ -617,6 +638,11 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
+  com.fs.starfarer.BrowserGameplayProbe \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseAbilityPlugin \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseToggleAbility \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseDurationAbility \
+  com.fs.starfarer.api.impl.campaign.abilities.TransponderAbility \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.loading.oOoO \
@@ -678,3 +704,6 @@ grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
+if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
+fi
