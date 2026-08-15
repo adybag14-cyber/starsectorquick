@@ -275,6 +275,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyJaninoNegativeSourceCachePatch.java \
   ci/PatchResourceLoaderQuickStart.java \
   ci/PatchSpecStoreDiagnostics.java \
+  ci/PatchVariantPhaseDiagnostics.java \
+  ci/VerifyVariantPhaseDiagnosticsPatch.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
@@ -400,6 +402,19 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.loading.SpecStore \
   | grep -q 'BrowserSpecStoreStage:'
+# Diagnostic-only split of the hot variant stage into JSON/spec construction,
+# relationship/default-module resolution, and finalization. Reuses the existing
+# SpecStore timestamp helper and does not alter control flow or data.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantPhaseDiagnosticsPatch .ci-build/starfarer-variant-phase-diag.jar
+mv .ci-build/starfarer-variant-phase-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantPhaseDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantPhaseDiagnosticsPatch .ci-build/starfarer-variant-phase-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesVariableDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-diag.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -612,4 +627,8 @@ grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'variant-phase:entry' "$OUT/browser.log"
+grep -q 'variant-phase:relationships' "$OUT/browser.log"
+grep -q 'variant-phase:finalize' "$OUT/browser.log"
+grep -q 'variant-phase:exit' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
