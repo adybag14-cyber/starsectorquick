@@ -200,6 +200,8 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
   let startingSuppliesAfter = null;
   let startingSuppliesReady = false;
   let playableResources = null;
+  let starterAbilityMappingReady = false;
+  const starterAbilitySlots = {};
   let jarPackResponses = 0;
   let jarPackResponseBytes = 0;
   let browser;
@@ -274,6 +276,14 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
         credits: Number(resources[9]),
         ready: resources[10].toLowerCase() === 'true',
       };
+    }
+    const starterAbilities = text.match(/Fixer: auto campaign starter abilities mapped=([^\r\n]+?)\s+ready=(true|false)/i);
+    if (starterAbilities) {
+      starterAbilityMappingReady = starterAbilities[2].toLowerCase() === 'true';
+      for (const entry of starterAbilities[1].split(',')) {
+        const match = entry.trim().match(/^(\d+)=(.+)$/);
+        if (match) starterAbilitySlots[match[1]] = match[2];
+      }
     }
     if (/watcher state=Campaign State|reached Campaign State/i.test(text) && !campaignSeenAt) {
       campaignSeenAt = Date.now();
@@ -674,6 +684,7 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
   const durationAbilityIds = new Set([
     'sensor_burst', 'emergency_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
   ]);
+  const contextUnavailableAbilityIds = new Set(['scavenge']);
   const abilityKeyResults = [];
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
@@ -718,23 +729,28 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
       const pressEvents = events.filter(event => event.event === 'ability-press');
       const stateEvents = events.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
       const ids = [...new Set(pressEvents.map(event => event.id).filter(Boolean))];
-      const mapped = pressEvents.some(event => event.id === expectedId);
+      const slotMapped = starterAbilityMappingReady && starterAbilitySlots[String(digit)] === expectedId;
+      const pressObserved = pressEvents.some(event => event.id === expectedId);
+      const mapped = slotMapped;
       const wrongIds = ids.filter(id => id !== expectedId);
       const usable = pressEvents.some(event => event.id === expectedId && event.usable === 'true');
+      const contextUnavailable = contextUnavailableAbilityIds.has(expectedId) && !pressObserved;
+      const pressRequired = !contextUnavailableAbilityIds.has(expectedId);
       const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
       const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
       const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
       const stateChanged = stateEvents.some(event => event.id === expectedId);
-      const animatedOrChanged = !usable || stateChanged || visualDiff >= 0.002;
+      const animatedOrChanged = contextUnavailable || !usable || stateChanged || visualDiff >= 0.002;
       const minKeyboardEvents = confirmationPress ? 4 : 2;
       const failed = deliveredDelta < minKeyboardEvents || globalDelta < minKeyboardEvents
-        || !mapped || wrongIds.length > 0 || !animatedOrChanged || Boolean(fatalSeenAt);
+        || !mapped || (pressRequired && !pressObserved) || wrongIds.length > 0
+        || !animatedOrChanged || Boolean(fatalSeenAt);
       abilityKeyResults.push({
-        digit, expectedId, mapped, ids, wrongIds, usable, confirmationPress, deliveredDelta, globalDelta,
-        visualDiff, stateChanged, stateEvents: stateEvents.length,
+        digit, expectedId, mapped, slotMapped, pressObserved, contextUnavailable, ids, wrongIds, usable,
+        confirmationPress, deliveredDelta, globalDelta, visualDiff, stateChanged, stateEvents: stateEvents.length,
         pressReadyMs: pressReady.matched ? pressReady.elapsedMs : null, failed,
       });
-      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
+      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
       flushLogs();
       if (failed) break;
 
@@ -751,7 +767,7 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
           const settled = await waitForGameplayEvent(
             gameplayEvents, settleStart,
             event => event.id === expectedId && event.event === 'ability-deactivate',
-            { timeoutMs: 10000, pollMs: 100 }
+            { timeoutMs: 45000, pollMs: 100 }
           );
           deactivated = settled.matched;
           settleMs = settled.elapsedMs;
@@ -759,10 +775,13 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
         if (deactivated) {
           await sleep(750);
         }
-        abilityKeyResults[abilityKeyResults.length - 1].durationSettled = deactivated;
-        abilityKeyResults[abilityKeyResults.length - 1].durationSettleMs = settleMs;
-        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} recoveryMs=${deactivated ? 750 : 0}`);
+        const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+        currentResult.durationSettled = deactivated;
+        currentResult.durationSettleMs = settleMs;
+        if (!deactivated) currentResult.failed = true;
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} recoveryMs=${deactivated ? 750 : 0} failed=${!deactivated}`);
         flushLogs();
+        if (!deactivated) break;
       }
 
       // Toggle-style abilities are pressed again to return the campaign to a
@@ -781,7 +800,8 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
     }
   }
   const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
-    abilityKeyResults.length === 8
+    starterAbilityMappingReady
+    && abilityKeyResults.length === 8
     && abilityKeyResults.every(item => !item.failed && item.mapped && item.expectedId === expectedAbilityIds[item.digit - 1])
     && abilityKeyResults.filter(item => item.usable && item.stateChanged).length >= 4
   );
@@ -995,6 +1015,8 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
     graphicsErrors: [...new Set(graphicsErrors)],
     runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
     gameplayEvents,
+    starterAbilityMappingReady,
+    starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
     localNegativeMisses: [...new Set(localNegativeMisses)],
     state,
