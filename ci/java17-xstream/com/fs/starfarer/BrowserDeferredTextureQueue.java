@@ -90,6 +90,7 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/stations/")
                 || value.startsWith("graphics/warroom/")
                 || value.startsWith("graphics/weapons/")
+                || value.startsWith("graphics/ships/")
                 || value.startsWith("graphics/damage/")
                 || value.startsWith("graphics/icons/tactical/")
                 || value.startsWith("graphics/debris/")
