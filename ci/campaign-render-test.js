@@ -671,6 +671,9 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
     'transponder', 'go_dark', 'sensor_burst', 'emergency_burn',
     'sustained_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
   ];
+  const durationAbilityIds = new Set([
+    'sensor_burst', 'emergency_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
+  ]);
   const abilityKeyResults = [];
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
@@ -734,6 +737,33 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
       logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
       flushLogs();
       if (failed) break;
+
+      // Duration abilities deliberately force incompatible abilities unusable for
+      // two subsequent campaign frames. Wait for the real deactivation event and
+      // then leave a small frame-recovery margin before probing the next numeric
+      // slot; otherwise a correct mapping can be swallowed by Starsector's own
+      // disableFrames guard rather than by the browser keyboard bridge.
+      if (durationAbilityIds.has(expectedId) && stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate')) {
+        let deactivated = stateEvents.some(event => event.id === expectedId && event.event === 'ability-deactivate');
+        let settleMs = 0;
+        if (!deactivated) {
+          const settleStart = gameplayEvents.length;
+          const settled = await waitForGameplayEvent(
+            gameplayEvents, settleStart,
+            event => event.id === expectedId && event.event === 'ability-deactivate',
+            { timeoutMs: 10000, pollMs: 100 }
+          );
+          deactivated = settled.matched;
+          settleMs = settled.elapsedMs;
+        }
+        if (deactivated) {
+          await sleep(750);
+        }
+        abilityKeyResults[abilityKeyResults.length - 1].durationSettled = deactivated;
+        abilityKeyResults[abilityKeyResults.length - 1].durationSettleMs = settleMs;
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} recoveryMs=${deactivated ? 750 : 0}`);
+        flushLogs();
+      }
 
       // Toggle-style abilities are pressed again to return the campaign to a
       // neutral baseline before the next slot. Transponder was already pressed
