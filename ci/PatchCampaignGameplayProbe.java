@@ -4,26 +4,94 @@ import java.util.*;
 import java.util.jar.*;
 import org.objectweb.asm.*;
 
-/** Test-only telemetry around CampaignState core-tab open/dismiss paths. */
+/** Test-only telemetry around the seven real Campaign bottom-bar listeners. */
 public final class PatchCampaignGameplayProbe {
-    private static final String ENTRY="com/fs/starfarer/campaign/CampaignState.class";
-    private static final String CLASS="com/fs/starfarer/campaign/CampaignState";
-    private static final String PROBE="com/fs/starfarer/BrowserGameplayProbe";
-    private static final String TAB="Lcom/fs/starfarer/api/campaign/CoreUITabId;";
-    private static final String ONE="("+TAB+")V";
-    private static final String TWO="("+TAB+"Ljava/lang/Object;)V";
-    private static final String DISMISS="()V";
-    public static void main(String[] a)throws Exception{
-        if(a.length!=2)throw new IllegalArgumentException("usage: PatchCampaignGameplayProbe input.jar output.jar");
-        Path in=Path.of(a[0]),out=Path.of(a[1]);int[] classes={0},methods={0},starts={0},ready={0},dismiss={0};
-        try(JarFile j=new JarFile(in.toFile());JarOutputStream o=new JarOutputStream(Files.newOutputStream(out))){Enumeration<JarEntry> es=j.entries();while(es.hasMoreElements()){JarEntry e=es.nextElement();JarEntry c=new JarEntry(e.getName());c.setTime(e.getTime());o.putNextEntry(c);byte[] b;try(InputStream x=j.getInputStream(e)){b=x.readAllBytes();}if(ENTRY.equals(e.getName())){classes[0]++;b=patch(b,methods,starts,ready,dismiss);}o.write(b);o.closeEntry();}}
-        if(classes[0]!=1||methods[0]!=3||starts[0]!=2||ready[0]<2||dismiss[0]!=1){Files.deleteIfExists(out);throw new IllegalStateException("campaign gameplay probe mismatch classes="+classes[0]+" methods="+methods[0]+" starts="+starts[0]+" ready="+ready[0]+" dismiss="+dismiss[0]);}
-        System.out.println("Patched Campaign gameplay probe methods=3 starts=2 ready="+ready[0]+" dismiss=1");
+    private static final String PROBE = "com/fs/starfarer/BrowserGameplayProbe";
+    private static final String ACTION = "actionPerformed";
+    private static final String ACTION_DESC = "(Ljava/lang/Object;Ljava/lang/Object;)V";
+    private static final Map<String, String> TARGETS = new LinkedHashMap<String, String>();
+    static {
+        TARGETS.put("com/fs/starfarer/ui/newui/L$2.class", "CHARACTER");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$3.class", "FLEET");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$4.class", "REFIT");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$5.class", "CARGO");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$6.class", "MAP");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$7.class", "INTEL");
+        TARGETS.put("com/fs/starfarer/ui/newui/L$8.class", "OUTPOSTS");
     }
-    private static byte[] patch(byte[] in,int[] methods,int[] starts,int[] ready,int[] dismiss){
-        int existing=count(in);if(existing>0){if(existing<5)throw new IllegalStateException("partial campaign gameplay probe calls="+existing);methods[0]=3;starts[0]=2;dismiss[0]=1;ready[0]=existing-3;return in;}
-        ClassReader r=new ClassReader(in);ClassWriter w=new ClassWriter(r,ClassWriter.COMPUTE_MAXS);
-        r.accept(new ClassVisitor(Opcodes.ASM9,w){@Override public MethodVisitor visitMethod(int ac,String n,String d,String s,String[]ex){MethodVisitor mv=super.visitMethod(ac,n,d,s,ex);boolean one="showCoreUITab".equals(n)&&ONE.equals(d),two="showCoreUITab".equals(n)&&TWO.equals(d),dis="notifyCoreUIDismissed".equals(n)&&DISMISS.equals(d);if(!one&&!two&&!dis)return mv;methods[0]++;return new MethodVisitor(Opcodes.ASM9,mv){@Override public void visitCode(){super.visitCode();if(one||two){super.visitVarInsn(Opcodes.ALOAD,1);super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,"coreTabStart","(Ljava/lang/Object;)V",false);starts[0]++;}else{super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,"coreUiDismissed","()V",false);dismiss[0]++;}}@Override public void visitInsn(int op){if(op==Opcodes.RETURN&&(one||two)){super.visitVarInsn(Opcodes.ALOAD,1);super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,"coreTabReady","(Ljava/lang/Object;)V",false);ready[0]++;}super.visitInsn(op);}};}},0);return w.toByteArray();
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 2) throw new IllegalArgumentException("usage: PatchCampaignGameplayProbe input.jar output.jar");
+        Path input = Path.of(args[0]), output = Path.of(args[1]);
+        int[] classes = {0}, methods = {0}, starts = {0}, ready = {0};
+        try (JarFile jar = new JarFile(input.toFile());
+             JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                JarEntry copy = new JarEntry(entry.getName()); copy.setTime(entry.getTime()); out.putNextEntry(copy);
+                byte[] bytes; try (InputStream in = jar.getInputStream(entry)) { bytes = in.readAllBytes(); }
+                String tab = TARGETS.get(entry.getName());
+                if (tab != null) { classes[0]++; bytes = patch(bytes, tab, methods, starts, ready); }
+                out.write(bytes); out.closeEntry();
+            }
+        }
+        if (classes[0] != 7 || methods[0] != 7 || starts[0] != 7 || ready[0] < 7) {
+            Files.deleteIfExists(output);
+            throw new IllegalStateException("campaign gameplay probe mismatch classes=" + classes[0]
+                    + " methods=" + methods[0] + " starts=" + starts[0] + " ready=" + ready[0]);
+        }
+        System.out.println("Patched Campaign gameplay listeners classes=7 methods=7 starts=7 ready=" + ready[0]);
     }
-    private static int count(byte[] b){final int[] c={0};new ClassReader(b).accept(new ClassVisitor(Opcodes.ASM9){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[]e){return new MethodVisitor(Opcodes.ASM9){@Override public void visitMethodInsn(int op,String o,String n,String d,boolean i){if(op==Opcodes.INVOKESTATIC&&PROBE.equals(o)&&(n.startsWith("coreTab")||"coreUiDismissed".equals(n)))c[0]++;}};}},ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);return c[0];}
+
+    private static byte[] patch(byte[] input, final String tab, int[] methods, int[] starts, int[] ready) {
+        int existing = countProbeCalls(input);
+        if (existing > 0) {
+            if (existing < 2) throw new IllegalStateException("partial gameplay listener probe tab=" + tab + " calls=" + existing);
+            methods[0]++; starts[0]++; ready[0] += existing - 1;
+            return input;
+        }
+        ClassReader reader = new ClassReader(input);
+        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
+            @Override public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] ex) {
+                MethodVisitor mv = super.visitMethod(access, name, desc, sig, ex);
+                if (!ACTION.equals(name) || !ACTION_DESC.equals(desc)) return mv;
+                methods[0]++;
+                return new MethodVisitor(Opcodes.ASM9, mv) {
+                    @Override public void visitCode() {
+                        super.visitCode();
+                        super.visitLdcInsn(tab);
+                        super.visitMethodInsn(Opcodes.INVOKESTATIC, PROBE, "coreTabStart", "(Ljava/lang/Object;)V", false);
+                        starts[0]++;
+                    }
+                    @Override public void visitInsn(int opcode) {
+                        if (opcode == Opcodes.RETURN) {
+                            super.visitLdcInsn(tab);
+                            super.visitMethodInsn(Opcodes.INVOKESTATIC, PROBE, "coreTabReady", "(Ljava/lang/Object;)V", false);
+                            ready[0]++;
+                        }
+                        super.visitInsn(opcode);
+                    }
+                };
+            }
+        }, 0);
+        return writer.toByteArray();
+    }
+
+    private static int countProbeCalls(byte[] bytes) {
+        final int[] count = {0};
+        new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] ex) {
+                if (!ACTION.equals(name) || !ACTION_DESC.equals(desc)) return null;
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                        if (opcode == Opcodes.INVOKESTATIC && PROBE.equals(owner)
+                                && ("coreTabStart".equals(name) || "coreTabReady".equals(name))) count[0]++;
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return count[0];
+    }
 }
