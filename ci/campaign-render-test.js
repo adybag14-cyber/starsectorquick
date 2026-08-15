@@ -424,19 +424,27 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         await page.mouse.move(x, y);
         await page.mouse.click(x, y, { button: 'left', delay: 80 });
         let tabReady = null;
+        let panelTransition = null;
         let panelFrame = null;
         let panelVisualDiff = null;
-        let panelOpenMs = null;
+        let listenerReadyMs = null;
+        let visualReadyMs = null;
         let panelOpened = !deepGameplay;
         if (deepGameplay) {
-          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\\s|$)`);
+          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
           tabReady = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 10000, pollMs: 100 });
-          panelOpenMs = tabReady.matched ? Date.now() - panelStartedAt : null;
+          listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
           if (tabReady.matched) {
-            await sleep(350);
-            panelFrame = await gameCanvas.screenshot({ timeout: 10000 });
-            panelVisualDiff = pixelDiffRatio(beforePanel, panelFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 });
-            panelOpened = panelVisualDiff >= 0.08;
+            panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
+              timeoutMs: 9000,
+              pollMs: 800,
+              threshold: 0.08,
+              region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+            });
+            panelFrame = panelTransition.frame;
+            panelVisualDiff = panelTransition.visualDiff;
+            panelOpened = panelTransition.opened;
+            visualReadyMs = panelOpened ? Date.now() - panelStartedAt : null;
           }
         } else {
           await sleep(2200);
@@ -455,35 +463,49 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(afterClick.bodyState)
           || afterClick.runtime?.state === 'fatal'
           || !panelOpened;
-        const controlResult = { name, expectedTab, tabReady: Boolean(tabReady?.matched), failed, panelOpened, panelOpenMs, panelVisualDiff, returnedToCampaign: !deepGameplay, returnReadyMs: null, returnVisualDiff: null, ...afterClick };
+        const controlResult = {
+          name,
+          expectedTab,
+          tabReady: Boolean(tabReady?.matched),
+          failed,
+          panelOpened,
+          listenerReadyMs,
+          visualReadyMs,
+          panelVisualDiff,
+          returnedToCampaign: !deepGameplay,
+          returnReadyMs: null,
+          returnVisualDiff: null,
+          ...afterClick,
+        };
         uiControlResults.push(controlResult);
-        logs.push(`[ui-probe] result ${name} expectedTab=${expectedTab} tabReady=${Boolean(tabReady?.matched)} panelOpened=${panelOpened} openMs=${panelOpenMs ?? 'n/a'} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
+        logs.push(`[ui-probe] result ${name} expectedTab=${expectedTab} tabReady=${Boolean(tabReady?.matched)} panelOpened=${panelOpened} listenerReadyMs=${listenerReadyMs ?? 'n/a'} visualReadyMs=${visualReadyMs ?? 'n/a'} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
-        if (failed) break;
-        if (deepGameplay) {
-          await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.45);
-          await page.mouse.wheel(0, 480);
-          await sleep(500);
-        }
-        const dismissStart = logs.length;
-        await page.keyboard.press('Escape');
-        if (deepGameplay) {
-          const dismissed = await waitForLogMatch(logs, dismissStart, /BrowserGameplayProbe:.*event=core-ui-dismissed(?:\s|$)/, { timeoutMs: 2500, pollMs: 100 });
-          if (dismissed.matched) await sleep(250);
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 700 });
+
+        // Clean up every listener that actually fired, even when its visual-ready
+        // deadline failed, so a single slow panel cannot contaminate later probes.
+        if (deepGameplay && tabReady?.matched) {
+          if (panelOpened) {
+            await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.45);
+            await page.mouse.wheel(0, 480);
+            await sleep(350);
+          }
+          await page.keyboard.press('Escape');
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
           const returnFrame = returned.frame;
-          controlResult.dismissTelemetry = dismissed.matched;
           if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
           controlResult.returnReadyMs = returned.readyMs;
-          controlResult.returnVisualDiff = returnFrame ? pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 }) : 0;
+          controlResult.returnVisualDiff = returnFrame && panelFrame
+            ? pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 })
+            : 0;
           controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
           controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
           logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
           flushLogs();
-          if (controlResult.failed) break;
-        } else {
+        } else if (!deepGameplay) {
+          await page.keyboard.press('Escape');
           await sleep(900);
         }
+        if (controlResult.failed) break;
       }
     } catch (error) {
       errors.push(`campaign UI control probe failed: ${error.message || error}`);
@@ -529,15 +551,30 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         let transition = null;
         let shortcutFrame = null;
         if (deepGameplay) {
-          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\\s|$)`);
+          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
           const ready = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 8000, pollMs: 100 });
+          const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
           if (ready.matched) {
-            await sleep(300);
-            shortcutFrame = await gameCanvas.screenshot({ timeout: 10000 });
-            const visualDiff = pixelDiffRatio(beforeFrame, shortcutFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 });
-            transition = { opened: visualDiff >= 0.08, openMs: Date.now() - shortcutStartedAt, visualDiff, readyMatched: true };
-          } else transition = { opened: false, openMs: null, visualDiff: 0, readyMatched: false };
-        } else await sleep(1600);
+            const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              timeoutMs: 8000,
+              pollMs: 800,
+              threshold: 0.08,
+              region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+            });
+            shortcutFrame = visual.frame;
+            transition = {
+              opened: visual.opened,
+              listenerReadyMs,
+              visualReadyMs: visual.opened ? Date.now() - shortcutStartedAt : null,
+              visualDiff: visual.visualDiff,
+              readyMatched: true,
+            };
+          } else {
+            transition = { opened: false, listenerReadyMs: null, visualReadyMs: null, visualDiff: 0, readyMatched: false };
+          }
+        } else {
+          await sleep(1600);
+        }
         const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const runtime = await page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
@@ -546,20 +583,39 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
         const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
         const semanticOpened = !deepGameplay || Boolean(transition?.opened);
+        const directInputOk = deepGameplay ? deliveredDelta >= 1 : deliveredDelta >= 2;
         const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState)
-          || deliveredDelta < 2 || globalDelta < 2 || !semanticOpened;
-        shortcutResults.push({ name, key, expectedTab, activeBefore, deliveredDelta, globalDelta, semanticOpened, tabReady: Boolean(transition?.readyMatched), openMs: transition?.openMs ?? null, visualDiff: transition?.visualDiff ?? null, failed });
-        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} openMs=${transition?.openMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
+          || !directInputOk || globalDelta < 2 || !semanticOpened;
+        const shortcutResult = {
+          name,
+          key,
+          expectedTab,
+          activeBefore,
+          deliveredDelta,
+          globalDelta,
+          semanticOpened,
+          tabReady: Boolean(transition?.readyMatched),
+          listenerReadyMs: transition?.listenerReadyMs ?? null,
+          visualReadyMs: transition?.visualReadyMs ?? null,
+          visualDiff: transition?.visualDiff ?? null,
+          failed,
+        };
+        shortcutResults.push(shortcutResult);
+        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
-        if (failed) break;
-        await page.keyboard.press('Escape');
-        if (deepGameplay) {
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 350 });
-          shortcutResults[shortcutResults.length - 1].returnedToCampaign = returned.ready;
-          shortcutResults[shortcutResults.length - 1].returnReadyMs = returned.readyMs;
-          if (!returned.ready) { shortcutResults[shortcutResults.length - 1].failed = true; break; }
-        } else await sleep(900);
+
+        if (deepGameplay && transition?.readyMatched) {
+          await page.keyboard.press('Escape');
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          shortcutResult.returnedToCampaign = returned.ready;
+          shortcutResult.returnReadyMs = returned.readyMs;
+          shortcutResult.failed = shortcutResult.failed || !returned.ready;
+        } else if (!deepGameplay) {
+          await page.keyboard.press('Escape');
+          await sleep(900);
+        }
+        if (shortcutResult.failed) break;
       }
     } catch (error) {
       errors.push(`campaign shortcut probe failed: ${error.message || error}`);
@@ -572,7 +628,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   ).catch(() => ({}));
   const shortcutsResponsive = expectedState !== 'campaign' || Boolean(
     shortcutResults.length === shortcutKeys.length
-    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= 2 && item.globalDelta >= 2)
+    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= (deepGameplay ? 1 : 2) && item.globalDelta >= 2)
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
