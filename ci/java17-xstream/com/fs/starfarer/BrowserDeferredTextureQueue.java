@@ -92,12 +92,47 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/weapons/")
                 || value.startsWith("graphics/ships/")
                 || value.startsWith("graphics/ui/buttons/")
+                || isDeferredFleetTabStockAsset(value)
                 || value.startsWith("graphics/damage/")
                 || value.startsWith("graphics/icons/tactical/")
                 || value.startsWith("graphics/debris/")
                 || value.startsWith("graphics/missiles/")
                 || value.startsWith("graphics/asteroids/")
                 || value.startsWith("data/missions/");
+    }
+
+    private static boolean isDeferredFleetTabStockAsset(java.lang.String value) {
+        return value.equals("graphics/ui/icons/fleettab/lr_doodad_bg.png")
+                || value.equals("graphics/ui/icons/fleettab/buy.png")
+                || value.equals("graphics/ui/icons/fleettab/cargo_24x16b.png")
+                || value.equals("graphics/ui/icons/fleettab/chassis14x.png")
+                || value.equals("graphics/ui/icons/fleettab/cr16x.png")
+                || value.equals("graphics/ui/icons/fleettab/cr24x16.png")
+                || value.equals("graphics/ui/icons/fleettab/cr32x.png")
+                || value.equals("graphics/ui/icons/fleettab/hull16x.png")
+                || value.equals("graphics/ui/icons/fleettab/hull32x.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_80x18.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority2.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority_1box.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority_2box.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority_3box.png")
+                || value.equals("graphics/ui/icons/fleettab/logistics_priority_low.png")
+                || value.equals("graphics/ui/icons/fleettab/more_info.png")
+                || value.equals("graphics/ui/icons/fleettab/mothball.png")
+                || value.equals("graphics/ui/icons/fleettab/rank0_16x24.png")
+                || value.equals("graphics/ui/icons/fleettab/rank1_16x24.png")
+                || value.equals("graphics/ui/icons/fleettab/rank2_16x24.png")
+                || value.equals("graphics/ui/icons/fleettab/rank3_16x24.png")
+                || value.equals("graphics/ui/icons/fleettab/refit.png")
+                || value.equals("graphics/ui/icons/fleettab/repair_rate_24x16.png")
+                || value.equals("graphics/ui/icons/fleettab/scuttle.png")
+                || value.equals("graphics/ui/icons/fleettab/sell.png")
+                || value.equals("graphics/ui/icons/fleettab/ship_store.png")
+                || value.equals("graphics/ui/icons/fleettab/ship_take.png")
+                || value.equals("graphics/ui/icons/fleettab/supplies16x.png")
+                || value.equals("graphics/ui/icons/fleettab/supplies_24x16.png")
+                || value.equals("graphics/ui/icons/fleettab/suspend_repairs.png");
     }
 
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
