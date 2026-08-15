@@ -306,6 +306,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyDeferredTexturePatches.java \
   ci/PatchAbilityGameplayProbe.java \
   ci/VerifyAbilityGameplayProbePatch.java \
+  ci/PatchCampaignGameplayProbe.java \
+  ci/VerifyCampaignGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -468,6 +470,17 @@ cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
+# Deep gameplay telemetry around actual CampaignState core-tab open/dismiss paths.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignGameplayProbePatch .ci-build/starfarer-campaign-gameplay-probe.jar
+mv .ci-build/starfarer-campaign-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignGameplayProbePatch .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
 # Fast exact smart-quote normalization before SpecStore's original two regex passes.
 # Null from the property-gated helper falls through to the untouched stock body.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -707,4 +720,5 @@ grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
 fi

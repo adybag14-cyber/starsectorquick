@@ -15,6 +15,19 @@ public final class BrowserGameplayProbe {
     public static void abilityActivate(AbilityPlugin ability) { emit("ability-activate", ability); }
     public static void abilityDeactivate(AbilityPlugin ability) { emit("ability-deactivate", ability); }
 
+    public static void coreTabStart(Object tab) { emitCore("core-tab-start", tab); }
+    public static void coreTabReady(Object tab) { emitCore("core-tab-ready", tab); }
+    public static void coreUiDismissed() {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY)) return;
+        System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet() + " event=core-ui-dismissed");
+    }
+
+    private static void emitCore(java.lang.String event, Object tab) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY)) return;
+        java.lang.String value = tab == null ? "<null>" : safe(java.lang.String.valueOf(tab));
+        System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet() + " event=" + event + " tab=" + value);
+    }
+
     private static void emit(java.lang.String event, AbilityPlugin ability) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY)) return;
         try {
