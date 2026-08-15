@@ -168,6 +168,8 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
   | grep 'public static void disableTitleHandoff()'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
   | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserRulesCsvLoadDiag \
+  | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-deferred-texture-policy
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-deferred-texture-policy ci/VerifyDeferredTexturePolicy.java
@@ -286,7 +288,9 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchRulesDeadVariableTraversal.java \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
-  ci/PatchLoadingUtilsBulkSpecCache.java
+  ci/PatchLoadingUtilsBulkSpecCache.java \
+  ci/PatchRulesCsvLoaderDiagnostics.java \
+  ci/VerifyRulesCsvLoaderDiagnosticsPatch.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
 mv .ci-build/starfarer-api-no-junk.jar jars/starfarer.api.jar
@@ -488,6 +492,13 @@ jar uf jars/starfarer_obf.jar \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchLoadingUtilsBulkSpecCache jars/starfarer_obf.jar .ci-build/starfarer-bulk-spec-cache.jar
 mv .ci-build/starfarer-bulk-spec-cache.jar jars/starfarer_obf.jar
+# Diagnostic-only subphase timer for the merged rules.csv loader. It records only
+# aggregate source/read/preprocess/parse/merge/copy times and changes no control flow.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesCsvLoaderDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesCsvLoaderDiagnosticsPatch .ci-build/starfarer-rules-csv-diag.jar
+mv .ci-build/starfarer-rules-csv-diag.jar jars/starfarer_obf.jar
 # SpecStore's stock variant loader discovers 645 files by synchronously walking
 # data/variants and every child directory. The generated BrowserSpecCache already
 # contains those exact paths and contents, so expand the root result from that
@@ -517,6 +528,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreVariantDiscovery jars/starfarer_obf.jar .ci-build/starfarer-variant-discovery-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreVariantDiscoveryPatch .ci-build/starfarer-variant-discovery-repeat.jar
+# The rules.csv diagnostic transform is independently idempotent and must survive
+# the LoadingUtils bulk-cache transform/reverification unchanged.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesCsvLoaderDiagnosticsPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesCsvLoaderDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesCsvLoaderDiagnosticsPatch .ci-build/starfarer-rules-csv-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -559,6 +579,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.BrowserDeferredTextureQueue \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
+  com.fs.starfarer.loading.BrowserRulesCsvLoadDiag \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   com.fs.starfarer.BaseGameState
 
@@ -612,4 +633,5 @@ grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserRulesCsvLoadDiag: sources=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
