@@ -34,6 +34,7 @@ window.__lwjglGraphicsInfo = (() => {
 		return { backend: "webgl2", error: String(error && (error.message || error) || error) };
 	}
 })();
+try { console.log("LWJGLGraphicsInfo: " + JSON.stringify(window.__lwjglGraphicsInfo)); } catch(_) {}
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 

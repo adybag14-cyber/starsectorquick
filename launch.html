@@ -1164,6 +1164,8 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
+                const browserGameplayPrewarm =
+                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ !== false;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
@@ -1283,7 +1285,9 @@
                     `-Dstarsector.browserDeferredTextures=${browserDeferredTextures}`,
                     `starsector.browserDeferredTextures=${browserDeferredTextures}`,
                     `-Dstarsector.browserGameplayProbe=${browserGameplayProbe}`,
-                    `starsector.browserGameplayProbe=${browserGameplayProbe}`
+                    `starsector.browserGameplayProbe=${browserGameplayProbe}`,
+                    `-Dstarsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
+                    `starsector.browserGameplayPrewarm=${browserGameplayPrewarm}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
@@ -1305,6 +1309,9 @@
                 }
                 if (browserGameplayProbe) {
                     log('Browser deep gameplay probe enabled for ability/button regression telemetry.', '#00ff88');
+                }
+                if (browserGameplayPrewarm) {
+                    log('Browser post-Campaign gameplay texture predecode enabled.', '#00ff88');
                 }
                 if (browserDeferredTextures) {
                     log('Browser deferred textures enabled: illustrations/portraits load on first real lookup.', '#00ff88');

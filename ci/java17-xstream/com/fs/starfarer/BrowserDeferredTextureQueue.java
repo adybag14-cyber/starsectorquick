@@ -3,6 +3,8 @@ package com.fs.starfarer;
 import com.fs.graphics.oOoO;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Browser quick-start deferral for nonessential textures with exact lazy loading on first lookup. */
@@ -12,6 +14,16 @@ public final class BrowserDeferredTextureQueue {
     private static final ConcurrentHashMap<java.lang.String, java.lang.String> DEFERRED = new ConcurrentHashMap<java.lang.String, java.lang.String>();
     private static final AtomicLong DEFERRED_COUNT = new AtomicLong();
     private static final AtomicLong LAZY_LOAD_COUNT = new AtomicLong();
+    private static final java.lang.String GAMEPLAY_PREWARM_PROPERTY = "starsector.browserGameplayPrewarm";
+    private static final java.lang.String GAMEPLAY_PREWARM_DELAY_PROPERTY = "starsector.browserGameplayPrewarmDelayMs";
+    private static final java.lang.String GAMEPLAY_PREWARM_PAUSE_PROPERTY = "starsector.browserGameplayPrewarmPauseMs";
+    private static final ConcurrentLinkedQueue<PrewarmItem> PREWARM_UI = new ConcurrentLinkedQueue<PrewarmItem>();
+    private static final ConcurrentLinkedQueue<PrewarmItem> PREWARM_REFIT = new ConcurrentLinkedQueue<PrewarmItem>();
+    private static final ConcurrentLinkedQueue<PrewarmItem> PREWARM_WORLD = new ConcurrentLinkedQueue<PrewarmItem>();
+    private static final AtomicBoolean PREWARM_STARTED = new AtomicBoolean();
+    private static final AtomicBoolean PREWARM_DONE = new AtomicBoolean();
+    private static final AtomicLong PREDECODE_COUNT = new AtomicLong();
+    private static final AtomicLong PREDECODE_FAILED = new AtomicLong();
 
     private BrowserDeferredTextureQueue() {}
 
@@ -35,6 +47,7 @@ public final class BrowserDeferredTextureQueue {
             if (count == 1L) {
                 System.out.println("BrowserDeferredTexture: first-deferred key=" + key + " path=" + path);
             }
+            enqueueGameplayPrewarm(key, path);
         }
     }
 
@@ -68,6 +81,135 @@ public final class BrowserDeferredTextureQueue {
             }
         }
     }
+
+    /**
+     * Start a low-priority post-Campaign ImageIO warmup. This intentionally does
+     * not call the texture registry or OpenGL: it only runs the same background
+     * image predecode routine ResourceLoader normally uses, after first-playable's
+     * critical path has passed. Actual texture registration remains render-thread
+     * lazy and exact on first use.
+     */
+    public static void startGameplayPrewarm() {
+        if (!ENABLED || !Boolean.getBoolean(GAMEPLAY_PREWARM_PROPERTY)
+                || !PREWARM_STARTED.compareAndSet(false, true)) return;
+        final long delayMs = readLongProperty(GAMEPLAY_PREWARM_DELAY_PROPERTY, 5000L, 0L, 60000L);
+        final long pauseMs = readLongProperty(GAMEPLAY_PREWARM_PAUSE_PROPERTY, 2L, 0L, 1000L);
+        System.out.println("BrowserDeferredTexturePrewarm: scheduled delayMs=" + delayMs
+                + " pauseMs=" + pauseMs
+                + " ui=" + PREWARM_UI.size()
+                + " refit=" + PREWARM_REFIT.size()
+                + " world=" + PREWARM_WORLD.size());
+        Thread thread = new Thread(new Runnable() {
+            @Override public void run() { runGameplayPrewarm(delayMs, pauseMs); }
+        }, "starsector-browser-gameplay-predecode");
+        thread.setDaemon(true);
+        try { thread.setPriority(Thread.MIN_PRIORITY); } catch (Throwable ignored) {}
+        thread.start();
+    }
+
+    private static void runGameplayPrewarm(long delayMs, long pauseMs) {
+        long started = System.currentTimeMillis();
+        try {
+            if (delayMs > 0L) Thread.sleep(delayMs);
+            drainPrewarmQueue(PREWARM_UI, pauseMs);
+            drainPrewarmQueue(PREWARM_REFIT, pauseMs);
+            drainPrewarmQueue(PREWARM_WORLD, pauseMs);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } finally {
+            PREWARM_DONE.set(true);
+            System.out.println("BrowserDeferredTexturePrewarm: complete decoded=" + PREDECODE_COUNT.get()
+                    + " failed=" + PREDECODE_FAILED.get()
+                    + " elapsedMs=" + Math.max(0L, System.currentTimeMillis() - started)
+                    + " pending=" + getGameplayPrewarmPendingCount());
+        }
+    }
+
+    private static void drainPrewarmQueue(ConcurrentLinkedQueue<PrewarmItem> queue, long pauseMs)
+            throws InterruptedException {
+        for (;;) {
+            PrewarmItem item = queue.poll();
+            if (item == null) return;
+            if (DEFERRED.get(item.key) == null) continue;
+            try {
+                com.fs.graphics.L.\u00d600000(item.path);
+                long count = PREDECODE_COUNT.incrementAndGet();
+                if (count == 1L || count % 100L == 0L) {
+                    System.out.println("BrowserDeferredTexturePrewarm: decoded=" + count
+                            + " pending=" + getGameplayPrewarmPendingCount()
+                            + " path=" + item.path);
+                }
+            } catch (Throwable error) {
+                long failed = PREDECODE_FAILED.incrementAndGet();
+                if (failed <= 8L) {
+                    System.out.println("BrowserDeferredTexturePrewarm: predecode failed path=" + item.path
+                            + " error=" + error.getClass().getName()
+                            + (error.getMessage() == null ? "" : ": " + error.getMessage()));
+                }
+            }
+            if (pauseMs > 0L) Thread.sleep(pauseMs);
+            else Thread.yield();
+        }
+    }
+
+    private static void enqueueGameplayPrewarm(java.lang.String key, java.lang.String path) {
+        if (key == null || path == null) return;
+        java.lang.String value = normalize(path);
+        int priority = gameplayPrewarmPriority(value);
+        if (priority < 0) return;
+        PrewarmItem item = new PrewarmItem(key, path);
+        if (priority == 0) PREWARM_UI.add(item);
+        else if (priority == 1) PREWARM_REFIT.add(item);
+        else PREWARM_WORLD.add(item);
+    }
+
+    private static int gameplayPrewarmPriority(java.lang.String value) {
+        if (value.startsWith("graphics/portraits/")
+                || value.startsWith("graphics/icons/skills/")
+                || value.startsWith("graphics/hullmods/")
+                || value.startsWith("graphics/icons/cargo/")
+                || value.startsWith("graphics/icons/intel/")
+                || value.startsWith("graphics/ui/buttons/")
+                || isDeferredFleetTabStockAsset(value)) return 0;
+        if (value.startsWith("graphics/ships/")
+                || value.startsWith("graphics/weapons/")
+                || value.startsWith("graphics/icons/hullsys/")) return 1;
+        if (value.startsWith("graphics/factions/")
+                || value.startsWith("graphics/planets/")
+                || value.startsWith("graphics/stations/")
+                || value.startsWith("graphics/icons/markets/")
+                || value.startsWith("graphics/icons/industry/")
+                || value.startsWith("graphics/icons/reports/")) return 2;
+        return -1;
+    }
+
+    private static java.lang.String normalize(java.lang.String path) {
+        java.lang.String value = path.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+        while (value.startsWith("/")) value = value.substring(1);
+        return value;
+    }
+
+    private static long readLongProperty(java.lang.String name, long fallback, long min, long max) {
+        try {
+            java.lang.String raw = System.getProperty(name, "").trim();
+            if (raw.isEmpty()) return fallback;
+            long value = Long.parseLong(raw);
+            return Math.max(min, Math.min(max, value));
+        } catch (Throwable ignored) { return fallback; }
+    }
+
+    private static final class PrewarmItem {
+        final java.lang.String key;
+        final java.lang.String path;
+        PrewarmItem(java.lang.String key, java.lang.String path) { this.key = key; this.path = path; }
+    }
+
+    public static long getGameplayPredecodeCount() { return PREDECODE_COUNT.get(); }
+    public static long getGameplayPredecodeFailedCount() { return PREDECODE_FAILED.get(); }
+    public static int getGameplayPrewarmPendingCount() {
+        return PREWARM_UI.size() + PREWARM_REFIT.size() + PREWARM_WORLD.size();
+    }
+    public static boolean isGameplayPrewarmDone() { return PREWARM_DONE.get(); }
 
     public static boolean shouldDeferPath(java.lang.String path) {
         if (path == null) return false;

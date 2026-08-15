@@ -166,6 +166,20 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   return { matched: false, match: null, line: null, index: -1, elapsedMs: Date.now() - started };
 }
 
+async function waitForGameplayEvent(events, startIndex, predicate, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 10000);
+  const pollMs = Math.max(25, Number(options.pollMs ?? 100));
+  const started = Date.now();
+  while (Date.now() - started <= timeoutMs) {
+    for (let i = startIndex; i < events.length; i++) {
+      const event = events[i];
+      if (predicate(event)) return { matched: true, event, index: i, elapsedMs: Date.now() - started };
+    }
+    await sleep(pollMs);
+  }
+  return { matched: false, event: null, index: -1, elapsedMs: Date.now() - started };
+}
+
 (async () => {
   const logs = [];
   const errors = [];
@@ -174,6 +188,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   const screenshotErrors = [];
   const graphicsErrors = [];
   const runtimeErrorSignals = [];
+  const gameplayEvents = [];
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -223,6 +238,16 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   page.on('console', message => {
     const text = message.text();
     logs.push(`[${message.type()}] ${text}`);
+    if (text.includes('BrowserGameplayProbe:')) {
+      const payload = text.slice(text.indexOf('BrowserGameplayProbe:') + 'BrowserGameplayProbe:'.length).trim();
+      const event = { raw: text, at: Date.now() };
+      for (const token of payload.split(/\s+/)) {
+        const eq = token.indexOf('=');
+        if (eq <= 0) continue;
+        event[token.slice(0, eq)] = token.slice(eq + 1);
+      }
+      gameplayEvents.push(event);
+    }
     const update = text.match(/Bridge Display\.update(?:\([^)]*\))? count=(\d+)/i);
     if (update) updateMax = Math.max(updateMax, Number(update[1]));
     const swap = text.match(/Bridge Display\.swapBuffers count=(\d+)/i);
@@ -421,6 +446,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         const y = box.y + box.height * ny;
         const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
         const probeStart = logs.length;
+        const gameplayStart = gameplayEvents.length;
         const panelStartedAt = Date.now();
         logs.push(`[ui-probe] click ${name} expectedTab=${expectedTab} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
         await page.mouse.move(x, y);
@@ -433,8 +459,11 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         let visualReadyMs = null;
         let panelOpened = !deepGameplay;
         if (deepGameplay) {
-          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
-          tabReady = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 10000, pollMs: 100, pump: () => page.evaluate(() => 0) });
+          tabReady = await waitForGameplayEvent(
+            gameplayEvents, gameplayStart,
+            event => event.event === 'core-tab-ready' && event.tab === expectedTab,
+            { timeoutMs: 10000, pollMs: 100 }
+          );
           listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
           if (tabReady.matched) {
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
@@ -548,13 +577,17 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
         const beforeFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
         const probeStart = logs.length;
+        const gameplayStart = gameplayEvents.length;
         const shortcutStartedAt = Date.now();
         await page.keyboard.press(key);
         let transition = null;
         let shortcutFrame = null;
         if (deepGameplay) {
-          const pattern = new RegExp(`BrowserGameplayProbe:.*event=core-tab-ready.*tab=${expectedTab}(?:\s|$)`);
-          const ready = await waitForLogMatch(logs, probeStart, pattern, { timeoutMs: 8000, pollMs: 100, pump: () => page.evaluate(() => 0) });
+          const ready = await waitForGameplayEvent(
+            gameplayEvents, gameplayStart,
+            event => event.event === 'core-tab-ready' && event.tab === expectedTab,
+            { timeoutMs: 8000, pollMs: 100 }
+          );
           const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
           if (ready.matched) {
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
@@ -634,45 +667,93 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
+  const expectedAbilityIds = [
+    'transponder', 'go_dark', 'sensor_burst', 'emergency_burn',
+    'sustained_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
+  ];
   const abilityKeyResults = [];
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
     for (let digit = 1; digit <= 8 && !fatalSeenAt; digit++) {
       const key = String(digit);
+      const expectedId = expectedAbilityIds[digit - 1];
       const logStart = logs.length;
+      const gameplayStart = gameplayEvents.length;
       const beforeInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
       const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+
       await page.keyboard.press(key);
-      await sleep(1200);
+      let pressReady = await waitForGameplayEvent(
+        gameplayEvents, gameplayStart,
+        event => event.event === 'ability-press' && event.id === expectedId,
+        { timeoutMs: 3500, pollMs: 100 }
+      );
+      await sleep(pressReady.matched ? 450 : 150);
+
+      // Transponder intentionally uses a desktop-style confirmation double tap.
+      // The first key primes the warning and the second must reach the same ability
+      // and produce a real activation/deactivation state transition.
+      let confirmationPress = false;
+      let currentEvents = gameplayEvents.slice(gameplayStart);
+      let currentStates = currentEvents.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      if (expectedId === 'transponder' && pressReady.matched && currentStates.length === 0) {
+        confirmationPress = true;
+        const confirmationStart = gameplayEvents.length;
+        await page.keyboard.press(key);
+        const confirmed = await waitForGameplayEvent(
+          gameplayEvents, confirmationStart,
+          event => (event.event === 'ability-activate' || event.event === 'ability-deactivate') && event.id === expectedId,
+          { timeoutMs: 3500, pollMs: 100 }
+        );
+        await sleep(confirmed.matched ? 450 : 150);
+      }
+
       const afterFrame = await gameCanvas.screenshot({ timeout: 10000 });
       fs.writeFileSync(`${outputDir}/gameplay-ability-${digit}.png`, afterFrame);
       const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
-      const eventLines = logs.slice(logStart).filter(line => /BrowserGameplayProbe:/.test(line));
-      const pressLines = eventLines.filter(line => /event=ability-press/.test(line));
-      const stateLines = eventLines.filter(line => /event=ability-(?:activate|deactivate)/.test(line));
-      const ids = [...new Set(pressLines.map(line => (line.match(/\bid=([^\s]+)/) || [])[1]).filter(Boolean))];
-      const usable = pressLines.some(line => /\busable=true\b/.test(line));
+      const events = gameplayEvents.slice(gameplayStart);
+      const pressEvents = events.filter(event => event.event === 'ability-press');
+      const stateEvents = events.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      const ids = [...new Set(pressEvents.map(event => event.id).filter(Boolean))];
+      const mapped = pressEvents.some(event => event.id === expectedId);
+      const wrongIds = ids.filter(id => id !== expectedId);
+      const usable = pressEvents.some(event => event.id === expectedId && event.usable === 'true');
       const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
       const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
       const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
-      const mapped = pressLines.length > 0;
-      const animatedOrChanged = !mapped || !usable || stateLines.length > 0 || visualDiff >= 0.002;
-      const failed = deliveredDelta < 2 || globalDelta < 2 || !animatedOrChanged || Boolean(fatalSeenAt);
-      abilityKeyResults.push({ digit, mapped, ids, usable, deliveredDelta, globalDelta, visualDiff, stateEvents: stateLines.length, failed });
-      logs.push(`[ability-key-probe] key=${digit} mapped=${mapped} ids=${ids.join(',') || '-'} usable=${usable} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateEvents=${stateLines.length} failed=${failed}`);
+      const stateChanged = stateEvents.some(event => event.id === expectedId);
+      const animatedOrChanged = !usable || stateChanged || visualDiff >= 0.002;
+      const minKeyboardEvents = confirmationPress ? 4 : 2;
+      const failed = deliveredDelta < minKeyboardEvents || globalDelta < minKeyboardEvents
+        || !mapped || wrongIds.length > 0 || !animatedOrChanged || Boolean(fatalSeenAt);
+      abilityKeyResults.push({
+        digit, expectedId, mapped, ids, wrongIds, usable, confirmationPress, deliveredDelta, globalDelta,
+        visualDiff, stateChanged, stateEvents: stateEvents.length,
+        pressReadyMs: pressReady.matched ? pressReady.elapsedMs : null, failed,
+      });
+      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
       flushLogs();
       if (failed) break;
-      // Toggle-style abilities are pressed a second time to avoid contaminating later tests.
-      if (stateLines.some(line => /event=ability-activate/.test(line) && /\bactive=true\b/.test(line))) {
+
+      // Toggle-style abilities are pressed again to return the campaign to a
+      // neutral baseline before the next slot. Transponder was already pressed
+      // twice to activate; this third press only primes its off confirmation, so
+      // follow it with a fourth when needed.
+      if (stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate' && event.active === 'true')) {
+        const cleanupStart = gameplayEvents.length;
         await page.keyboard.press(key);
-        await sleep(700);
+        await sleep(350);
+        if (expectedId === 'transponder' && !gameplayEvents.slice(cleanupStart).some(event => event.id === expectedId && event.event === 'ability-deactivate')) {
+          await page.keyboard.press(key);
+        }
+        await sleep(500);
       }
     }
   }
   const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
     abilityKeyResults.length === 8
-    && abilityKeyResults.every(item => !item.failed)
-    && abilityKeyResults.some(item => item.mapped)
+    && abilityKeyResults.every(item => !item.failed && item.mapped && item.expectedId === expectedAbilityIds[item.digit - 1])
+    && abilityKeyResults.filter(item => item.usable && item.stateChanged).length >= 4
   );
 
   let gameplayPerformance = null;
@@ -883,6 +964,7 @@ async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
     runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
+    gameplayEvents,
     httpErrors: [...new Set(httpErrors)],
     localNegativeMisses: [...new Set(localNegativeMisses)],
     state,

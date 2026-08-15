@@ -86,6 +86,8 @@ grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' laun
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
+grep -q 'starsector.browserGameplayPrewarm=${browserGameplayPrewarm}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
@@ -222,9 +224,11 @@ mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies \
   ci/VerifyStartingSupplies.java \
-  ci/VerifyPlayableStartingResources.java
+  ci/VerifyPlayableStartingResources.java \
+  ci/VerifyStartingAbilities.java
 java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyPlayableStartingResources
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingAbilities
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -718,6 +722,7 @@ grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
+grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"

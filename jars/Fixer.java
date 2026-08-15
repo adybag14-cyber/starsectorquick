@@ -1,4 +1,4 @@
-﻿import java.io.File;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -17881,9 +17881,83 @@ public class Fixer {
             Object sector = getSector.invoke(null);
             Object fleet = sector == null ? null : invokeNoArgIfPresent(sector, "getPlayerFleet");
             Object cargo = fleet == null ? null : invokeNoArgIfPresent(fleet, "getCargo");
-            return balanceAutoCampaignPlayerResources(fleet, cargo);
+            boolean resourcesReady = balanceAutoCampaignPlayerResources(fleet, cargo);
+            boolean abilitiesReady = ensureAutoCampaignStarterAbilities(sector, fleet);
+            return resourcesReady && abilitiesReady;
         } catch (Throwable t) {
             System.out.println("Fixer: auto campaign playable resources check failed: " + describeThrowableChain(t));
+            return false;
+        }
+    }
+
+    private static boolean ensureAutoCampaignStarterAbilities(Object sector, Object fleet) {
+        if (sector == null || fleet == null) return false;
+        final String[] abilityIds = new String[] {
+                "transponder",
+                "go_dark",
+                "sensor_burst",
+                "emergency_burn",
+                "sustained_burn",
+                "scavenge",
+                "interdiction_pulse",
+                "distress_call"
+        };
+        try {
+            Object characterData = invokeNoArgIfPresent(sector, "getCharacterData");
+            Object uiData = invokeNoArgIfPresent(sector, "getUIData");
+            Object slotsApi = uiData == null ? null : invokeNoArgIfPresent(uiData, "getAbilitySlotsAPI");
+            if (characterData == null || slotsApi == null) return false;
+
+            Method addCharacterAbility = findMethodRecursive(characterData.getClass(), "addAbility", String.class);
+            Method addFleetAbility = findMethodRecursive(fleet.getClass(), "addAbility", String.class);
+            Method getFleetAbility = findMethodRecursive(fleet.getClass(), "getAbility", String.class);
+            Method setBar = findMethodRecursive(slotsApi.getClass(), "setCurrBarIndex", Integer.TYPE);
+            Method getSlots = findMethodRecursive(slotsApi.getClass(), "getCurrSlotsCopy");
+            if (addCharacterAbility == null || addFleetAbility == null || getFleetAbility == null || setBar == null || getSlots == null) {
+                return false;
+            }
+            addCharacterAbility.setAccessible(true);
+            addFleetAbility.setAccessible(true);
+            getFleetAbility.setAccessible(true);
+            setBar.setAccessible(true);
+            getSlots.setAccessible(true);
+            setBar.invoke(slotsApi, Integer.valueOf(0));
+            Object slotsValue = getSlots.invoke(slotsApi);
+            if (!(slotsValue instanceof java.util.List) || ((java.util.List<?>)slotsValue).size() < abilityIds.length) {
+                return false;
+            }
+            java.util.List<?> slots = (java.util.List<?>)slotsValue;
+            for (int i = 0; i < abilityIds.length; i++) {
+                String id = abilityIds[i];
+                addCharacterAbility.invoke(characterData, id);
+                if (getFleetAbility.invoke(fleet, id) == null) {
+                    addFleetAbility.invoke(fleet, id);
+                }
+                Object slot = slots.get(i);
+                Method setAbilityId = findMethodRecursive(slot.getClass(), "setAbilityId", String.class);
+                if (setAbilityId == null) return false;
+                setAbilityId.setAccessible(true);
+                setAbilityId.invoke(slot, id);
+            }
+
+            boolean ready = true;
+            StringBuilder mapped = new StringBuilder();
+            for (int i = 0; i < abilityIds.length; i++) {
+                Object slot = slots.get(i);
+                Method getAbilityId = findMethodRecursive(slot.getClass(), "getAbilityId");
+                if (getAbilityId == null) { ready = false; break; }
+                getAbilityId.setAccessible(true);
+                Object mappedId = getAbilityId.invoke(slot);
+                if (!abilityIds[i].equals(String.valueOf(mappedId)) || getFleetAbility.invoke(fleet, abilityIds[i]) == null) {
+                    ready = false;
+                }
+                if (i > 0) mapped.append(',');
+                mapped.append(i + 1).append('=').append(String.valueOf(mappedId));
+            }
+            System.out.println("Fixer: auto campaign starter abilities mapped=" + mapped + " ready=" + ready);
+            return ready;
+        } catch (Throwable t) {
+            System.out.println("Fixer: auto campaign starter abilities setup failed: " + describeThrowableChain(t));
             return false;
         }
     }
@@ -17956,6 +18030,13 @@ public class Fixer {
                             + " cargo=" + spaceUsedAfter + "/" + maxCapacity
                             + " credits=" + creditsAfter
                             + " ready=" + ready);
+            if (ready) {
+                try {
+                    com.fs.starfarer.BrowserDeferredTextureQueue.startGameplayPrewarm();
+                } catch (Throwable prewarmError) {
+                    System.out.println("Fixer: gameplay texture prewarm scheduling failed: " + describeThrowableChain(prewarmError));
+                }
+            }
             return ready;
         } catch (Throwable t) {
             System.out.println("Fixer: auto campaign playable resources balance failed: " + describeThrowableChain(t));
