@@ -112,6 +112,14 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
   return total > 0 ? changed / total : 0;
 }
 
+function panelVisualThreshold(tab) {
+  // Command/OUTPOSTS is intentionally sparse on a fresh campaign and changes
+  // less of the screen than Character/Fleet/Refit/Cargo/Map/Intel. Keep a
+  // meaningful visual gate, but key it to the actual screen rather than forcing
+  // every tab through one 8% pixel-difference threshold.
+  return tab === 'OUTPOSTS' ? 0.04 : 0.08;
+}
+
 async function waitForVisualTransition(canvas, baseline, options = {}) {
   const region = options.region || { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
   const threshold = Number(options.threshold ?? 0.025);
@@ -480,7 +488,7 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
               timeoutMs: 9000,
               pollMs: 800,
-              threshold: 0.08,
+              threshold: panelVisualThreshold(expectedTab),
               region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
             });
             panelFrame = panelTransition.frame;
@@ -604,7 +612,7 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
               timeoutMs: 8000,
               pollMs: 800,
-              threshold: 0.08,
+              threshold: panelVisualThreshold(expectedTab),
               region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
             });
             shortcutFrame = visual.frame;
@@ -763,15 +771,32 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
       if (durationAbilityIds.has(expectedId) && stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate')) {
         let deactivated = stateEvents.some(event => event.id === expectedId && event.event === 'ability-deactivate');
         let settleMs = 0;
+        let fastForwardInput = null;
         if (!deactivated) {
           const settleStart = gameplayEvents.length;
-          const settled = await waitForGameplayEvent(
-            gameplayEvents, settleStart,
-            event => event.id === expectedId && event.event === 'ability-deactivate',
-            { timeoutMs: 45000, pollMs: 100 }
-          );
-          deactivated = settled.matched;
-          settleMs = settled.elapsedMs;
+          const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          let settled;
+          try {
+            // Starsector's campaign tutorial explicitly teaches holding the
+            // FAST_FORWARD control to accelerate time. The stock desktop binding
+            // is Shift; exercise that real gameplay control while long-duration
+            // abilities run instead of waiting minutes at SwiftShader frame rate.
+            await page.keyboard.down('Shift');
+            settled = await waitForGameplayEvent(
+              gameplayEvents, settleStart,
+              event => event.id === expectedId && event.event === 'ability-deactivate',
+              { timeoutMs: 60000, pollMs: 100 }
+            );
+          } finally {
+            await page.keyboard.up('Shift').catch(() => undefined);
+          }
+          const fastAfter = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          fastForwardInput = {
+            deliveredDelta: Number(fastAfter.directKeyboardDelivered || 0) - Number(fastBefore.directKeyboardDelivered || 0),
+            globalDelta: Number(fastAfter.keyboardGlobalCaptures || 0) - Number(fastBefore.keyboardGlobalCaptures || 0),
+          };
+          deactivated = Boolean(settled && settled.matched);
+          settleMs = settled ? settled.elapsedMs : 60000;
         }
         if (deactivated) {
           await sleep(750);
@@ -779,8 +804,11 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
         const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
         currentResult.durationSettled = deactivated;
         currentResult.durationSettleMs = settleMs;
+        currentResult.fastForwardInput = fastForwardInput;
         if (!deactivated) currentResult.failed = true;
-        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} recoveryMs=${deactivated ? 750 : 0} failed=${!deactivated}`);
+        const ffDelivered = fastForwardInput ? fastForwardInput.deliveredDelta : 0;
+        const ffGlobal = fastForwardInput ? fastForwardInput.globalDelta : 0;
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryMs=${deactivated ? 750 : 0} failed=${!deactivated}`);
         flushLogs();
         if (!deactivated) break;
       }
