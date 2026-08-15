@@ -9891,7 +9891,8 @@ public class Fixer {
                 } catch (Throwable ignored) {
                 }
             }
-            requiredFonts.addAll(collectFontPathsFromIndex("graphics/fonts"));
+            // Browser quick-start: keep the default/explicit/settings-derived font warmup,
+            // but do not force every font in graphics/fonts/index.list through direct-new-game.
 
             List<String> missingBefore = new ArrayList<String>();
             for (String font : requiredFonts) {

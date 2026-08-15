@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "corvus-asharu-compat",
-    "sourceSha": "2d058c0b50092e4f43d4736321e3496130e8f784",
-    "workflowRunId": "31887190508",
-    "generatedAt": "2026-08-15T13:27:39.086857+00:00",
+    "sourceSha": "e654a18f4a154c82aa2805b08d191d005210e053",
+    "workflowRunId": "31888215858",
+    "generatedAt": "2026-08-15T13:50:31.927264+00:00",
     "overlayFiles": 836,
     "dataPack": {
       "version": 1,
@@ -506,18 +506,18 @@
     },
     {
       "path": "jars/Fixer.java",
-      "bytes": 953912,
-      "sha256": "8b717a9e8b2397790ed230bf04a1124383fb5e39055c48c95389f8c245a6a56d"
+      "bytes": 954022,
+      "sha256": "de4b8828b88d75c18138599f04aa41d7171c5b565b0b59c3de095a77456b7277"
     },
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "6eb26c60938467f49f48e8a02c2b63dbf462644961e871e0cb35086bf2e77110"
+      "sha256": "fa3e41a63eb0987708196b0269e4d3f633531e8095c53e69799ca28e64679947"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 224163,
-      "sha256": "ce249b6b2f3eb4b61ec0c80ffec8c2f519b73c4dafab076fe0cbe5b7a30a0a86"
+      "bytes": 224122,
+      "sha256": "aa5401a066d89a4af8410b3b8d5b747c95d1f0394e590b4fe5a153b5ab3c10e3"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -527,7 +527,7 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "6a28d7a4c9fe46891f0bd6222d281a9ea8fd846134af399340d4e72ba0e9f66f"
+      "sha256": "9083e07764db78495a1f99e0145bdae4737a33a0eb6a5b4c8e48b6054653070a"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -542,7 +542,7 @@
     {
       "path": "jars/starfarer_obf.jar",
       "bytes": 6027863,
-      "sha256": "650ec78ff87c11894a0a8aa44068c66df3929f26b187cf498ef4b50156d0adde"
+      "sha256": "ec43f5a2c617c30aee0ebba06a6bcf87dbfb144d2b53e094cf6c4bf1a7b734cf"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
