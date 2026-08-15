@@ -199,6 +199,8 @@ javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserF
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
   | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.campaign.rules.BrowserRuleExpressionDiag \
+  | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-deferred-texture-policy
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-deferred-texture-policy ci/VerifyDeferredTexturePolicy.java
@@ -320,6 +322,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesDeadVariableWritesPatch.java \
   ci/PatchRulesDeadVariableTraversal.java \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
+  ci/PatchRuleExpressionDiagnostics.java \
+  ci/VerifyRuleExpressionDiagnosticsPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -506,6 +510,13 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDeadVariableTraversalPatch .ci-build/starfarer-rules-no-variable-traversal.jar
 mv .ci-build/starfarer-rules-no-variable-traversal.jar jars/starfarer_obf.jar
+# Diagnostic-only aggregate timer around A(String) expression construction and
+# its Misc.tokenize(String) call while Rules loading is active.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRuleExpressionDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rule-expression-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRuleExpressionDiagnosticsPatch .ci-build/starfarer-rule-expression-diag.jar
+mv .ci-build/starfarer-rule-expression-diag.jar jars/starfarer_obf.jar
 # All Rules transforms must remain idempotent and compatible in their final order.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesDuplicateIndex jars/starfarer_obf.jar .ci-build/starfarer-rules-duplicate-index-repeat.jar
@@ -541,6 +552,13 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDuplicateIndexPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRuleExpressionDiagnosticsPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRuleExpressionDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rule-expression-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRuleExpressionDiagnosticsPatch .ci-build/starfarer-rule-expression-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rule-expression-diag-repeat.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
@@ -623,6 +641,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.loading.BrowserFastCsvParser \
   com.fs.starfarer.loading.BrowserTextPreprocessor \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
+  com.fs.starfarer.campaign.rules.BrowserRuleExpressionDiag \
   com.fs.starfarer.BaseGameState
 
 # Rules itself is valid HotSpot bytecode, but its method descriptor references
@@ -677,4 +696,5 @@ grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserRuleExpressionDiag: expressions=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
