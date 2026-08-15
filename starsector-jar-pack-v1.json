@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "bytes": 20303230,
+  "bytes": 20304653,
   "order": [
     "fixer_patch.jar",
     "bridge.jar",
@@ -27,126 +27,126 @@
   "jars": {
     "fixer_patch.jar": {
       "offset": 0,
-      "length": 227093,
-      "sha256": "698bdcfeb22d6f812f83824c9b72036e11ac5f69bd3a5d02c2556ed200844f3b",
+      "length": 228449,
+      "sha256": "513b5a6382efcb31f5e1be5d68dfc15c463675325cb2f1fa70ae80c7d0552b20",
       "type": "application/java-archive"
     },
     "bridge.jar": {
-      "offset": 227093,
+      "offset": 228449,
       "length": 93475,
-      "sha256": "8997883250118994625a82fc93ed399c1ce5b0bbd8e1de922be8355c39bf62d6",
+      "sha256": "3874075769c5bbfda3c01ba9f83ae2bc8c5f54ffd4b9099d325a0e643b075b51",
       "type": "application/java-archive"
     },
     "fixer.jar": {
-      "offset": 320568,
+      "offset": 321924,
       "length": 252546,
       "sha256": "931acab0ed514f007a7c86fb07e03ec41616ec9319937e073bb3042f92fc0c00",
       "type": "application/java-archive"
     },
     "resources.jar": {
-      "offset": 573114,
+      "offset": 574470,
       "length": 2693795,
       "sha256": "a31fe708eb73b7ced28deb060e2fd4e2e9e47e7c6ca54611c65987dffc6ebd91",
       "type": "application/java-archive"
     },
     "janino.jar": {
-      "offset": 3266909,
+      "offset": 3268265,
       "length": 613299,
       "sha256": "60f05562c22b6de06641a1f76148692ef336ad1f6712fe6a76f9e2611f766344",
       "type": "application/java-archive"
     },
     "commons-compiler.jar": {
-      "offset": 3880208,
+      "offset": 3881564,
       "length": 30595,
       "sha256": "69094456b227ec07d908938c8f90eb57e51ca6d0e82f96475770af7224b508b2",
       "type": "application/java-archive"
     },
     "starfarer.api.jar": {
-      "offset": 3910803,
+      "offset": 3912159,
       "length": 7239822,
       "sha256": "738e9e27ac1a59f359fe92d4c763a9ab3515b3ea3e123aa87075feb1ef075e24",
       "type": "application/java-archive"
     },
     "starfarer_obf.jar": {
-      "offset": 11150625,
-      "length": 6028047,
-      "sha256": "890013086a71ac095a1238a36dcfb067cbafbfbfbfef9bd8eedd54f734fd4750",
+      "offset": 11151981,
+      "length": 6028114,
+      "sha256": "051fdbed4c0b94277e8ccc6389160031c86f31beabdad4f85e49c94ffe9fc477",
       "type": "application/java-archive"
     },
     "jogg-0.0.7.jar": {
-      "offset": 17178672,
+      "offset": 17180095,
       "length": 6839,
       "sha256": "ed7946260897d97c468a4749b3d9d5e436a268fa948bc32e75a7487130e89379",
       "type": "application/java-archive"
     },
     "jorbis-0.0.15.jar": {
-      "offset": 17185511,
+      "offset": 17186934,
       "length": 58917,
       "sha256": "d049b2a1c6ddefde3a5cbff320c96fdd5aefa09b0d3bbea3fe44839f7e6713f9",
       "type": "application/java-archive"
     },
     "json.jar": {
-      "offset": 17244428,
+      "offset": 17245851,
       "length": 44055,
       "sha256": "63c3541f323f3dfdd595da9257a2099b6a6c39f35a6b3909d86c48a8aa456911",
       "type": "application/java-archive"
     },
     "lwjgl.jar": {
-      "offset": 17288483,
+      "offset": 17289906,
       "length": 1063148,
       "sha256": "1bcb134a828051d2d4673c94ed4b8cbb4894ec7a32dbba15f782b891d3953b3c",
       "type": "application/java-archive"
     },
     "jinput.jar": {
-      "offset": 18351631,
+      "offset": 18353054,
       "length": 214859,
       "sha256": "36b6fbede7a2d2f00949a87b9de83007a1c6b4ce5a96978279c0cc612a9adef5",
       "type": "application/java-archive"
     },
     "log4j-1.2.9.jar": {
-      "offset": 18566490,
+      "offset": 18567913,
       "length": 352291,
       "sha256": "d2b9dfb297bcaa7be1fcdd702642a9c9713d7847dca8704e9c15bd829f0ab1bf",
       "type": "application/java-archive"
     },
     "lwjgl_util.jar": {
-      "offset": 18918781,
+      "offset": 18920204,
       "length": 173911,
       "sha256": "6f4a261384e1688a3359420efce5275c8693b822a8c6eaa1e20d5cc126a51571",
       "type": "application/java-archive"
     },
     "fs.sound_obf.jar": {
-      "offset": 19092692,
+      "offset": 19094115,
       "length": 35387,
       "sha256": "c2d071f24b84e7227fced0a43d0f531f133b7d979d7c7784f66af11ce436cf21",
       "type": "application/java-archive"
     },
     "fs.common_obf.jar": {
-      "offset": 19128079,
+      "offset": 19129502,
       "length": 311570,
       "sha256": "45e147ec9600b4899f9474680a16cc3e48e8fa7f09b95dc59f87f37ea1faadd0",
       "type": "application/java-archive"
     },
     "xstream-1.4.10.jar": {
-      "offset": 19439649,
+      "offset": 19441072,
       "length": 589803,
       "sha256": "a1587f35fa617513607c86ec9e6e4de5eb8acdf9a3a6d7f7458f8a8c40b00858",
       "type": "application/java-archive"
     },
     "txw2-2.3.1.jar": {
-      "offset": 20029452,
+      "offset": 20030875,
       "length": 70288,
       "sha256": "34975dde1c6920f1a39791142235689bc3cd357e24d05edd8ff93b885bd68d60",
       "type": "application/java-archive"
     },
     "starfarer.res.jar": {
-      "offset": 20099740,
+      "offset": 20101163,
       "length": 51512,
       "sha256": "308d0bd3d75c12e85471b0dee558f09598157deed62467cf0b4c56fd65eb85c0",
       "type": "application/java-archive"
     },
     "scripts-precompiled.jar": {
-      "offset": 20151252,
+      "offset": 20152675,
       "length": 151978,
       "sha256": "dc5b8fb97dda10c19b1c2f85f83dfc22ddd461dec9711dc623a2e42d98166ec6",
       "type": "application/java-archive"
