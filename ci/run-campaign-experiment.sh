@@ -92,6 +92,8 @@ grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
 grep -q 'starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
 grep -q 'starsector.browserGameplayPrewarm=${browserGameplayPrewarm}' launch.html
+grep -q '__STARSECTOR_BROWSER_SKIP_OUTER_SECTOR_PROCGEN__ === true' launch.html
+grep -q 'starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
@@ -236,11 +238,13 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   ci/VerifyStartingSupplies.java \
   ci/VerifyPlayableStartingResources.java \
   ci/VerifyStartingAbilities.java \
-  ci/VerifyCampaignWorldReadiness.java
+  ci/VerifyCampaignWorldReadiness.java \
+  ci/VerifyCampaignProcGenCompat.java
 java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyPlayableStartingResources
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingAbilities
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignWorldReadiness
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignProcGenCompat
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -780,6 +784,11 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  grep -q 'Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.' "$OUT/browser.log"
+  if grep -q 'Fixer: explicit diagnostic override is skipping outer-sector procedural generation.' "$OUT/browser.log"; then
+    echo 'Deep gameplay unexpectedly ran with partial-map procgen override.' >&2
+    exit 1
+  fi
   grep -Eq 'Fixer: auto campaign world-ready systems=[1-9][0-9]* planets=[1-9][0-9]* markets=[1-9][0-9]* factions=([3-9]|[1-9][0-9]+) playerFleet=true playerLocation=true' "$OUT/browser.log"
   grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
