@@ -355,6 +355,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
+  ci/PatchSectorGenTiming.java \
+  ci/VerifySectorGenTimingPatch.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
   ci/PatchJaninoNegativeSourceCache.java \
@@ -452,6 +454,16 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   | tee "$OUT/precompiled-sector-gen.log"
 grep -q 'encountered=24 skipped=0' "$OUT/precompiled-sector-gen.log"
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSectorGenTiming jars/scripts-precompiled.jar .ci-build/scripts-precompiled-procgen-timing.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifySectorGenTimingPatch .ci-build/scripts-precompiled-procgen-timing.jar
+mv .ci-build/scripts-precompiled-procgen-timing.jar jars/scripts-precompiled.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSectorGenTiming jars/scripts-precompiled.jar .ci-build/scripts-precompiled-procgen-timing-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifySectorGenTimingPatch .ci-build/scripts-precompiled-procgen-timing-repeat.jar
+cmp -s jars/scripts-precompiled.jar .ci-build/scripts-precompiled-procgen-timing-repeat.jar
 javap -classpath jars/scripts-precompiled.jar -c data.scripts.world.SectorGen \
   | grep -q 'BrowserSectorGenDiag: executing patched scripts-precompiled SectorGen.generate'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -801,6 +813,8 @@ fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.' "$OUT/browser.log"
   grep -q 'Fixer: full campaign outer-sector procedural generation complete.' "$OUT/browser.log"
+  grep -q 'BrowserProcgenTiming: outer-end elapsedMs=' "$OUT/browser.log"
+  grep -q 'BrowserProcgenTiming: step-end label=' "$OUT/browser.log"
   if grep -q 'Fixer: explicit diagnostic override is skipping outer-sector procedural generation.' "$OUT/browser.log"; then
     echo 'Deep gameplay unexpectedly ran with partial-map procgen override.' >&2
     exit 1

@@ -85,7 +85,12 @@ public final class CampaignInitCompat {
             System.out.println(
                     "Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.");
         }
-        plugin.generate(data, progress);
+        long browserProcgenStart = BrowserProcgenTiming.beginOuter();
+        try {
+            plugin.generate(data, progress);
+        } finally {
+            BrowserProcgenTiming.endOuter(browserProcgenStart);
+        }
         if (!procGenCompletedLogged) {
             procGenCompletedLogged = true;
             System.out.println(
