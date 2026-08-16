@@ -54,9 +54,10 @@ jobs:
         run: |
           python3 ci/prepare-pages-overlay.py \
             --output test_output/pages-overlays/deploy \
-            --profile corvus-asharu-compat \
+            --profile full-stock-campaign \
             --source-sha "${{ steps.source.outputs.sha }}"
           test -s test_output/pages-overlays/deploy/web-runtime-profile.json
+          grep -q '"profile": "full-stock-campaign"' test_output/pages-overlays/deploy/web-runtime-profile.json
           test -s test_output/pages-overlays/deploy/jars/fixer_patch.jar
           test -s test_output/pages-overlays/deploy/jars/bridge.jar
           test -s test_output/pages-overlays/deploy/jars/starfarer.api.jar
@@ -137,7 +138,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install chromium
 
-      - name: Verify live campaign renders and advances from clean browser state
+      - name: Verify live mature campaign gameplay from clean browser state
         env:
           STARSECTOR_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
           STARSECTOR_TEST_TIMEOUT_MS: '720000'
@@ -147,6 +148,17 @@ jobs:
           STARSECTOR_TEST_OUTPUT_DIR: 'test_output/pages-live'
         run: node ci/campaign-render-test.js
 
+      - name: Verify live public tutorial starts from a clean browser state
+        env:
+          STARSECTOR_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
+          STARSECTOR_TEST_TIMEOUT_MS: '720000'
+          STARSECTOR_FRAME_SETTLE_MS: '5000'
+          STARSECTOR_EXPECT_STATE: 'campaign'
+          STARSECTOR_TEST_OUTPUT_DIR: 'test_output/pages-tutorial'
+        run: |
+          node ci/campaign-render-test.js
+          grep -q 'BrowserTutorialCompat: started stock Galatia tutorial' test_output/pages-tutorial/browser.log
+
       - name: Upload live Pages evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -154,6 +166,7 @@ jobs:
           name: pages-live-campaign-evidence
           path: |
             test_output/pages-live
+            test_output/pages-tutorial
             test_output/pages-build
             test_output/pages-overlays/deploy/web-runtime-profile.json
             test_output/pages-overlays/deploy/web-runtime-manifest.json
