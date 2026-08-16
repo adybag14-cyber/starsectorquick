@@ -326,6 +326,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyAbilityUiGameplayProbePatch.java \
   ci/PatchControlMatcherGameplayProbe.java \
   ci/VerifyControlMatcherGameplayProbePatch.java \
+  ci/PatchCampaignPauseGameplayProbe.java \
+  ci/VerifyCampaignPauseGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -524,6 +526,17 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyControlMatcherGameplayProbePatch .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+# Observe actual CampaignEngine pause transitions without changing pause semantics.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignPauseGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignPauseGameplayProbePatch .ci-build/starfarer-campaign-pause-gameplay-probe.jar
+mv .ci-build/starfarer-campaign-pause-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignPauseGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignPauseGameplayProbePatch .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
 # Fast exact smart-quote normalization before SpecStore's original two regex passes.
 # Null from the property-gated helper falls through to the untouched stock body.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \

@@ -211,6 +211,37 @@ public final class BrowserGameplayProbe {
         }
     }
 
+    public static void pauseTransition(boolean before, boolean after) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || before == after) return;
+        try {
+            AbilityPlugin interdiction = null;
+            try {
+                if (Global.getSector() != null && Global.getSector().getPlayerFleet() != null) {
+                    interdiction = Global.getSector().getPlayerFleet().getAbility("interdiction_pulse");
+                }
+            } catch (Throwable ignored) {
+            }
+            java.lang.StringBuilder caller = new java.lang.StringBuilder();
+            java.lang.StackTraceElement[] trace = java.lang.Thread.currentThread().getStackTrace();
+            for (int i = 2; i < trace.length && i < 9; i++) {
+                if (caller.length() > 0) caller.append('>');
+                java.lang.StackTraceElement frame = trace[i];
+                caller.append(frame.getClassName()).append('.').append(frame.getMethodName());
+                if (frame.getLineNumber() >= 0) caller.append(':').append(frame.getLineNumber());
+            }
+            System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
+                    + " event=pause-transition before=" + before
+                    + " after=" + after
+                    + " gameTs=" + safeCampaignTimestamp()
+                    + " interdictionUsable=" + (interdiction != null && safeBool(interdiction, 0))
+                    + " interdictionActive=" + (interdiction != null && safeBool(interdiction, 1))
+                    + " interdictionInProgress=" + (interdiction != null && safeBool(interdiction, 2))
+                    + " interdictionLevel=" + (interdiction == null ? -1f : safeFloat(interdiction, 0))
+                    + " caller=" + safe(caller.toString()));
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static void controlMatch(Object control, int eventValue, boolean keyDown, boolean consumed, boolean matched) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY) || control == null || !keyDown) return;
         try {
