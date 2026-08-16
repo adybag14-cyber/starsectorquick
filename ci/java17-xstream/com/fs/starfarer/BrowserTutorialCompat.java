@@ -11,8 +11,8 @@ import com.fs.starfarer.api.impl.campaign.tutorial.CampaignTutorialScript;
 
 /** Starts the stock Galatia campaign tutorial for the public browser quick-start. */
 public final class BrowserTutorialCompat {
-    public static final String ENABLE_PROPERTY = "starsector.browserTutorial";
-    private static final String INSTALLED_MEMORY_KEY = "$browserTutorialInstalled";
+    public static final java.lang.String ENABLE_PROPERTY = "starsector.browserTutorial";
+    private static final java.lang.String INSTALLED_MEMORY_KEY = "$browserTutorialInstalled";
 
     private BrowserTutorialCompat() {}
 
