@@ -100,8 +100,6 @@ jobs:
         env:
           EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
-          STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
-          STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Validate Pages overlay from verified candidate

@@ -9,6 +9,15 @@ WINDOW_CONFIG=${5:-'{}'}
 OUT="test_output/${NAME}"
 mkdir -p "$OUT" .ci-build/fixer .ci-cache
 
+# A deep gameplay run must use the real stock campaign world. The old minimal
+# Corvus/Asharu knobs remain available for explicit bootstrap diagnostics only.
+if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" || "${STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR:-false}" == "true" ]]; then
+    echo 'Deep gameplay refuses minimal Corvus/Asharu world preparation; use the full stock sector/economy.' >&2
+    exit 1
+  fi
+fi
+
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
