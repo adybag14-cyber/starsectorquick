@@ -833,7 +833,11 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
         let toggleSettleMs = null;
         let toggleFastForwardInput = null;
         if (deactivated.matched) {
-          const settleStart = gameplayEvents.length;
+          // ability-settled can arrive in the same render/update burst as the
+          // deactivation callback. Start immediately after the matched
+          // deactivation event so a one-shot settled signal cannot be lost
+          // between the deactivation wait returning and this second wait.
+          const settleStart = deactivated.index + 1;
           const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
           let settled;
           try {
