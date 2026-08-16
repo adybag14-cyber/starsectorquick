@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Verifies direct browser quick-start mirrors the standard tutorial-complete ability bar. */
+/** Verifies mature quick-start slots and tutorial-managed ability preservation. */
 public final class VerifyStartingAbilities {
     private static final String[] EXPECTED = {
         "transponder", "go_dark", "sensor_burst", "emergency_burn",
@@ -67,6 +67,7 @@ public final class VerifyStartingAbilities {
         method.setAccessible(true);
 
         System.clearProperty("starsector.browserGameplayProbe");
+        System.clearProperty("starsector.browserTutorial");
         Sector normalSector = new Sector();
         Fleet normalFleet = new Fleet();
         invokeSetup(method, normalSector, normalFleet);
@@ -76,6 +77,27 @@ public final class VerifyStartingAbilities {
         }
         if (normalSector.characterData.abilities.size() != EXPECTED.length || normalFleet.abilities.size() != EXPECTED.length) {
             throw new AssertionError("unexpected normal ability counts character=" + normalSector.characterData.abilities.size() + " fleet=" + normalFleet.abilities.size());
+        }
+
+        System.setProperty("starsector.browserTutorial", "true");
+        try {
+            Sector tutorialSector = new Sector();
+            Fleet tutorialFleet = new Fleet();
+            invokeSetup(method, tutorialSector, tutorialFleet);
+            if (!tutorialSector.characterData.abilities.isEmpty() || !tutorialFleet.abilities.isEmpty()) {
+                throw new AssertionError(
+                        "tutorial quick-start must preserve tutorial-managed empty abilities character="
+                                + tutorialSector.characterData.abilities.size()
+                                + " fleet="
+                                + tutorialFleet.abilities.size());
+            }
+            for (int i = 0; i < tutorialSector.uiData.slots.values.size(); i++) {
+                if (tutorialSector.uiData.slots.values.get(i).getAbilityId() != null) {
+                    throw new AssertionError("tutorial quick-start unexpectedly mapped slot " + (i + 1));
+                }
+            }
+        } finally {
+            System.clearProperty("starsector.browserTutorial");
         }
 
         System.setProperty("starsector.browserGameplayProbe", "true");
@@ -97,6 +119,9 @@ public final class VerifyStartingAbilities {
             System.clearProperty("starsector.browserGameplayProbe");
         }
 
-        System.out.println("VerifyStartingAbilities: OK slots=1-8 abilities=" + String.join(",", EXPECTED) + " deepEscape=fracture_jump");
+        System.out.println(
+                "VerifyStartingAbilities: OK slots=1-8 abilities="
+                        + String.join(",", EXPECTED)
+                        + " tutorialManaged=true deepEscape=fracture_jump");
     }
 }
