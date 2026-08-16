@@ -56,6 +56,7 @@ test -s starsector/starsector/graphics/particlealpha32sq.png
 # class actually used by the current launcher is also patched directly in
 # scripts-precompiled.jar below.
 python3 ci/patch-browser-sector-gen.py
+test "$(grep -c 'runSectorStep("' data/scripts/world/SectorGen.java)" -eq 24
 
 python3 ci/patch-lwjgl-matrix-stack.py
 python3 ci/patch-lwjgl-display-lists.py
@@ -95,6 +96,8 @@ grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
 grep -q 'starsector.browserGameplayPrewarm=${browserGameplayPrewarm}' launch.html
 grep -q '__STARSECTOR_BROWSER_SKIP_OUTER_SECTOR_PROCGEN__ === true' launch.html
 grep -q 'starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}' launch.html
+grep -q '__STARSECTOR_BROWSER_LIGHTWEIGHT_SECTOR_COMPAT__ === true' launch.html
+grep -q 'starsector.compatibilityFastPath=${browserLightweightSectorCompat}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
@@ -436,7 +439,9 @@ javac -encoding UTF-8 --release 8 -cp "jars/starfarer_obf.jar:$CP" \
 java -Xverify:all -cp ".ci-build/verify-janino-negative-behavior:jars/starfarer_obf.jar:$CP" \
   TestJaninoNegativeSourceCache
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
+  PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar \
+  | tee "$OUT/precompiled-sector-gen.log"
+grep -q 'encountered=24 skipped=0' "$OUT/precompiled-sector-gen.log"
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
 javap -classpath jars/scripts-precompiled.jar -c data.scripts.world.SectorGen \
   | grep -q 'BrowserSectorGenDiag: executing patched scripts-precompiled SectorGen.generate'
@@ -786,6 +791,7 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.' "$OUT/browser.log"
+  grep -q 'Fixer: full campaign outer-sector procedural generation complete.' "$OUT/browser.log"
   if grep -q 'Fixer: explicit diagnostic override is skipping outer-sector procedural generation.' "$OUT/browser.log"; then
     echo 'Deep gameplay unexpectedly ran with partial-map procgen override.' >&2
     exit 1

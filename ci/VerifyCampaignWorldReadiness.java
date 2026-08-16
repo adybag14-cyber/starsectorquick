@@ -44,11 +44,13 @@ public final class VerifyCampaignWorldReadiness {
         }
 
         Sector full = new Sector();
-        StarSystem system = new StarSystem();
-        system.planets.add(new Object());
-        full.systems.add(system);
-        full.economy.markets.add(new Object());
-        full.factions.addAll(Arrays.asList(new Object(), new Object(), new Object()));
+        for (int i = 0; i < 24; i++) {
+            StarSystem system = new StarSystem();
+            system.planets.add(new Object());
+            full.systems.add(system);
+        }
+        for (int i = 0; i < 8; i++) full.economy.markets.add(new Object());
+        for (int i = 0; i < 8; i++) full.factions.add(new Object());
         full.fleet = new Fleet();
         full.fleet.location = new Object();
         if (issue(method, full, true) != null) {
@@ -67,7 +69,7 @@ public final class VerifyCampaignWorldReadiness {
         full.fleet.location = new Object();
         full.factions.remove(full.factions.size() - 1);
         String lowFactions = issue(method, full, true);
-        if (lowFactions == null || lowFactions.indexOf("factions=2") < 0) {
+        if (lowFactions == null || lowFactions.indexOf("factions=7") < 0) {
             throw new AssertionError("under-populated factions incorrectly playable: " + lowFactions);
         }
 

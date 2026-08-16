@@ -27,11 +27,10 @@ import org.objectweb.asm.Opcodes;
  * precompiled generate() therefore wins before Janino can make the loose source
  * rewrite authoritative.
  *
- * By default all 24 heavyweight vanilla system-generator calls are removed. A
- * third optional argument, or STARSECTOR_RETAIN_WORLD_STEPS, may name specific
- * steps to retain (comma-separated), e.g. "Corvus". This keeps the current
- * skip-all isolation test unchanged while allowing evidence-driven restoration
- * of one real system at a time without another source patch for every experiment.
+ * By default all 24 vanilla core-system generator calls are retained. A third
+ * optional argument, or STARSECTOR_RETAIN_WORLD_STEPS, may name a diagnostic
+ * subset (comma-separated), e.g. "Corvus"; the special value "none" skips all.
+ * Production preparation therefore preserves the full core sector.
  *
  * STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR=true is a second, independent diagnostic
  * knob. It keeps all selected system-step behavior above, but before generate()
@@ -163,6 +162,9 @@ public final class PatchPrecompiledSectorGen {
 
     private static Set<String> parseRetainedSteps(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
+            return new LinkedHashSet<String>(STEP_ORDER);
+        }
+        if ("none".equalsIgnoreCase(raw.trim())) {
             return Collections.emptySet();
         }
         Set<String> retained = new LinkedHashSet<String>();

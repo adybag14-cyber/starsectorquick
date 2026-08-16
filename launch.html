@@ -1171,6 +1171,8 @@
                 // This opt-in exists only for narrowly scoped bootstrap diagnostics.
                 const browserSkipOuterSectorProcGen =
                     window.__STARSECTOR_BROWSER_SKIP_OUTER_SECTOR_PROCGEN__ === true;
+                const browserLightweightSectorCompat =
+                    window.__STARSECTOR_BROWSER_LIGHTWEIGHT_SECTOR_COMPAT__ === true;
                 const browserGameplaySpeedupMult = browserGameplayProbe
                     ? Math.max(2, Math.min(32, Number(window.__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__ ?? 8) || 8))
                     : 0;
@@ -1303,7 +1305,9 @@
                     `-Dstarsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
                     `starsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
                     `-Dstarsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}`,
-                    `starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}`
+                    `starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}`,
+                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
+                    `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
@@ -1313,6 +1317,9 @@
                 }
                 if (browserSkipOuterSectorProcGen) {
                     log('DIAGNOSTIC ONLY: outer-sector procedural generation is disabled for this run.', '#ffaa00');
+                }
+                if (browserLightweightSectorCompat) {
+                    log('DIAGNOSTIC ONLY: lightweight SectorGen compatibility path is enabled for this run.', '#ffaa00');
                 }
                 if (browserFastCsvParser) {
                     log('Browser fast CSV parser enabled for stock no-mod data tables.', '#00ff88');

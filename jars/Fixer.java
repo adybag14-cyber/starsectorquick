@@ -16413,7 +16413,10 @@ public class Fixer {
         int factions = countSectorFactionsSafe(sector);
         Object playerFleet = invokeNoArgIfPresent(sector, "getPlayerFleet");
         Object location = playerFleet == null ? null : invokeNoArgIfPresent(playerFleet, "getContainingLocation");
-        boolean worldReady = systems > 0 && planets > 0 && markets > 0 && factions >= 3;
+        // Starsector 0.98a's primary SectorGen has 24 named core-system steps.
+        // Require a meaningful populated core before declaring the browser world ready;
+        // the synchronous outer-sector procgen completion gate is checked in CI as well.
+        boolean worldReady = systems >= 24 && planets >= 24 && markets >= 8 && factions >= 8;
         boolean playerReady = !requirePlayerLocation || (playerFleet != null && location != null);
         if (worldReady && playerReady) return null;
         return "campaign-world-incomplete(" + describeCampaignWorldPopulation(sector) + ")";

@@ -17,6 +17,7 @@ public final class CampaignInitCompat {
     private static boolean sectorConfigFailureLogged;
     private static boolean procGenSkippedLogged;
     private static boolean procGenDelegatedLogged;
+    private static boolean procGenCompletedLogged;
 
     private CampaignInitCompat() {}
 
@@ -85,6 +86,11 @@ public final class CampaignInitCompat {
                     "Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.");
         }
         plugin.generate(data, progress);
+        if (!procGenCompletedLogged) {
+            procGenCompletedLogged = true;
+            System.out.println(
+                    "Fixer: full campaign outer-sector procedural generation complete.");
+        }
     }
 
     /** Observational diagnostic only: never creates or repairs markets/entities. */
