@@ -2004,9 +2004,41 @@ public class Fixer {
                 }
                 if (isCampaignState(stateId, currentState)) {
                     com.fs.starfarer.MainThreadTransitionBridge.disableTitleHandoff();
-                    if (normalizedMode.indexOf("new") >= 0) {
-                        ensureAutoCampaignPlayerResources();
+                    String worldIssue = ensureAutoCampaignWorldReadyBestEffort(ctx, true);
+                    if (worldIssue != null) {
+                        long now = System.currentTimeMillis();
+                        if (now - campaignTransitionPendingLogAt >= 5000L) {
+                            System.out.println(
+                                    "Fixer: auto campaign Campaign State not playable yet; waiting for full world: "
+                                            + worldIssue);
+                            campaignTransitionPendingLogAt = now;
+                        }
+                        try {
+                            Thread.sleep(pollMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                        continue;
                     }
+                    if (normalizedMode.indexOf("new") >= 0
+                            && !ensureAutoCampaignPlayerResources()) {
+                        long now = System.currentTimeMillis();
+                        if (now - campaignTransitionPendingLogAt >= 5000L) {
+                            System.out.println(
+                                    "Fixer: auto campaign Campaign State world is ready but player resources/abilities are not ready yet.");
+                            campaignTransitionPendingLogAt = now;
+                        }
+                        try {
+                            Thread.sleep(pollMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                        continue;
+                    }
+                    System.out.println(
+                            "Fixer: auto campaign world-ready " + describeCampaignWorldPopulation(sectorForWorldReadiness(ctx)));
                     if (!enableColonyVisit) {
                         System.out.println("Fixer: auto campaign watcher reached Campaign State.");
                         return;
@@ -14075,12 +14107,22 @@ public class Fixer {
                 }
             }
             if (markets.isEmpty()) {
-                Object fallbackMarket = tryCreateMinimalFallbackMarketInHyperspace(sector, economy);
-                if (fallbackMarket != null) {
-                    markets.add(fallbackMarket);
+                boolean allowMinimalHyperspaceMarket =
+                        Boolean.parseBoolean(
+                                System.getProperty(
+                                        "starsector.autoCampaignAllowMinimalHyperspaceMarket",
+                                        "false"));
+                if (allowMinimalHyperspaceMarket) {
+                    Object fallbackMarket = tryCreateMinimalFallbackMarketInHyperspace(sector, economy);
+                    if (fallbackMarket != null) {
+                        markets.add(fallbackMarket);
+                        System.out.println(
+                                "Fixer: auto campaign colony-target seeded explicitly-enabled minimal fallback market entity="
+                                        + describeEntityName(extractPrimaryEntityFromMarket(fallbackMarket)));
+                    }
+                } else {
                     System.out.println(
-                            "Fixer: auto campaign colony-target seeded minimal fallback market entity="
-                                    + describeEntityName(extractPrimaryEntityFromMarket(fallbackMarket)));
+                            "Fixer: auto campaign refusing synthetic hyperspace market; waiting for real sector generation.");
                 }
             }
 
@@ -16247,6 +16289,167 @@ public class Fixer {
         return null;
     }
 
+    private static int countCollectionResult(Object value) {
+        if (value instanceof Collection) {
+            return ((Collection) value).size();
+        }
+        if (value != null && value.getClass().isArray()) {
+            return Array.getLength(value);
+        }
+        return value == null ? 0 : -1;
+    }
+
+    private static int countSectorStarSystemsSafe(Object sector) {
+        if (sector == null) return -1;
+        try {
+            Method getStarSystems = findMethodRecursive(sector.getClass(), "getStarSystems");
+            if (getStarSystems == null) return -1;
+            getStarSystems.setAccessible(true);
+            return countCollectionResult(getStarSystems.invoke(sector));
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    private static int countSectorPlanetsSafe(Object sector) {
+        if (sector == null) return -1;
+        try {
+            Method getStarSystems = findMethodRecursive(sector.getClass(), "getStarSystems");
+            if (getStarSystems == null) return -1;
+            getStarSystems.setAccessible(true);
+            Object systemsObj = getStarSystems.invoke(sector);
+            List systems = coerceToList(systemsObj);
+            if (systems == null) return -1;
+            int planets = 0;
+            for (Object system : systems) {
+                if (system == null) continue;
+                Method getPlanets = findMethodRecursive(system.getClass(), "getPlanets");
+                if (getPlanets == null) continue;
+                getPlanets.setAccessible(true);
+                int count = countCollectionResult(getPlanets.invoke(system));
+                if (count > 0) planets += count;
+            }
+            return planets;
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    private static int countSectorFactionsSafe(Object sector) {
+        if (sector == null) return -1;
+        try {
+            Method getAllFactions = findMethodRecursive(sector.getClass(), "getAllFactions");
+            if (getAllFactions != null) {
+                getAllFactions.setAccessible(true);
+                int count = countCollectionResult(getAllFactions.invoke(sector));
+                if (count >= 0) return count;
+            }
+            Method getFaction = findMethodRecursive(sector.getClass(), "getFaction", String.class);
+            if (getFaction == null) return -1;
+            getFaction.setAccessible(true);
+            String[] ids = new String[] {
+                    "player", "hegemony", "tritachyon", "persean",
+                    "independent", "pirates", "luddic_church", "luddic_path"
+            };
+            int count = 0;
+            for (String id : ids) {
+                try {
+                    if (getFaction.invoke(sector, id) != null) count++;
+                } catch (Throwable ignored) {
+                }
+            }
+            return count;
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    private static Object sectorForWorldReadiness(DriverContext ctx) {
+        try {
+            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
+            Method getSector = findMethodRecursive(globalClass, "getSector");
+            if (getSector != null) {
+                getSector.setAccessible(true);
+                Object sector = getSector.invoke(null);
+                if (sector != null) return sector;
+            }
+        } catch (Throwable ignored) {
+        }
+        if (ctx != null) {
+            try {
+                Object campaignState = resolveCampaignStateFromDriver(ctx);
+                if (campaignState != null) {
+                    Object sector = invokeNoArgIfPresent(campaignState, "getSector");
+                    if (sector != null) return sector;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
+    }
+
+    private static String describeCampaignWorldPopulation(Object sector) {
+        if (sector == null) return "sector=null";
+        int systems = countSectorStarSystemsSafe(sector);
+        int planets = countSectorPlanetsSafe(sector);
+        int markets = countEconomyMarketsForDiagnostics(sector);
+        int factions = countSectorFactionsSafe(sector);
+        Object playerFleet = invokeNoArgIfPresent(sector, "getPlayerFleet");
+        Object location = playerFleet == null ? null : invokeNoArgIfPresent(playerFleet, "getContainingLocation");
+        return "systems=" + systems
+                + " planets=" + planets
+                + " markets=" + markets
+                + " factions=" + factions
+                + " playerFleet=" + (playerFleet != null)
+                + " playerLocation=" + (location != null);
+    }
+
+    private static String describeCampaignWorldPopulationIssue(
+            Object sector, boolean requirePlayerLocation) {
+        if (sector == null) return "campaign-world-incomplete(sector-null)";
+        int systems = countSectorStarSystemsSafe(sector);
+        int planets = countSectorPlanetsSafe(sector);
+        int markets = countEconomyMarketsForDiagnostics(sector);
+        int factions = countSectorFactionsSafe(sector);
+        Object playerFleet = invokeNoArgIfPresent(sector, "getPlayerFleet");
+        Object location = playerFleet == null ? null : invokeNoArgIfPresent(playerFleet, "getContainingLocation");
+        boolean worldReady = systems > 0 && planets > 0 && markets > 0 && factions >= 3;
+        boolean playerReady = !requirePlayerLocation || (playerFleet != null && location != null);
+        if (worldReady && playerReady) return null;
+        return "campaign-world-incomplete(" + describeCampaignWorldPopulation(sector) + ")";
+    }
+
+    private static String ensureAutoCampaignWorldReadyBestEffort(
+            DriverContext ctx, boolean requirePlayerLocation) {
+        Object sector = sectorForWorldReadiness(ctx);
+        String issue = describeCampaignWorldPopulationIssue(sector, requirePlayerLocation);
+        if (issue == null || sector == null) return issue;
+        try {
+            Method getEconomy = findMethodRecursive(sector.getClass(), "getEconomy");
+            Object economy = null;
+            List markets = new ArrayList();
+            if (getEconomy != null) {
+                getEconomy.setAccessible(true);
+                economy = getEconomy.invoke(sector);
+                if (economy != null) {
+                    Method getMarketsCopy = findMethodRecursive(economy.getClass(), "getMarketsCopy");
+                    if (getMarketsCopy != null) {
+                        getMarketsCopy.setAccessible(true);
+                        List current = coerceToList(getMarketsCopy.invoke(economy));
+                        if (current != null) markets = current;
+                    }
+                }
+            }
+            int systemsBefore = countSectorStarSystemsSafe(sector);
+            if (systemsBefore == 0) {
+                tryBootstrapSectorGenForNoMarkets(sector, economy, markets);
+            }
+        } catch (Throwable t) {
+            return issue + " repair=" + describeThrowableChain(t);
+        }
+        return describeCampaignWorldPopulationIssue(sector, requirePlayerLocation);
+    }
+
     private static int countEconomyMarketsSafe(Object economy) {
         if (economy == null) {
             return -1;
@@ -16276,7 +16479,7 @@ public class Fixer {
         boolean enabled =
                 Boolean.parseBoolean(
                         System.getProperty(
-                                "starsector.autoCampaignBootstrapSectorGenOnNoMarkets", "false"));
+                                "starsector.autoCampaignBootstrapSectorGenOnNoMarkets", "true"));
         if (!enabled) {
             return false;
         }
@@ -16302,13 +16505,26 @@ public class Fixer {
 
         int economyMarketsBefore = countEconomyMarketsSafe(economy);
         int marketCandidatesBefore = markets == null ? -1 : markets.size();
+        int starSystemsBefore = countSectorStarSystemsSafe(sector);
+        int planetsBefore = countSectorPlanetsSafe(sector);
         int sectorEntitiesBefore = collectSectorEntities(sector).size();
-        if (economyMarketsBefore > 0 || marketCandidatesBefore > 0) {
+        // Hyperspace itself, the player fleet, or an old synthetic market are not
+        // evidence that the sector map exists. Only real star systems stop a fresh
+        // SectorGen bootstrap. If the API cannot report systems, preserve the old
+        // conservative entity/market guard rather than risking duplicate worlds.
+        if (starSystemsBefore > 0) {
             return false;
         }
-        if (sectorEntitiesBefore > 0) {
+        if (starSystemsBefore < 0
+                && (economyMarketsBefore > 0 || marketCandidatesBefore > 0 || sectorEntitiesBefore > 0)) {
             return false;
         }
+        System.out.println(
+                "Fixer: auto campaign SectorGen eligibility systems=" + starSystemsBefore
+                        + " planets=" + planetsBefore
+                        + " economyMarkets=" + economyMarketsBefore
+                        + " marketCandidates=" + marketCandidatesBefore
+                        + " sectorEntities=" + sectorEntitiesBefore);
 
         autoCampaignSectorBootstrapAttempts++;
         autoCampaignSectorBootstrapAttemptAt = now;
@@ -16406,13 +16622,22 @@ public class Fixer {
         }
 
         int economyMarketsAfter = countEconomyMarketsSafe(economy);
+        int starSystemsAfter = countSectorStarSystemsSafe(sector);
+        int planetsAfter = countSectorPlanetsSafe(sector);
+        int factionsAfter = countSectorFactionsSafe(sector);
         int sectorEntitiesAfter = collectSectorEntities(sector).size();
         System.out.println(
-                "Fixer: auto campaign no-markets bootstrap result economyMarkets="
+                "Fixer: auto campaign SectorGen bootstrap result systems="
+                        + starSystemsAfter
+                        + " planets="
+                        + planetsAfter
+                        + " economyMarkets="
                         + economyMarketsAfter
+                        + " factions="
+                        + factionsAfter
                         + " sectorEntities="
                         + sectorEntitiesAfter);
-        return economyMarketsAfter > 0 || sectorEntitiesAfter > 0;
+        return starSystemsAfter > 0 && planetsAfter > 0 && economyMarketsAfter > 0;
     }
 
     private static Object readGlobalSectorForSectorGen() {
@@ -19105,7 +19330,7 @@ public class Fixer {
                 Boolean.parseBoolean(
                         System.getProperty(
                                 "starsector.autoCampaignPlayerFleetNullRequireWorldPopulation",
-                                "false"));
+                                "true"));
         if (!requireWorldPopulationGate) {
             long now = System.currentTimeMillis();
             if (autoCampaignPlayerFleetNullTransitionDeferredSince <= 0L) {
@@ -19118,27 +19343,15 @@ public class Fixer {
                                     "starsector.autoCampaignPlayerFleetNullMinDeferMs", 5000L));
             long deferredFor = Math.max(0L, now - autoCampaignPlayerFleetNullTransitionDeferredSince);
             if (deferredFor < minDeferMs) {
-                if (now - autoCampaignPlayerFleetNullTransitionDeferredLogAt >= 5000L) {
-                    System.out.println(
-                            "Fixer: waiting before immediate Campaign State transition for player-fleet-null (deferredFor="
-                                    + deferredFor
-                                    + "ms, minDefer="
-                                    + minDeferMs
-                                    + "ms).");
-                    autoCampaignPlayerFleetNullTransitionDeferredLogAt = now;
-                }
                 return false;
             }
-            if (now - autoCampaignPlayerFleetNullTransitionDeferredLogAt >= 5000L) {
-                System.out.println(
-                        "Fixer: allowing immediate Campaign State transition for player-fleet-null after deferredFor="
-                                + deferredFor
-                                + "ms (world-population gate disabled).");
-                autoCampaignPlayerFleetNullTransitionDeferredLogAt = now;
-            }
+            System.out.println(
+                    "Fixer: explicit override allows player-fleet-null Campaign transition without world gate after deferredFor="
+                            + deferredFor + "ms.");
             return true;
         }
-        String gateIssue = checkCampaignWorldPopulationForPlayerFleetNullTransition(ctx);
+
+        String gateIssue = ensureAutoCampaignWorldReadyBestEffort(ctx, false);
         if (gateIssue == null) {
             autoCampaignPlayerFleetNullTransitionDeferredSince = 0L;
             return true;
@@ -19147,33 +19360,14 @@ public class Fixer {
         if (autoCampaignPlayerFleetNullTransitionDeferredSince <= 0L) {
             autoCampaignPlayerFleetNullTransitionDeferredSince = now;
         }
-        long forceAfterMs =
-                Math.max(
-                        30000L,
-                        parseLongProperty(
-                                "starsector.autoCampaignPlayerFleetNullTransitionForceAfterMs",
-                                120000L));
-        long deferredFor =
-                Math.max(0L, now - autoCampaignPlayerFleetNullTransitionDeferredSince);
-        if (deferredFor >= forceAfterMs) {
-            if (now - autoCampaignPlayerFleetNullTransitionDeferredLogAt >= 5000L) {
-                System.out.println(
-                        "Fixer: forcing immediate Campaign State transition for player-fleet-null after prolonged deferral (deferredFor="
-                                + deferredFor
-                                + "ms, gate="
-                                + gateIssue
-                                + ").");
-                autoCampaignPlayerFleetNullTransitionDeferredLogAt = now;
-            }
-            return true;
-        }
+        long deferredFor = Math.max(0L, now - autoCampaignPlayerFleetNullTransitionDeferredSince);
         if (now - autoCampaignPlayerFleetNullTransitionDeferredLogAt >= 5000L) {
             System.out.println(
-                    "Fixer: deferring immediate Campaign State transition for player-fleet-null until campaign world is populated: "
+                    "Fixer: refusing player-fleet-null Campaign transition until the real campaign world is populated: "
                             + gateIssue
                             + " (deferredFor="
                             + deferredFor
-                            + "ms).");
+                            + "ms; no timeout bypass).");
             autoCampaignPlayerFleetNullTransitionDeferredLogAt = now;
         }
         return false;
@@ -19181,32 +19375,7 @@ public class Fixer {
 
     private static String checkCampaignWorldPopulationForPlayerFleetNullTransition(DriverContext ctx) {
         try {
-            Object sector = null;
-            Class<?> globalClass = Class.forName("com.fs.starfarer.api.Global");
-            Method getSector = findMethodRecursive(globalClass, "getSector");
-            if (getSector != null) {
-                getSector.setAccessible(true);
-                sector = getSector.invoke(null);
-            }
-            if (sector == null && ctx != null) {
-                Object campaignState = resolveCampaignStateFromDriver(ctx);
-                if (campaignState != null) {
-                    sector = invokeNoArgIfPresent(campaignState, "getSector");
-                }
-            }
-            if (sector == null) {
-                return "sector-null";
-            }
-            int economyMarkets = countEconomyMarketsForDiagnostics(sector);
-            int sectorEntities = collectSectorEntities(sector).size();
-            if (economyMarkets > 0) {
-                return null;
-            }
-            return "campaign-world-empty(economyMarkets="
-                    + economyMarkets
-                    + ", sectorEntities="
-                    + sectorEntities
-                    + ")";
+            return describeCampaignWorldPopulationIssue(sectorForWorldReadiness(ctx), false);
         } catch (Throwable t) {
             return "campaign-world-check-exception: " + describeThrowableChain(t);
         }
