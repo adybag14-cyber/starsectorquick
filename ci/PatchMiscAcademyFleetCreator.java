@@ -18,11 +18,10 @@ import org.objectweb.asm.Opcodes;
  * Small browser compatibility transforms for starfarer.api.jar.
  *
  * The Academy guard keeps an optional misc-fleet creator null-safe during campaign
- * bootstrap. The nebula transform removes a measured CheerpJ allocation hotspot in
- * Misc.addNebulaFromPNG(): stock bytecode calls Raster.getPixel(x, y, null) for every
- * image pixel, forcing a fresh int[] allocation each time. Route that one exact call
- * through BrowserRasterCompat, which reuses per-thread scratch storage while still
- * delegating to Raster.getPixel() and therefore preserves the pixel/terrain result.
+ * bootstrap. The nebula transform replaces only the detailed stock
+ * Misc.addNebulaFromPNG overload with BrowserNebulaCompat. The helper preserves the
+ * stock terrain mask/placement semantics but bulk-reads Raster samples, removing the
+ * measured per-pixel AWT virtual-call bottleneck that stalls Eos under CheerpJ.
  */
 public final class PatchMiscAcademyFleetCreator {
     private static final String ACADEMY_TARGET =
@@ -39,10 +38,7 @@ public final class PatchMiscAcademyFleetCreator {
                     + "Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;"
                     + "Lcom/fs/starfarer/api/impl/campaign/procgen/StarAge;)"
                     + "Lcom/fs/starfarer/api/campaign/SectorEntityToken;";
-    private static final String RASTER = "java/awt/image/Raster";
-    private static final String RASTER_GET_PIXEL_DESC = "(II[I)[I";
-    private static final String RASTER_COMPAT = "com/fs/starfarer/BrowserRasterCompat";
-    private static final String RASTER_COMPAT_DESC = "(Ljava/awt/image/Raster;II[I)[I";
+    private static final String NEBULA_COMPAT = "com/fs/starfarer/BrowserNebulaCompat";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -56,8 +52,7 @@ public final class PatchMiscAcademyFleetCreator {
         int[] systemGuards = {0};
         int[] miscClasses = {0};
         int[] miscMethods = {0};
-        int[] rasterReplacements = {0};
-        int[] rasterAlreadyPatched = {0};
+        int[] bulkNebulaBodies = {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -76,22 +71,20 @@ public final class PatchMiscAcademyFleetCreator {
                     bytes = patchAcademy(bytes, academyMethods, sectorGuards, systemGuards);
                 } else if (MISC_TARGET.equals(entry.getName())) {
                     miscClasses[0]++;
-                    bytes = patchMiscNebulaRaster(
-                            bytes, miscMethods, rasterReplacements, rasterAlreadyPatched);
+                    bytes = patchMiscNebulaBulk(bytes, miscMethods, bulkNebulaBodies);
                 }
                 out.write(bytes);
                 out.closeEntry();
             }
         }
 
-        int rasterPaths = rasterReplacements[0] + rasterAlreadyPatched[0];
         if (academyClasses[0] != 1
                 || academyMethods[0] != 1
                 || sectorGuards[0] != 1
                 || systemGuards[0] != 1
                 || miscClasses[0] != 1
                 || miscMethods[0] != 1
-                || rasterPaths != 1) {
+                || bulkNebulaBodies[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "starfarer.api browser patch incomplete academyClasses=" + academyClasses[0]
@@ -100,14 +93,12 @@ public final class PatchMiscAcademyFleetCreator {
                             + " systemGuards=" + systemGuards[0]
                             + " miscClasses=" + miscClasses[0]
                             + " miscMethods=" + miscMethods[0]
-                            + " rasterReplacements=" + rasterReplacements[0]
-                            + " rasterAlreadyPatched=" + rasterAlreadyPatched[0]);
+                            + " bulkNebulaBodies=" + bulkNebulaBodies[0]);
         }
         System.out.println(
                 "Patched starfarer.api Academy null guards sector=" + sectorGuards[0]
                         + " system=" + systemGuards[0]
-                        + " nebulaRasterReplacements=" + rasterReplacements[0]
-                        + " alreadyPatched=" + rasterAlreadyPatched[0]);
+                        + " bulkNebulaBodies=" + bulkNebulaBodies[0]);
     }
 
     private static byte[] patchAcademy(
@@ -151,8 +142,8 @@ public final class PatchMiscAcademyFleetCreator {
         return writer.toByteArray();
     }
 
-    private static byte[] patchMiscNebulaRaster(
-            byte[] input, int[] methods, int[] replacements, int[] alreadyPatched) {
+    private static byte[] patchMiscNebulaBulk(
+            byte[] input, int[] methods, int[] bulkNebulaBodies) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -164,33 +155,33 @@ public final class PatchMiscAcademyFleetCreator {
                 if (!MISC_METHOD.equals(name) || !MISC_DESC.equals(descriptor)) {
                     return delegate;
                 }
+
                 methods[0]++;
-                return new MethodVisitor(Opcodes.ASM9, delegate) {
-                    @Override
-                    public void visitMethodInsn(int opcode, String owner, String methodName,
-                                                String methodDescriptor, boolean isInterface) {
-                        if (opcode == Opcodes.INVOKEVIRTUAL
-                                && RASTER.equals(owner)
-                                && "getPixel".equals(methodName)
-                                && RASTER_GET_PIXEL_DESC.equals(methodDescriptor)) {
-                            super.visitMethodInsn(
-                                    Opcodes.INVOKESTATIC,
-                                    RASTER_COMPAT,
-                                    "getPixel",
-                                    RASTER_COMPAT_DESC,
-                                    false);
-                            replacements[0]++;
-                            return;
-                        }
-                        if (opcode == Opcodes.INVOKESTATIC
-                                && RASTER_COMPAT.equals(owner)
-                                && "getPixel".equals(methodName)
-                                && RASTER_COMPAT_DESC.equals(methodDescriptor)) {
-                            alreadyPatched[0]++;
-                        }
-                        super.visitMethodInsn(opcode, owner, methodName, methodDescriptor, isInterface);
-                    }
-                };
+                delegate.visitCode();
+                delegate.visitVarInsn(Opcodes.ALOAD, 0);
+                delegate.visitVarInsn(Opcodes.FLOAD, 1);
+                delegate.visitVarInsn(Opcodes.FLOAD, 2);
+                delegate.visitVarInsn(Opcodes.ALOAD, 3);
+                delegate.visitVarInsn(Opcodes.ALOAD, 4);
+                delegate.visitVarInsn(Opcodes.ALOAD, 5);
+                delegate.visitVarInsn(Opcodes.ILOAD, 6);
+                delegate.visitVarInsn(Opcodes.ILOAD, 7);
+                delegate.visitVarInsn(Opcodes.ALOAD, 8);
+                delegate.visitVarInsn(Opcodes.ALOAD, 9);
+                delegate.visitMethodInsn(
+                        Opcodes.INVOKESTATIC,
+                        NEBULA_COMPAT,
+                        "addNebulaFromPNG",
+                        MISC_DESC,
+                        false);
+                delegate.visitInsn(Opcodes.ARETURN);
+                delegate.visitMaxs(0, 0);
+                delegate.visitEnd();
+                bulkNebulaBodies[0]++;
+
+                // Returning null tells ASM not to copy any instructions from the
+                // original method after the replacement body written above.
+                return null;
             }
         };
         reader.accept(visitor, 0);
