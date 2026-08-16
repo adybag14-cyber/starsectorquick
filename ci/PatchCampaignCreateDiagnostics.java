@@ -34,6 +34,7 @@ public final class PatchCampaignCreateDiagnostics {
         int[] fleetClassSeen = new int[] {0};
         int[] checkpoints = new int[] {0};
         int[] economyProbes = new int[] {0};
+        int[] tutorialHooks = new int[] {0};
         int[] fleetCtorSeen = new int[] {0};
         int[] fleetCtorCalls = new int[] {0};
 
@@ -51,7 +52,7 @@ public final class PatchCampaignCreateDiagnostics {
                 }
                 if (CREATE_TARGET.equals(entry.getName())) {
                     createClassSeen[0]++;
-                    bytes = patchCreate(bytes, checkpoints, economyProbes);
+                    bytes = patchCreate(bytes, checkpoints, economyProbes, tutorialHooks);
                 } else if (FLEET_TARGET.equals(entry.getName())) {
                     fleetClassSeen[0]++;
                     bytes = patchFleetConstructor(bytes, fleetCtorSeen, fleetCtorCalls);
@@ -65,6 +66,7 @@ public final class PatchCampaignCreateDiagnostics {
                 || fleetClassSeen[0] != 1
                 || checkpoints[0] < 1
                 || economyProbes[0] != 1
+                || tutorialHooks[0] != 1
                 || fleetCtorSeen[0] != 1
                 || fleetCtorCalls[0] != EXPECTED_FLEET_CTOR_CALLS) {
             Files.deleteIfExists(output);
@@ -77,6 +79,8 @@ public final class PatchCampaignCreateDiagnostics {
                             + checkpoints[0]
                             + " economyProbes="
                             + economyProbes[0]
+                            + " tutorialHooks="
+                            + tutorialHooks[0]
                             + " fleetCtorSeen="
                             + fleetCtorSeen[0]
                             + " fleetCtorCalls="
@@ -89,11 +93,14 @@ public final class PatchCampaignCreateDiagnostics {
                         + checkpoints[0]
                         + " economyProbes="
                         + economyProbes[0]
+                        + " tutorialHooks="
+                        + tutorialHooks[0]
                         + " CampaignFleetCtorCalls="
                         + fleetCtorCalls[0]);
     }
 
-    private static byte[] patchCreate(byte[] input, int[] checkpoints, int[] economyProbes) {
+    private static byte[] patchCreate(
+            byte[] input, int[] checkpoints, int[] economyProbes, int[] tutorialHooks) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -132,6 +139,19 @@ public final class PatchCampaignCreateDiagnostics {
                                         "()V",
                                         false);
                                 economyProbes[0]++;
+                            }
+                            if ("CampaignState.resetViewOffset".equals(phase)) {
+                                // This is the stock lifecycle boundary immediately before
+                                // CharacterCreationData.getScripts() is executed. The direct
+                                // browser path has an empty scripts list, so install the
+                                // requested stock tutorial here after the player fleet exists.
+                                super.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        "com/fs/starfarer/BrowserTutorialCompat",
+                                        "startTutorialIfRequested",
+                                        "()V",
+                                        false);
+                                tutorialHooks[0]++;
                             }
                         }
                     }
