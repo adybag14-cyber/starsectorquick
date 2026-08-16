@@ -8,54 +8,134 @@ import org.objectweb.asm.*;
 public final class PatchAbilityGameplayProbe {
     private static final String PROBE = "com/fs/starfarer/BrowserGameplayProbe";
     private static final String ABILITY = "com/fs/starfarer/api/characters/AbilityPlugin";
-    private static final String VOID = "()V";
-    private static final Map<String, Set<String>> TARGETS = new HashMap<String, Set<String>>();
+    private static final Map<String, Map<String, String>> TARGETS = new LinkedHashMap<String, Map<String, String>>();
+
     static {
-        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseAbilityPlugin.class", new HashSet<String>(Arrays.asList("activate", "deactivate")));
-        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseToggleAbility.class", new HashSet<String>(Arrays.asList("pressButton", "advance")));
-        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/BaseDurationAbility.class", new HashSet<String>(Arrays.asList("pressButton")));
-        TARGETS.put("com/fs/starfarer/api/impl/campaign/abilities/TransponderAbility.class", new HashSet<String>(Arrays.asList("pressButton")));
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseAbilityPlugin.class", "activate()V", "abilityActivate");
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseAbilityPlugin.class", "deactivate()V", "abilityDeactivate");
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseToggleAbility.class", "pressButton()V", "abilityPress");
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseToggleAbility.class", "advance(F)V", "abilityAdvance");
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseDurationAbility.class", "pressButton()V", "abilityPress");
+        add("com/fs/starfarer/api/impl/campaign/abilities/BaseDurationAbility.class", "advance(F)V", "abilityAdvance");
+        add("com/fs/starfarer/api/impl/campaign/abilities/TransponderAbility.class", "pressButton()V", "abilityPress");
     }
+
+    private static void add(String classEntry, String methodSig, String probeMethod) {
+        Map<String, String> hooks = TARGETS.get(classEntry);
+        if (hooks == null) {
+            hooks = new LinkedHashMap<String, String>();
+            TARGETS.put(classEntry, hooks);
+        }
+        hooks.put(methodSig, probeMethod);
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length != 2) throw new IllegalArgumentException("usage: PatchAbilityGameplayProbe input.jar output.jar");
-        Path in=Path.of(args[0]), out=Path.of(args[1]); int[] classes={0}, methods={0}, inserted={0};
-        try(JarFile jar=new JarFile(in.toFile()); JarOutputStream jos=new JarOutputStream(Files.newOutputStream(out))){
-            Enumeration<JarEntry> es=jar.entries();
-            while(es.hasMoreElements()){
-                JarEntry e=es.nextElement(); JarEntry c=new JarEntry(e.getName()); c.setTime(e.getTime()); jos.putNextEntry(c);
-                byte[] bytes; try(InputStream is=jar.getInputStream(e)){bytes=is.readAllBytes();}
-                Set<String> names=TARGETS.get(e.getName());
-                if(names!=null){classes[0]++; bytes=patch(bytes,names,methods,inserted);}
-                jos.write(bytes); jos.closeEntry();
+        Path in = Path.of(args[0]);
+        Path out = Path.of(args[1]);
+        int[] classes = {0};
+        int[] methods = {0};
+        int[] ready = {0};
+        try (JarFile jar = new JarFile(in.toFile());
+             JarOutputStream jos = new JarOutputStream(Files.newOutputStream(out))) {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                JarEntry copy = new JarEntry(entry.getName());
+                copy.setTime(entry.getTime());
+                jos.putNextEntry(copy);
+                byte[] bytes;
+                try (InputStream stream = jar.getInputStream(entry)) {
+                    bytes = stream.readAllBytes();
+                }
+                Map<String, String> hooks = TARGETS.get(entry.getName());
+                if (hooks != null) {
+                    classes[0]++;
+                    bytes = patch(bytes, hooks, methods, ready);
+                }
+                jos.write(bytes);
+                jos.closeEntry();
             }
         }
-        if(classes[0]!=4||methods[0]!=6||inserted[0]!=6){Files.deleteIfExists(out);throw new IllegalStateException("gameplay probe mismatch classes="+classes[0]+" methods="+methods[0]+" inserted="+inserted[0]);}
-        System.out.println("Patched ability gameplay probe classes=4 methods=6 inserted=6");
-    }
-    private static byte[] patch(byte[] input, Set<String> names, int[] methods, int[] inserted){
-        if(countProbeCalls(input)>0){
-            int c=countProbeCalls(input); methods[0]+=c; inserted[0]+=c; return input;
+        if (classes[0] != 4 || methods[0] != 7 || ready[0] != 7) {
+            Files.deleteIfExists(out);
+            throw new IllegalStateException("gameplay probe mismatch classes=" + classes[0]
+                    + " methods=" + methods[0] + " ready=" + ready[0]);
         }
-        ClassReader r=new ClassReader(input); ClassWriter w=new ClassWriter(r,ClassWriter.COMPUTE_MAXS);
-        r.accept(new ClassVisitor(Opcodes.ASM9,w){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[] ex){
-            MethodVisitor mv=super.visitMethod(a,n,d,s,ex);
-            boolean advance = "advance".equals(n) && "(F)V".equals(d) && names.contains(n);
-            boolean simple = VOID.equals(d) && names.contains(n);
-            if(!advance && !simple)return mv;
-            methods[0]++;
-            if(advance){
-                return new MethodVisitor(Opcodes.ASM9,mv){@Override public void visitInsn(int opcode){
-                    if(opcode==Opcodes.RETURN){
-                        super.visitVarInsn(Opcodes.ALOAD,0);
-                        super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,"abilityAdvance","(L"+ABILITY+";)V",false);
-                        inserted[0]++;
+        System.out.println("Patched ability gameplay probe classes=4 methods=7 ready=7");
+    }
+
+    private static byte[] patch(byte[] input, Map<String, String> hooks, int[] methods, int[] ready) {
+        final Set<String> existing = findExistingHooks(input);
+        final Set<String> expected = new LinkedHashSet<String>();
+        for (Map.Entry<String, String> hook : hooks.entrySet()) {
+            expected.add(hook.getKey() + "#" + hook.getValue());
+        }
+        if (existing.containsAll(expected)) {
+            methods[0] += hooks.size();
+            ready[0] += hooks.size();
+            return input;
+        }
+
+        ClassReader reader = new ClassReader(input);
+        ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
+                String methodSig = name + desc;
+                String probeMethod = hooks.get(methodSig);
+                if (probeMethod == null) return mv;
+                methods[0]++;
+                String hookKey = methodSig + "#" + probeMethod;
+                if (existing.contains(hookKey)) {
+                    ready[0]++;
+                    return mv;
+                }
+                ready[0]++;
+                if ("abilityAdvance".equals(probeMethod)) {
+                    return new MethodVisitor(Opcodes.ASM9, mv) {
+                        @Override
+                        public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.RETURN) {
+                                super.visitVarInsn(Opcodes.ALOAD, 0);
+                                super.visitMethodInsn(Opcodes.INVOKESTATIC, PROBE, probeMethod,
+                                        "(L" + ABILITY + ";)V", false);
+                            }
+                            super.visitInsn(opcode);
+                        }
+                    };
+                }
+                return new MethodVisitor(Opcodes.ASM9, mv) {
+                    @Override
+                    public void visitCode() {
+                        super.visitCode();
+                        super.visitVarInsn(Opcodes.ALOAD, 0);
+                        super.visitMethodInsn(Opcodes.INVOKESTATIC, PROBE, probeMethod,
+                                "(L" + ABILITY + ";)V", false);
                     }
-                    super.visitInsn(opcode);
-                }};
+                };
             }
-            final String probeMethod="pressButton".equals(n)?"abilityPress":("activate".equals(n)?"abilityActivate":"abilityDeactivate");
-            return new MethodVisitor(Opcodes.ASM9,mv){@Override public void visitCode(){super.visitCode();super.visitVarInsn(Opcodes.ALOAD,0);super.visitMethodInsn(Opcodes.INVOKESTATIC,PROBE,probeMethod,"(L"+ABILITY+";)V",false);inserted[0]++;}};
-        }},0); return w.toByteArray();
+        }, 0);
+        return writer.toByteArray();
     }
-    private static int countProbeCalls(byte[] bytes){final int[] c={0};new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9){@Override public MethodVisitor visitMethod(int a,String n,String d,String s,String[]e){return new MethodVisitor(Opcodes.ASM9){@Override public void visitMethodInsn(int op,String o,String n,String d,boolean i){if(op==Opcodes.INVOKESTATIC&&PROBE.equals(o)&&n.startsWith("ability"))c[0]++;}};}},ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);return c[0];}
+
+    private static Set<String> findExistingHooks(byte[] bytes) {
+        final Set<String> result = new LinkedHashSet<String>();
+        new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                final String methodSig = name + desc;
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String method, String methodDesc, boolean itf) {
+                        if (opcode == Opcodes.INVOKESTATIC && PROBE.equals(owner) && method.startsWith("ability")) {
+                            result.add(methodSig + "#" + method);
+                        }
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return result;
+    }
 }

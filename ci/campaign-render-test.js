@@ -188,6 +188,23 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
   return { matched: false, event: null, index: -1, elapsedMs: Date.now() - started };
 }
 
+async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 5000);
+  const pollMs = Math.max(50, Number(options.pollMs ?? 100));
+  const readSwapCount = () => page.evaluate(() => Number(window.__lwjglPresentationStats?.swapCount || 0));
+  const start = await readSwapCount().catch(() => 0);
+  const started = Date.now();
+  let current = start;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    current = await readSwapCount().catch(() => current);
+    if (current - start >= minFrames) {
+      return { advanced: true, frames: current - start, elapsedMs: Date.now() - started };
+    }
+  }
+  return { advanced: false, frames: current - start, elapsedMs: Date.now() - started };
+}
+
 (async () => {
   const logs = [];
   const errors = [];
@@ -763,28 +780,28 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
       flushLogs();
       if (failed) break;
 
-      // Duration abilities deliberately force incompatible abilities unusable for
-      // two subsequent campaign frames. Wait for the real deactivation event and
-      // then leave a small frame-recovery margin before probing the next numeric
-      // slot; otherwise a correct mapping can be swallowed by Starsector's own
-      // disableFrames guard rather than by the browser keyboard bridge.
+      // Duration abilities keep incompatible abilities force-disabled until their
+      // deactivation fade has reached a true zero-progress state. A deactivation
+      // callback alone is too early (notably for Emergency Burn). Wait for the
+      // test-only ability-settled event emitted at the end of BaseDurationAbility
+      // advance(), then allow three real presentation frames for disableFrames to
+      // clear before probing the next numeric slot.
       if (durationAbilityIds.has(expectedId) && stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate')) {
-        let deactivated = stateEvents.some(event => event.id === expectedId && event.event === 'ability-deactivate');
+        let fullySettled = gameplayEvents.slice(gameplayStart).some(
+          event => event.id === expectedId && event.event === 'ability-settled'
+        );
         let settleMs = 0;
         let fastForwardInput = null;
-        if (!deactivated) {
-          const settleStart = gameplayEvents.length;
+        let settledEvent = null;
+        if (!fullySettled) {
           const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
-          let settled;
           try {
-            // Starsector's campaign tutorial explicitly teaches holding the
-            // FAST_FORWARD control to accelerate time. The stock desktop binding
-            // is Shift; exercise that real gameplay control while long-duration
-            // abilities run instead of waiting minutes at SwiftShader frame rate.
+            // Starsector's tutorial teaches holding FAST_FORWARD (stock binding:
+            // Shift). Exercise that real gameplay control while long abilities run.
             await page.keyboard.down('Shift');
-            settled = await waitForGameplayEvent(
-              gameplayEvents, settleStart,
-              event => event.id === expectedId && event.event === 'ability-deactivate',
+            settledEvent = await waitForGameplayEvent(
+              gameplayEvents, gameplayStart,
+              event => event.id === expectedId && event.event === 'ability-settled',
               { timeoutMs: 60000, pollMs: 100 }
             );
           } finally {
@@ -795,22 +812,28 @@ async function waitForGameplayEvent(events, startIndex, predicate, options = {})
             deliveredDelta: Number(fastAfter.directKeyboardDelivered || 0) - Number(fastBefore.directKeyboardDelivered || 0),
             globalDelta: Number(fastAfter.keyboardGlobalCaptures || 0) - Number(fastBefore.keyboardGlobalCaptures || 0),
           };
-          deactivated = Boolean(settled && settled.matched);
-          settleMs = settled ? settled.elapsedMs : 60000;
+          fullySettled = Boolean(settledEvent && settledEvent.matched);
+          settleMs = settledEvent ? settledEvent.elapsedMs : 60000;
         }
-        if (deactivated) {
-          await sleep(750);
-        }
+        const lifecycleEvents = gameplayEvents.slice(gameplayStart);
+        const deactivated = lifecycleEvents.some(
+          event => event.id === expectedId && event.event === 'ability-deactivate'
+        );
+        const recovery = fullySettled
+          ? await waitForPresentationFrames(page, 3, { timeoutMs: 5000, pollMs: 100 })
+          : { advanced: false, frames: 0, elapsedMs: 0 };
         const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
-        currentResult.durationSettled = deactivated;
+        currentResult.durationDeactivated = deactivated;
+        currentResult.durationSettled = fullySettled;
         currentResult.durationSettleMs = settleMs;
+        currentResult.durationRecovery = recovery;
         currentResult.fastForwardInput = fastForwardInput;
-        if (!deactivated) currentResult.failed = true;
+        if (!deactivated || !fullySettled || !recovery.advanced) currentResult.failed = true;
         const ffDelivered = fastForwardInput ? fastForwardInput.deliveredDelta : 0;
         const ffGlobal = fastForwardInput ? fastForwardInput.globalDelta : 0;
-        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settleMs=${settleMs} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryMs=${deactivated ? 750 : 0} failed=${!deactivated}`);
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settled=${fullySettled} settleMs=${settleMs} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryFrames=${recovery.frames} recoveryMs=${recovery.elapsedMs} failed=${currentResult.failed}`);
         flushLogs();
-        if (!deactivated) break;
+        if (currentResult.failed) break;
       }
 
       // Toggle-style abilities are pressed again to return the campaign to a
