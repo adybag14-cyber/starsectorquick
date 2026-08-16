@@ -322,6 +322,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyAbilityGameplayProbePatch.java \
   ci/PatchCampaignGameplayProbe.java \
   ci/VerifyCampaignGameplayProbePatch.java \
+  ci/PatchAbilityUiGameplayProbe.java \
+  ci/VerifyAbilityUiGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -495,6 +497,19 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyCampaignGameplayProbePatch .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+# Deep gameplay telemetry at the actual campaign ability-button UI layer. This
+# distinguishes plugin readiness from whether the rendered button has refreshed
+# to enabled and proves numeric-key dispatch reached H.actionPerformed().
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityUiGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityUiGameplayProbePatch .ci-build/starfarer-ability-ui-gameplay-probe.jar
+mv .ci-build/starfarer-ability-ui-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityUiGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityUiGameplayProbePatch .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
 # Fast exact smart-quote normalization before SpecStore's original two regex passes.
 # Null from the property-gated helper falls through to the untouched stock body.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -737,6 +752,8 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
 fi

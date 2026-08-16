@@ -228,6 +228,38 @@ async function waitForAbilityReady(events, abilityId, options = {}) {
   };
 }
 
+function latestAbilityUiReadiness(events, abilityId) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.id !== abilityId) continue;
+    if (event.event === 'ability-ui-ready') return true;
+    if (event.event === 'ability-ui-unready'
+        || event.event === 'ability-ui-lag'
+        || event.event === 'ability-ui-stale-enabled') return false;
+  }
+  return null;
+}
+
+async function waitForAbilityUiReady(events, abilityId, options = {}) {
+  const initialState = latestAbilityUiReadiness(events, abilityId);
+  if (initialState === true) {
+    return { ready: true, initialState, finalState: true, elapsedMs: 0, source: 'ui-current' };
+  }
+  const startIndex = events.length;
+  const ready = await waitForGameplayEvent(
+    events, startIndex,
+    event => event.id === abilityId && event.event === 'ability-ui-ready',
+    { timeoutMs: Number(options.timeoutMs ?? 12000), pollMs: Number(options.pollMs ?? 100) }
+  );
+  return {
+    ready: ready.matched,
+    initialState,
+    finalState: latestAbilityUiReadiness(events, abilityId),
+    elapsedMs: ready.elapsedMs,
+    source: ready.matched ? 'ui-transition' : 'timeout',
+  };
+}
+
 async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const timeoutMs = Number(options.timeoutMs ?? 5000);
   const pollMs = Math.max(50, Number(options.pollMs ?? 100));
@@ -760,11 +792,20 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const expectedId = expectedAbilityIds[digit - 1];
       const readinessRequired = !contextUnavailableAbilityIds.has(expectedId);
       const readiness = readinessRequired
-        ? await waitForAbilityReady(gameplayEvents, expectedId, { timeoutMs: 8000, pollMs: 100 })
+        ? await waitForAbilityReady(gameplayEvents, expectedId, { timeoutMs: 12000, pollMs: 100 })
         : {
             ready: latestAbilityReadiness(gameplayEvents, expectedId) === true,
             initialState: latestAbilityReadiness(gameplayEvents, expectedId),
             finalState: latestAbilityReadiness(gameplayEvents, expectedId),
+            elapsedMs: 0,
+            source: 'context-optional',
+          };
+      const uiReadiness = readinessRequired
+        ? await waitForAbilityUiReady(gameplayEvents, expectedId, { timeoutMs: 12000, pollMs: 100 })
+        : {
+            ready: latestAbilityUiReadiness(gameplayEvents, expectedId) === true,
+            initialState: latestAbilityUiReadiness(gameplayEvents, expectedId),
+            finalState: latestAbilityUiReadiness(gameplayEvents, expectedId),
             elapsedMs: 0,
             source: 'context-optional',
           };
@@ -804,6 +845,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
       const events = gameplayEvents.slice(gameplayStart);
       const pressEvents = events.filter(event => event.event === 'ability-press');
+      const uiActionEvents = events.filter(event => event.event === 'ability-ui-action');
       const stateEvents = events.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
       const ids = [...new Set(pressEvents.map(event => event.id).filter(Boolean))];
       const slotMapped = starterAbilityMappingReady && starterAbilitySlots[String(digit)] === expectedId;
@@ -813,7 +855,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const usable = pressEvents.some(event => event.id === expectedId && event.usable === 'true');
       const contextUnavailable = contextUnavailableAbilityIds.has(expectedId) && !pressObserved;
       const pressRequired = !contextUnavailableAbilityIds.has(expectedId);
-      const preReady = readiness.ready;
+      const uiActionObserved = uiActionEvents.some(event => event.id === expectedId);
+      const preReady = readiness.ready && uiReadiness.ready;
       const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
       const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
       const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
@@ -821,14 +864,14 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const animatedOrChanged = contextUnavailable || !usable || stateChanged || visualDiff >= 0.002;
       const minKeyboardEvents = confirmationPress ? 4 : 2;
       const failed = deliveredDelta < minKeyboardEvents || globalDelta < minKeyboardEvents
-        || !mapped || (pressRequired && (!preReady || !pressObserved)) || wrongIds.length > 0
+        || !mapped || (pressRequired && (!preReady || !uiActionObserved || !pressObserved)) || wrongIds.length > 0
         || !animatedOrChanged || Boolean(fatalSeenAt);
       abilityKeyResults.push({
-        digit, expectedId, mapped, slotMapped, pressObserved, contextUnavailable, preReady, readiness, ids, wrongIds, usable,
+        digit, expectedId, mapped, slotMapped, pressObserved, uiActionObserved, contextUnavailable, preReady, readiness, uiReadiness, ids, wrongIds, usable,
         confirmationPress, deliveredDelta, globalDelta, visualDiff, stateChanged, stateEvents: stateEvents.length,
         pressReadyMs: pressReady.matched ? pressReady.elapsedMs : null, failed,
       });
-      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} preReady=${preReady} readyWaitMs=${readiness.elapsedMs} readySource=${readiness.source} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
+      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} preReady=${preReady} pluginReadyWaitMs=${readiness.elapsedMs} pluginReadySource=${readiness.source} uiReady=${uiReadiness.ready} uiReadyWaitMs=${uiReadiness.elapsedMs} uiReadySource=${uiReadiness.source} uiAction=${uiActionObserved} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
       flushLogs();
       if (failed) break;
 

@@ -25,6 +25,8 @@ public final class BrowserGameplayProbe {
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Integer>());
     private static final Map<AbilityPlugin, Boolean> READY_STABLE =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
+    private static final Map<Object, String> UI_STATE =
+            Collections.synchronizedMap(new WeakHashMap<Object, String>());
 
     private BrowserGameplayProbe() {}
 
@@ -35,7 +37,7 @@ public final class BrowserGameplayProbe {
             READY_STREAK.put(ability, Integer.valueOf(0));
             READY_STABLE.put(ability, Boolean.FALSE);
             long timestamp = safeCampaignTimestamp();
-            if (timestamp >= 0L) ACTIVATED_AT.put(ability, Long.valueOf(timestamp));
+            if (timestamp != Long.MIN_VALUE) ACTIVATED_AT.put(ability, Long.valueOf(timestamp));
         }
         emit("ability-activate", ability);
     }
@@ -68,6 +70,45 @@ public final class BrowserGameplayProbe {
 
         Boolean previousSettled = SETTLED.put(ability, Boolean.valueOf(settled));
         if (settled && Boolean.FALSE.equals(previousSettled)) emit("ability-settled", ability);
+    }
+
+    public static void abilityUiAdvance(Object panel) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || panel == null) return;
+        AbilityPlugin ability = reflectAbility(panel);
+        if (ability == null) return;
+        boolean usable;
+        boolean enabled;
+        try {
+            usable = ability.isUsable();
+            enabled = reflectButtonEnabled(panel);
+        } catch (Throwable ignored) {
+            return;
+        }
+        String state;
+        String event;
+        if (usable && enabled) {
+            state = "ready";
+            event = "ability-ui-ready";
+        } else if (!usable && !enabled) {
+            state = "unready";
+            event = "ability-ui-unready";
+        } else if (usable) {
+            state = "lag";
+            event = "ability-ui-lag";
+        } else {
+            state = "stale-enabled";
+            event = "ability-ui-stale-enabled";
+        }
+        String previous = UI_STATE.put(panel, state);
+        if (!state.equals(previous)) emitUi(event, ability, enabled);
+    }
+
+    public static void abilityUiAction(Object panel) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || panel == null) return;
+        AbilityPlugin ability = reflectAbility(panel);
+        if (ability == null) return;
+        boolean enabled = reflectButtonEnabled(panel);
+        emitUi("ability-ui-action", ability, enabled);
     }
 
     public static void coreTabStart(Object tab) { emitCore("core-tab-start", tab); }
@@ -126,6 +167,50 @@ public final class BrowserGameplayProbe {
         }
     }
 
+    private static AbilityPlugin reflectAbility(Object panel) {
+        try {
+            java.lang.reflect.Method method = panel.getClass().getMethod("getPlugin");
+            Object value = method.invoke(panel);
+            return value instanceof AbilityPlugin ? (AbilityPlugin)value : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static boolean reflectButtonEnabled(Object panel) {
+        Class<?> type = panel.getClass();
+        while (type != null) {
+            try {
+                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                    if (!"com.fs.starfarer.ui.n".equals(field.getType().getName())) continue;
+                    field.setAccessible(true);
+                    Object button = field.get(panel);
+                    if (button == null) continue;
+                    java.lang.reflect.Method method = button.getClass().getMethod("isEnabled");
+                    Object value = method.invoke(button);
+                    if (value instanceof Boolean) return ((Boolean)value).booleanValue();
+                }
+            } catch (Throwable ignored) {
+            }
+            type = type.getSuperclass();
+        }
+        return false;
+    }
+
+    private static void emitUi(String event, AbilityPlugin ability, boolean buttonEnabled) {
+        try {
+            System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
+                    + " event=" + event
+                    + " id=" + safe(ability == null ? null : ability.getId())
+                    + " usable=" + (ability != null && safeBool(ability, 0))
+                    + " buttonEnabled=" + buttonEnabled
+                    + " active=" + (ability != null && safeBool(ability, 1))
+                    + " inProgress=" + (ability != null && safeBool(ability, 2))
+                    + " level=" + (ability == null ? -1f : safeFloat(ability, 0)));
+        } catch (Throwable ignored) {
+        }
+    }
+
     private static void maybeApplySpeedupOverride() {
         if (SPEEDUP_APPLIED.get()) return;
         java.lang.String raw = System.getProperty(SPEEDUP_PROPERTY, "").trim();
@@ -145,16 +230,16 @@ public final class BrowserGameplayProbe {
 
     private static long safeCampaignTimestamp() {
         try {
-            if (Global.getSector() == null || Global.getSector().getClock() == null) return -1L;
+            if (Global.getSector() == null || Global.getSector().getClock() == null) return Long.MIN_VALUE;
             return Global.getSector().getClock().getTimestamp();
         } catch (Throwable ignored) {
-            return -1L;
+            return Long.MIN_VALUE;
         }
     }
 
     private static float safeElapsedDaysSince(long timestamp) {
         try {
-            if (timestamp < 0L || Global.getSector() == null || Global.getSector().getClock() == null) return -1f;
+            if (timestamp == Long.MIN_VALUE || Global.getSector() == null || Global.getSector().getClock() == null) return -1f;
             return Global.getSector().getClock().getElapsedDaysSince(timestamp);
         } catch (Throwable ignored) {
             return -1f;
