@@ -10,7 +10,7 @@ import java.awt.image.Raster;
  * null. On CheerpJ this turns small nebula masks into a very allocation-heavy hot
  * loop and can monopolize the VM for minutes. Reuse one per-thread scratch array
  * while delegating to Raster.getPixel() unchanged, so the returned sample values
- * and terrain mask semantics remain identical.
+ * and terrain mask semantics remain identical for the transformed call site.
  */
 public final class BrowserRasterCompat {
     private static final ThreadLocal<int[]> PIXEL_SCRATCH = new ThreadLocal<int[]>();
@@ -25,9 +25,13 @@ public final class BrowserRasterCompat {
             return raster.getPixel(x, y, out);
         }
 
-        int needed = Math.max(3, raster.getNumBands());
+        // Match Raster.getPixel(..., null): its newly allocated array is exactly
+        // numBands long. Keeping that length preserves stock behavior even for an
+        // unexpected non-RGB raster instead of accidentally masking an out-of-range
+        // access in Misc.addNebulaFromPNG().
+        int needed = raster.getNumBands();
         int[] scratch = PIXEL_SCRATCH.get();
-        if (scratch == null || scratch.length < needed) {
+        if (scratch == null || scratch.length != needed) {
             scratch = new int[needed];
             PIXEL_SCRATCH.set(scratch);
         }
