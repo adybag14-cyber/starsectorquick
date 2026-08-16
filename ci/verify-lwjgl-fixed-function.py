@@ -47,6 +47,7 @@ def main() -> int:
     require(text, "LWJGL_INTEGER_PIXEL_STORE_COMPAT_V1", "module")
     require(text, "LWJGL_GENERATE_MIPMAP_COMPAT_V1", "module")
     require(text, "LWJGL_IMMEDIATE_VERTEX_BATCH_V1", "module")
+    require(text, "WEBGL_QUAD_INDEX_BATCH_V2", "module")
     require(text, "LWJGL_RASTER_STATE_COMPAT_V1", "module")
     require(text, "LWJGL_POINT_SIZE_COMPAT_V1", "module")
     require(text, "preserveDrawingBuffer: false", "production WebGL context")
@@ -73,6 +74,8 @@ def main() -> int:
     stencil_op = function_block(text, "Java_org_lwjgl_opengl_GL11_nglStencilOp")
     point_size = function_block(text, "Java_org_lwjgl_opengl_GL11_nglPointSize")
     copy_tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D")
+    quad_indices = function_block(text, "ensureQuadIndexCapacity")
+    draw_arrays = function_block(text, "drawArraysImpl")
 
     require(enable, "setTexture2DEnabled(true);", "glEnable")
     reject(enable, "uniform1f(texMaskLocation", "glEnable")
@@ -97,6 +100,15 @@ def main() -> int:
     require(restore, "glCtx.stencilFunc", "attribute restoration stencil state")
     require(copy_tex_image, "glCtx.copyTexImage2D", "texture framebuffer copy")
     require(copy_tex_image, "glCtx.generateMipmap(target);", "level-0 texture framebuffer-copy mipmaps")
+    require(quad_indices, "new Uint32Array(quadCount * 6)", "quad index cache")
+    require(quad_indices, "indices[i + 5] = v + 3", "quad triangle expansion")
+    require(quad_indices, "capacity *= 2", "geometric quad-index growth")
+    require(quad_indices, "glCtx.ELEMENT_ARRAY_BUFFER", "quad index buffer upload")
+    require(draw_arrays, "assert(first == 0);", "preserved client-array first contract")
+    require(draw_arrays, "if(quadCount <= 1)", "single-quad fast path")
+    require(draw_arrays, "glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);", "batched GL_QUADS draw")
+    require(draw_arrays, "presentationStats.quadDrawCallsSaved += quadCount - 1", "quad draw-call savings telemetry")
+    reject(draw_arrays, "for(var i=0;i<count;i+=4)", "old per-quad WebGL draw loop")
 
     for mask in (
         "0x2000/*GL_ENABLE_BIT*/",
