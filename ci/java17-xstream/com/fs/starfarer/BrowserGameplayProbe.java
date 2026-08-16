@@ -25,8 +25,8 @@ public final class BrowserGameplayProbe {
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Integer>());
     private static final Map<AbilityPlugin, Boolean> READY_STABLE =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
-    private static final Map<Object, String> UI_STATE =
-            Collections.synchronizedMap(new WeakHashMap<Object, String>());
+    private static final Map<Object, java.lang.String> UI_STATE =
+            Collections.synchronizedMap(new WeakHashMap<Object, java.lang.String>());
 
     private BrowserGameplayProbe() {}
 
@@ -84,8 +84,8 @@ public final class BrowserGameplayProbe {
         } catch (Throwable ignored) {
             return;
         }
-        String state;
-        String event;
+        java.lang.String state;
+        java.lang.String event;
         if (usable && enabled) {
             state = "ready";
             event = "ability-ui-ready";
@@ -99,7 +99,7 @@ public final class BrowserGameplayProbe {
             state = "stale-enabled";
             event = "ability-ui-stale-enabled";
         }
-        String previous = UI_STATE.put(panel, state);
+        java.lang.String previous = UI_STATE.put(panel, state);
         if (!state.equals(previous)) emitUi(event, ability, enabled);
     }
 
@@ -197,7 +197,7 @@ public final class BrowserGameplayProbe {
         return false;
     }
 
-    private static void emitUi(String event, AbilityPlugin ability, boolean buttonEnabled) {
+    private static void emitUi(java.lang.String event, AbilityPlugin ability, boolean buttonEnabled) {
         try {
             System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
                     + " event=" + event
