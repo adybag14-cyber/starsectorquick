@@ -211,47 +211,20 @@ public final class BrowserGameplayProbe {
         }
     }
 
-    public static void controlMatch(Object event, Object mode, Object control, boolean matched) {
-        if (!Boolean.getBoolean(ENABLE_PROPERTY) || control == null) return;
+    public static void controlMatch(Object control, int eventValue, boolean keyDown, boolean consumed, boolean matched) {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || control == null || !keyDown) return;
         try {
             java.lang.String name = control instanceof Enum<?>
                     ? ((Enum<?>)control).name()
                     : java.lang.String.valueOf(control);
             if (!("CORE_ABILITY_6".equals(name) || "CORE_ABILITY_7".equals(name) || "CORE_ABILITY_8".equals(name))) return;
-            int eventValue = reflectInt(event, "getEventValue", -1);
-            boolean keyDown = reflectBoolean(event, "isKeyDownEvent", false);
-            boolean consumed = reflectBoolean(event, "isConsumed", false);
-            java.lang.String modeName = mode instanceof Enum<?> ? ((Enum<?>)mode).name() : java.lang.String.valueOf(mode);
             System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
                     + " event=control-match control=" + safe(name)
-                    + " mode=" + safe(modeName)
                     + " eventValue=" + eventValue
-                    + " keyDown=" + keyDown
+                    + " keyDown=true"
                     + " consumed=" + consumed
                     + " matched=" + matched);
         } catch (Throwable ignored) {
-        }
-    }
-
-    private static int reflectInt(Object target, java.lang.String methodName, int fallback) {
-        try {
-            if (target == null) return fallback;
-            java.lang.reflect.Method method = target.getClass().getMethod(methodName);
-            Object value = method.invoke(target);
-            return value instanceof Number ? ((Number)value).intValue() : fallback;
-        } catch (Throwable ignored) {
-            return fallback;
-        }
-    }
-
-    private static boolean reflectBoolean(Object target, java.lang.String methodName, boolean fallback) {
-        try {
-            if (target == null) return fallback;
-            java.lang.reflect.Method method = target.getClass().getMethod(methodName);
-            Object value = method.invoke(target);
-            return value instanceof Boolean ? ((Boolean)value).booleanValue() : fallback;
-        } catch (Throwable ignored) {
-            return fallback;
         }
     }
 

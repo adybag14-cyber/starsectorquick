@@ -10,7 +10,7 @@ public final class PatchControlMatcherGameplayProbe {
     private static final String PROBE = "com/fs/starfarer/BrowserGameplayProbe";
     private static final String METHOD = "o00000";
     private static final String DESC = "(Lcom/fs/starfarer/util/super/Object;Lcom/fs/starfarer/title/B/B$o;Lcom/fs/starfarer/title/B/B$oo;)Z";
-    private static final String PROBE_DESC = "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Z)V";
+    private static final String PROBE_DESC = "(Ljava/lang/Object;IZZZ)V";
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) throw new IllegalArgumentException("usage: PatchControlMatcherGameplayProbe input.jar output.jar");
@@ -49,9 +49,13 @@ public final class PatchControlMatcherGameplayProbe {
                     @Override public void visitInsn(int opcode) {
                         if (opcode == Opcodes.IRETURN) {
                             super.visitVarInsn(Opcodes.ISTORE, 4);
-                            super.visitVarInsn(Opcodes.ALOAD, 0);
-                            super.visitVarInsn(Opcodes.ALOAD, 1);
                             super.visitVarInsn(Opcodes.ALOAD, 2);
+                            super.visitVarInsn(Opcodes.ALOAD, 0);
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "com/fs/starfarer/util/super/Object", "getEventValue", "()I", false);
+                            super.visitVarInsn(Opcodes.ALOAD, 0);
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "com/fs/starfarer/util/super/Object", "isKeyDownEvent", "()Z", false);
+                            super.visitVarInsn(Opcodes.ALOAD, 0);
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "com/fs/starfarer/util/super/Object", "isConsumed", "()Z", false);
                             super.visitVarInsn(Opcodes.ILOAD, 4);
                             super.visitMethodInsn(Opcodes.INVOKESTATIC, PROBE, "controlMatch", PROBE_DESC, false);
                             super.visitVarInsn(Opcodes.ILOAD, 4);
