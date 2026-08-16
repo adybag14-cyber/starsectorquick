@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import runpy
 from pathlib import Path
 
 version = os.environ.get("CHEERPJ_JAVA_VERSION", "8").strip()
@@ -50,12 +51,16 @@ text = replace_exact(
 # points and tutorial debris). The source already catches individual derelict
 # failures, so public full-stock mode should request the complete Galatia layout.
 # Keep the old lightweight behavior available as an explicit browser override.
+# Public launches also request the stock tutorial; the deep gameplay probe keeps
+# it disabled so mature ability-slot regression coverage remains meaningful.
 compat_anchor = """                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
                     `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`"""
 full_galatia = """                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
                     `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
                     `-Dstarsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`,
-                    `starsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`"""
+                    `starsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`,
+                    `-Dstarsector.browserTutorial=${window.__STARSECTOR_BROWSER_TUTORIAL__ !== false && !browserGameplayProbe}`,
+                    `starsector.browserTutorial=${window.__STARSECTOR_BROWSER_TUTORIAL__ !== false && !browserGameplayProbe}`"""
 text = replace_exact(
     text,
     compat_anchor,
@@ -64,7 +69,15 @@ text = replace_exact(
 )
 
 path.write_text(text, encoding="utf-8", newline="\n")
+
+# The tutorial script clears mature abilities and grants them through progression.
+# Patch Fixer's post-create resource repair so it does not immediately overwrite
+# that tutorial-managed state. set-cheerpj-version.py already runs before Fixer is
+# compiled in every production-like campaign preparation path.
+runpy.run_path(str(root / "ci" / "enable-browser-tutorial.py"), run_name="__main__")
+
 print(
     f"Configured CheerpJ Java runtime version={version}; "
-    "campaign defaults sectorSize=normal startingLocation=Galatia fullGalatia=true"
+    "campaign defaults sectorSize=normal startingLocation=Galatia "
+    "fullGalatia=true publicTutorial=true"
 )
