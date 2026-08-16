@@ -324,6 +324,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyCampaignGameplayProbePatch.java \
   ci/PatchAbilityUiGameplayProbe.java \
   ci/VerifyAbilityUiGameplayProbePatch.java \
+  ci/PatchControlMatcherGameplayProbe.java \
+  ci/VerifyControlMatcherGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -510,6 +512,18 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyAbilityUiGameplayProbePatch .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+# Observe the final named-control shortcut matcher for ability slots 6-8. This
+# preserves the original boolean result at all three returns; telemetry only.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchControlMatcherGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyControlMatcherGameplayProbePatch .ci-build/starfarer-control-matcher-gameplay-probe.jar
+mv .ci-build/starfarer-control-matcher-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchControlMatcherGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyControlMatcherGameplayProbePatch .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
 # Fast exact smart-quote normalization before SpecStore's original two regex passes.
 # Null from the property-gated helper falls through to the untouched stock body.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -754,6 +768,7 @@ if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=control-match control=CORE_ABILITY_7' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
 fi
