@@ -13,6 +13,8 @@ public final class BrowserGameplayProbe {
     private static final AtomicLong SEQ = new AtomicLong();
     private static final Map<AbilityPlugin, Boolean> SETTLED =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
+    private static final Map<AbilityPlugin, Boolean> READY =
+            Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
 
     private BrowserGameplayProbe() {}
 
@@ -24,14 +26,20 @@ public final class BrowserGameplayProbe {
     public static void abilityDeactivate(AbilityPlugin ability) { emit("ability-deactivate", ability); }
     public static void abilityAdvance(AbilityPlugin ability) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY) || ability == null) return;
+        boolean ready;
         boolean settled;
         try {
+            ready = ability.isUsable();
             settled = !ability.isActive() && !ability.isInProgress() && ability.getLevel() <= 0.0001f;
         } catch (Throwable ignored) {
             return;
         }
-        Boolean previous = SETTLED.put(ability, Boolean.valueOf(settled));
-        if (settled && Boolean.FALSE.equals(previous)) emit("ability-settled", ability);
+        Boolean previousReady = READY.put(ability, Boolean.valueOf(ready));
+        if (previousReady == null || previousReady.booleanValue() != ready) {
+            emit(ready ? "ability-ready" : "ability-unready", ability);
+        }
+        Boolean previousSettled = SETTLED.put(ability, Boolean.valueOf(settled));
+        if (settled && Boolean.FALSE.equals(previousSettled)) emit("ability-settled", ability);
     }
 
     public static void coreTabStart(Object tab) { emitCore("core-tab-start", tab); }
