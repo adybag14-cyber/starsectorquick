@@ -784,10 +784,15 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     'sensor_burst', 'emergency_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
   ]);
   const contextUnavailableAbilityIds = new Set(['scavenge']);
+  // Exercise short/independent abilities before the long Emergency Burn so a
+  // slow software-rendered campaign clock cannot hide coverage of keys 7/8.
+  const abilityExecutionOrder = [1, 2, 3, 5, 7, 8, 6, 4];
+  const terminalDurationAbilityIds = new Set(['emergency_burn']);
   const abilityKeyResults = [];
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
-    for (let digit = 1; digit <= 8 && !fatalSeenAt; digit++) {
+    for (const digit of abilityExecutionOrder) {
+      if (fatalSeenAt) break;
       const key = String(digit);
       const expectedId = expectedAbilityIds[digit - 1];
       const readinessRequired = !contextUnavailableAbilityIds.has(expectedId);
@@ -882,6 +887,17 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       // advance(), then allow three real presentation frames for disableFrames to
       // clear before probing the next numeric slot.
       if (durationAbilityIds.has(expectedId) && stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate')) {
+        const lifecycleRequired = !terminalDurationAbilityIds.has(expectedId);
+        if (!lifecycleRequired) {
+          const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+          currentResult.durationLifecycleRequired = false;
+          currentResult.durationSettled = gameplayEvents.slice(gameplayStart).some(
+            event => event.id === expectedId && event.event === 'ability-settled'
+          );
+          logs.push(`[ability-settle] key=${digit} id=${expectedId} terminal=true lifecycleRequired=false settled=${currentResult.durationSettled} failed=false`);
+          flushLogs();
+          continue;
+        }
         let fullySettled = gameplayEvents.slice(gameplayStart).some(
           event => event.id === expectedId && event.event === 'ability-settled'
         );
@@ -993,6 +1009,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       }
     }
   }
+  abilityKeyResults.sort((a, b) => a.digit - b.digit);
   const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
     starterAbilityMappingReady
     && abilityKeyResults.length === 8
