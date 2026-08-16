@@ -204,6 +204,12 @@ javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredT
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserGameplayProbe \
   | grep -q 'major version: 52'
+rm -rf .ci-build/verify-gameplay-probe-readiness
+mkdir -p .ci-build/verify-gameplay-probe-readiness
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java
+java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
+  VerifyGameplayProbeReadiness
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \

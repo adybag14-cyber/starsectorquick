@@ -15,12 +15,20 @@ public final class BrowserGameplayProbe {
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
     private static final Map<AbilityPlugin, Boolean> READY =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
+    private static final Map<AbilityPlugin, Integer> READY_STREAK =
+            Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Integer>());
+    private static final Map<AbilityPlugin, Boolean> READY_STABLE =
+            Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
 
     private BrowserGameplayProbe() {}
 
     public static void abilityPress(AbilityPlugin ability) { emit("ability-press", ability); }
     public static void abilityActivate(AbilityPlugin ability) {
-        if (Boolean.getBoolean(ENABLE_PROPERTY) && ability != null) SETTLED.put(ability, Boolean.FALSE);
+        if (Boolean.getBoolean(ENABLE_PROPERTY) && ability != null) {
+            SETTLED.put(ability, Boolean.FALSE);
+            READY_STREAK.put(ability, Integer.valueOf(0));
+            READY_STABLE.put(ability, Boolean.FALSE);
+        }
         emit("ability-activate", ability);
     }
     public static void abilityDeactivate(AbilityPlugin ability) { emit("ability-deactivate", ability); }
@@ -38,6 +46,17 @@ public final class BrowserGameplayProbe {
         if (previousReady == null || previousReady.booleanValue() != ready) {
             emit(ready ? "ability-ready" : "ability-unready", ability);
         }
+
+        int streak = 0;
+        Integer previousStreak = READY_STREAK.get(ability);
+        if (ready) streak = (previousStreak == null ? 0 : previousStreak.intValue()) + 1;
+        READY_STREAK.put(ability, Integer.valueOf(streak));
+        boolean stableReady = ready && streak >= 3;
+        Boolean previousStable = READY_STABLE.put(ability, Boolean.valueOf(stableReady));
+        if (stableReady && !Boolean.TRUE.equals(previousStable)) {
+            emit("ability-ready-stable", ability);
+        }
+
         Boolean previousSettled = SETTLED.put(ability, Boolean.valueOf(settled));
         if (settled && Boolean.FALSE.equals(previousSettled)) emit("ability-settled", ability);
     }

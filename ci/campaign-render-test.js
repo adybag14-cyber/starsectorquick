@@ -198,23 +198,33 @@ function latestAbilityReadiness(events, abilityId) {
   return null;
 }
 
+function latestAbilityStableReadiness(events, abilityId) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.id !== abilityId) continue;
+    if (event.event === 'ability-unready') return false;
+    if (event.event === 'ability-ready-stable') return true;
+  }
+  return null;
+}
+
 async function waitForAbilityReady(events, abilityId, options = {}) {
-  const initialState = latestAbilityReadiness(events, abilityId);
+  const initialState = latestAbilityStableReadiness(events, abilityId);
   if (initialState === true) {
-    return { ready: true, initialState, finalState: true, elapsedMs: 0, source: 'current' };
+    return { ready: true, initialState, finalState: true, elapsedMs: 0, source: 'stable-current' };
   }
   const startIndex = events.length;
   const ready = await waitForGameplayEvent(
     events, startIndex,
-    event => event.id === abilityId && event.event === 'ability-ready',
-    { timeoutMs: Number(options.timeoutMs ?? 8000), pollMs: Number(options.pollMs ?? 100) }
+    event => event.id === abilityId && event.event === 'ability-ready-stable',
+    { timeoutMs: Number(options.timeoutMs ?? 12000), pollMs: Number(options.pollMs ?? 100) }
   );
   return {
     ready: ready.matched,
     initialState,
-    finalState: latestAbilityReadiness(events, abilityId),
+    finalState: latestAbilityStableReadiness(events, abilityId),
     elapsedMs: ready.elapsedMs,
-    source: ready.matched ? 'transition' : 'timeout',
+    source: ready.matched ? 'stable-transition' : 'timeout',
   };
 }
 
