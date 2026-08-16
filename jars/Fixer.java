@@ -77,6 +77,7 @@ public class Fixer {
             "starsector.autoCampaignStartFuelFraction";
     private static final String AUTO_CAMPAIGN_START_CREW_RESERVE_PROPERTY =
             "starsector.autoCampaignStartCrewReserve";
+    private static final String BROWSER_GAMEPLAY_PROBE_PROPERTY = "starsector.browserGameplayProbe";
     private static final String AUTO_CAMPAIGN_START_CREDITS_PROPERTY =
             "starsector.autoCampaignStartCredits";
     private static final String AUTO_CAMPAIGN_TIMEOUT_MS_PROPERTY =
@@ -17940,7 +17941,26 @@ public class Fixer {
                 setAbilityId.invoke(slot, id);
             }
 
-            boolean ready = true;
+            // Deep CI intentionally spends many accelerated campaign days inside a
+            // stripped-down Corvus test world. If that world lacks a usable jump
+            // destination, stock StrandedGiveTJScript correctly interrupts play
+            // after 60 days unless Transverse Jump exists. Grant it only for the
+            // property-gated deep probe; normal/public progression is unchanged.
+            final boolean deepGameplay = Boolean.parseBoolean(
+                    System.getProperty(BROWSER_GAMEPLAY_PROBE_PROPERTY, "false"));
+            final String deepEscapeAbilityId = "fracture_jump";
+            boolean deepEscapeReady = !deepGameplay;
+            if (deepGameplay) {
+                addCharacterAbility.invoke(characterData, deepEscapeAbilityId);
+                if (getFleetAbility.invoke(fleet, deepEscapeAbilityId) == null) {
+                    addFleetAbility.invoke(fleet, deepEscapeAbilityId);
+                }
+                deepEscapeReady = getFleetAbility.invoke(fleet, deepEscapeAbilityId) != null;
+                System.out.println("Fixer: auto campaign deep escape ability id="
+                        + deepEscapeAbilityId + " ready=" + deepEscapeReady);
+            }
+
+            boolean ready = deepEscapeReady;
             StringBuilder mapped = new StringBuilder();
             for (int i = 0; i < abilityIds.length; i++) {
                 Object slot = slots.get(i);
@@ -17949,6 +17969,9 @@ public class Fixer {
                 getAbilityId.setAccessible(true);
                 Object mappedId = getAbilityId.invoke(slot);
                 if (!abilityIds[i].equals(String.valueOf(mappedId)) || getFleetAbility.invoke(fleet, abilityIds[i]) == null) {
+                    ready = false;
+                }
+                if (deepGameplay && deepEscapeAbilityId.equals(String.valueOf(mappedId))) {
                     ready = false;
                 }
                 if (i > 0) mapped.append(',');

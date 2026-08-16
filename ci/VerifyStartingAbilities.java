@@ -46,23 +46,57 @@ public final class VerifyStartingAbilities {
         public Object getAbility(String id) { return abilities.get(id); }
     }
 
-    public static void main(String[] args) throws Exception {
-        Sector sector = new Sector();
-        Fleet fleet = new Fleet();
-        Method method = Fixer.class.getDeclaredMethod("ensureAutoCampaignStarterAbilities", Object.class, Object.class);
-        method.setAccessible(true);
-        Object result = method.invoke(null, sector, fleet);
-        if (!Boolean.TRUE.equals(result)) throw new AssertionError("starter ability setup returned " + result);
+    private static void assertStandardSlots(Sector sector, Fleet fleet) {
         for (int i = 0; i < EXPECTED.length; i++) {
             String id = EXPECTED[i];
             if (!sector.characterData.abilities.contains(id)) throw new AssertionError("character missing " + id);
             if (fleet.getAbility(id) == null) throw new AssertionError("fleet missing " + id);
             String mapped = sector.uiData.slots.values.get(i).getAbilityId();
             if (!id.equals(mapped)) throw new AssertionError("slot " + (i + 1) + " expected=" + id + " actual=" + mapped);
+            if ("fracture_jump".equals(mapped)) throw new AssertionError("deep escape ability replaced numbered slot " + (i + 1));
         }
-        if (sector.characterData.abilities.size() != EXPECTED.length || fleet.abilities.size() != EXPECTED.length) {
-            throw new AssertionError("unexpected ability counts character=" + sector.characterData.abilities.size() + " fleet=" + fleet.abilities.size());
+    }
+
+    private static void invokeSetup(Method method, Sector sector, Fleet fleet) throws Exception {
+        Object result = method.invoke(null, sector, fleet);
+        if (!Boolean.TRUE.equals(result)) throw new AssertionError("starter ability setup returned " + result);
+    }
+
+    public static void main(String[] args) throws Exception {
+        Method method = Fixer.class.getDeclaredMethod("ensureAutoCampaignStarterAbilities", Object.class, Object.class);
+        method.setAccessible(true);
+
+        System.clearProperty("starsector.browserGameplayProbe");
+        Sector normalSector = new Sector();
+        Fleet normalFleet = new Fleet();
+        invokeSetup(method, normalSector, normalFleet);
+        assertStandardSlots(normalSector, normalFleet);
+        if (normalSector.characterData.abilities.contains("fracture_jump") || normalFleet.getAbility("fracture_jump") != null) {
+            throw new AssertionError("normal quick-start unexpectedly gained fracture_jump");
         }
-        System.out.println("VerifyStartingAbilities: OK slots=1-8 abilities=" + String.join(",", EXPECTED));
+        if (normalSector.characterData.abilities.size() != EXPECTED.length || normalFleet.abilities.size() != EXPECTED.length) {
+            throw new AssertionError("unexpected normal ability counts character=" + normalSector.characterData.abilities.size() + " fleet=" + normalFleet.abilities.size());
+        }
+
+        System.setProperty("starsector.browserGameplayProbe", "true");
+        try {
+            Sector deepSector = new Sector();
+            Fleet deepFleet = new Fleet();
+            invokeSetup(method, deepSector, deepFleet);
+            assertStandardSlots(deepSector, deepFleet);
+            if (!deepSector.characterData.abilities.contains("fracture_jump") || deepFleet.getAbility("fracture_jump") == null) {
+                throw new AssertionError("deep quick-start missing fracture_jump escape ability");
+            }
+            if (deepSector.characterData.abilities.size() != EXPECTED.length + 1 || deepFleet.abilities.size() != EXPECTED.length + 1) {
+                throw new AssertionError("unexpected deep ability counts character=" + deepSector.characterData.abilities.size() + " fleet=" + deepFleet.abilities.size());
+            }
+            if (deepSector.uiData.slots.values.get(8).getAbilityId() != null || deepSector.uiData.slots.values.get(9).getAbilityId() != null) {
+                throw new AssertionError("deep escape ability must remain unmapped");
+            }
+        } finally {
+            System.clearProperty("starsector.browserGameplayProbe");
+        }
+
+        System.out.println("VerifyStartingAbilities: OK slots=1-8 abilities=" + String.join(",", EXPECTED) + " deepEscape=fracture_jump");
     }
 }

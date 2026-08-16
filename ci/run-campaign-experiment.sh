@@ -778,6 +778,7 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' "$OUT/browser.log"
