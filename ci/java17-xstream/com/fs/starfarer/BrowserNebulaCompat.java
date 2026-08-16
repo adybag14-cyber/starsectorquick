@@ -31,15 +31,15 @@ public final class BrowserNebulaCompat {
     private BrowserNebulaCompat() {}
 
     public static SectorEntityToken addNebulaFromPNG(
-            String path,
+            java.lang.String path,
             float centerX,
             float centerY,
             LocationAPI location,
-            String category,
-            String textureId,
+            java.lang.String category,
+            java.lang.String textureId,
             int tilesX,
             int tilesY,
-            String terrainId,
+            java.lang.String terrainId,
             StarAge age) {
         try {
             BufferedImage image = ImageIO.read(Global.getSettings().openStream(path));
@@ -56,7 +56,8 @@ public final class BrowserNebulaCompat {
             int bands = raster.getNumBands();
             int[] pixels = raster.getPixels(0, sourceY, chunkWidth, chunkHeight, (int[]) null);
 
-            StringBuilder mask = new StringBuilder(chunkWidth * chunkHeight);
+            java.lang.StringBuilder mask =
+                    new java.lang.StringBuilder(chunkWidth * chunkHeight);
             int sample = 0;
             for (int y = 0; y < chunkHeight; y++) {
                 for (int x = 0; x < chunkWidth; x++) {
