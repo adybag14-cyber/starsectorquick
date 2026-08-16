@@ -44,8 +44,27 @@ text = replace_exact(
     "window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'Galatia'",
     "real campaign starting location default",
 )
+
+# Galatia.java has a CheerpJ auto-detection path that returns early after Tetra,
+# skipping tutorial derelicts plus the late system content (Derinkuyu, gate, jump
+# points and tutorial debris). The source already catches individual derelict
+# failures, so public full-stock mode should request the complete Galatia layout.
+# Keep the old lightweight behavior available as an explicit browser override.
+compat_anchor = """                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
+                    `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`"""
+full_galatia = """                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
+                    `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
+                    `-Dstarsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`,
+                    `starsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`"""
+text = replace_exact(
+    text,
+    compat_anchor,
+    full_galatia,
+    "full Galatia tutorial/system default",
+)
+
 path.write_text(text, encoding="utf-8", newline="\n")
 print(
     f"Configured CheerpJ Java runtime version={version}; "
-    "campaign defaults sectorSize=normal startingLocation=Galatia"
+    "campaign defaults sectorSize=normal startingLocation=Galatia fullGalatia=true"
 )
