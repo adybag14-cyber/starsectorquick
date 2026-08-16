@@ -88,6 +88,8 @@ grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' laun
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
+grep -q 'starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
 grep -q 'starsector.browserGameplayPrewarm=${browserGameplayPrewarm}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
@@ -734,6 +736,7 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
 fi

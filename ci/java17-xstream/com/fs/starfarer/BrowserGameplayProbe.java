@@ -1,5 +1,6 @@
 package com.fs.starfarer;
 
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.loading.AbilitySpecAPI;
 import java.util.Collections;
@@ -10,9 +11,14 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Test-only browser gameplay telemetry. Disabled unless explicitly enabled. */
 public final class BrowserGameplayProbe {
     private static final java.lang.String ENABLE_PROPERTY = "starsector.browserGameplayProbe";
+    private static final java.lang.String SPEEDUP_PROPERTY = "starsector.browserGameplaySpeedupMult";
     private static final AtomicLong SEQ = new AtomicLong();
+    private static final java.util.concurrent.atomic.AtomicBoolean SPEEDUP_APPLIED =
+            new java.util.concurrent.atomic.AtomicBoolean();
     private static final Map<AbilityPlugin, Boolean> SETTLED =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
+    private static final Map<AbilityPlugin, Long> ACTIVATED_AT =
+            Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Long>());
     private static final Map<AbilityPlugin, Boolean> READY =
             Collections.synchronizedMap(new WeakHashMap<AbilityPlugin, Boolean>());
     private static final Map<AbilityPlugin, Integer> READY_STREAK =
@@ -28,12 +34,15 @@ public final class BrowserGameplayProbe {
             SETTLED.put(ability, Boolean.FALSE);
             READY_STREAK.put(ability, Integer.valueOf(0));
             READY_STABLE.put(ability, Boolean.FALSE);
+            long timestamp = safeCampaignTimestamp();
+            if (timestamp >= 0L) ACTIVATED_AT.put(ability, Long.valueOf(timestamp));
         }
         emit("ability-activate", ability);
     }
     public static void abilityDeactivate(AbilityPlugin ability) { emit("ability-deactivate", ability); }
     public static void abilityAdvance(AbilityPlugin ability) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY) || ability == null) return;
+        maybeApplySpeedupOverride();
         boolean ready;
         boolean settled;
         try {
@@ -94,6 +103,10 @@ public final class BrowserGameplayProbe {
             float level = safeFloat(ability, 0);
             float progressFraction = safeFloat(ability, 1);
             float cooldownFraction = safeFloat(ability, 2);
+            long gameTs = safeCampaignTimestamp();
+            float elapsedDays = -1f;
+            Long activatedAt = ACTIVATED_AT.get(ability);
+            if (activatedAt != null) elapsedDays = safeElapsedDaysSince(activatedAt.longValue());
             System.out.println(
                     "BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
                             + " event=" + event
@@ -105,9 +118,46 @@ public final class BrowserGameplayProbe {
                             + " onCooldown=" + cooldown
                             + " level=" + level
                             + " progress=" + progressFraction
-                            + " cooldown=" + cooldownFraction);
+                            + " cooldown=" + cooldownFraction
+                            + " gameTs=" + gameTs
+                            + " elapsedDays=" + elapsedDays);
         } catch (Throwable error) {
             System.out.println("BrowserGameplayProbe: telemetry failure event=" + event + " error=" + describe(error));
+        }
+    }
+
+    private static void maybeApplySpeedupOverride() {
+        if (SPEEDUP_APPLIED.get()) return;
+        java.lang.String raw = System.getProperty(SPEEDUP_PROPERTY, "").trim();
+        if (raw.isEmpty()) return;
+        try {
+            float value = Float.parseFloat(raw);
+            if (value < 2f) return;
+            value = Math.min(32f, value);
+            Global.getSettings().setFloat("campaignSpeedupMult", Float.valueOf(value));
+            if (SPEEDUP_APPLIED.compareAndSet(false, true)) {
+                System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
+                        + " event=gameplay-speedup mult=" + value);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static long safeCampaignTimestamp() {
+        try {
+            if (Global.getSector() == null || Global.getSector().getClock() == null) return -1L;
+            return Global.getSector().getClock().getTimestamp();
+        } catch (Throwable ignored) {
+            return -1L;
+        }
+    }
+
+    private static float safeElapsedDaysSince(long timestamp) {
+        try {
+            if (timestamp < 0L || Global.getSector() == null || Global.getSector().getClock() == null) return -1f;
+            return Global.getSector().getClock().getElapsedDaysSince(timestamp);
+        } catch (Throwable ignored) {
+            return -1f;
         }
     }
 

@@ -296,7 +296,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     __STARSECTOR_RENDER_WIDTH__: 1024,
     __STARSECTOR_RENDER_HEIGHT__: 768,
     __LWJGL_FIRST_LOG_LIMIT__: 512,
-    __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: deepGameplay
+    __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: deepGameplay,
+    __STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__: deepGameplay ? 8 : 0
   };
   const windowConfig = { ...defaultConfig, ...configOverrides };
   await page.addInitScript(config => {
@@ -874,15 +875,19 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           ? await waitForPresentationFrames(page, 3, { timeoutMs: 5000, pollMs: 100 })
           : { advanced: false, frames: 0, elapsedMs: 0 };
         const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+        const settledElapsedDays = settledEvent?.event?.elapsedDays == null
+          ? null
+          : Number(settledEvent.event.elapsedDays);
         currentResult.durationDeactivated = deactivated;
         currentResult.durationSettled = fullySettled;
         currentResult.durationSettleMs = settleMs;
+        currentResult.durationElapsedDays = Number.isFinite(settledElapsedDays) ? settledElapsedDays : null;
         currentResult.durationRecovery = recovery;
         currentResult.fastForwardInput = fastForwardInput;
         if (!deactivated || !fullySettled || !recovery.advanced) currentResult.failed = true;
         const ffDelivered = fastForwardInput ? fastForwardInput.deliveredDelta : 0;
         const ffGlobal = fastForwardInput ? fastForwardInput.globalDelta : 0;
-        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settled=${fullySettled} settleMs=${settleMs} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryFrames=${recovery.frames} recoveryMs=${recovery.elapsedMs} failed=${currentResult.failed}`);
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settled=${fullySettled} settleMs=${settleMs} elapsedDays=${currentResult.durationElapsedDays ?? 'n/a'} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryFrames=${recovery.frames} recoveryMs=${recovery.elapsedMs} failed=${currentResult.failed}`);
         flushLogs();
         if (currentResult.failed) break;
       }

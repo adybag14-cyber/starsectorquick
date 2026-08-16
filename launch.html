@@ -1167,6 +1167,9 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
+                const browserGameplaySpeedupMult = browserGameplayProbe
+                    ? Math.max(2, Math.min(32, Number(window.__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__ ?? 8) || 8))
+                    : 0;
                 // Background bulk predecode is opt-in only. In software-rendered browser
                 // environments a 1000+ image warmup can starve live Campaign/UI work.
                 const browserGameplayPrewarm =
@@ -1291,6 +1294,8 @@
                     `starsector.browserDeferredTextures=${browserDeferredTextures}`,
                     `-Dstarsector.browserGameplayProbe=${browserGameplayProbe}`,
                     `starsector.browserGameplayProbe=${browserGameplayProbe}`,
+                    `-Dstarsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
+                    `starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
                     `-Dstarsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
                     `starsector.browserGameplayPrewarm=${browserGameplayPrewarm}`
                 ];
@@ -1313,7 +1318,7 @@
                     log('Browser Rules duplicate index enabled: preserving duplicate checks without quadratic trigger-list scans.', '#00ff88');
                 }
                 if (browserGameplayProbe) {
-                    log('Browser deep gameplay probe enabled for ability/button regression telemetry.', '#00ff88');
+                    log(`Browser deep gameplay probe enabled for ability/button regression telemetry (fast-forward ${browserGameplaySpeedupMult}x).`, '#00ff88');
                 }
                 if (browserGameplayPrewarm) {
                     log('Browser post-Campaign gameplay texture predecode enabled.', '#00ff88');
