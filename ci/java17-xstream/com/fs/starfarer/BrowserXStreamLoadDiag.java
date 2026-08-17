@@ -60,7 +60,7 @@ public final class BrowserXStreamLoadDiag {
                         + " next-moveDown-after elapsedMs=" + (System.currentTimeMillis() - startedAt)
                         + " node=" + safeNodeName());
             }
-            if (nodes <= 100L || nodes % 1000L == 0L) {
+            if (nodes <= 100L || nodes % 1000L == 0L || (nodes >= 16500L && nodes <= 17500L)) {
                 System.out.println("BrowserXStreamLoadDiag: reader=" + id
                         + " nodes=" + nodes
                         + " depth=" + depth
