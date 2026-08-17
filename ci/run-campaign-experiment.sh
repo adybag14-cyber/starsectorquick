@@ -97,6 +97,8 @@ grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' la
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
+grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
+grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
@@ -281,7 +283,14 @@ java -Xmx2g -cp ".ci-build/verify-texture-prepared-assets:jars/fixer_patch.jar:$
 mkdir -p .ci-build/verify-xstream
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-xstream ci/VerifyJava17XStreamCompat.java
-java -cp ".ci-build/verify-xstream:jars/fixer_patch.jar:$CP" VerifyJava17XStreamCompat
+java -Dstarsector.browserXstreamUnsafeReadFastPath=false \
+  -cp ".ci-build/verify-xstream:jars/fixer_patch.jar:$CP" VerifyJava17XStreamCompat \
+  > .ci-build/verify-xstream/reflection.txt
+java -Dstarsector.browserXstreamUnsafeReadFastPath=true \
+  -cp ".ci-build/verify-xstream:jars/fixer_patch.jar:$CP" VerifyJava17XStreamCompat \
+  > .ci-build/verify-xstream/unsafe.txt
+cmp .ci-build/verify-xstream/reflection.txt .ci-build/verify-xstream/unsafe.txt
+cat .ci-build/verify-xstream/unsafe.txt
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')

@@ -18,7 +18,11 @@ import com.thoughtworks.xstream.converters.reflection.ObjectAccessException;
 import sun.misc.Unsafe;
 
 public class Fields {
+    private static final String UNSAFE_READ_FAST_PATH_PROPERTY =
+            "starsector.browserXstreamUnsafeReadFastPath";
     private static final Unsafe UNSAFE = initUnsafe();
+    private static final boolean UNSAFE_READ_FAST_PATH =
+            Boolean.parseBoolean(System.getProperty(UNSAFE_READ_FAST_PATH_PROPERTY, "false"));
 
     private static Unsafe initUnsafe() {
         try {
@@ -101,6 +105,20 @@ public class Fields {
     }
 
     public static Object read(final Field field, final Object instance) {
+        // XStream's hot serialization path visits every field through this helper.
+        // CheerpJ pays a high bridge/reflection cost for Field.get(), while XStream
+        // already relies on sun.misc.Unsafe for its preferred reflection provider.
+        // Keep volatile reads on the reflection path to preserve Java visibility
+        // semantics; non-volatile fields can use the same raw field access XStream's
+        // SunUnsafeReflectionProvider uses for construction/writes.
+        if (UNSAFE_READ_FAST_PATH && UNSAFE != null
+                && !Modifier.isVolatile(field.getModifiers())) {
+            try {
+                return unsafeRead(field, instance);
+            } catch (final Throwable ignoredUnsafeFastPathFailure) {
+                // Preserve the established compatibility path below.
+            }
+        }
         try {
             return field.get(instance);
         } catch (final Throwable reflectionFailure) {
@@ -113,6 +131,10 @@ public class Fields {
             }
             throw wrap("Cannot read field", field.getType(), field.getName(), reflectionFailure);
         }
+    }
+
+    public static boolean isUnsafeReadFastPathEnabled() {
+        return UNSAFE_READ_FAST_PATH && UNSAFE != null;
     }
 
     private static Object unsafeRead(final Field field, final Object instance) {
