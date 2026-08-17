@@ -57,7 +57,15 @@ public class SerializationMembers implements Caching {
         if (method == null) return result;
         ErrorWritingException ex = null;
         try {
-            return method.invoke(result, EMPTY_ARGS);
+            final long startedAt = System.currentTimeMillis();
+            final Object resolved = method.invoke(result, EMPTY_ARGS);
+            final long elapsedMs = System.currentTimeMillis() - startedAt;
+            if (Boolean.parseBoolean(System.getProperty("starsector.browserXstreamLoadDiag", "false"))
+                    && elapsedMs >= 100L) {
+                System.out.println("BrowserXStreamLoadDiag: readResolve class="
+                        + resultType.getName() + " elapsedMs=" + elapsedMs);
+            }
+            return resolved;
         } catch (final IllegalAccessException e) {
             ex = new ObjectAccessException("Cannot access method", e);
         } catch (final InvocationTargetException e) {
