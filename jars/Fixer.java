@@ -20075,7 +20075,7 @@ public class Fixer {
 
     static boolean shouldPreferDirectNewGameBeforeContinue(
             boolean directLaunchMode, String normalizedMode) {
-        String mode = normalizedMode == null ? "" : normalizedMode.toLowerCase(Locale.ROOT);
+        String mode = normalizedMode == null ? "" : normalizedMode;
         return directLaunchMode
                 && mode.indexOf("continue") >= 0
                 && mode.indexOf("direct") >= 0
