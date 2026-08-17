@@ -10,6 +10,7 @@ const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaig
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
 const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
+const traceOnly = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_TRACE_ONLY || 'false'));
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -458,6 +459,14 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   }
 
   flushLogs();
+  if (traceOnly) {
+    const phaseLines = logs.filter(line => line.includes('BrowserSectorGenStep:') || line.includes('BrowserNebulaCompat:'));
+    fs.writeFileSync(`${outputDir}/sector-generation-phases.log`, phaseLines.join('\n') + (phaseLines.length ? '\n' : ''));
+    console.log(`Trace-only campaign startup captured ${phaseLines.length} sector/nebula phase lines campaignSeen=${Boolean(campaignSeenAt)} timeoutMs=${timeoutMs}`);
+    await withTimeout(browser.close(), 10000, 'trace-only browser close').catch(() => undefined);
+    if (!campaignSeenAt) process.exitCode = 1;
+    return;
+  }
   const game = page.locator('#game-container');
   const gameCanvas = page.locator('#lwjglCanvas');
   const safeScreenshot = async (path, label) => {
