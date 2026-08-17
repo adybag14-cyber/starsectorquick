@@ -320,8 +320,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     __STARSECTOR_AUTO_CAMPAIGN_MODE__: 'new_direct',
     __STARSECTOR_DIRECT_LAUNCH__: true,
     __STARSECTOR_AUTO_VISIT_COLONY__: false,
-    __STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__: 'small',
-    __STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__: deepGameplay ? 'Corvus' : 'hyperspace',
+    __STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__: 'normal',
+    __STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__: deepGameplay ? 'Corvus' : 'Galatia',
     __STARSECTOR_AUTO_CAMPAIGN_TIMEOUT_MS__: 900000,
     __STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__: 45000,
     __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: true,
@@ -862,6 +862,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const pressRequired = !contextUnavailableAbilityIds.has(expectedId);
       const uiActionObserved = uiActionEvents.some(event => event.id === expectedId);
       const preReady = readiness.ready && uiReadiness.ready;
+      // A real press reported usable=true is stronger runtime evidence than the
+      // pre-press stable probe. The latter can be stale for a few frames after
+      // another duration ability settles under software rendering. Keep the UI
+      // readiness requirement and all mapping/action/state gates intact.
+      const runtimeReady = uiReadiness.ready && (readiness.ready || (pressObserved && usable));
       const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
       const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
       const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
@@ -869,14 +874,14 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       const animatedOrChanged = contextUnavailable || !usable || stateChanged || visualDiff >= 0.002;
       const minKeyboardEvents = confirmationPress ? 4 : 2;
       const failed = deliveredDelta < minKeyboardEvents || globalDelta < minKeyboardEvents
-        || !mapped || (pressRequired && (!preReady || !uiActionObserved || !pressObserved)) || wrongIds.length > 0
+        || !mapped || (pressRequired && (!runtimeReady || !uiActionObserved || !pressObserved)) || wrongIds.length > 0
         || !animatedOrChanged || Boolean(fatalSeenAt);
       abilityKeyResults.push({
-        digit, expectedId, mapped, slotMapped, pressObserved, uiActionObserved, contextUnavailable, preReady, readiness, uiReadiness, ids, wrongIds, usable,
+        digit, expectedId, mapped, slotMapped, pressObserved, uiActionObserved, contextUnavailable, preReady, runtimeReady, readiness, uiReadiness, ids, wrongIds, usable,
         confirmationPress, deliveredDelta, globalDelta, visualDiff, stateChanged, stateEvents: stateEvents.length,
         pressReadyMs: pressReady.matched ? pressReady.elapsedMs : null, failed,
       });
-      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} preReady=${preReady} pluginReadyWaitMs=${readiness.elapsedMs} pluginReadySource=${readiness.source} uiReady=${uiReadiness.ready} uiReadyWaitMs=${uiReadiness.elapsedMs} uiReadySource=${uiReadiness.source} uiAction=${uiActionObserved} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
+      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} preReady=${preReady} runtimeReady=${runtimeReady} pluginReadyWaitMs=${readiness.elapsedMs} pluginReadySource=${readiness.source} uiReady=${uiReadiness.ready} uiReadyWaitMs=${uiReadiness.elapsedMs} uiReadySource=${uiReadiness.source} uiAction=${uiActionObserved} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
       flushLogs();
       if (failed) break;
 

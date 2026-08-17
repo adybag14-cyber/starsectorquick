@@ -146,7 +146,11 @@ jobs:
           STARSECTOR_EXPECT_STATE: 'campaign'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_TEST_OUTPUT_DIR: 'test_output/pages-live'
-        run: node ci/campaign-render-test.js
+        run: |
+          node ci/campaign-render-test.js
+          python3 ci/verify-full-campaign-map.py test_output/pages-live/browser.log \
+            --expected-sector-size normal \
+            --expected-start-location Corvus
 
       - name: Verify live public tutorial starts from a clean browser state
         env:
@@ -157,7 +161,10 @@ jobs:
           STARSECTOR_TEST_OUTPUT_DIR: 'test_output/pages-tutorial'
         run: |
           node ci/campaign-render-test.js
-          grep -q 'BrowserTutorialCompat: started stock Galatia tutorial' test_output/pages-tutorial/browser.log
+          python3 ci/verify-full-campaign-map.py test_output/pages-tutorial/browser.log \
+            --expected-sector-size normal \
+            --expected-start-location Galatia \
+            --require-tutorial
 
       - name: Upload live Pages evidence
         if: always()

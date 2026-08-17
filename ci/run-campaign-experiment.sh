@@ -796,6 +796,22 @@ STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
+if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
+  TUTORIAL_OUT="${OUT}-tutorial"
+  rm -rf "$TUTORIAL_OUT"
+  STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
+  STARSECTOR_TEST_TIMEOUT_MS=720000 \
+  STARSECTOR_FRAME_SETTLE_MS=5000 \
+  STARSECTOR_EXPECT_STATE=campaign \
+  STARSECTOR_DEEP_GAMEPLAY=false \
+  STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
+  STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
+    node ci/campaign-render-test.js
+  python3 ci/verify-full-campaign-map.py "$TUTORIAL_OUT/browser.log" \
+    --expected-sector-size normal \
+    --expected-start-location Galatia \
+    --require-tutorial
+fi
 # The optimized run is only valid if the real game loaded and used the bulk spec
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
@@ -809,13 +825,9 @@ if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
-  grep -q 'Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.' "$OUT/browser.log"
-  grep -q 'Fixer: full campaign outer-sector procedural generation complete.' "$OUT/browser.log"
-  if grep -q 'Fixer: explicit diagnostic override is skipping outer-sector procedural generation.' "$OUT/browser.log"; then
-    echo 'Deep gameplay unexpectedly ran with partial-map procgen override.' >&2
-    exit 1
-  fi
-  grep -Eq 'Fixer: auto campaign world-ready systems=[1-9][0-9]* planets=[1-9][0-9]* markets=[1-9][0-9]* factions=([3-9]|[1-9][0-9]+) playerFleet=true playerLocation=true' "$OUT/browser.log"
+  python3 ci/verify-full-campaign-map.py "$OUT/browser.log" \
+    --expected-sector-size normal \
+    --expected-start-location Corvus
   grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"

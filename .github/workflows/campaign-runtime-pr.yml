@@ -77,7 +77,7 @@ jobs:
     name: campaign-direct-main-thread-java17
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -101,6 +101,7 @@ jobs:
           EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
+          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Validate Pages overlay from verified candidate
         run: |
@@ -121,6 +122,7 @@ jobs:
           name: campaign-runtime-campaign-direct-main-thread-java17
           path: |
             test_output/campaign-direct-main-thread-java17
+            test_output/campaign-direct-main-thread-java17-tutorial
             test_output/pages-overlays/pr-check/web-runtime-profile.json
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
           if-no-files-found: warn
