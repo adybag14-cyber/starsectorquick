@@ -57,11 +57,18 @@ public class SerializationMembers implements Caching {
         if (method == null) return result;
         ErrorWritingException ex = null;
         try {
+            final boolean browserLoadDiag = Boolean.parseBoolean(
+                    System.getProperty("starsector.browserXstreamLoadDiag", "false"));
+            final boolean gameReadResolve = browserLoadDiag
+                    && resultType.getName().startsWith("com.fs.");
+            if (gameReadResolve) {
+                System.out.println("BrowserXStreamLoadDiag: readResolve-before class="
+                        + resultType.getName());
+            }
             final long startedAt = System.currentTimeMillis();
             final Object resolved = method.invoke(result, EMPTY_ARGS);
             final long elapsedMs = System.currentTimeMillis() - startedAt;
-            if (Boolean.parseBoolean(System.getProperty("starsector.browserXstreamLoadDiag", "false"))
-                    && elapsedMs >= 100L) {
+            if (browserLoadDiag && elapsedMs >= 100L) {
                 System.out.println("BrowserXStreamLoadDiag: readResolve class="
                         + resultType.getName() + " elapsedMs=" + elapsedMs);
             }
