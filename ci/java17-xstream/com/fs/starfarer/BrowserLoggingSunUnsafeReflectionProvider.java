@@ -2,7 +2,7 @@ package com.fs.starfarer;
 
 import com.thoughtworks.xstream.converters.reflection.SunUnsafeReflectionProvider;
 
-/** Diagnostic-only boundary logging around the first CampaignEngine field write. */
+/** Diagnostic-only boundary logging around selected browser XStream field writes. */
 public final class BrowserLoggingSunUnsafeReflectionProvider extends SunUnsafeReflectionProvider {
     private static final java.lang.String ENABLE_PROPERTY = "starsector.browserXstreamLoadDiag";
 
@@ -11,18 +11,24 @@ public final class BrowserLoggingSunUnsafeReflectionProvider extends SunUnsafeRe
                            final java.lang.String fieldName,
                            final java.lang.Object value,
                            final java.lang.Class definedIn) {
-        final boolean interesting = Boolean.parseBoolean(System.getProperty(ENABLE_PROPERTY, "false"))
-                && object != null
-                && "com.fs.starfarer.campaign.CampaignEngine".equals(object.getClass().getName())
+        final java.lang.String objectClass = object == null ? "<null>" : object.getClass().getName();
+        final boolean campaignFirst = "com.fs.starfarer.campaign.CampaignEngine".equals(objectClass)
                 && "isFastForwardIteration".equals(fieldName);
+        final boolean marketPrimary = ("com.fs.starfarer.campaign.econ.Market".equals(objectClass)
+                || "com.fs.starfarer.campaign.econ.PlanetConditionMarket".equals(objectClass))
+                && "primaryEntity".equals(fieldName);
+        final boolean interesting = Boolean.parseBoolean(System.getProperty(ENABLE_PROPERTY, "false"))
+                && (campaignFirst || marketPrimary);
         if (interesting) {
-            System.out.println("BrowserXStreamLoadDiag: writeField-before field=" + fieldName
-                    + " value=" + java.lang.String.valueOf(value)
+            System.out.println("BrowserXStreamLoadDiag: writeField-before object=" + objectClass
+                    + " field=" + fieldName
+                    + " valueClass=" + (value == null ? "<null>" : value.getClass().getName())
                     + " definedIn=" + (definedIn == null ? "<null>" : definedIn.getName()));
         }
         super.writeField(object, fieldName, value, definedIn);
         if (interesting) {
-            System.out.println("BrowserXStreamLoadDiag: writeField-after field=" + fieldName);
+            System.out.println("BrowserXStreamLoadDiag: writeField-after object=" + objectClass
+                    + " field=" + fieldName);
         }
     }
 }
