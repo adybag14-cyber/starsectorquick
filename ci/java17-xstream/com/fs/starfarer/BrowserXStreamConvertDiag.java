@@ -25,7 +25,15 @@ public final class BrowserXStreamConvertDiag {
         childMs[frame] = 0L;
         types[frame] = type;
         converters[frame] = converter;
-        nodes[frame] = safeNode(reader);
+        final java.lang.String node = safeNode(reader);
+        nodes[frame] = node;
+        if ("primaryEntity".equals(node)) {
+            System.out.println("BrowserXStreamLoadDiag: convert-enter node=primaryEntity"
+                    + " type=" + (type == null ? "<null>" : type.getName())
+                    + " converter=" + (converter == null ? "<null>" : converter.getClass().getName())
+                    + " attrs=" + safeAttributes(reader)
+                    + " depth=" + frame);
+        }
     }
 
     public static void exit() {
@@ -61,6 +69,25 @@ public final class BrowserXStreamConvertDiag {
         types = (Class[]) java.util.Arrays.copyOf(types, size);
         converters = (Converter[]) java.util.Arrays.copyOf(converters, size);
         nodes = (java.lang.String[]) java.util.Arrays.copyOf(nodes, size);
+    }
+
+    private static java.lang.String safeAttributes(final HierarchicalStreamReader reader) {
+        if (reader == null) return "<null-reader>";
+        try {
+            final java.lang.StringBuilder out = new java.lang.StringBuilder("{");
+            final java.util.Iterator names = reader.getAttributeNames();
+            int count = 0;
+            while (names.hasNext() && count < 12) {
+                final java.lang.String name = java.lang.String.valueOf(names.next());
+                if (count > 0) out.append(',');
+                out.append(name).append('=').append(java.lang.String.valueOf(reader.getAttribute(name)));
+                count++;
+            }
+            if (names.hasNext()) out.append(",...");
+            return out.append('}').toString();
+        } catch (final Throwable t) {
+            return "<error:" + t.getClass().getName() + ">";
+        }
     }
 
     private static java.lang.String safeNode(final HierarchicalStreamReader reader) {
