@@ -1,14 +1,14 @@
 {
-  "profile": "corvus-asharu-compat",
-  "sourceSha": "ef4d0b367782beab378ec64058ef4615ae140f92",
-  "workflowRunId": "31900568694",
-  "generatedAt": "2026-08-15T18:16:09.851016+00:00",
-  "overlayFiles": 836,
+  "profile": "full-stock-campaign",
+  "sourceSha": "d3b7a56dcf8ab61cacca29beeff3befd4f4650e9",
+  "workflowRunId": "32039391557",
+  "generatedAt": "2026-08-17T14:34:05.616679+00:00",
+  "overlayFiles": 874,
   "dataPack": {
     "version": 1,
     "fileCount": 1696,
-    "bytes": 10095995,
-    "sha256": "939f6e090d3402393ba5881469cba56f8505665834cf7b77d5223ac136813ec0"
+    "bytes": 10099127,
+    "sha256": "c2751f4250870505abb3e61731f9c9d26477391d82ed272082f57303dca92c3e"
   },
   "graphicsPack": {
     "version": 1,

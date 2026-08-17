@@ -10,6 +10,31 @@ const glCtx = glCanvas.getContext("webgl2", {
 	desynchronized: true,
 	powerPreference: "high-performance"
 });
+
+window.__lwjglGraphicsInfo = (() => {
+	if(!glCtx) return null;
+	try {
+		const extensions = glCtx.getSupportedExtensions() || [];
+		return {
+			backend: "webgl2",
+			version: glCtx.getParameter(glCtx.VERSION),
+			shadingLanguageVersion: glCtx.getParameter(glCtx.SHADING_LANGUAGE_VERSION),
+			vendor: glCtx.getParameter(glCtx.VENDOR),
+			renderer: glCtx.getParameter(glCtx.RENDERER),
+			maxTextureSize: glCtx.getParameter(glCtx.MAX_TEXTURE_SIZE),
+			maxVertexAttribs: glCtx.getParameter(glCtx.MAX_VERTEX_ATTRIBS),
+			maxCombinedTextureUnits: glCtx.getParameter(glCtx.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
+			maxDrawBuffers: glCtx.getParameter(glCtx.MAX_DRAW_BUFFERS),
+			maxSamples: glCtx.getParameter(glCtx.MAX_SAMPLES),
+			extensionCount: extensions.length,
+			extensions,
+			contextAttributes: glCtx.getContextAttributes()
+		};
+	} catch(error) {
+		return { backend: "webgl2", error: String(error && (error.message || error) || error) };
+	}
+})();
+try { console.log("LWJGLGraphicsInfo: " + JSON.stringify(window.__lwjglGraphicsInfo)); } catch(_) {}
 const defaultWindowWidth = 1000;
 const defaultWindowHeight = 500;
 
@@ -241,6 +266,11 @@ glCtx.useProgram(program);
 var vertexBuffer = glCtx.createBuffer();
 var colorBuffer = glCtx.createBuffer();
 var texCoordBuffer = glCtx.createBuffer();
+// WEBGL_QUAD_INDEX_BATCH_V2: WebGL2 has no GL_QUADS. Cache an index buffer that
+// expands each legacy 4-vertex quad into two triangles so a whole OpenGL quad
+// batch is submitted in one WebGL draw call instead of one call per quad.
+var quadIndexBuffer = glCtx.createBuffer();
+var quadIndexVertexCapacity = 0;
 var vertexPosition = glCtx.getAttribLocation(program, "aVertexPosition");
 var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
@@ -434,7 +464,13 @@ var presentationStats = {
 	lastFramebufferStatus: null,
 	lastViewport: null,
 	recentFps: 0,
-	recentFrameMs: 0
+	recentFrameMs: 0,
+	legacyDrawCalls: 0,
+	webglDrawCalls: 0,
+	quadBatches: 0,
+	quadQuads: 0,
+	quadDrawCallsSaved: 0,
+	quadIndexBufferUploads: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -745,25 +781,72 @@ function callList(listId)
 		c.f.apply(null, c.a);
 	}
 }
+function ensureQuadIndexCapacity(vertexCount)
+{
+	if(vertexCount <= quadIndexVertexCapacity)
+		return;
+	// Grow geometrically so varying sprite batches do not reallocate the element
+	// buffer every time a slightly larger batch appears.
+	var capacity = quadIndexVertexCapacity > 0 ? quadIndexVertexCapacity : 256;
+	while(capacity < vertexCount)
+		capacity *= 2;
+	capacity = Math.ceil(capacity / 4) * 4;
+	var quadCount = capacity / 4;
+	var indices = new Uint32Array(quadCount * 6);
+	for(var q=0;q<quadCount;q++)
+	{
+		var v = q * 4;
+		var i = q * 6;
+		indices[i] = v;
+		indices[i + 1] = v + 1;
+		indices[i + 2] = v + 2;
+		indices[i + 3] = v;
+		indices[i + 4] = v + 2;
+		indices[i + 5] = v + 3;
+	}
+	glCtx.bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER, quadIndexBuffer);
+	glCtx.bufferData(glCtx.ELEMENT_ARRAY_BUFFER, indices, glCtx.STATIC_DRAW);
+	quadIndexVertexCapacity = capacity;
+	presentationStats.quadIndexBufferUploads++;
+}
 function drawArraysImpl(mode, first, count)
 {
 	// TODO: Conditional
 	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
 	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	// Client-array upload/capture currently assumes first==0. Preserve that
+	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
-	// We can render each quad a separate GL_TRIANGLE_FAN
+	presentationStats.legacyDrawCalls++;
 	if(mode == 7/*QUADS*/ && (count % 4) == 0)
 	{
-		for(var i=0;i<count;i+=4)
-			glCtx.drawArrays(glCtx.TRIANGLE_FAN, i, 4);
+		var quadCount = count / 4;
+		if(quadCount <= 1)
+		{
+			// A single quad already costs one WebGL draw; avoid index-buffer work.
+			glCtx.drawArrays(glCtx.TRIANGLE_FAN, 0, count);
+			presentationStats.webglDrawCalls++;
+		}
+		else
+		{
+			ensureQuadIndexCapacity(count);
+			glCtx.bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER, quadIndexBuffer);
+			glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);
+			presentationStats.webglDrawCalls++;
+			presentationStats.quadBatches++;
+			presentationStats.quadQuads += quadCount;
+			presentationStats.quadDrawCallsSaved += quadCount - 1;
+		}
 	}
 	else if(mode == 8/*QUAD_STRIP*/)
 	{
 		glCtx.drawArrays(glCtx.TRIANGLE_STRIP, first, count);
+		presentationStats.webglDrawCalls++;
 	}
 	else if(mode == 9/*POLYGON*/)
 	{
 		glCtx.drawArrays(glCtx.TRIANGLE_FAN, first, count);
+		presentationStats.webglDrawCalls++;
 	}
 	else if(
 		mode == glCtx.POINTS ||
@@ -776,6 +859,7 @@ function drawArraysImpl(mode, first, count)
 	)
 	{
 		glCtx.drawArrays(mode, first, count);
+		presentationStats.webglDrawCalls++;
 	}
 	else
 	{

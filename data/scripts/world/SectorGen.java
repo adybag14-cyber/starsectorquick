@@ -56,74 +56,174 @@ public class SectorGen implements SectorGeneratorPlugin {
 	}
 
 	public void generate(SectorAPI sector) {
-        // Browser compatibility sector. Match the authoritative precompiled
-        // diagnostic path: preserve the stock Corvus shell/current/respawn
-        // skeleton, faction relationships and core plugin/scripts, while
-        // deferring heavyweight system population.
-        System.out.println("BrowserSectorGenDiag: begin lightweight SectorGen.generate");
-        try {
-            System.out.println("BrowserSectorGenDiag: before Corvus shell bootstrap");
-            StarSystemAPI system = sector.createStarSystem("Corvus");
-            system.setBackgroundTextureFilename("graphics/backgrounds/background4.jpg");
-            sector.setCurrentLocation(system);
-            sector.setRespawnLocation(system);
-            sector.getRespawnCoordinates().set(-2500, -3500);
-            System.out.println("BrowserSectorGenDiag: after Corvus shell bootstrap");
-        } catch (Throwable t) {
-            System.out.println("BrowserSectorGenDiag: Corvus shell bootstrap partial: " + t);
-            try {
-                Global.getLogger(SectorGen.class).warn(
-                        "SectorGen: browser Corvus shell bootstrap was partial", t);
-            } catch (Throwable ignored) {
-            }
-        }
+		//ClassLoader cl = Global.getSettings().getScriptClassLoader();
+		boolean compatibilityFastPath = shouldUseCompatibilityFastPath();
 
-        try {
-            System.out.println("BrowserSectorGenDiag: before initFactionRelationships");
-            initFactionRelationships(sector);
-            System.out.println("BrowserSectorGenDiag: after initFactionRelationships");
-        } catch (Throwable t) {
-            System.out.println("BrowserSectorGenDiag: initFactionRelationships partial: " + t);
-            try {
-                Global.getLogger(SectorGen.class).warn(
-                        "SectorGen: browser relationship initialization was partial", t);
-            } catch (Throwable ignored) {
-            }
-        }
+		StarSystemAPI system = sector.createStarSystem("Corvus");
+		//system.getLocation().set(16000 - 8000, 9000 - 10000);
+		system.setBackgroundTextureFilename("graphics/backgrounds/background4.jpg");
 
-        try {
-            System.out.println("BrowserSectorGenDiag: before CoreCampaignPluginImpl registration");
-            sector.registerPlugin(new CoreCampaignPluginImpl());
-            System.out.println("BrowserSectorGenDiag: after CoreCampaignPluginImpl registration");
-        } catch (Throwable t) {
-            System.out.println("BrowserSectorGenDiag: CoreCampaignPluginImpl registration skipped: " + t);
-            try {
-                Global.getLogger(SectorGen.class).warn(
-                        "SectorGen: browser core campaign plugin registration skipped", t);
-            } catch (Throwable ignored) {
-            }
-        }
-        try {
-            System.out.println("BrowserSectorGenDiag: before core script registration");
-            sector.addScript(new CoreScript());
-            sector.addScript(new CoreEventProbabilityManager());
-            System.out.println("BrowserSectorGenDiag: after core script registration");
-        } catch (Throwable t) {
-            System.out.println("BrowserSectorGenDiag: core script registration partial: " + t);
-            try {
-                Global.getLogger(SectorGen.class).warn(
-                        "SectorGen: browser core script registration was partial", t);
-            } catch (Throwable ignored) {
-            }
-        }
+		if (compatibilityFastPath) {
+			try {
+				sector.setCurrentLocation(system);
+				Global.getLogger(SectorGen.class).warn("SectorGen: compatibility current location primed to Corvus.");
+			} catch (Throwable t) {
+				try {
+					Global.getLogger(SectorGen.class).warn("SectorGen: compatibility current location prime failed.", t);
+				} catch (Throwable ignored) {
+				}
+			}
+		} else {
+			//sector.setCurrentLocation(system);
+		}
+		sector.setRespawnLocation(system);
+		sector.getRespawnCoordinates().set(-2500, -3500);
 
-        System.out.println("BrowserSectorGenDiag: end lightweight SectorGen.generate");
-        try {
-            Global.getLogger(SectorGen.class).warn(
-                    "SectorGen: using lightweight CheerpJ browser sector; desktop core-system generation deferred.");
-        } catch (Throwable ignored) {
-        }
-    }
+		initFactionRelationships(sector);
+
+		runSectorStep("Galatia", compatibilityFastPath, new SectorStep() { public void run() { new Galatia().generate(sector); } });
+		runSectorStep("Askonia", compatibilityFastPath, new SectorStep() { public void run() { new Askonia().generate(sector); } });
+		runSectorStep("Eos", compatibilityFastPath, new SectorStep() { public void run() { new Eos().generate(sector); } });
+		runSectorStep("Valhalla", compatibilityFastPath, new SectorStep() { public void run() { new Valhalla().generate(sector); } });
+		runSectorStep("Arcadia", compatibilityFastPath, new SectorStep() { public void run() { new Arcadia().generate(sector); } });
+		runSectorStep("Magec", compatibilityFastPath, new SectorStep() { public void run() { new Magec().generate(sector); } });
+		runSectorStep("Corvus", compatibilityFastPath, new SectorStep() { public void run() { new Corvus().generate(sector); } });
+		runSectorStep("Aztlan", compatibilityFastPath, new SectorStep() { public void run() { new Aztlan().generate(sector); } });
+		runSectorStep("Samarra", compatibilityFastPath, new SectorStep() { public void run() { new Samarra().generate(sector); } });
+		runSectorStep("Penelope", compatibilityFastPath, new SectorStep() { public void run() { new Penelope().generate(sector); } });
+		runSectorStep("Yma", compatibilityFastPath, new SectorStep() { public void run() { new Yma().generate(sector); } });
+		runSectorStep("Hybrasil", compatibilityFastPath, new SectorStep() { public void run() { new Hybrasil().generate(sector); } });
+		runSectorStep("Duzahk", compatibilityFastPath, new SectorStep() { public void run() { new Duzahk().generate(sector); } });
+		runSectorStep("TiaTaxet", compatibilityFastPath, new SectorStep() { public void run() { new TiaTaxet().generate(sector); } });
+		runSectorStep("Canaan", compatibilityFastPath, new SectorStep() { public void run() { new Canaan().generate(sector); } });
+		runSectorStep("AlGebbar", compatibilityFastPath, new SectorStep() { public void run() { new AlGebbar().generate(sector); } });
+		runSectorStep("Isirah", compatibilityFastPath, new SectorStep() { public void run() { new Isirah().generate(sector); } });
+		runSectorStep("KumariKandam", compatibilityFastPath, new SectorStep() { public void run() { new KumariKandam().generate(sector); } });
+		runSectorStep("Naraka", compatibilityFastPath, new SectorStep() { public void run() { new Naraka().generate(sector); } });
+		runSectorStep("Thule", compatibilityFastPath, new SectorStep() { public void run() { new Thule().generate(sector); } });
+		runSectorStep("Mayasura", compatibilityFastPath, new SectorStep() { public void run() { new Mayasura().generate(sector); } });
+		runSectorStep("Zagan", compatibilityFastPath, new SectorStep() { public void run() { new Zagan().generate(sector); } });
+		runSectorStep("Westernesse", compatibilityFastPath, new SectorStep() { public void run() { new Westernesse().generate(sector); } });
+		runSectorStep("Tyle", compatibilityFastPath, new SectorStep() { public void run() { new Tyle().generate(sector); } });
+
+		LocationAPI hyper = Global.getSector().getHyperspace();
+		if (!compatibilityFastPath) {
+			SectorEntityToken atlanticLabel = hyper.addCustomEntity("atlantic_label_id", null, "atlantic_label", null);
+			SectorEntityToken perseanLabel = hyper.addCustomEntity("persean_label_id", null, "persean_label", null);
+			SectorEntityToken luddicLabel = hyper.addCustomEntity("luddic_label_id", null, "luddic_label", null);
+			SectorEntityToken zinLabel = hyper.addCustomEntity("zin_label_id", null, "zin_label", null);
+			SectorEntityToken abyssLabel = hyper.addCustomEntity("opabyss_label_id", null, "opabyss_label", null);
+			SectorEntityToken telmunLabel = hyper.addCustomEntity("telmun_label_id", null, "telmun_label", null);
+			SectorEntityToken cathedralLabel = hyper.addCustomEntity("cathedral_label_id", null, "cathedral_label", null);
+			SectorEntityToken coreLabel = hyper.addCustomEntity("core_label_id", null, "core_label", null);
+
+			atlanticLabel.setFixedLocation(500, -2000);
+			perseanLabel.setFixedLocation(-10000, 1000);
+			luddicLabel.setFixedLocation(-14000, -9500);
+			zinLabel.setFixedLocation(-22000, -17000);
+			telmunLabel.setFixedLocation(-16000, 0);
+			cathedralLabel.setFixedLocation(-12700, -12000);
+			coreLabel.setFixedLocation(0, -6000);
+
+			abyssLabel.setFixedLocation(-65000, -47000);
+		} else {
+			try {
+				Global.getLogger(SectorGen.class).warn("SectorGen: skipping hyperspace labels for CheerpJ/compatibility runtime.");
+			} catch (Throwable ignored) {
+			}
+		}
+
+		/*SectorEntityToken deep_hyperspace_test = Global.getSector().getHyperspace().addTerrain(Terrain.NEBULA, new BaseTiledTerrain.TileParams(
+				"   xx     " +
+				"   xxx    " +
+				"  xxx x   " +
+				"  xx   x  " +
+				" xxxx xxx " +
+				"  xxxxxxx " +
+				" xxxxxxxxx" +
+				" xxxxxxxxx" +
+				"  xxxxxxx " +
+				" xxxxxxx  " +
+				" x xxxxx  " +
+				"  xxxxxx  " +
+				" xxxx xxx " +
+				"xxxx  xxx " +
+				" xxxx     " +
+				"xxxxxxxxx " +
+				"  xxxxxxxx" +
+				" xxxxxxxxx" +
+				"  xxxxxxx " +
+				"   xxx    ",
+				10, 20, // size of the nebula grid, should match above string
+				"terrain", "deep_hyperspace", 4, 4));
+
+		deep_hyperspace_test.getLocation().set(5000,5000);*/
+
+
+		if (!compatibilityFastPath) {
+			SectorEntityToken deep_hyperspace = Misc.addNebulaFromPNG("data/campaign/terrain/hyperspace_map.png",
+			//SectorEntityToken deep_hyperspace = Misc.addNebulaFromPNG("data/campaign/terrain/hyperspace_map_filled.png",
+					  0, 0, // center of nebula
+					  Global.getSector().getHyperspace(), // location to add to
+					  "terrain", "deep_hyperspace", // "nebula_blue", // texture to use, uses xxx_map for map
+					  4, 4, Terrain.HYPERSPACE, null); // number of cells in texture
+		}
+
+
+
+		// ensure area around stars is clear
+		if (!compatibilityFastPath) {
+			HyperspaceTerrainPlugin plugin = (HyperspaceTerrainPlugin) Misc.getHyperspaceTerrain().getPlugin();
+			NebulaEditor editor = new NebulaEditor(plugin);
+			float minRadius = plugin.getTileSize() * 2f;
+			for (StarSystemAPI curr : sector.getStarSystems()) {
+				float radius = curr.getMaxRadiusInHyperspace() * 0.5f;
+				editor.clearArc(curr.getLocation().x, curr.getLocation().y, 0, radius + minRadius * 0.5f, 0, 360f);
+				editor.clearArc(curr.getLocation().x, curr.getLocation().y, 0, radius + minRadius, 0, 360f, 0.25f);
+			}
+		} else {
+			try {
+				Global.getLogger(SectorGen.class).warn("SectorGen: skipping hyperspace terrain smoothing for CheerpJ/compatibility runtime.");
+			} catch (Throwable ignored) {
+			}
+		}
+
+
+
+//		PirateSpawnPoint pirateSpawn = new PirateSpawnPoint(sector, sector.getHyperspace(), 1, 15, system.getHyperspaceAnchor());
+//		system.addSpawnPoint(pirateSpawn);
+//		for (int i = 0; i < 2; i++) {
+//			pirateSpawn.spawnFleet();
+//		}
+
+		// need to do this after hyperspace terrain exists
+		//SectorProcGen.generate();
+		// this is done through settings.json, "plugins"->"newGameSectorProcGen"
+
+		sector.registerPlugin(new CoreCampaignPluginImpl());
+		sector.addScript(new CoreScript());
+		sector.addScript(new CoreEventProbabilityManager());
+
+		if (!compatibilityFastPath) {
+			sector.addScript(new EconomyFleetRouteManager());
+			//sector.addScript(new MercFleetManager());
+			sector.addScript(new MercFleetManagerV2());
+
+
+			sector.addScript(new DisposablePirateFleetManager());
+			sector.addScript(new DisposableLuddicPathFleetManager());
+		} else {
+			try {
+				Global.getLogger(SectorGen.class).warn("SectorGen: skipping fleet-manager startup for CheerpJ/compatibility runtime.");
+			} catch (Throwable ignored) {
+			}
+		}
+
+//		sector.addScript(new LuddicPathFleetManager());
+//		sector.addScript(new PirateFleetManager());
+//		sector.addScript(new BountyPirateFleetManager());
+
+	}
 
 	protected boolean shouldUseCompatibilityFastPath() {
 		String force = System.getProperty("starsector.compatibilityFastPath", "");

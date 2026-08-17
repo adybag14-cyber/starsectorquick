@@ -1,15 +1,15 @@
 {
   "profile": {
-    "profile": "corvus-asharu-compat",
-    "sourceSha": "ef4d0b367782beab378ec64058ef4615ae140f92",
-    "workflowRunId": "31900568694",
-    "generatedAt": "2026-08-15T18:16:09.851016+00:00",
-    "overlayFiles": 836,
+    "profile": "full-stock-campaign",
+    "sourceSha": "d3b7a56dcf8ab61cacca29beeff3befd4f4650e9",
+    "workflowRunId": "32039391557",
+    "generatedAt": "2026-08-17T14:34:05.616679+00:00",
+    "overlayFiles": 874,
     "dataPack": {
       "version": 1,
       "fileCount": 1696,
-      "bytes": 10095995,
-      "sha256": "939f6e090d3402393ba5881469cba56f8505665834cf7b77d5223ac136813ec0"
+      "bytes": 10099127,
+      "sha256": "c2751f4250870505abb3e61731f9c9d26477391d82ed272082f57303dca92c3e"
     },
     "graphicsPack": {
       "version": 1,
@@ -31,23 +31,118 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 89626,
-      "sha256": "5be4806b1eca199ed2da7501b93f0a0c8c31ddc49cbc3ebb304a33575862661e"
+      "bytes": 92797,
+      "sha256": "9b5e2c5fd95bebfc904b3e4f97ed1e1970fdc5e6490fce2db1cfe1ad184ea63c"
+    },
+    {
+      "path": "data/campaign/econ/algebbar.json",
+      "bytes": 474,
+      "sha256": "d752a44f5cdc277e8fb157c6bd946a0729fc55943958d593412c0209f2bf666b"
+    },
+    {
+      "path": "data/campaign/econ/arcadia.json",
+      "bytes": 982,
+      "sha256": "1b131c8fed7dfd2f45548a8ad5ee077653d68e876cacd7ddcaf9ea3d925ac3ab"
+    },
+    {
+      "path": "data/campaign/econ/askonia.json",
+      "bytes": 2611,
+      "sha256": "c5567f7561eda0abcc698dd2b9fc208e072f8fcdf50e21631a0b3fabd50384c9"
+    },
+    {
+      "path": "data/campaign/econ/aztlan.json",
+      "bytes": 977,
+      "sha256": "c817e132f874da01353dbd1120cb989cf19b14594ec2e32f7fa1a57bd5f33253"
+    },
+    {
+      "path": "data/campaign/econ/canaan.json",
+      "bytes": 1069,
+      "sha256": "c75f30c5e6b89d2941ccbfee3ceb68671c01966df88b522369af81011d97275f"
     },
     {
       "path": "data/campaign/econ/corvus.json",
-      "bytes": 531,
-      "sha256": "2b66949da76a2b36a981f0b785a8817067896ab34e598256a07d9c8427aef3fc"
+      "bytes": 1528,
+      "sha256": "690e3aef99a1a7806d97e45a9391e0b68c6dc78bc9d5037860ad4073557b7803"
     },
     {
       "path": "data/campaign/econ/economy.json",
-      "bytes": 192,
-      "sha256": "d725eb6da10c9ddd0f4e944d295b759d8fd7368c357648cfd8ab694197b1c595"
+      "bytes": 535,
+      "sha256": "b536590ec28318bf78acaa881aed43e99ae855a5a3e175bb2fb002ac5ef0332a"
+    },
+    {
+      "path": "data/campaign/econ/eos.json",
+      "bytes": 1730,
+      "sha256": "90222a4c5c86cf6ab53ec7da0187f1b3086baf9e29bd569c0ce9126b1cbfc60d"
+    },
+    {
+      "path": "data/campaign/econ/hybrasil.json",
+      "bytes": 2279,
+      "sha256": "7ac16aabb24a0e153d4f7b0be7c83ca607d1f45fd7577536aadefd29864fd879"
     },
     {
       "path": "data/campaign/econ/index.list",
       "bytes": 363,
-      "sha256": "af2d65c7fc0b7f9890d7785eca3c0feb58b52e4797bce1398757c2eec2b093f4"
+      "sha256": "0e677dcaca94077cd2c69c54fa65dbb15c32561e7ac62bfa349d7fdbd0dc2133"
+    },
+    {
+      "path": "data/campaign/econ/isirah.json",
+      "bytes": 947,
+      "sha256": "d26ad0c5570eb6b86eea8ab6e6edce642bcaa2836c9df1de3104550ee1fd5d88"
+    },
+    {
+      "path": "data/campaign/econ/kumarikandam.json",
+      "bytes": 1463,
+      "sha256": "b982853db9f9426c9699abdbb351d66d6dc1f49369b7eb36e2c8c6377f0fe31d"
+    },
+    {
+      "path": "data/campaign/econ/magec.json",
+      "bytes": 1215,
+      "sha256": "e051f972e6c3e76e3d2fde2bc307783ee68946908fdc1147ea0d3ec91c7cdd20"
+    },
+    {
+      "path": "data/campaign/econ/mayasura.json",
+      "bytes": 1047,
+      "sha256": "afc1052e597ef3c5ebd1b4f93cf293b6133c195c52e4ad02f9a3f367e46d4f80"
+    },
+    {
+      "path": "data/campaign/econ/naraka.json",
+      "bytes": 692,
+      "sha256": "c47feefbf568deeabe4b87e12f28bf33e8d69834e345c939e8b43bf033006c61"
+    },
+    {
+      "path": "data/campaign/econ/samarra.json",
+      "bytes": 1567,
+      "sha256": "e6295a51467400c78844b04abaad45f0d7f73de162d16faf6f26a1907422a1ce"
+    },
+    {
+      "path": "data/campaign/econ/thule.json",
+      "bytes": 1112,
+      "sha256": "60cb3b9dfc5a80f955d45c3944a27308ef3647919519f22d63e19e9b3eea4a67"
+    },
+    {
+      "path": "data/campaign/econ/tyle.json",
+      "bytes": 896,
+      "sha256": "c1b50d2143e20fb655100aea4439b3cfe30c0ddd85f1f2d4709bfc1dfac9a587"
+    },
+    {
+      "path": "data/campaign/econ/valhalla.json",
+      "bytes": 1751,
+      "sha256": "93bf771db40e753acf0dc5390e2767208bdb75aef7d8a39b84d1aa639f3cf071"
+    },
+    {
+      "path": "data/campaign/econ/westernesse.json",
+      "bytes": 1456,
+      "sha256": "81a24761432ae64f22ef495e3d8687e88af3465fb82dc7fe437fcfd5ab11c369"
+    },
+    {
+      "path": "data/campaign/econ/yma.json",
+      "bytes": 818,
+      "sha256": "365357a3412e5acd3f9445c834bcb286848b83caa18cc1d9129cf8038a1e50c9"
+    },
+    {
+      "path": "data/campaign/econ/zagan.json",
+      "bytes": 1203,
+      "sha256": "54fc5ca19f863fce8eeab1cd7994c4d49006001371423320bb5991ad388d8948"
     },
     {
       "path": "data/campaign/index.list",
@@ -196,8 +291,8 @@
     },
     {
       "path": "data/scripts/world/SectorGen.java",
-      "bytes": 13775,
-      "sha256": "af05fbff5cd9b16fa83bc11ee2eb1f7fab3cc72f92bf6e354284a3bcb791ea99"
+      "bytes": 18929,
+      "sha256": "5cd08900b32d011968de5e27acda44b86d5eea35bcdeab28d03c31f84b71ead7"
     },
     {
       "path": "data/scripts/world/corvus/index.list",
@@ -506,18 +601,18 @@
     },
     {
       "path": "jars/Fixer.java",
-      "bytes": 954022,
-      "sha256": "de4b8828b88d75c18138599f04aa41d7171c5b565b0b59c3de095a77456b7277"
+      "bytes": 974777,
+      "sha256": "9cf9bfcde6b8b95cc09564703fc918eb0065bd184ed3ea91fa862c45ce1f609f"
     },
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "3874075769c5bbfda3c01ba9f83ae2bc8c5f54ffd4b9099d325a0e643b075b51"
+      "sha256": "95017c4bf33456f4096b0b26ffd3c0447bc8d5cb53d931543c134315a34d6f25"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 228449,
-      "sha256": "513b5a6382efcb31f5e1be5d68dfc15c463675325cb2f1fa70ae80c7d0552b20"
+      "bytes": 249254,
+      "sha256": "1376eb72fdf39532f2408dafa32a638d53edba37616df24e77c0f87140b5b6e6"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -527,22 +622,22 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "9f6a556fe7ca843e45de4847ba0e9923c86ec2688a09e36a05d3293048fc0dc5"
+      "sha256": "c31b1f200d7742f5eff615ed4cdd1f8cce10bbfa6f6bac19a441f5837f026eb6"
     },
     {
       "path": "jars/scripts-precompiled.jar",
-      "bytes": 151978,
-      "sha256": "dc5b8fb97dda10c19b1c2f85f83dfc22ddd461dec9711dc623a2e42d98166ec6"
+      "bytes": 152163,
+      "sha256": "4f7998230e137a03c08f8921836529b88996874b3dc580bb0c9dc915682ec45b"
     },
     {
       "path": "jars/starfarer.api.jar",
-      "bytes": 7239822,
-      "sha256": "738e9e27ac1a59f359fe92d4c763a9ab3515b3ea3e123aa87075feb1ef075e24"
+      "bytes": 7239469,
+      "sha256": "a819d811d0f99d0588cd6b1c663d722c3ba96567b146ddc69430cf543d2f66ac"
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6028114,
-      "sha256": "051fdbed4c0b94277e8ccc6389160031c86f31beabdad4f85e49c94ffe9fc477"
+      "bytes": 6028910,
+      "sha256": "86333ff6b4db411011b346dd4587e4e17f3d0d470dc544c35e78aba5f35a1518"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -551,18 +646,18 @@
     },
     {
       "path": "launch.html",
-      "bytes": 98565,
-      "sha256": "3978cab678d06aa2e7450ced236e6f50abe0112c5dc46f2999436b9b58aa9ce0"
+      "bytes": 102253,
+      "sha256": "30f61e4b4475963e002d44a12f4241b465d5b81c15ab49c061405727bfd4d2ed"
     },
     {
       "path": "starsector-data-pack-v1.bin",
-      "bytes": 10095995,
-      "sha256": "939f6e090d3402393ba5881469cba56f8505665834cf7b77d5223ac136813ec0"
+      "bytes": 10099127,
+      "sha256": "c2751f4250870505abb3e61731f9c9d26477391d82ed272082f57303dca92c3e"
     },
     {
       "path": "starsector-data-pack-v1.json",
-      "bytes": 176546,
-      "sha256": "8d16782c8f3e2c4381d3b04653c484299c38a325c36e8baef4b661ce40de8cab"
+      "bytes": 176548,
+      "sha256": "acbc709e2fb8a01521d6247f690c167a163fbca98b810b40fbbec56d58f68d76"
     },
     {
       "path": "starsector-graphics-pack-v1.json",
@@ -700,19 +795,114 @@
       "sha256": "bc7a43c9170ed397ca3ecf408780db6a832207074f0db2fbbbf103911c87362f"
     },
     {
+      "path": "starsector/starsector/data/campaign/econ/algebbar.json",
+      "bytes": 474,
+      "sha256": "d752a44f5cdc277e8fb157c6bd946a0729fc55943958d593412c0209f2bf666b"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/arcadia.json",
+      "bytes": 982,
+      "sha256": "1b131c8fed7dfd2f45548a8ad5ee077653d68e876cacd7ddcaf9ea3d925ac3ab"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/askonia.json",
+      "bytes": 2611,
+      "sha256": "c5567f7561eda0abcc698dd2b9fc208e072f8fcdf50e21631a0b3fabd50384c9"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/aztlan.json",
+      "bytes": 977,
+      "sha256": "c817e132f874da01353dbd1120cb989cf19b14594ec2e32f7fa1a57bd5f33253"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/canaan.json",
+      "bytes": 1069,
+      "sha256": "c75f30c5e6b89d2941ccbfee3ceb68671c01966df88b522369af81011d97275f"
+    },
+    {
       "path": "starsector/starsector/data/campaign/econ/corvus.json",
-      "bytes": 531,
-      "sha256": "2b66949da76a2b36a981f0b785a8817067896ab34e598256a07d9c8427aef3fc"
+      "bytes": 1528,
+      "sha256": "690e3aef99a1a7806d97e45a9391e0b68c6dc78bc9d5037860ad4073557b7803"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/economy.json",
-      "bytes": 192,
-      "sha256": "d725eb6da10c9ddd0f4e944d295b759d8fd7368c357648cfd8ab694197b1c595"
+      "bytes": 535,
+      "sha256": "b536590ec28318bf78acaa881aed43e99ae855a5a3e175bb2fb002ac5ef0332a"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/eos.json",
+      "bytes": 1730,
+      "sha256": "90222a4c5c86cf6ab53ec7da0187f1b3086baf9e29bd569c0ce9126b1cbfc60d"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/hybrasil.json",
+      "bytes": 2279,
+      "sha256": "7ac16aabb24a0e153d4f7b0be7c83ca607d1f45fd7577536aadefd29864fd879"
     },
     {
       "path": "starsector/starsector/data/campaign/econ/index.list",
       "bytes": 363,
-      "sha256": "af2d65c7fc0b7f9890d7785eca3c0feb58b52e4797bce1398757c2eec2b093f4"
+      "sha256": "0e677dcaca94077cd2c69c54fa65dbb15c32561e7ac62bfa349d7fdbd0dc2133"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/isirah.json",
+      "bytes": 947,
+      "sha256": "d26ad0c5570eb6b86eea8ab6e6edce642bcaa2836c9df1de3104550ee1fd5d88"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/kumarikandam.json",
+      "bytes": 1463,
+      "sha256": "b982853db9f9426c9699abdbb351d66d6dc1f49369b7eb36e2c8c6377f0fe31d"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/magec.json",
+      "bytes": 1215,
+      "sha256": "e051f972e6c3e76e3d2fde2bc307783ee68946908fdc1147ea0d3ec91c7cdd20"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/mayasura.json",
+      "bytes": 1047,
+      "sha256": "afc1052e597ef3c5ebd1b4f93cf293b6133c195c52e4ad02f9a3f367e46d4f80"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/naraka.json",
+      "bytes": 692,
+      "sha256": "c47feefbf568deeabe4b87e12f28bf33e8d69834e345c939e8b43bf033006c61"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/samarra.json",
+      "bytes": 1567,
+      "sha256": "e6295a51467400c78844b04abaad45f0d7f73de162d16faf6f26a1907422a1ce"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/thule.json",
+      "bytes": 1112,
+      "sha256": "60cb3b9dfc5a80f955d45c3944a27308ef3647919519f22d63e19e9b3eea4a67"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/tyle.json",
+      "bytes": 896,
+      "sha256": "c1b50d2143e20fb655100aea4439b3cfe30c0ddd85f1f2d4709bfc1dfac9a587"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/valhalla.json",
+      "bytes": 1751,
+      "sha256": "93bf771db40e753acf0dc5390e2767208bdb75aef7d8a39b84d1aa639f3cf071"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/westernesse.json",
+      "bytes": 1456,
+      "sha256": "81a24761432ae64f22ef495e3d8687e88af3465fb82dc7fe437fcfd5ab11c369"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/yma.json",
+      "bytes": 818,
+      "sha256": "365357a3412e5acd3f9445c834bcb286848b83caa18cc1d9129cf8038a1e50c9"
+    },
+    {
+      "path": "starsector/starsector/data/campaign/econ/zagan.json",
+      "bytes": 1203,
+      "sha256": "54fc5ca19f863fce8eeab1cd7994c4d49006001371423320bb5991ad388d8948"
     },
     {
       "path": "starsector/starsector/data/campaign/index.list",
@@ -861,8 +1051,8 @@
     },
     {
       "path": "starsector/starsector/data/scripts/world/SectorGen.java",
-      "bytes": 12900,
-      "sha256": "835d19b7378a8ce1de1764a6ed536c5011484704f0195200bbb66c639a4364cb"
+      "bytes": 14692,
+      "sha256": "8520051bbc329e5a733be5b2024ab1d3f15db9e4827a7cd08c00674ff6a5e610"
     },
     {
       "path": "starsector/starsector/data/scripts/world/corvus/index.list",
