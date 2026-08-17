@@ -118,7 +118,7 @@
 	"smallClouds":true,  # set to true to improve nebula rendering performance
 	# set to false to *maybe* work around driver issue re: fps drop when using Heron's system with shielded fighters
 	"renderShieldJitterEffect":true,
-	"compressSaveGameData":false, # smaller files, faster saving/loading, saveiles files not hand-editable
+	"compressSaveGameData":true, # smaller files, faster saving/loading, saveiles files not hand-editable
 	
 	# disabled for now, causes issues with subsequent runs if game is shut down during startup
 	"enableScriptCaching":false, # caches compiled scripts in saves/cache, faster startup time after first run
