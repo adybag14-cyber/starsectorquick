@@ -1126,12 +1126,26 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const campaignCenterSubjectFirst = campaignCenterGate.first;
   const campaignCenterSubjectSecond = campaignCenterGate.second;
   const campaignCenterSubject = campaignCenterGate.overall;
-  const campaignVisualQuality = expectedState !== 'campaign' || Boolean(secondStats
-    && secondStats.nonBlackRatio > 0.03
-    && secondStats.darkRatio < 0.94
-    && secondStats.midToneRatio > 0.025
-    && campaignTextureRichness
-    && campaignCenterSubject);
+  const browserTutorialVisual = expectedState === 'campaign'
+    && !deepGameplay
+    && windowConfig.__STARSECTOR_BROWSER_TUTORIAL__ === true;
+  // The stock tutorial owns the opening composition and may present an almost
+  // full-screen tutorial layer instead of the mature campaign's centered starter
+  // ship. Keep strong render/readability/richness checks, but do not require the
+  // mature center-ship signature while tutorial mode is explicitly active.
+  const tutorialVisualQuality = !browserTutorialVisual || Boolean(secondStats
+    && secondStats.nonBlackRatio > 0.10
+    && secondStats.darkRatio < 0.95
+    && secondStats.midToneRatio > 0.05
+    && campaignTextureRichness);
+  const campaignVisualQuality = expectedState !== 'campaign' || (browserTutorialVisual
+    ? tutorialVisualQuality
+    : Boolean(secondStats
+      && secondStats.nonBlackRatio > 0.03
+      && secondStats.darkRatio < 0.94
+      && secondStats.midToneRatio > 0.025
+      && campaignTextureRichness
+      && campaignCenterSubject));
   const campaign = Boolean(campaignSeenAt) || state.bodyState === 'campaign';
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
@@ -1195,6 +1209,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     campaignCenterSubjectFirst,
     campaignCenterSubjectSecond,
     campaignCenterSubject,
+    browserTutorialVisual,
+    tutorialVisualQuality,
     campaignVisualQuality,
     inputKeyboardResponsive,
     inputMouseResponsive,
