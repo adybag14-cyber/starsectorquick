@@ -295,6 +295,10 @@ java -Dstarsector.browserXstreamUnsafeReadFastPath=true \
   > .ci-build/verify-xstream/unsafe.txt
 cmp .ci-build/verify-xstream/reflection.txt .ci-build/verify-xstream/unsafe.txt
 cat .ci-build/verify-xstream/unsafe.txt
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-xstream ci/VerifyBrowserMemoizingNameCoder.java
+java -Xverify:all -cp ".ci-build/verify-xstream:jars/fixer_patch.jar:$CP" \
+  VerifyBrowserMemoizingNameCoder
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
@@ -377,6 +381,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchInitialSavePerfDiagnostics.java \
+  ci/PatchCampaignXStreamNameCoder.java \
+  ci/VerifyCampaignXStreamNameCoderPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -426,6 +432,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-save-perf-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.campaign.save.CampaignGameManager \
   | grep -q 'BrowserInitialSavePerfDiag'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserMemoizingNameCoder.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignXStreamNameCoder jars/starfarer_obf.jar .ci-build/starfarer-namecoder-cache.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignXStreamNameCoderPatch .ci-build/starfarer-namecoder-cache.jar
+mv .ci-build/starfarer-namecoder-cache.jar jars/starfarer_obf.jar
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  'com.fs.starfarer.campaign.save.CampaignGameManager$5' \
+  | grep -q 'BrowserMemoizingNameCoder'
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
