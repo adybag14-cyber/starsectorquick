@@ -108,6 +108,7 @@ jobs:
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
+          STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '720000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Validate Pages overlay from verified candidate

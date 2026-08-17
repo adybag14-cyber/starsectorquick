@@ -1271,18 +1271,39 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       try {
         await reloadPage.goto(reloadTarget, { waitUntil: 'domcontentloaded', timeout: 60000 });
         const reloadDeadline = Date.now() + saveLoadSmokeTimeoutMs;
-        while (Date.now() < reloadDeadline && !reloadFatal && !reloadFallbackNewGame && reloadErrors.length === 0) {
+        // Do not poll page.evaluate() while CheerpJ is synchronously
+        // deserializing campaign.xml. DevTools evaluations cannot run while
+        // the page thread is owned by Java and can accumulate unnecessary
+        // work. The world-ready console marker is emitted only after Fixer
+        // observes a playable Campaign State, so wait event-driven instead.
+        while (Date.now() < reloadDeadline
+            && !loadedWorld
+            && !reloadFatal
+            && !reloadFallbackNewGame
+            && reloadErrors.length === 0) {
+          await sleep(1000);
+        }
+        if (loadedWorld && !reloadFatal && !reloadFallbackNewGame && reloadErrors.length === 0) {
+          reloadLogs.push(`[save-load-smoke] world-ready observed; checking final runtime state`);
           loadedBodyState = await withTimeout(
             reloadPage.evaluate(() => document.body.dataset.runtimeState || ''),
-            5000,
-            'save/load-smoke runtime-state evaluate'
+            15000,
+            'save/load-smoke final runtime-state evaluate'
           ).catch(error => {
             reloadLogs.push(`[diagnostic] ${error.message || error}`);
             return '';
           });
-          if (loadedBodyState === 'campaign' && loadedWorld) break;
-          if (['main-returned', 'failed', 'fatal'].includes(loadedBodyState)) break;
-          await sleep(1000);
+        } else {
+          // One diagnostic state read at the end is enough; never hammer the
+          // page thread during the XStream hot path.
+          loadedBodyState = await withTimeout(
+            reloadPage.evaluate(() => document.body.dataset.runtimeState || ''),
+            15000,
+            'save/load-smoke terminal runtime-state evaluate'
+          ).catch(error => {
+            reloadLogs.push(`[diagnostic] ${error.message || error}`);
+            return '';
+          });
         }
       } catch (error) {
         reloadErrors.push(`reload-navigation: ${error.message || error}`);
