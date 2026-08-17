@@ -361,6 +361,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchInitialSavePerfDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -404,6 +405,12 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserInitialSavePerfDiag.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchInitialSavePerfDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-save-perf-diag.jar
+mv .ci-build/starfarer-save-perf-diag.jar jars/starfarer_obf.jar
+javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.campaign.save.CampaignGameManager \
+  | grep -q 'BrowserInitialSavePerfDiag'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
