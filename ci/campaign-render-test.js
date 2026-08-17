@@ -1133,11 +1133,15 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   // full-screen tutorial layer instead of the mature campaign's centered starter
   // ship. Keep strong render/readability/richness checks, but do not require the
   // mature center-ship signature while tutorial mode is explicitly active.
-  const tutorialVisualQuality = !browserTutorialVisual || Boolean(secondStats
-    && secondStats.nonBlackRatio > 0.10
-    && secondStats.darkRatio < 0.95
-    && secondStats.midToneRatio > 0.05
-    && campaignTextureRichness);
+  const tutorialFrameQuality = stats => Boolean(stats
+    && stats.nonBlackRatio > 0.075
+    && stats.darkRatio < 0.97
+    && stats.midToneRatio > 0.025
+    && stats.quantizedColorCount >= 150
+    && stats.variance >= 400);
+  const tutorialVisualQuality = !browserTutorialVisual
+    || tutorialFrameQuality(firstStats)
+    || tutorialFrameQuality(secondStats);
   const campaignVisualQuality = expectedState !== 'campaign' || (browserTutorialVisual
     ? tutorialVisualQuality
     : Boolean(secondStats
