@@ -215,6 +215,9 @@ javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.Fields 
   | grep 'public class com.thoughtworks.xstream.core.util.Fields'
 javap -classpath jars/fixer_patch.jar com.thoughtworks.xstream.core.util.SerializationMembers \
   | grep 'public class com.thoughtworks.xstream.core.util.SerializationMembers'
+jar tf jars/fixer_patch.jar | grep -qx 'javax/xml/bind/DatatypeConverter.class'
+javap -classpath jars/fixer_patch.jar -c -p javax.xml.bind.DatatypeConverter \
+  | grep -q 'decodeBase64Char'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
   | grep 'public static void drain(java.lang.Object)'
 javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridge \
