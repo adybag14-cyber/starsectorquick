@@ -9,10 +9,12 @@ import java.util.zip.Inflater;
  *
  * <p>Stock BaseTiledTerrain encodes compressed data in 100-byte chunks and
  * Base64-encodes each chunk separately before concatenating the padded strings.
- * Its decoder then incorrectly parses the concatenation as one Base64 value; for
- * multi-chunk payloads that truncates the zlib stream and can leave Inflater in a
- * no-progress loop forever. This compatibility decoder preserves the exact stock
- * on-disk format while decoding every Base64 quantum and bounding Inflate progress.
+ * Java 8 JAXB's permissive DatatypeConverter accepts those repeated padded blocks,
+ * but the Java-17 compatibility shim used by the browser runtime does not preserve
+ * that behavior; it truncates the compressed stream at an internal padding marker.
+ * BaseTiledTerrain's stock Inflater loop then has no needsInput/no-progress guard.
+ * This decoder preserves the exact stock on-disk format, restores the Java-8-style
+ * block semantics for this sole JAXB-using game class, and bounds Inflate progress.
  * The browser-raw prefix remains the transient init fast path.
  */
 public final class BrowserTiledTerrainCompat {
