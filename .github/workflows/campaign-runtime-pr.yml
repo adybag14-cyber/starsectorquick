@@ -43,6 +43,7 @@ jobs:
             ci/java17-xstream/com/thoughtworks/xstream/converters/reflection/FieldDictionary.java \
             ci/java17-xstream/XStreamStaxValueProbe.java \
             ci/java17-xstream/XStreamPostFieldProbe.java \
+            ci/java17-xstream/XStreamCampaignEngineFastFieldProbe.java \
             ci/java17-xstream/XStreamSunUnsafeProbe.java \
             ci/java17-xstream/XStreamPureJavaProbe.java
           jar cf jars/fixer_patch.jar -C .ci-build/xstream-microprobe .
