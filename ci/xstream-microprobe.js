@@ -9,8 +9,7 @@ const probes = [
   { main: 'XStreamStaxValueProbe', marker: 'XStreamStaxValueProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamPostFieldProbe', marker: 'XStreamPostFieldProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamCampaignEngineFastFieldProbe', marker: 'XStreamCampaignEngineFastFieldProbe: DONE', timeoutMs: 45000 },
-  { main: 'XStreamCampaignEngineConverterProbe', marker: 'XStreamCampaignEngineConverterProbe: DONE', timeoutMs: 45000 },
-  { main: 'XStreamCampaignEngineHyperspaceProbe', marker: 'XStreamCampaignEngineHyperspaceProbe: DONE', timeoutMs: 45000 },
+  { main: 'XStreamHyperspaceFieldProbe', marker: 'XStreamHyperspaceFieldProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamSunUnsafeProbe', marker: 'XStreamSunUnsafeProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamPureJavaProbe', marker: 'XStreamPureJavaProbe: DONE', timeoutMs: 45000 },
 ];
