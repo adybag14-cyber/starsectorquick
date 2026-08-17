@@ -461,10 +461,19 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   flushLogs();
   const game = page.locator('#game-container');
   const gameCanvas = page.locator('#lwjglCanvas');
+  const configuredScreenshotTimeoutMs = Number(process.env.STARSECTOR_SCREENSHOT_TIMEOUT_MS || 12000);
+  const screenshotTimeoutMs = Number.isFinite(configuredScreenshotTimeoutMs)
+    ? Math.max(12000, configuredScreenshotTimeoutMs)
+    : 12000;
+  const screenshotActionTimeoutMs = Math.max(10000, screenshotTimeoutMs - 2000);
   const safeScreenshot = async (path, label) => {
     try {
       await withTimeout(gameCanvas.waitFor({ state: 'visible', timeout: 10000 }), 12000, `${label} canvas visibility`);
-      return await withTimeout(gameCanvas.screenshot({ path, timeout: 10000 }), 12000, label);
+      return await withTimeout(
+        gameCanvas.screenshot({ path, timeout: screenshotActionTimeoutMs }),
+        screenshotTimeoutMs,
+        label,
+      );
     } catch (error) {
       screenshotErrors.push(String(error && (error.stack || error.message) || error));
       logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
