@@ -366,6 +366,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchBaseTiledTerrainBrowserCodec.java \
   ci/PatchHyperspaceAutomatonBrowserCodec.java \
   ci/PatchPlaythroughLogBrowserCodec.java \
+  ci/PatchNascentGravityWellLoadDiag.java \
   ci/PatchTextureUploadRaster.java \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
@@ -437,6 +438,9 @@ mv .ci-build/starfarer-api-fast-hyperspace-automaton.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchPlaythroughLogBrowserCodec jars/starfarer.api.jar .ci-build/starfarer-api-fast-playthrough-log.jar
 mv .ci-build/starfarer-api-fast-playthrough-log.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchNascentGravityWellLoadDiag jars/starfarer_obf.jar .ci-build/starfarer-obf-nascent-load-diag.jar
+mv .ci-build/starfarer-obf-nascent-load-diag.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSlipstreamBrowserAdvance jars/starfarer.api.jar .ci-build/starfarer-api-slipstream-guard.jar
 mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
