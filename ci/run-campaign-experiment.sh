@@ -101,6 +101,8 @@ grep -q '__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__' launch.html
 grep -q 'starsector.browserContinueRenderGuard=${browserContinueRenderGuard}' launch.html
 grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
 grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
+grep -q '__STARSECTOR_BROWSER_XSTREAM_LOAD_DIAG__' launch.html
+grep -q 'starsector.browserXstreamLoadDiag=${browserXstreamLoadDiag}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
@@ -377,6 +379,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchInitialSavePerfDiagnostics.java \
+  ci/PatchCampaignXStreamLoadDiag.java \
+  ci/VerifyCampaignXStreamLoadDiagPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -426,6 +430,16 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-save-perf-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.campaign.save.CampaignGameManager \
   | grep -q 'BrowserInitialSavePerfDiag'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserXStreamLoadDiag.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignXStreamLoadDiag jars/starfarer_obf.jar .ci-build/starfarer-xstream-load-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignXStreamLoadDiagPatch .ci-build/starfarer-xstream-load-diag.jar
+mv .ci-build/starfarer-xstream-load-diag.jar jars/starfarer_obf.jar
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  'com.fs.starfarer.campaign.save.CampaignGameManager$5' | grep -q 'BrowserXStreamLoadDiag.wrap'
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  'com.fs.starfarer.campaign.save.CampaignGameManager$6' | grep -q 'BrowserXStreamLoadDiag.logProvider'
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
