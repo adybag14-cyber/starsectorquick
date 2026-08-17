@@ -97,6 +97,8 @@ grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' la
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
+grep -q '__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__' launch.html
+grep -q 'starsector.browserContinueRenderGuard=${browserContinueRenderGuard}' launch.html
 grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
 grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
@@ -371,6 +373,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyBrowserTextPreprocessorPatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
+  ci/PatchTitleContinueRenderGuard.java \
+  ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
@@ -415,6 +419,14 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyTitleContinueRenderGuardPatch .ci-build/starfarer-title-continue.jar
+mv .ci-build/starfarer-title-continue.jar jars/starfarer_obf.jar
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  com.fs.starfarer.title.TitleScreenState | grep -q 'BrowserTitleContinueCompat.renderBeforeContinue'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
