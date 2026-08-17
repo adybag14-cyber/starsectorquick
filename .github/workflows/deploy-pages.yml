@@ -100,7 +100,12 @@ jobs:
           # newly generated JARs. This worktree starts clean from gh-pages, so force
           # staging is limited to the verified overlay copied above.
           git -C .pages-worktree add -f -A
-          git -C .pages-worktree diff --cached --check
+          # Official Starsector data/source files intentionally retain their upstream whitespace.
+          # Lint only deployment control/generated files; mutating stock data to satisfy Git
+          # whitespace rules would change the byte-faithful runtime payload.
+          git -C .pages-worktree diff --cached --check -- . \
+            ':(exclude)data/**' \
+            ':(exclude)starsector/starsector/data/**'
           if git -C .pages-worktree diff --cached --name-status | grep -q '^D'; then
             echo 'Refusing Pages overlay that deletes existing deployed files.' >&2
             git -C .pages-worktree diff --cached --name-status >&2
