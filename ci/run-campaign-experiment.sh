@@ -254,12 +254,14 @@ javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   ci/VerifyPlayableStartingResources.java \
   ci/VerifyStartingAbilities.java \
   ci/VerifyCampaignWorldReadiness.java \
-  ci/VerifyCampaignProcGenCompat.java
+  ci/VerifyCampaignProcGenCompat.java \
+  ci/VerifyAutoCampaignContinueMode.java
 java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyPlayableStartingResources
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingAbilities
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignWorldReadiness
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignProcGenCompat
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyAutoCampaignContinueMode
 rm -rf .ci-build/verify-browser-tiled-terrain
 mkdir -p .ci-build/verify-browser-tiled-terrain
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
