@@ -97,6 +97,8 @@ grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' la
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
+grep -q '__STARSECTOR_BROWSER_ZERO_INDENT_XML_WRITER__' launch.html
+grep -q 'starsector.browserZeroIndentXmlWriter=${browserZeroIndentXmlWriter}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
@@ -282,6 +284,12 @@ mkdir -p .ci-build/verify-xstream
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-xstream ci/VerifyJava17XStreamCompat.java
 java -cp ".ci-build/verify-xstream:jars/fixer_patch.jar:$CP" VerifyJava17XStreamCompat
+rm -rf .ci-build/verify-zero-indent-writer
+mkdir -p .ci-build/verify-zero-indent-writer
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-zero-indent-writer ci/VerifyBrowserZeroIndentWriter.java
+java -Xverify:all -cp ".ci-build/verify-zero-indent-writer:jars/fixer_patch.jar:$CP" \
+  VerifyBrowserZeroIndentWriter
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
@@ -362,6 +370,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
   ci/PatchInitialSavePerfDiagnostics.java \
+  ci/PatchCampaignSaveZeroIndentWriter.java \
+  ci/VerifyCampaignSaveZeroIndentWriterPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -411,6 +421,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 mv .ci-build/starfarer-save-perf-diag.jar jars/starfarer_obf.jar
 javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.campaign.save.CampaignGameManager \
   | grep -q 'BrowserInitialSavePerfDiag'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserZeroIndentXMLStreamWriter.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignSaveZeroIndentWriter jars/starfarer_obf.jar .ci-build/starfarer-zero-indent-writer.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignSaveZeroIndentWriterPatch .ci-build/starfarer-zero-indent-writer.jar
+mv .ci-build/starfarer-zero-indent-writer.jar jars/starfarer_obf.jar
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  'com.fs.starfarer.campaign.save.CampaignGameManager$5' \
+  | grep -q 'BrowserZeroIndentXMLStreamWriter'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
