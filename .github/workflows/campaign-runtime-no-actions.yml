@@ -44,8 +44,6 @@ jobs:
         env:
           EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
-          STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR: 'true'
-          STARSECTOR_MINIMAL_ASHARU_ECONOMY: 'true'
         run: |
           set +e
 
@@ -59,12 +57,9 @@ jobs:
           done
           echo "diagnostic TitleScreenState owner=${TITLE_JAR:-not-found}"
 
-          # This diagnostic runner has repeatedly been externally cancelled around
-          # ten minutes. Keep the strict state/render checks intact, but force the
-          # diagnostic snapshot to complete before that boundary. Prior evidence
-          # reaches Title Screen at ~396s, leaving roughly two minutes for create().
-          sed -i 's/STARSECTOR_TEST_TIMEOUT_MS=720000/STARSECTOR_TEST_TIMEOUT_MS=540000/' ci/run-campaign-experiment.sh
-          sed -i 's/STARSECTOR_FRAME_SETTLE_MS=30000/STARSECTOR_FRAME_SETTLE_MS=5000/' ci/run-campaign-experiment.sh
+          # This check now exercises the same full-stock public path as production.
+          # Do not reintroduce the historical minimal-Asharu/partial-world shortcut:
+          # Fixer correctly refuses to transition a campaign with only a few markets.
 
           mkdir -p test_output/campaign-direct-main-thread-java17
           (
@@ -83,6 +78,13 @@ jobs:
             'campaign' \
             "$EXPERIMENT_CONFIG"
           status=$?
+          if [[ "$status" -eq 0 ]]; then
+            python3 ci/verify-full-campaign-map.py \
+              test_output/campaign-direct-main-thread-java17/browser.log \
+              --expected-sector-size normal \
+              --expected-start-location Galatia \
+              --require-tutorial || status=$?
+          fi
 
           kill "$stream_pid" 2>/dev/null || true
           wait "$stream_pid" 2>/dev/null || true
