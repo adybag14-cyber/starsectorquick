@@ -34,7 +34,7 @@ jobs:
           set -euo pipefail
           rm -rf .ci-build/xstream-microprobe
           mkdir -p .ci-build/xstream-microprobe
-          CP='jars/xstream-1.4.10.jar:jars/txw2-2.3.1.jar'
+          CP=$(find jars -maxdepth 1 -name '*.jar' -printf '%p:' | sed 's/:$//')
           javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
             -d .ci-build/xstream-microprobe \
             ci/java17-xstream/com/thoughtworks/xstream/core/util/Fields.java \
