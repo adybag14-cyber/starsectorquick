@@ -110,8 +110,14 @@ public final class BrowserTiledTerrainCompat {
         if (expectedRawBytes < 0) {
             throw new DataFormatException("Negative expected chunked payload size");
         }
-        final byte[] compressed = decodeConcatenatedBase64(encoded);
+        final byte[] compressed = decodeStockChunkedCompressedBytes(encoded);
         return inflateExactly(compressed, expectedRawBytes);
+    }
+
+    /** Restores Java-8 JAXB semantics for concatenated independently padded blocks. */
+    public static byte[] decodeStockChunkedCompressedBytes(java.lang.String encoded)
+            throws DataFormatException {
+        return decodeConcatenatedBase64(encoded);
     }
 
     private static byte[] decodeConcatenatedBase64(java.lang.String encoded)
