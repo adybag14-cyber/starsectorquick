@@ -7,6 +7,7 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const probes = [
   { main: 'XStreamStaxValueProbe', marker: 'XStreamStaxValueProbe: DONE', timeoutMs: 45000 },
+  { main: 'XStreamPostFieldProbe', marker: 'XStreamPostFieldProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamSunUnsafeProbe', marker: 'XStreamSunUnsafeProbe: DONE', timeoutMs: 45000 },
   { main: 'XStreamPureJavaProbe', marker: 'XStreamPureJavaProbe: DONE', timeoutMs: 45000 },
 ];
