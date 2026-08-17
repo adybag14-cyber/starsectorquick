@@ -47,11 +47,11 @@ jobs:
           jar cf jars/fixer_patch.jar -C .ci-build/xstream-microprobe .
           python3 - <<'PY'
           from pathlib import Path
-          names = ['fixer_patch.jar', 'xstream-1.4.10.jar', 'txw2-2.3.1.jar']
-          Path('jars/index.list').write_text(
-              ''.join(f'{name}\t{(Path("jars") / name).stat().st_size}\n' for name in names),
-              encoding='utf-8',
-          )
+          p = Path('jars/index.list')
+          lines = [line for line in p.read_text(encoding='utf-8').splitlines()
+                   if line and not line.startswith('fixer_patch.jar')]
+          lines.insert(0, f'fixer_patch.jar\t{Path("jars/fixer_patch.jar").stat().st_size}')
+          p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
           cat jars/index.list
       - name: Install browser
