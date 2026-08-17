@@ -28,10 +28,16 @@ text = text.replace(
 # look empty/stranded even when sector generation succeeded. Explicit window
 # overrides remain available for diagnostics.
 def replace_exact(source: str, old_text: str, new_text: str, label: str) -> str:
-    matches = source.count(old_text)
-    if matches != 1:
-        raise RuntimeError(f"{label}: expected exactly one match, found {matches}")
-    return source.replace(old_text, new_text, 1)
+    old_matches = source.count(old_text)
+    new_matches = source.count(new_text)
+    if old_matches == 1 and new_matches == 0:
+        return source.replace(old_text, new_text, 1)
+    if old_matches == 0 and new_matches == 1:
+        return source
+    raise RuntimeError(
+        f"{label}: expected one source match or one already-patched match, "
+        f"found source={old_matches} patched={new_matches}"
+    )
 
 text = replace_exact(
     text,
@@ -61,12 +67,13 @@ full_galatia = """                    `-Dstarsector.compatibilityFastPath=${brow
                     `starsector.skipGalatiaDerelicts=${window.__STARSECTOR_SKIP_GALATIA_DERELICTS__ === true}`,
                     `-Dstarsector.browserTutorial=${window.__STARSECTOR_BROWSER_TUTORIAL__ !== false && !browserGameplayProbe}`,
                     `starsector.browserTutorial=${window.__STARSECTOR_BROWSER_TUTORIAL__ !== false && !browserGameplayProbe}`"""
-text = replace_exact(
-    text,
-    compat_anchor,
-    full_galatia,
-    "full Galatia tutorial/system default",
-)
+if "-Dstarsector.browserTutorial=${window.__STARSECTOR_BROWSER_TUTORIAL__" not in text:
+    text = replace_exact(
+        text,
+        compat_anchor,
+        full_galatia,
+        "full Galatia tutorial/system default",
+    )
 
 path.write_text(text, encoding="utf-8", newline="\n")
 

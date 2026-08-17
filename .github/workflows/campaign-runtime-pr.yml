@@ -106,9 +106,10 @@ jobs:
         run: |
           python3 ci/prepare-pages-overlay.py \
             --output test_output/pages-overlays/pr-check \
-            --profile corvus-asharu-compat \
+            --profile full-stock-campaign \
             --source-sha "$GITHUB_SHA"
           test -s test_output/pages-overlays/pr-check/web-runtime-profile.json
+          grep -q '"profile": "full-stock-campaign"' test_output/pages-overlays/pr-check/web-runtime-profile.json
           test -s test_output/pages-overlays/pr-check/jars/fixer_patch.jar
           test -s test_output/pages-overlays/pr-check/jars/starfarer.api.jar
           test -s test_output/pages-overlays/pr-check/jars/starfarer_obf.jar
