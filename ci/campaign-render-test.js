@@ -29,6 +29,40 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
+async function exportCheerpJFile(page, vfsPath, destinationPath) {
+  const info = await page.evaluate(async path => {
+    try {
+      if (typeof cjFileBlob !== 'function') return { ok: false, error: 'cjFileBlob unavailable' };
+      const blob = await cjFileBlob(path);
+      return { ok: true, size: Number(blob.size || 0), type: String(blob.type || '') };
+    } catch (error) {
+      return { ok: false, error: String(error && (error.stack || error.message) || error) };
+    }
+  }, vfsPath);
+  if (!info?.ok) throw new Error(`cjFileBlob failed for ${vfsPath}: ${info?.error || 'unknown error'}`);
+  fs.mkdirSync(require('path').dirname(destinationPath), { recursive: true });
+  const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
+  await page.evaluate(async ({ path, fileName }) => {
+    const blob = await cjFileBlob(path);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      link.remove();
+    }, 1000);
+  }, { path: vfsPath, fileName: require('path').basename(destinationPath) });
+  const download = await downloadPromise;
+  await download.saveAs(destinationPath);
+  const failure = await download.failure();
+  if (failure) throw new Error(`download failed for ${vfsPath}: ${failure}`);
+  return { ...info, savedBytes: fs.statSync(destinationPath).size };
+}
+
 function pixelStats(buffer) {
   if (!buffer) return null;
   const png = PNG.sync.read(buffer);
@@ -312,7 +346,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   };
 
   browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow', acceptDownloads: true });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
   page.setDefaultNavigationTimeout(60000);
@@ -1227,6 +1261,39 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       let loadedWorld = null;
       let loadedBodyState = '';
       const reloadStartedAt = Date.now();
+      let exportedSave = null;
+      try {
+        const saveDir = String(await page.evaluate(async () => {
+          if (typeof cjFileBlob !== 'function') throw new Error('cjFileBlob unavailable');
+          return (await (await cjFileBlob('/files/browser-last-save-dir.txt')).text()).trim();
+        }));
+        if (!saveDir || saveDir.includes('..') || /[\\/]/.test(saveDir)) {
+          throw new Error(`invalid exported save directory marker: ${JSON.stringify(saveDir)}`);
+        }
+        const exportDir = `${outputDir}/real-save`;
+        fs.mkdirSync(exportDir, { recursive: true });
+        const descriptor = await exportCheerpJFile(
+          page, `/files/saves/${saveDir}/descriptor.xml`, `${exportDir}/descriptor.xml`);
+        let campaign = null;
+        let campaignName = null;
+        for (const candidate of ['campaign.xml', 'campaign.zip']) {
+          try {
+            campaign = await exportCheerpJFile(
+              page, `/files/saves/${saveDir}/${candidate}`, `${exportDir}/${candidate}`);
+            campaignName = candidate;
+            break;
+          } catch (error) {
+            reloadLogs.push(`[save-export] ${candidate} unavailable: ${error.message || error}`);
+          }
+        }
+        if (!campaign || !campaignName) throw new Error('neither campaign.xml nor campaign.zip could be exported');
+        exportedSave = { saveDir, campaignName, descriptor, campaign };
+        fs.writeFileSync(`${exportDir}/metadata.json`, JSON.stringify(exportedSave, null, 2));
+        reloadLogs.push(`[save-export] saveDir=${saveDir} file=${campaignName} bytes=${campaign.savedBytes}`);
+      } catch (error) {
+        reloadLogs.push(`[save-export] failed: ${error.message || error}`);
+      }
+
       const reloadConfig = {
         ...windowConfig,
         // Keep the optimized direct-resource path, but make Continue the only
