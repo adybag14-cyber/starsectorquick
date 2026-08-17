@@ -264,6 +264,12 @@ javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-browser-tiled-terrain ci/VerifyBrowserTiledTerrainCompat.java
 java -Xverify:all -cp ".ci-build/verify-browser-tiled-terrain:jars/fixer_patch.jar:$CP" \
   VerifyBrowserTiledTerrainCompat
+rm -rf .ci-build/verify-resource-loader-policy
+mkdir -p .ci-build/verify-resource-loader-policy
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-resource-loader-policy ci/TestBrowserResourceLoaderCompat.java
+java -Xverify:all -cp ".ci-build/verify-resource-loader-policy:jars/fixer_patch.jar:$CP" \
+  TestBrowserResourceLoaderCompat
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java

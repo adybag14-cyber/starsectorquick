@@ -29,6 +29,10 @@ public final class PatchResourceLoaderQuickStart {
     private static final String INIT_METHOD = "init";
     private static final String INIT_DESC = "(Ljava/util/Map;)V";
     private static final String PROPERTY = "starsector.browserQuickResourceLoad";
+    private static final String RESOURCE_COMPAT =
+            "com/fs/starfarer/loading/BrowserResourceLoaderCompat";
+    private static final String RESOLVE_WORKERS = "resolveWorkerCount";
+    private static final String RESOLVE_WORKERS_DESC = "(I)I";
     private static final int EXPECTED_STAGE_MARKERS = 9;
 
     public static void main(String[] args) throws Exception {
@@ -41,6 +45,7 @@ public final class PatchResourceLoaderQuickStart {
         int[] quickMethods = new int[] {0};
         int[] initMethods = new int[] {0};
         int[] stageMarkers = new int[] {0};
+        int[] workerHooks = new int[] {0};
 
         try (JarFile jar = new JarFile(input.toFile());
              JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
@@ -56,7 +61,7 @@ public final class PatchResourceLoaderQuickStart {
                 }
                 if (TARGET.equals(entry.getName())) {
                     classes[0]++;
-                    bytes = patch(bytes, quickMethods, initMethods, stageMarkers);
+                    bytes = patch(bytes, quickMethods, initMethods, stageMarkers, workerHooks);
                 }
                 out.write(bytes);
                 out.closeEntry();
@@ -64,21 +69,23 @@ public final class PatchResourceLoaderQuickStart {
         }
 
         if (classes[0] != 1 || quickMethods[0] != 1 || initMethods[0] != 1
-                || stageMarkers[0] != EXPECTED_STAGE_MARKERS) {
+                || stageMarkers[0] != EXPECTED_STAGE_MARKERS || workerHooks[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException(
                     "ResourceLoaderState quick-start patch incomplete: classes=" + classes[0]
                             + " quickMethods=" + quickMethods[0]
                             + " initMethods=" + initMethods[0]
-                            + " stageMarkers=" + stageMarkers[0]);
+                            + " stageMarkers=" + stageMarkers[0]
+                            + " workerHooks=" + workerHooks[0]);
         }
         System.out.println(
                 "Patched ResourceLoaderState quick-start guards=" + quickMethods[0]
-                        + " loader-stage markers=" + stageMarkers[0]);
+                        + " loader-stage markers=" + stageMarkers[0]
+                        + " workerHooks=" + workerHooks[0]);
     }
 
     private static byte[] patch(byte[] input, int[] quickMethods, int[] initMethods,
-                                int[] stageMarkers) {
+                                int[] stageMarkers, int[] workerHooks) {
         ClassReader reader = new ClassReader(input);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
@@ -92,7 +99,7 @@ public final class PatchResourceLoaderQuickStart {
                 }
                 if (INIT_METHOD.equals(name) && INIT_DESC.equals(descriptor)) {
                     initMethods[0]++;
-                    return initStages(delegate, stageMarkers);
+                    return initStages(delegate, stageMarkers, workerHooks);
                 }
                 return delegate;
             }
@@ -124,7 +131,8 @@ public final class PatchResourceLoaderQuickStart {
         };
     }
 
-    private static MethodVisitor initStages(MethodVisitor delegate, int[] stageMarkers) {
+    private static MethodVisitor initStages(
+            MethodVisitor delegate, int[] stageMarkers, int[] workerHooks) {
         return new MethodVisitor(Opcodes.ASM9, delegate) {
             @Override
             public void visitCode() {
@@ -137,7 +145,14 @@ public final class PatchResourceLoaderQuickStart {
                                         String methodDescriptor, boolean isInterface) {
                 if (opcode == Opcodes.INVOKESTATIC
                         && "java/util/concurrent/Executors".equals(owner)
-                        && "newFixedThreadPool".equals(methodName)) {
+                        && "newFixedThreadPool".equals(methodName)
+                        && "(I)Ljava/util/concurrent/ExecutorService;".equals(methodDescriptor)) {
+                    // The stock worker count is already on the operand stack. Resolve it
+                    // through a property-gated helper, then call the exact stock factory.
+                    super.visitMethodInsn(
+                            Opcodes.INVOKESTATIC, RESOURCE_COMPAT, RESOLVE_WORKERS,
+                            RESOLVE_WORKERS_DESC, false);
+                    workerHooks[0]++;
                     emitStage(this.mv, "queued-resource-load-start", stageMarkers);
                 }
                 if (opcode == Opcodes.INVOKESTATIC

@@ -41,6 +41,8 @@ public final class VerifyResourceLoaderQuickStart {
         int[] markerLoads = {0};
         int[] returns = {0};
         int[] stockSpecCalls = {0};
+        int[] workerHooks = {0};
+        int[] fixedThreadPoolCalls = {0};
         List<String> stages = new ArrayList<>();
 
         try (JarFile jar = new JarFile(Path.of(args[0]).toFile())) {
@@ -86,6 +88,18 @@ public final class VerifyResourceLoaderQuickStart {
                                 if (quick && "com/fs/starfarer/loading/o00O".equals(owner)) {
                                     stockSpecCalls[0]++;
                                 }
+                                if (init && opcode == Opcodes.INVOKESTATIC
+                                        && "com/fs/starfarer/loading/BrowserResourceLoaderCompat".equals(owner)
+                                        && "resolveWorkerCount".equals(methodName)
+                                        && "(I)I".equals(methodDescriptor)) {
+                                    workerHooks[0]++;
+                                }
+                                if (init && opcode == Opcodes.INVOKESTATIC
+                                        && "java/util/concurrent/Executors".equals(owner)
+                                        && "newFixedThreadPool".equals(methodName)
+                                        && "(I)Ljava/util/concurrent/ExecutorService;".equals(methodDescriptor)) {
+                                    fixedThreadPoolCalls[0]++;
+                                }
                             }
                         };
                     }
@@ -95,7 +109,8 @@ public final class VerifyResourceLoaderQuickStart {
 
         if (quickMethods[0] != 1 || initMethods[0] != 1 || propertyLoads[0] != 1
                 || booleanChecks[0] != 1 || markerLoads[0] != 1 || returns[0] < 2
-                || stockSpecCalls[0] < 2 || !stages.equals(EXPECTED_STAGES)) {
+                || stockSpecCalls[0] < 2 || workerHooks[0] != 1 || fixedThreadPoolCalls[0] != 1
+                || !stages.equals(EXPECTED_STAGES)) {
             throw new AssertionError(
                     "quick-loader structure mismatch quickMethods=" + quickMethods[0]
                             + " initMethods=" + initMethods[0]
@@ -104,11 +119,14 @@ public final class VerifyResourceLoaderQuickStart {
                             + " markerLoads=" + markerLoads[0]
                             + " returns=" + returns[0]
                             + " stockSpecCalls=" + stockSpecCalls[0]
+                            + " workerHooks=" + workerHooks[0]
+                            + " fixedThreadPoolCalls=" + fixedThreadPoolCalls[0]
                             + " stages=" + stages);
         }
         System.out.println(
                 "VerifyResourceLoaderQuickStart: OK quickMethods=" + quickMethods[0]
                         + " loaderStages=" + stages.size()
-                        + " stockSpecCalls=" + stockSpecCalls[0]);
+                        + " stockSpecCalls=" + stockSpecCalls[0]
+                        + " workerHooks=" + workerHooks[0]);
     }
 }

@@ -1165,6 +1165,9 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__ !== false;
                 const browserDeferredTextures =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
+                const browserResourceLoaderThreads = browserQuickResourceLoad
+                    ? Math.max(1, Math.min(8, Number(window.__STARSECTOR_BROWSER_RESOURCE_LOADER_THREADS__ ?? 4) || 4))
+                    : 2;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
                 // Full vanilla procedural sector generation is the production default.
@@ -1284,6 +1287,8 @@
                     `starsector.browserQuickResourceLoad=${browserQuickResourceLoad}`,
                     `-Dstarsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
                     `starsector.browserQuickTitleHandoff=${browserQuickResourceLoad}`,
+                    `-Dstarsector.browserResourceLoaderThreads=${browserResourceLoaderThreads}`,
+                    `starsector.browserResourceLoaderThreads=${browserResourceLoaderThreads}`,
                     `-Dstarsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `starsector.browserBulkSpecCache=${browserBulkSpecCache}`,
                     `-Dstarsector.browserFastCsvParser=${browserFastCsvParser}`,
