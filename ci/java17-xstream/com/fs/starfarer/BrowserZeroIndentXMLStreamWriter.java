@@ -15,7 +15,7 @@ import com.sun.xml.txw2.output.IndentingXMLStreamWriter;
  * behavior byte-for-byte while eliminating only the empty indentation loop.
  */
 public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWriter {
-    private static final String ENABLE_PROPERTY = "starsector.browserZeroIndentXmlWriter";
+    private static final java.lang.String ENABLE_PROPERTY = "starsector.browserZeroIndentXmlWriter";
     private static final int SEEN_NOTHING = 0;
     private static final int SEEN_ELEMENT = 1;
     private static final int SEEN_DATA = 2;
@@ -65,35 +65,35 @@ public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWr
     }
 
     @Override
-    public void writeStartDocument(final String version) throws XMLStreamException {
+    public void writeStartDocument(final java.lang.String version) throws XMLStreamException {
         if (!fastPath) { super.writeStartDocument(version); return; }
         delegate.writeStartDocument(version);
         delegate.writeCharacters("\n");
     }
 
     @Override
-    public void writeStartDocument(final String encoding, final String version) throws XMLStreamException {
+    public void writeStartDocument(final java.lang.String encoding, final java.lang.String version) throws XMLStreamException {
         if (!fastPath) { super.writeStartDocument(encoding, version); return; }
         delegate.writeStartDocument(encoding, version);
         delegate.writeCharacters("\n");
     }
 
     @Override
-    public void writeStartElement(final String localName) throws XMLStreamException {
+    public void writeStartElement(final java.lang.String localName) throws XMLStreamException {
         if (!fastPath) { super.writeStartElement(localName); return; }
         onStartElementFast();
         delegate.writeStartElement(localName);
     }
 
     @Override
-    public void writeStartElement(final String namespaceURI, final String localName) throws XMLStreamException {
+    public void writeStartElement(final java.lang.String namespaceURI, final java.lang.String localName) throws XMLStreamException {
         if (!fastPath) { super.writeStartElement(namespaceURI, localName); return; }
         onStartElementFast();
         delegate.writeStartElement(namespaceURI, localName);
     }
 
     @Override
-    public void writeStartElement(final String prefix, final String localName, final String namespaceURI)
+    public void writeStartElement(final java.lang.String prefix, final java.lang.String localName, final java.lang.String namespaceURI)
             throws XMLStreamException {
         if (!fastPath) { super.writeStartElement(prefix, localName, namespaceURI); return; }
         onStartElementFast();
@@ -101,14 +101,14 @@ public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWr
     }
 
     @Override
-    public void writeEmptyElement(final String namespaceURI, final String localName) throws XMLStreamException {
+    public void writeEmptyElement(final java.lang.String namespaceURI, final java.lang.String localName) throws XMLStreamException {
         if (!fastPath) { super.writeEmptyElement(namespaceURI, localName); return; }
         onEmptyElementFast();
         delegate.writeEmptyElement(namespaceURI, localName);
     }
 
     @Override
-    public void writeEmptyElement(final String prefix, final String localName, final String namespaceURI)
+    public void writeEmptyElement(final java.lang.String prefix, final java.lang.String localName, final java.lang.String namespaceURI)
             throws XMLStreamException {
         if (!fastPath) { super.writeEmptyElement(prefix, localName, namespaceURI); return; }
         onEmptyElementFast();
@@ -116,7 +116,7 @@ public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWr
     }
 
     @Override
-    public void writeEmptyElement(final String localName) throws XMLStreamException {
+    public void writeEmptyElement(final java.lang.String localName) throws XMLStreamException {
         if (!fastPath) { super.writeEmptyElement(localName); return; }
         onEmptyElementFast();
         delegate.writeEmptyElement(localName);
@@ -130,7 +130,7 @@ public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWr
     }
 
     @Override
-    public void writeCharacters(final String text) throws XMLStreamException {
+    public void writeCharacters(final java.lang.String text) throws XMLStreamException {
         if (!fastPath) { super.writeCharacters(text); return; }
         state = SEEN_DATA;
         delegate.writeCharacters(text);
@@ -144,7 +144,7 @@ public final class BrowserZeroIndentXMLStreamWriter extends IndentingXMLStreamWr
     }
 
     @Override
-    public void writeCData(final String data) throws XMLStreamException {
+    public void writeCData(final java.lang.String data) throws XMLStreamException {
         if (!fastPath) { super.writeCData(data); return; }
         state = SEEN_DATA;
         delegate.writeCData(data);
