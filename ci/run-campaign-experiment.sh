@@ -810,6 +810,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   python3 ci/verify-full-campaign-map.py "$TUTORIAL_OUT/browser.log" \
     --expected-sector-size normal \
     --expected-start-location Galatia \
+    --expected-seed SEK968276040 \
     --require-tutorial
 fi
 # The optimized run is only valid if the real game loaded and used the bulk spec
@@ -827,7 +828,8 @@ fi
 if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
   python3 ci/verify-full-campaign-map.py "$OUT/browser.log" \
     --expected-sector-size normal \
-    --expected-start-location Corvus
+    --expected-start-location Corvus \
+    --expected-seed SEK968276040
   grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"

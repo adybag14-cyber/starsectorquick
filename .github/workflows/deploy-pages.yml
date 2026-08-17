@@ -150,7 +150,8 @@ jobs:
           node ci/campaign-render-test.js
           python3 ci/verify-full-campaign-map.py test_output/pages-live/browser.log \
             --expected-sector-size normal \
-            --expected-start-location Corvus
+            --expected-start-location Corvus \
+            --expected-seed SEK968276040
 
       - name: Verify live public tutorial starts from a clean browser state
         env:
@@ -164,6 +165,7 @@ jobs:
           python3 ci/verify-full-campaign-map.py test_output/pages-tutorial/browser.log \
             --expected-sector-size normal \
             --expected-start-location Galatia \
+            --expected-seed SEK968276040 \
             --require-tutorial
 
       - name: Upload live Pages evidence

@@ -20,7 +20,7 @@ WORLD_READY_RE = re.compile(
 )
 DATA_RE = re.compile(
     r"Fixer: auto campaign data prepared .*?startLocation=([^\s]+) "
-    r"sectorSize=([^\s]+)"
+    r"sectorSize=([^\s]+).*?seed=([^\s]+)"
 )
 
 
@@ -34,6 +34,7 @@ def main() -> None:
     parser.add_argument("log", type=Path)
     parser.add_argument("--expected-sector-size", required=True)
     parser.add_argument("--expected-start-location", required=True)
+    parser.add_argument("--expected-seed")
     parser.add_argument("--require-tutorial", action="store_true")
     parser.add_argument("--min-systems", type=int, default=100)
     parser.add_argument("--min-planets", type=int, default=300)
@@ -65,7 +66,7 @@ def main() -> None:
 
     data_matches = DATA_RE.findall(text)
     require(data_matches, "campaign preparation settings were not logged")
-    start_location, sector_size = data_matches[-1]
+    start_location, sector_size, seed_string = data_matches[-1]
     require(
         sector_size.lower() == args.expected_sector_size.lower(),
         f"sector size {sector_size!r} != {args.expected_sector_size!r}",
@@ -74,6 +75,11 @@ def main() -> None:
         start_location.lower() == args.expected_start_location.lower(),
         f"start location {start_location!r} != {args.expected_start_location!r}",
     )
+    if args.expected_seed:
+        require(
+            seed_string == args.expected_seed,
+            f"seed {seed_string!r} != {args.expected_seed!r}",
+        )
 
     world_matches = WORLD_READY_RE.findall(text)
     require(world_matches, "no completed world-ready population record")
@@ -102,7 +108,7 @@ def main() -> None:
         "Full campaign map verified "
         f"coreSystems={len(CORE_SYSTEMS)} systems={systems_i} planets={planets_i} "
         f"markets={markets_i} factions={factions_i} sectorSize={sector_size} "
-        f"startLocation={start_location} tutorial={args.require_tutorial}"
+        f"startLocation={start_location} seed={seed_string} tutorial={args.require_tutorial}"
     )
 
 
