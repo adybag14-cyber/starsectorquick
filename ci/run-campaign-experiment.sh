@@ -337,6 +337,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCoreLifecycleDiagnostics.java \
   ci/PatchMiscAcademyFleetCreator.java \
   ci/PatchBaseTiledTerrainBrowserCodec.java \
+  ci/PatchSectorProcGenDiagnostics.java \
   ci/PatchTextureUploadRaster.java \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
@@ -395,6 +396,12 @@ mv .ci-build/starfarer-api-academy-null.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchBaseTiledTerrainBrowserCodec jars/starfarer.api.jar .ci-build/starfarer-api-fast-tiled-terrain.jar
 mv .ci-build/starfarer-api-fast-tiled-terrain.jar jars/starfarer.api.jar
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/api/impl/campaign/procgen/BrowserSectorProcGenDiag.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSectorProcGenDiagnostics jars/starfarer.api.jar .ci-build/starfarer-api-sector-procgen-diag.jar
+mv .ci-build/starfarer-api-sector-procgen-diag.jar jars/starfarer.api.jar
+javap -classpath jars/starfarer.api.jar -c -p com.fs.starfarer.api.impl.campaign.procgen.SectorProcGen \
+  | grep -q 'BrowserSectorProcGenDiag'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSlipstreamBrowserAdvance jars/starfarer.api.jar .ci-build/starfarer-api-slipstream-guard.jar
 mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
