@@ -264,6 +264,14 @@ javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-browser-tiled-terrain ci/VerifyBrowserTiledTerrainCompat.java
 java -Xverify:all -cp ".ci-build/verify-browser-tiled-terrain:jars/fixer_patch.jar:$CP" \
   VerifyBrowserTiledTerrainCompat
+rm -rf .ci-build/verify-economy-random
+mkdir -p .ci-build/verify-economy-random
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-economy-random ci/TestBrowserEconomyRandomCompat.java
+java -Xverify:all -Dstarsector.browserQuickResourceLoad=true \
+  -cp ".ci-build/verify-economy-random:jars/fixer_patch.jar:$CP" TestBrowserEconomyRandomCompat
+java -Xverify:all -Dstarsector.browserQuickResourceLoad=false \
+  -cp ".ci-build/verify-economy-random:jars/fixer_patch.jar:$CP" TestBrowserEconomyRandomCompat
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -361,6 +369,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSlipstreamBrowserAdvance.java \
   ci/PatchCampaignProcGen.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchEconomyStockpileRandom.java \
+  ci/VerifyEconomyStockpileRandomPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -404,6 +414,17 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/campaign/econ/reach/BrowserEconomyRandomCompat.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchEconomyStockpileRandom jars/starfarer_obf.jar .ci-build/starfarer-economy-random.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyEconomyStockpileRandomPatch .ci-build/starfarer-economy-random.jar
+mv .ci-build/starfarer-economy-random.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchEconomyStockpileRandom jars/starfarer_obf.jar .ci-build/starfarer-economy-random-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyEconomyStockpileRandomPatch .ci-build/starfarer-economy-random-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-economy-random-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureUploadRaster jars/starfarer_obf.jar .ci-build/starfarer-texture-rgba.jar
 mv .ci-build/starfarer-texture-rgba.jar jars/starfarer_obf.jar
