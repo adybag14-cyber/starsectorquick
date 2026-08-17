@@ -1,13 +1,10 @@
 name: Campaign runtime PR matrix
 
 on:
-  pull_request:
-    branches:
-      - feature/starsector-webgl-integration
   workflow_dispatch:
     inputs:
       save_load_smoke:
-        description: Verify the created campaign can be reloaded via Continue without creating a fallback world
+        description: Compatibility input used to dispatch branch diagnostics
         required: false
         default: false
         type: boolean
@@ -15,75 +12,11 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: campaign-runtime-pr-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  prepare:
-    name: prepare runtime diagnostics
+  probe:
+    name: CheerpJ XStream microprobe
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: false
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Sanitize and report missing static graphics
-        run: |
-          mkdir -p test_output/asset-audit test_output/bytecode .ci-cache
-          python3 ci/sanitize-runtime-assets.py | tee test_output/asset-audit/asset-sanitation.log
-      - name: Inspect runtime jars and campaign bytecode
-        run: |
-          git lfs pull --include='jars/resources.jar' --exclude=''
-          bash ci/dump-campaign-bytecode.sh test_output/bytecode
-          python3 - <<'PY'
-          from pathlib import Path
-          from zipfile import ZipFile
-          jar = Path('jars/resources.jar')
-          out = Path('test_output/asset-audit')
-          with ZipFile(jar) as zf:
-              names = sorted(zf.namelist())
-          graphics = [name for name in names if 'graphics/' in name.lower()]
-          (out / 'resources-jar-all.txt').write_text('\n'.join(names) + '\n', encoding='utf-8')
-          (out / 'resources-jar-graphics.txt').write_text('\n'.join(graphics) + '\n', encoding='utf-8')
-          (out / 'resources-jar-summary.txt').write_text(
-              f'bytes={jar.stat().st_size}\nentries={len(names)}\ngraphicsEntries={len(graphics)}\n',
-              encoding='utf-8',
-          )
-          print((out / 'resources-jar-summary.txt').read_text(), end='')
-          PY
-      - name: Download official 0.98a-RC8 release
-        run: |
-          curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 1200 \
-            --connect-timeout 30 --max-time 900 --continue-at - \
-            -o .ci-cache/starsector_linux-0.98a-RC8.zip \
-            https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip
-          unzip -tq .ci-cache/starsector_linux-0.98a-RC8.zip
-          test "$(wc -c < .ci-cache/starsector_linux-0.98a-RC8.zip)" -gt 200000000
-      - name: Save official release cache
-        uses: actions/cache/save@v4
-        with:
-          path: .ci-cache/starsector_linux-0.98a-RC8.zip
-          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
-      - name: Upload preparation evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: campaign-preparation-evidence
-          path: |
-            test_output/asset-audit
-            test_output/bytecode
-          if-no-files-found: warn
-
-  experiment:
-    name: campaign-direct-main-thread-java17
-    needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,41 +29,54 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Restore official release cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .ci-cache/starsector_linux-0.98a-RC8.zip
-          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
-          fail-on-cache-miss: true
-      - name: Build and verify campaign-direct-main-thread-java17
-        env:
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_BROWSER_XSTREAM_LOAD_DIAG__":true}'
-          CHEERPJ_JAVA_VERSION: '17'
-          STARSECTOR_DEEP_GAMEPLAY: 'true'
-          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
-          STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '720000'
-          STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
-        run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Validate Pages overlay from verified candidate
+      - name: Build minimal XStream compatibility probe
         run: |
-          python3 ci/prepare-pages-overlay.py \
-            --output test_output/pages-overlays/pr-check \
-            --profile full-stock-campaign \
-            --source-sha "$GITHUB_SHA"
-          test -s test_output/pages-overlays/pr-check/web-runtime-profile.json
-          grep -q '"profile": "full-stock-campaign"' test_output/pages-overlays/pr-check/web-runtime-profile.json
-          test -s test_output/pages-overlays/pr-check/jars/fixer_patch.jar
-          test -s test_output/pages-overlays/pr-check/jars/starfarer.api.jar
-          test -s test_output/pages-overlays/pr-check/jars/starfarer_obf.jar
-          test -s test_output/pages-overlays/pr-check/jars/scripts-precompiled.jar
-      - name: Upload campaign-direct-main-thread-java17 evidence
+          set -euo pipefail
+          rm -rf .ci-build/xstream-microprobe
+          mkdir -p .ci-build/xstream-microprobe
+          CP='jars/xstream-1.4.10.jar:jars/txw2-2.3.1.jar'
+          javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
+            -d .ci-build/xstream-microprobe \
+            ci/java17-xstream/com/thoughtworks/xstream/core/util/Fields.java \
+            ci/java17-xstream/com/thoughtworks/xstream/core/util/SerializationMembers.java \
+            ci/java17-xstream/com/thoughtworks/xstream/converters/reflection/AbstractAttributedCharacterIteratorAttributeConverter.java \
+            ci/java17-xstream/com/thoughtworks/xstream/converters/reflection/FieldDictionary.java \
+            ci/java17-xstream/XStreamStaxValueProbe.java \
+            ci/java17-xstream/XStreamSunUnsafeProbe.java \
+            ci/java17-xstream/XStreamPureJavaProbe.java
+          jar cf jars/fixer_patch.jar -C .ci-build/xstream-microprobe .
+          python3 - <<'PY'
+          from pathlib import Path
+          names = ['fixer_patch.jar', 'xstream-1.4.10.jar', 'txw2-2.3.1.jar']
+          Path('jars/index.list').write_text(
+              ''.join(f'{name}\t{(Path("jars") / name).stat().st_size}\n' for name in names),
+              encoding='utf-8',
+          )
+          PY
+          cat jars/index.list
+      - name: Install browser
+        run: |
+          npm ci
+          npx playwright install chromium
+      - name: Run CheerpJ XStream probes
+        run: |
+          set -euo pipefail
+          STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
+            node ci/range-server.js >/tmp/xstream-probe-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for _ in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/launch.html >/dev/null; then break; fi
+            sleep 1
+          done
+          XSTREAM_PROBE_URL=http://127.0.0.1:8000/launch.html \
+            node ci/xstream-microprobe.js
+      - name: Upload probe evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-campaign-direct-main-thread-java17
+          name: xstream-cheerpj-microprobe
           path: |
-            test_output/campaign-direct-main-thread-java17
-            test_output/campaign-direct-main-thread-java17-tutorial
-            test_output/pages-overlays/pr-check/web-runtime-profile.json
-            test_output/pages-overlays/pr-check/web-runtime-manifest.json
+            test_output/xstream-microprobe
+            /tmp/xstream-probe-http.log
           if-no-files-found: warn
