@@ -45,6 +45,29 @@ REQUIRED_FILES = {
     "starsector/starsector/data/scripts/world/SectorGen.java",
 }
 
+FULL_ECONOMY_SYSTEMS = (
+    "askonia.json",
+    "aztlan.json",
+    "samarra.json",
+    "corvus.json",
+    "valhalla.json",
+    "arcadia.json",
+    "magec.json",
+    "eos.json",
+    "hybrasil.json",
+    "yma.json",
+    "tyle.json",
+    "naraka.json",
+    "canaan.json",
+    "mayasura.json",
+    "westernesse.json",
+    "zagan.json",
+    "thule.json",
+    "algebbar.json",
+    "kumarikandam.json",
+    "isirah.json",
+)
+
 
 def git_paths(*args: str) -> set[str]:
     raw = subprocess.check_output(["git", *args], cwd=ROOT)
@@ -76,7 +99,7 @@ def copy_file(rel: str, output: Path) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="test_output/pages-overlays/deploy")
-    parser.add_argument("--profile", default="corvus-asharu-compat")
+    parser.add_argument("--profile", default="full-stock-campaign")
     parser.add_argument("--source-sha", default="")
     args = parser.parse_args()
 
@@ -110,14 +133,31 @@ def main() -> int:
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
 
-    # Preparation-time changes include restored official graphics, the minimal
-    # economy, and patched loose Java fallbacks. Copy only runtime/data paths.
+    # Keep accepting the old profile argument while workflows transition, but
+    # record what is actually shipped. A Corvus/Asharu-only profile is no longer
+    # a valid public runtime.
+    profile_name = args.profile
+    if profile_name == "corvus-asharu-compat":
+        profile_name = "full-stock-campaign"
+
+    # Preparation-time changes include restored official graphics and patched
+    # loose Java fallbacks. Copy only runtime/data paths plus the complete stock
+    # economy dataset so an old gh-pages tree cannot retain a minimal economy.
     changed = git_paths("diff", "--name-only", "-z", "HEAD", "--")
     untracked = git_paths("ls-files", "--others", "--exclude-standard", "-z")
     selected = set(REQUIRED_FILES)
     for rel in changed | untracked:
         if rel.startswith("data/") or rel.startswith("starsector/starsector/"):
             selected.add(rel)
+
+    for econ_base in (
+        ROOT / "data" / "campaign" / "econ",
+        ROOT / "starsector" / "starsector" / "data" / "campaign" / "econ",
+    ):
+        if not econ_base.is_dir():
+            raise RuntimeError(f"full economy directory missing: {econ_base}")
+        for econ_file in econ_base.glob("*.json"):
+            selected.add(econ_file.relative_to(ROOT).as_posix())
 
     # The source branch already stores sanitized manifests, so they may not
     # appear in git diff even though the old gh-pages branch still has BOMs.
@@ -129,6 +169,11 @@ def main() -> int:
     launch = (ROOT / "launch.html").read_text(encoding="utf-8")
     if "20260810-campaign-render-v6" not in launch:
         raise RuntimeError("launch cache/reset version was not updated")
+    if "window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__ || 'normal'" not in launch:
+        raise RuntimeError("public launcher is not using normal sector size")
+    if "window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'Galatia'" not in launch:
+        raise RuntimeError("public launcher is not starting in Galatia")
+
     lwjgl_js = (
         ROOT / "build" / "final" / "wasm-modules" / "lwjgl.js"
     ).read_text(encoding="utf-8")
@@ -142,21 +187,25 @@ def main() -> int:
         "starsector/starsector/data/campaign/econ/economy.json",
     ):
         econ = (ROOT / econ_rel).read_text(encoding="utf-8-sig")
-        if '"corvus.json"' not in econ or '"askonia.json"' in econ:
-            raise RuntimeError(f"unexpected {args.profile} economy manifest: {econ_rel}")
+        missing = [name for name in FULL_ECONOMY_SYSTEMS if f'"{name}"' not in econ]
+        if missing:
+            raise RuntimeError(f"incomplete full-stock economy manifest {econ_rel}: missing={missing}")
+
     for corvus_rel in (
         "data/campaign/econ/corvus.json",
         "starsector/starsector/data/campaign/econ/corvus.json",
     ):
         corvus = (ROOT / corvus_rel).read_text(encoding="utf-8-sig")
-        if '"entities":["asharu"]' not in corvus or "jangala" in corvus:
-            raise RuntimeError(f"unexpected {args.profile} Corvus market data: {corvus_rel}")
+        required_entities = ("asharu", "jangala", "corvus_hegemony_station", "corvus_IIIa", "corvus_pirate_station")
+        missing = [entity for entity in required_entities if f'"{entity}"' not in corvus]
+        if missing:
+            raise RuntimeError(f"incomplete full-stock Corvus market data {corvus_rel}: missing={missing}")
 
     entries = [copy_file(rel, output) for rel in sorted(selected)]
     (output / ".nojekyll").touch()
     entries.insert(0, {"path": ".nojekyll", "bytes": 0, "sha256": sha256(output / ".nojekyll")})
     profile = {
-        "profile": args.profile,
+        "profile": profile_name,
         "sourceSha": source_sha,
         "workflowRunId": os.environ.get("GITHUB_RUN_ID", "local"),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -170,7 +219,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(
-        f"Pages overlay prepared profile={args.profile} source={source_sha} "
+        f"Pages overlay prepared profile={profile_name} source={source_sha} "
         f"files={len(entries)} bytes={sum(int(e['bytes']) for e in entries)}"
     )
     return 0

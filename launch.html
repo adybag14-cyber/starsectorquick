@@ -1094,6 +1094,9 @@
                 const autoCampaignSectorSize = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__ || 'small'
                 ).toString().trim().toLowerCase() || 'small';
+                const autoCampaignStartingLocation = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'hyperspace'
+                ).toString().trim() || 'hyperspace';
                 const autoCampaignTitleSettleMs = Math.max(
                     0,
                     Number(window.__STARSECTOR_AUTO_CAMPAIGN_TITLE_SETTLE_MS__ ?? 1000) || 1000
@@ -1162,6 +1165,21 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__ !== false;
                 const browserDeferredTextures =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_DEFERRED_TEXTURES__ !== false;
+                const browserGameplayProbe =
+                    window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
+                // Full vanilla procedural sector generation is the production default.
+                // This opt-in exists only for narrowly scoped bootstrap diagnostics.
+                const browserSkipOuterSectorProcGen =
+                    window.__STARSECTOR_BROWSER_SKIP_OUTER_SECTOR_PROCGEN__ === true;
+                const browserLightweightSectorCompat =
+                    window.__STARSECTOR_BROWSER_LIGHTWEIGHT_SECTOR_COMPAT__ === true;
+                const browserGameplaySpeedupMult = browserGameplayProbe
+                    ? Math.max(2, Math.min(32, Number(window.__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__ ?? 8) || 8))
+                    : 0;
+                // Background bulk predecode is opt-in only. In software-rendered browser
+                // environments a 1000+ image warmup can starve live Campaign/UI work.
+                const browserGameplayPrewarm =
+                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ === true;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
@@ -1279,13 +1297,29 @@
                     `-Dstarsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}`,
                     `starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}`,
                     `-Dstarsector.browserDeferredTextures=${browserDeferredTextures}`,
-                    `starsector.browserDeferredTextures=${browserDeferredTextures}`
+                    `starsector.browserDeferredTextures=${browserDeferredTextures}`,
+                    `-Dstarsector.browserGameplayProbe=${browserGameplayProbe}`,
+                    `starsector.browserGameplayProbe=${browserGameplayProbe}`,
+                    `-Dstarsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
+                    `starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
+                    `-Dstarsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
+                    `starsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,
+                    `-Dstarsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}`,
+                    `starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}`,
+                    `-Dstarsector.compatibilityFastPath=${browserLightweightSectorCompat}`,
+                    `starsector.compatibilityFastPath=${browserLightweightSectorCompat}`
                 ];
                 if (browserQuickResourceLoad) {
                     log('Browser quick resource load enabled: deferring all-ships/all-weapons sprite preload and suppressing title background combat during direct handoff.', '#00ff88');
                 }
                 if (browserBulkSpecCache) {
                     log('Browser bulk spec cache enabled for stock gameplay spec files.', '#00ff88');
+                }
+                if (browserSkipOuterSectorProcGen) {
+                    log('DIAGNOSTIC ONLY: outer-sector procedural generation is disabled for this run.', '#ffaa00');
+                }
+                if (browserLightweightSectorCompat) {
+                    log('DIAGNOSTIC ONLY: lightweight SectorGen compatibility path is enabled for this run.', '#ffaa00');
                 }
                 if (browserFastCsvParser) {
                     log('Browser fast CSV parser enabled for stock no-mod data tables.', '#00ff88');
@@ -1298,6 +1332,12 @@
                 }
                 if (browserRuleDuplicateIndex) {
                     log('Browser Rules duplicate index enabled: preserving duplicate checks without quadratic trigger-list scans.', '#00ff88');
+                }
+                if (browserGameplayProbe) {
+                    log(`Browser deep gameplay probe enabled for ability/button regression telemetry (fast-forward ${browserGameplaySpeedupMult}x).`, '#00ff88');
+                }
+                if (browserGameplayPrewarm) {
+                    log('Browser post-Campaign gameplay texture predecode enabled.', '#00ff88');
                 }
                 if (browserDeferredTextures) {
                     log('Browser deferred textures enabled: illustrations/portraits load on first real lookup.', '#00ff88');
@@ -1316,6 +1356,8 @@
                     javaProperties.push(`starsector.autoCampaignStartVariant=${autoCampaignVariant}`);
                     javaProperties.push(`-Dstarsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
                     javaProperties.push(`starsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
+                    javaProperties.push(`-Dstarsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
+                    javaProperties.push(`starsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
                     javaProperties.push(`-Dstarsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`starsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDirectEscape=${autoCampaignAllowDirectEscape}`);

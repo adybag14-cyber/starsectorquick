@@ -9,6 +9,7 @@ const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
 const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaign-render';
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
+const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -86,6 +87,196 @@ function pixelStats(buffer) {
   };
 }
 
+function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
+  if (!beforeBuffer || !afterBuffer) return 0;
+  const a = PNG.sync.read(beforeBuffer);
+  const b = PNG.sync.read(afterBuffer);
+  if (a.width !== b.width || a.height !== b.height) return 1;
+  const r = region || { x0: 0, y0: 0, x1: 1, y1: 1 };
+  const x0 = Math.max(0, Math.floor(a.width * r.x0));
+  const x1 = Math.min(a.width, Math.ceil(a.width * r.x1));
+  const y0 = Math.max(0, Math.floor(a.height * r.y0));
+  const y1 = Math.min(a.height, Math.ceil(a.height * r.y1));
+  let changed = 0;
+  let total = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * a.width + x) * 4;
+      const delta = Math.abs(a.data[i] - b.data[i])
+        + Math.abs(a.data[i + 1] - b.data[i + 1])
+        + Math.abs(a.data[i + 2] - b.data[i + 2]);
+      if (delta >= 24) changed += 1;
+      total += 1;
+    }
+  }
+  return total > 0 ? changed / total : 0;
+}
+
+function panelVisualThreshold(tab) {
+  // Command/OUTPOSTS is intentionally sparse on a fresh campaign and changes
+  // less of the screen than Character/Fleet/Refit/Cargo/Map/Intel. Keep a
+  // meaningful visual gate, but key it to the actual screen rather than forcing
+  // every tab through one 8% pixel-difference threshold.
+  return tab === 'OUTPOSTS' ? 0.04 : 0.08;
+}
+
+async function waitForVisualTransition(canvas, baseline, options = {}) {
+  const region = options.region || { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
+  const threshold = Number(options.threshold ?? 0.025);
+  const timeoutMs = Number(options.timeoutMs ?? 8000);
+  const pollMs = Math.max(100, Number(options.pollMs ?? 400));
+  const started = Date.now();
+  let bestDiff = 0;
+  let lastFrame = null;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    const visualDiff = pixelDiffRatio(baseline, lastFrame, region);
+    bestDiff = Math.max(bestDiff, visualDiff);
+    if (visualDiff >= threshold) {
+      return { opened: true, openMs: Date.now() - started, visualDiff, bestDiff, frame: lastFrame };
+    }
+  }
+  return { opened: false, openMs: null, visualDiff: bestDiff, bestDiff, frame: lastFrame };
+}
+
+async function waitForCampaignFrame(canvas, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 8000);
+  const pollMs = Math.max(100, Number(options.pollMs ?? 400));
+  const started = Date.now();
+  let lastFrame = null;
+  let lastStats = null;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastStats = pixelStats(lastFrame);
+    if (isCampaignFramePlayable(lastStats)) {
+      return { ready: true, readyMs: Date.now() - started, frame: lastFrame, stats: lastStats };
+    }
+  }
+  return { ready: false, readyMs: null, frame: lastFrame, stats: lastStats };
+}
+
+async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 10000);
+  const pollMs = Math.max(25, Number(options.pollMs ?? 100));
+  const pump = typeof options.pump === 'function' ? options.pump : null;
+  const started = Date.now();
+  while (Date.now() - started <= timeoutMs) {
+    if (pump) await pump().catch(() => undefined);
+    for (let i = startIndex; i < logs.length; i++) {
+      const line = logs[i];
+      const match = line.match(pattern);
+      if (match) return { matched: true, match, line, index: i, elapsedMs: Date.now() - started };
+    }
+    await sleep(pollMs);
+  }
+  return { matched: false, match: null, line: null, index: -1, elapsedMs: Date.now() - started };
+}
+
+async function waitForGameplayEvent(events, startIndex, predicate, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 10000);
+  const pollMs = Math.max(25, Number(options.pollMs ?? 100));
+  const started = Date.now();
+  while (Date.now() - started <= timeoutMs) {
+    for (let i = startIndex; i < events.length; i++) {
+      const event = events[i];
+      if (predicate(event)) return { matched: true, event, index: i, elapsedMs: Date.now() - started };
+    }
+    await sleep(pollMs);
+  }
+  return { matched: false, event: null, index: -1, elapsedMs: Date.now() - started };
+}
+
+function latestAbilityReadiness(events, abilityId) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.id !== abilityId) continue;
+    if (event.event === 'ability-ready') return true;
+    if (event.event === 'ability-unready') return false;
+  }
+  return null;
+}
+
+function latestAbilityStableReadiness(events, abilityId) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.id !== abilityId) continue;
+    if (event.event === 'ability-unready') return false;
+    if (event.event === 'ability-ready-stable') return true;
+  }
+  return null;
+}
+
+async function waitForAbilityReady(events, abilityId, options = {}) {
+  const initialState = latestAbilityStableReadiness(events, abilityId);
+  if (initialState === true) {
+    return { ready: true, initialState, finalState: true, elapsedMs: 0, source: 'stable-current' };
+  }
+  const startIndex = events.length;
+  const ready = await waitForGameplayEvent(
+    events, startIndex,
+    event => event.id === abilityId && event.event === 'ability-ready-stable',
+    { timeoutMs: Number(options.timeoutMs ?? 12000), pollMs: Number(options.pollMs ?? 100) }
+  );
+  return {
+    ready: ready.matched,
+    initialState,
+    finalState: latestAbilityStableReadiness(events, abilityId),
+    elapsedMs: ready.elapsedMs,
+    source: ready.matched ? 'stable-transition' : 'timeout',
+  };
+}
+
+function latestAbilityUiReadiness(events, abilityId) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.id !== abilityId) continue;
+    if (event.event === 'ability-ui-ready') return true;
+    if (event.event === 'ability-ui-unready'
+        || event.event === 'ability-ui-lag'
+        || event.event === 'ability-ui-stale-enabled') return false;
+  }
+  return null;
+}
+
+async function waitForAbilityUiReady(events, abilityId, options = {}) {
+  const initialState = latestAbilityUiReadiness(events, abilityId);
+  if (initialState === true) {
+    return { ready: true, initialState, finalState: true, elapsedMs: 0, source: 'ui-current' };
+  }
+  const startIndex = events.length;
+  const ready = await waitForGameplayEvent(
+    events, startIndex,
+    event => event.id === abilityId && event.event === 'ability-ui-ready',
+    { timeoutMs: Number(options.timeoutMs ?? 12000), pollMs: Number(options.pollMs ?? 100) }
+  );
+  return {
+    ready: ready.matched,
+    initialState,
+    finalState: latestAbilityUiReadiness(events, abilityId),
+    elapsedMs: ready.elapsedMs,
+    source: ready.matched ? 'ui-transition' : 'timeout',
+  };
+}
+
+async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 5000);
+  const pollMs = Math.max(50, Number(options.pollMs ?? 100));
+  const readSwapCount = () => page.evaluate(() => Number(window.__lwjglPresentationStats?.swapCount || 0));
+  const start = await readSwapCount().catch(() => 0);
+  const started = Date.now();
+  let current = start;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    current = await readSwapCount().catch(() => current);
+    if (current - start >= minFrames) {
+      return { advanced: true, frames: current - start, elapsedMs: Date.now() - started };
+    }
+  }
+  return { advanced: false, frames: current - start, elapsedMs: Date.now() - started };
+}
+
 (async () => {
   const logs = [];
   const errors = [];
@@ -93,6 +284,8 @@ function pixelStats(buffer) {
   const localNegativeMisses = [];
   const screenshotErrors = [];
   const graphicsErrors = [];
+  const runtimeErrorSignals = [];
+  const gameplayEvents = [];
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -103,6 +296,9 @@ function pixelStats(buffer) {
   let startingSuppliesTarget = null;
   let startingSuppliesAfter = null;
   let startingSuppliesReady = false;
+  let playableResources = null;
+  let starterAbilityMappingReady = false;
+  const starterAbilitySlots = {};
   let jarPackResponses = 0;
   let jarPackResponseBytes = 0;
   let browser;
@@ -124,13 +320,17 @@ function pixelStats(buffer) {
     __STARSECTOR_AUTO_CAMPAIGN_MODE__: 'new_direct',
     __STARSECTOR_DIRECT_LAUNCH__: true,
     __STARSECTOR_AUTO_VISIT_COLONY__: false,
-    __STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__: 'small',
+    __STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__: 'normal',
+    __STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__: deepGameplay ? 'Corvus' : 'Galatia',
+    __STARSECTOR_BROWSER_TUTORIAL__: !deepGameplay,
     __STARSECTOR_AUTO_CAMPAIGN_TIMEOUT_MS__: 900000,
     __STARSECTOR_AUTO_CAMPAIGN_DIRECT_ATTEMPT_TIMEOUT_MS__: 45000,
     __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: true,
     __STARSECTOR_RENDER_WIDTH__: 1024,
     __STARSECTOR_RENDER_HEIGHT__: 768,
-    __LWJGL_FIRST_LOG_LIMIT__: 512
+    __LWJGL_FIRST_LOG_LIMIT__: 512,
+    __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: deepGameplay,
+    __STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__: deepGameplay ? 8 : 0
   };
   const windowConfig = { ...defaultConfig, ...configOverrides };
   await page.addInitScript(config => {
@@ -140,6 +340,16 @@ function pixelStats(buffer) {
   page.on('console', message => {
     const text = message.text();
     logs.push(`[${message.type()}] ${text}`);
+    if (text.includes('BrowserGameplayProbe:')) {
+      const payload = text.slice(text.indexOf('BrowserGameplayProbe:') + 'BrowserGameplayProbe:'.length).trim();
+      const event = { raw: text, at: Date.now() };
+      for (const token of payload.split(/\s+/)) {
+        const eq = token.indexOf('=');
+        if (eq <= 0) continue;
+        event[token.slice(0, eq)] = token.slice(eq + 1);
+      }
+      gameplayEvents.push(event);
+    }
     const update = text.match(/Bridge Display\.update(?:\([^)]*\))? count=(\d+)/i);
     if (update) updateMax = Math.max(updateMax, Number(update[1]));
     const swap = text.match(/Bridge Display\.swapBuffers count=(\d+)/i);
@@ -152,14 +362,39 @@ function pixelStats(buffer) {
         && Number.isFinite(startingSuppliesTarget)
         && Number.isFinite(startingSuppliesAfter);
     }
+    const resources = text.match(/Fixer: auto campaign playable resources supplies=([0-9.+-]+)\s+fuel=([0-9.+-]+)\/([0-9.+-]+)\s+crew=([0-9.+-]+)\/min=([0-9.+-]+)\/max=([0-9.+-]+)\s+cargo=([0-9.+-]+)\/([0-9.+-]+)\s+credits=([0-9.+-]+)\s+ready=(true|false)/i);
+    if (resources) {
+      playableResources = {
+        supplies: Number(resources[1]),
+        fuel: Number(resources[2]),
+        maxFuel: Number(resources[3]),
+        crew: Number(resources[4]),
+        minCrew: Number(resources[5]),
+        maxPersonnel: Number(resources[6]),
+        cargoUsed: Number(resources[7]),
+        maxCargo: Number(resources[8]),
+        credits: Number(resources[9]),
+        ready: resources[10].toLowerCase() === 'true',
+      };
+    }
+    const starterAbilities = text.match(/Fixer: auto campaign starter abilities mapped=([^\r\n]+?)\s+ready=(true|false)/i);
+    if (starterAbilities) {
+      starterAbilityMappingReady = starterAbilities[2].toLowerCase() === 'true';
+      for (const entry of starterAbilities[1].split(',')) {
+        const match = entry.trim().match(/^(\d+)=(.+)$/);
+        if (match) starterAbilitySlots[match[1]] = match[2];
+      }
+    }
     if (/watcher state=Campaign State|reached Campaign State/i.test(text) && !campaignSeenAt) {
       campaignSeenAt = Date.now();
     }
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
-    if (/(?:^|\b)Fatal\s*:\s*|Exception in thread|auto campaign aborting|exhausted all new-game/i.test(text) && !fatalSeenAt) {
-      fatalSeenAt = Date.now();
+    const hardRuntimeError = /fatal\s+starsector\s+null|NullPointerException|Exception in thread|(?:^|\b)Fatal\s*:\s*|auto campaign aborting|exhausted all new-game/i.test(text);
+    if (hardRuntimeError) {
+      runtimeErrorSignals.push(text);
+      if (!fatalSeenAt) fatalSeenAt = Date.now();
     }
     if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
       graphicsErrors.push(text);
@@ -296,8 +531,17 @@ function pixelStats(buffer) {
   // inset 6px from the left and 10px from the bottom of the 1024x768 logical
   // viewport. Slot 1 is Character (the exact reproduced crash); sweeping every
   // slot avoids silently missing controls whose live labels differ by game state.
-  const campaignUiControls = Array.from({ length: 7 }, (_, slot) => [
-    `bottom-slot-${slot + 1}`,
+  const campaignControlTabs = [
+    ['Character', 'CHARACTER'],
+    ['Fleet', 'FLEET'],
+    ['Refit', 'REFIT'],
+    ['Crew/Cargo', 'CARGO'],
+    ['Map', 'MAP'],
+    ['Intel', 'INTEL'],
+    ['Command', 'OUTPOSTS'],
+  ];
+  const campaignUiControls = campaignControlTabs.map(([label, tab], slot) => [
+    label, tab,
     (68.5 + 131 * slot) / 1024,
     748 / 768,
   ]);
@@ -306,14 +550,47 @@ function pixelStats(buffer) {
     try {
       const box = await gameCanvas.boundingBox();
       if (!box) throw new Error('campaign canvas has no bounding box');
-      for (const [name, nx, ny] of campaignUiControls) {
+      for (const [name, expectedTab, nx, ny] of campaignUiControls) {
         if (fatalSeenAt || errors.length > 0) break;
         const x = box.x + box.width * nx;
         const y = box.y + box.height * ny;
-        logs.push(`[ui-probe] click ${name} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
+        const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const probeStart = logs.length;
+        const gameplayStart = gameplayEvents.length;
+        const panelStartedAt = Date.now();
+        logs.push(`[ui-probe] click ${name} expectedTab=${expectedTab} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
         await page.mouse.move(x, y);
         await page.mouse.click(x, y, { button: 'left', delay: 80 });
-        await sleep(2200);
+        let tabReady = null;
+        let panelTransition = null;
+        let panelFrame = null;
+        let panelVisualDiff = null;
+        let listenerReadyMs = null;
+        let visualReadyMs = null;
+        let panelOpened = !deepGameplay;
+        if (deepGameplay) {
+          tabReady = await waitForGameplayEvent(
+            gameplayEvents, gameplayStart,
+            event => event.event === 'core-tab-ready' && event.tab === expectedTab,
+            { timeoutMs: 10000, pollMs: 100 }
+          );
+          listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
+          if (tabReady.matched) {
+            panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
+              timeoutMs: 9000,
+              pollMs: 800,
+              threshold: panelVisualThreshold(expectedTab),
+              region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+            });
+            panelFrame = panelTransition.frame;
+            panelVisualDiff = panelTransition.visualDiff;
+            panelOpened = panelTransition.opened;
+            visualReadyMs = panelOpened ? Date.now() - panelStartedAt : null;
+          }
+        } else {
+          await sleep(2200);
+        }
+        if (panelFrame) fs.writeFileSync(`${outputDir}/gameplay-panel-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, panelFrame);
         const afterClick = await withTimeout(page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
           bodyDetail: document.body.dataset.runtimeDetail || '',
@@ -325,12 +602,51 @@ function pixelStats(buffer) {
         }));
         const failed = Boolean(fatalSeenAt)
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(afterClick.bodyState)
-          || afterClick.runtime?.state === 'fatal';
-        uiControlResults.push({ name, failed, ...afterClick });
+          || afterClick.runtime?.state === 'fatal'
+          || !panelOpened;
+        const controlResult = {
+          name,
+          expectedTab,
+          tabReady: Boolean(tabReady?.matched),
+          failed,
+          panelOpened,
+          listenerReadyMs,
+          visualReadyMs,
+          panelVisualDiff,
+          returnedToCampaign: !deepGameplay,
+          returnReadyMs: null,
+          returnVisualDiff: null,
+          ...afterClick,
+        };
+        uiControlResults.push(controlResult);
+        logs.push(`[ui-probe] result ${name} expectedTab=${expectedTab} tabReady=${Boolean(tabReady?.matched)} panelOpened=${panelOpened} listenerReadyMs=${listenerReadyMs ?? 'n/a'} visualReadyMs=${visualReadyMs ?? 'n/a'} visualDiff=${panelVisualDiff == null ? 'n/a' : panelVisualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
-        if (failed) break;
-        await page.keyboard.press('Escape');
-        await sleep(900);
+
+        // Clean up every listener that actually fired, even when its visual-ready
+        // deadline failed, so a single slow panel cannot contaminate later probes.
+        if (deepGameplay && tabReady?.matched) {
+          if (panelOpened) {
+            await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.45);
+            await page.mouse.wheel(0, 480);
+            await sleep(350);
+          }
+          await page.keyboard.press('Escape');
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returnFrame = returned.frame;
+          if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
+          controlResult.returnReadyMs = returned.readyMs;
+          controlResult.returnVisualDiff = returnFrame && panelFrame
+            ? pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 })
+            : 0;
+          controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
+          controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
+          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
+          flushLogs();
+        } else if (!deepGameplay) {
+          await page.keyboard.press('Escape');
+          await sleep(900);
+        }
+        if (controlResult.failed) break;
       }
     } catch (error) {
       errors.push(`campaign UI control probe failed: ${error.message || error}`);
@@ -346,9 +662,13 @@ function pixelStats(buffer) {
   // The old bridge dropped every key unless the canvas itself was active, while
   // desktop LWJGL continues to own the keyboard across in-game UI panels.
   const shortcutKeys = [
-    ['Cargo', 'i'],
-    ['Intel', 'e'],
-    ['Map', 'Tab'],
+    ['Character', 'c', 'CHARACTER'],
+    ['Fleet', 'f', 'FLEET'],
+    ['Refit', 'r', 'REFIT'],
+    ['Crew/Cargo', 'i', 'CARGO'],
+    ['Map', 'Tab', 'MAP'],
+    ['Intel', 'e', 'INTEL'],
+    ['Command', 'd', 'OUTPOSTS'],
   ];
   const shortcutResults = [];
   const shortcutBefore = await withTimeout(
@@ -358,15 +678,48 @@ function pixelStats(buffer) {
   ).catch(() => ({}));
   if (expectedState === 'campaign' && !fatalSeenAt) {
     try {
-      for (const [name, key] of shortcutKeys) {
+      for (const [name, key, expectedTab] of shortcutKeys) {
         await page.evaluate(() => {
           document.body.tabIndex = -1;
           document.body.focus({ preventScroll: true });
         });
         const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
+        const beforeFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const probeStart = logs.length;
+        const gameplayStart = gameplayEvents.length;
+        const shortcutStartedAt = Date.now();
         await page.keyboard.press(key);
-        await sleep(1600);
+        let transition = null;
+        let shortcutFrame = null;
+        if (deepGameplay) {
+          const ready = await waitForGameplayEvent(
+            gameplayEvents, gameplayStart,
+            event => event.event === 'core-tab-ready' && event.tab === expectedTab,
+            { timeoutMs: 8000, pollMs: 100 }
+          );
+          const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
+          if (ready.matched) {
+            const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              timeoutMs: 8000,
+              pollMs: 800,
+              threshold: panelVisualThreshold(expectedTab),
+              region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+            });
+            shortcutFrame = visual.frame;
+            transition = {
+              opened: visual.opened,
+              listenerReadyMs,
+              visualReadyMs: visual.opened ? Date.now() - shortcutStartedAt : null,
+              visualDiff: visual.visualDiff,
+              readyMatched: true,
+            };
+          } else {
+            transition = { opened: false, listenerReadyMs: null, visualReadyMs: null, visualDiff: 0, readyMatched: false };
+          }
+        } else {
+          await sleep(1600);
+        }
         const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const runtime = await page.evaluate(() => ({
           bodyState: document.body.dataset.runtimeState || '',
@@ -374,14 +727,40 @@ function pixelStats(buffer) {
         }));
         const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
         const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
+        const semanticOpened = !deepGameplay || Boolean(transition?.opened);
+        const directInputOk = deepGameplay ? deliveredDelta >= 1 : deliveredDelta >= 2;
         const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
-          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState);
-        shortcutResults.push({ name, key, activeBefore, deliveredDelta, globalDelta, failed });
-        logs.push(`[shortcut-probe] ${name} key=${key} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} failed=${failed}`);
+          || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState)
+          || !directInputOk || globalDelta < 2 || !semanticOpened;
+        const shortcutResult = {
+          name,
+          key,
+          expectedTab,
+          activeBefore,
+          deliveredDelta,
+          globalDelta,
+          semanticOpened,
+          tabReady: Boolean(transition?.readyMatched),
+          listenerReadyMs: transition?.listenerReadyMs ?? null,
+          visualReadyMs: transition?.visualReadyMs ?? null,
+          visualDiff: transition?.visualDiff ?? null,
+          failed,
+        };
+        shortcutResults.push(shortcutResult);
+        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
-        if (failed) break;
-        await page.keyboard.press('Escape');
-        await sleep(900);
+
+        if (deepGameplay && transition?.readyMatched) {
+          await page.keyboard.press('Escape');
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          shortcutResult.returnedToCampaign = returned.ready;
+          shortcutResult.returnReadyMs = returned.readyMs;
+          shortcutResult.failed = shortcutResult.failed || !returned.ready;
+        } else if (!deepGameplay) {
+          await page.keyboard.press('Escape');
+          await sleep(900);
+        }
+        if (shortcutResult.failed) break;
       }
     } catch (error) {
       errors.push(`campaign shortcut probe failed: ${error.message || error}`);
@@ -394,9 +773,279 @@ function pixelStats(buffer) {
   ).catch(() => ({}));
   const shortcutsResponsive = expectedState !== 'campaign' || Boolean(
     shortcutResults.length === shortcutKeys.length
-    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= 2 && item.globalDelta >= 2)
+    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= (deepGameplay ? 1 : 2) && item.globalDelta >= 2)
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
+
+  const expectedAbilityIds = [
+    'transponder', 'go_dark', 'sensor_burst', 'emergency_burn',
+    'sustained_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
+  ];
+  const durationAbilityIds = new Set([
+    'sensor_burst', 'emergency_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
+  ]);
+  const contextUnavailableAbilityIds = new Set(['scavenge']);
+  // Exercise short/independent abilities before the long Emergency Burn so a
+  // slow software-rendered campaign clock cannot hide coverage of keys 7/8.
+  const abilityExecutionOrder = [1, 2, 3, 5, 7, 8, 6, 4];
+  const terminalDurationAbilityIds = new Set(['emergency_burn']);
+  const abilityKeyResults = [];
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+    const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
+    for (const digit of abilityExecutionOrder) {
+      if (fatalSeenAt) break;
+      const key = String(digit);
+      const expectedId = expectedAbilityIds[digit - 1];
+      const readinessRequired = !contextUnavailableAbilityIds.has(expectedId);
+      const readiness = readinessRequired
+        ? await waitForAbilityReady(gameplayEvents, expectedId, { timeoutMs: 12000, pollMs: 100 })
+        : {
+            ready: latestAbilityReadiness(gameplayEvents, expectedId) === true,
+            initialState: latestAbilityReadiness(gameplayEvents, expectedId),
+            finalState: latestAbilityReadiness(gameplayEvents, expectedId),
+            elapsedMs: 0,
+            source: 'context-optional',
+          };
+      const uiReadiness = readinessRequired
+        ? await waitForAbilityUiReady(gameplayEvents, expectedId, { timeoutMs: 12000, pollMs: 100 })
+        : {
+            ready: latestAbilityUiReadiness(gameplayEvents, expectedId) === true,
+            initialState: latestAbilityUiReadiness(gameplayEvents, expectedId),
+            finalState: latestAbilityUiReadiness(gameplayEvents, expectedId),
+            elapsedMs: 0,
+            source: 'context-optional',
+          };
+      const logStart = logs.length;
+      const gameplayStart = gameplayEvents.length;
+      const beforeInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+      const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+
+      await page.keyboard.press(key);
+      let pressReady = await waitForGameplayEvent(
+        gameplayEvents, gameplayStart,
+        event => event.event === 'ability-press' && event.id === expectedId,
+        { timeoutMs: 3500, pollMs: 100 }
+      );
+      await sleep(pressReady.matched ? 450 : 150);
+
+      // Transponder intentionally uses a desktop-style confirmation double tap.
+      // The first key primes the warning and the second must reach the same ability
+      // and produce a real activation/deactivation state transition.
+      let confirmationPress = false;
+      let currentEvents = gameplayEvents.slice(gameplayStart);
+      let currentStates = currentEvents.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      if (expectedId === 'transponder' && pressReady.matched && currentStates.length === 0) {
+        confirmationPress = true;
+        const confirmationStart = gameplayEvents.length;
+        await page.keyboard.press(key);
+        const confirmed = await waitForGameplayEvent(
+          gameplayEvents, confirmationStart,
+          event => (event.event === 'ability-activate' || event.event === 'ability-deactivate') && event.id === expectedId,
+          { timeoutMs: 3500, pollMs: 100 }
+        );
+        await sleep(confirmed.matched ? 450 : 150);
+      }
+
+      const afterFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      fs.writeFileSync(`${outputDir}/gameplay-ability-${digit}.png`, afterFrame);
+      const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+      const events = gameplayEvents.slice(gameplayStart);
+      const pressEvents = events.filter(event => event.event === 'ability-press');
+      const uiActionEvents = events.filter(event => event.event === 'ability-ui-action');
+      const stateEvents = events.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      const ids = [...new Set(pressEvents.map(event => event.id).filter(Boolean))];
+      const slotMapped = starterAbilityMappingReady && starterAbilitySlots[String(digit)] === expectedId;
+      const pressObserved = pressEvents.some(event => event.id === expectedId);
+      const mapped = slotMapped;
+      const wrongIds = ids.filter(id => id !== expectedId);
+      const usable = pressEvents.some(event => event.id === expectedId && event.usable === 'true');
+      const contextUnavailable = contextUnavailableAbilityIds.has(expectedId) && !pressObserved;
+      const pressRequired = !contextUnavailableAbilityIds.has(expectedId);
+      const uiActionObserved = uiActionEvents.some(event => event.id === expectedId);
+      const preReady = readiness.ready && uiReadiness.ready;
+      // A real press reported usable=true is stronger runtime evidence than the
+      // pre-press stable probe. The latter can be stale for a few frames after
+      // another duration ability settles under software rendering. Keep the UI
+      // readiness requirement and all mapping/action/state gates intact.
+      const runtimeReady = uiReadiness.ready && (readiness.ready || (pressObserved && usable));
+      const deliveredDelta = Number(afterInput.directKeyboardDelivered || 0) - Number(beforeInput.directKeyboardDelivered || 0);
+      const globalDelta = Number(afterInput.keyboardGlobalCaptures || 0) - Number(beforeInput.keyboardGlobalCaptures || 0);
+      const visualDiff = pixelDiffRatio(beforeFrame, afterFrame, abilityRegion);
+      const stateChanged = stateEvents.some(event => event.id === expectedId);
+      const animatedOrChanged = contextUnavailable || !usable || stateChanged || visualDiff >= 0.002;
+      const minKeyboardEvents = confirmationPress ? 4 : 2;
+      const failed = deliveredDelta < minKeyboardEvents || globalDelta < minKeyboardEvents
+        || !mapped || (pressRequired && (!runtimeReady || !uiActionObserved || !pressObserved)) || wrongIds.length > 0
+        || !animatedOrChanged || Boolean(fatalSeenAt);
+      abilityKeyResults.push({
+        digit, expectedId, mapped, slotMapped, pressObserved, uiActionObserved, contextUnavailable, preReady, runtimeReady, readiness, uiReadiness, ids, wrongIds, usable,
+        confirmationPress, deliveredDelta, globalDelta, visualDiff, stateChanged, stateEvents: stateEvents.length,
+        pressReadyMs: pressReady.matched ? pressReady.elapsedMs : null, failed,
+      });
+      logs.push(`[ability-key-probe] key=${digit} expected=${expectedId} mapped=${mapped} preReady=${preReady} runtimeReady=${runtimeReady} pluginReadyWaitMs=${readiness.elapsedMs} pluginReadySource=${readiness.source} uiReady=${uiReadiness.ready} uiReadyWaitMs=${uiReadiness.elapsedMs} uiReadySource=${uiReadiness.source} uiAction=${uiActionObserved} pressObserved=${pressObserved} contextUnavailable=${contextUnavailable} ids=${ids.join(',') || '-'} usable=${usable} confirm=${confirmationPress} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} visualDiff=${visualDiff.toFixed(4)} stateChanged=${stateChanged} stateEvents=${stateEvents.length} pressReadyMs=${pressReady.matched ? pressReady.elapsedMs : 'n/a'} failed=${failed}`);
+      flushLogs();
+      if (failed) break;
+
+      // Duration abilities keep incompatible abilities force-disabled until their
+      // deactivation fade has reached a true zero-progress state. A deactivation
+      // callback alone is too early (notably for Emergency Burn). Wait for the
+      // test-only ability-settled event emitted at the end of BaseDurationAbility
+      // advance(), then allow three real presentation frames for disableFrames to
+      // clear before probing the next numeric slot.
+      if (durationAbilityIds.has(expectedId) && stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate')) {
+        const lifecycleRequired = !terminalDurationAbilityIds.has(expectedId);
+        if (!lifecycleRequired) {
+          const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+          currentResult.durationLifecycleRequired = false;
+          currentResult.durationSettled = gameplayEvents.slice(gameplayStart).some(
+            event => event.id === expectedId && event.event === 'ability-settled'
+          );
+          logs.push(`[ability-settle] key=${digit} id=${expectedId} terminal=true lifecycleRequired=false settled=${currentResult.durationSettled} failed=false`);
+          flushLogs();
+          continue;
+        }
+        let fullySettled = gameplayEvents.slice(gameplayStart).some(
+          event => event.id === expectedId && event.event === 'ability-settled'
+        );
+        let settleMs = 0;
+        let fastForwardInput = null;
+        let settledEvent = null;
+        if (!fullySettled) {
+          const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          try {
+            // Starsector's tutorial teaches holding FAST_FORWARD (stock binding:
+            // Shift). Exercise that real gameplay control while long abilities run.
+            await page.keyboard.down('Shift');
+            settledEvent = await waitForGameplayEvent(
+              gameplayEvents, gameplayStart,
+              event => event.id === expectedId && event.event === 'ability-settled',
+              { timeoutMs: 60000, pollMs: 100 }
+            );
+          } finally {
+            await page.keyboard.up('Shift').catch(() => undefined);
+          }
+          const fastAfter = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          fastForwardInput = {
+            deliveredDelta: Number(fastAfter.directKeyboardDelivered || 0) - Number(fastBefore.directKeyboardDelivered || 0),
+            globalDelta: Number(fastAfter.keyboardGlobalCaptures || 0) - Number(fastBefore.keyboardGlobalCaptures || 0),
+          };
+          fullySettled = Boolean(settledEvent && settledEvent.matched);
+          settleMs = settledEvent ? settledEvent.elapsedMs : 60000;
+        }
+        const lifecycleEvents = gameplayEvents.slice(gameplayStart);
+        const deactivated = lifecycleEvents.some(
+          event => event.id === expectedId && event.event === 'ability-deactivate'
+        );
+        const recovery = fullySettled
+          ? await waitForPresentationFrames(page, 3, { timeoutMs: 5000, pollMs: 100 })
+          : { advanced: false, frames: 0, elapsedMs: 0 };
+        const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+        const settledElapsedDays = settledEvent?.event?.elapsedDays == null
+          ? null
+          : Number(settledEvent.event.elapsedDays);
+        currentResult.durationDeactivated = deactivated;
+        currentResult.durationSettled = fullySettled;
+        currentResult.durationSettleMs = settleMs;
+        currentResult.durationElapsedDays = Number.isFinite(settledElapsedDays) ? settledElapsedDays : null;
+        currentResult.durationRecovery = recovery;
+        currentResult.fastForwardInput = fastForwardInput;
+        if (!deactivated || !fullySettled || !recovery.advanced) currentResult.failed = true;
+        const ffDelivered = fastForwardInput ? fastForwardInput.deliveredDelta : 0;
+        const ffGlobal = fastForwardInput ? fastForwardInput.globalDelta : 0;
+        logs.push(`[ability-settle] key=${digit} id=${expectedId} deactivated=${deactivated} settled=${fullySettled} settleMs=${settleMs} elapsedDays=${currentResult.durationElapsedDays ?? 'n/a'} fastForwardDelivered=${ffDelivered} fastForwardGlobal=${ffGlobal} recoveryFrames=${recovery.frames} recoveryMs=${recovery.elapsedMs} failed=${currentResult.failed}`);
+        flushLogs();
+        if (currentResult.failed) break;
+      }
+
+      // Toggle-style abilities are pressed again to return the campaign to a
+      // neutral baseline before the next slot. Transponder was already pressed
+      // twice to activate; this third press only primes its off confirmation, so
+      // follow it with a fourth when needed.
+      if (stateEvents.some(event => event.id === expectedId && event.event === 'ability-activate' && event.active === 'true')) {
+        const cleanupStart = gameplayEvents.length;
+        await page.keyboard.press(key);
+        await sleep(300);
+        if (expectedId === 'transponder' && !gameplayEvents.slice(cleanupStart).some(event => event.id === expectedId && event.event === 'ability-deactivate')) {
+          await page.keyboard.press(key);
+        }
+        const deactivated = await waitForGameplayEvent(
+          gameplayEvents, cleanupStart,
+          event => event.id === expectedId && event.event === 'ability-deactivate',
+          { timeoutMs: 5000, pollMs: 100 }
+        );
+        let fullySettled = false;
+        let toggleSettleMs = null;
+        let toggleFastForwardInput = null;
+        if (deactivated.matched) {
+          // ability-settled can arrive in the same render/update burst as the
+          // deactivation callback. Start immediately after the matched
+          // deactivation event so a one-shot settled signal cannot be lost
+          // between the deactivation wait returning and this second wait.
+          const settleStart = deactivated.index + 1;
+          const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          let settled;
+          try {
+            await page.keyboard.down('Shift');
+            settled = await waitForGameplayEvent(
+              gameplayEvents, settleStart,
+              event => event.id === expectedId && event.event === 'ability-settled',
+              { timeoutMs: 15000, pollMs: 100 }
+            );
+          } finally {
+            await page.keyboard.up('Shift').catch(() => undefined);
+          }
+          const fastAfter = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+          toggleFastForwardInput = {
+            deliveredDelta: Number(fastAfter.directKeyboardDelivered || 0) - Number(fastBefore.directKeyboardDelivered || 0),
+            globalDelta: Number(fastAfter.keyboardGlobalCaptures || 0) - Number(fastBefore.keyboardGlobalCaptures || 0),
+          };
+          fullySettled = Boolean(settled && settled.matched);
+          toggleSettleMs = settled ? settled.elapsedMs : 15000;
+        }
+        const currentResult = abilityKeyResults[abilityKeyResults.length - 1];
+        currentResult.toggleDeactivated = deactivated.matched;
+        currentResult.toggleSettled = fullySettled;
+        currentResult.toggleSettleMs = toggleSettleMs;
+        currentResult.toggleFastForwardInput = toggleFastForwardInput;
+        if (!deactivated.matched || !fullySettled) currentResult.failed = true;
+        logs.push(`[ability-toggle-cleanup] key=${digit} id=${expectedId} deactivated=${deactivated.matched} settled=${fullySettled} settleMs=${toggleSettleMs ?? 'n/a'} fastForwardDelivered=${toggleFastForwardInput?.deliveredDelta ?? 0} fastForwardGlobal=${toggleFastForwardInput?.globalDelta ?? 0} failed=${currentResult.failed}`);
+        flushLogs();
+        if (currentResult.failed) break;
+        await sleep(500);
+      }
+    }
+  }
+  abilityKeyResults.sort((a, b) => a.digit - b.digit);
+  const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
+    starterAbilityMappingReady
+    && abilityKeyResults.length === 8
+    && abilityKeyResults.every(item => !item.failed && item.mapped && item.expectedId === expectedAbilityIds[item.digit - 1])
+    && abilityKeyResults.filter(item => item.usable && item.stateChanged).length >= 4
+  );
+
+  let gameplayPerformance = null;
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+    const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const started = Date.now();
+    await page.keyboard.down('w');
+    await sleep(2200);
+    await page.keyboard.up('w');
+    await sleep(5800);
+    const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    gameplayPerformance = {
+      durationMs: Date.now() - started,
+      swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
+      recentFps: Number(perfAfter.recentFps || 0),
+      recentFrameMs: Number(perfAfter.recentFrameMs || 0),
+      webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
+      quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
+      quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
+      quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
+    };
+    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} responsive=${gameplayPerformance.responsive}`);
+  }
+  const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
@@ -408,7 +1057,8 @@ function pixelStats(buffer) {
     inputStats: window.__lwjglInputStats || null,
     bootTiming: window.__STARSECTOR_BOOT_TIMING__ || null,
     webglState: (() => {
-      const canvas = document.querySelector('#game-container canvas');
+      if (window.__lwjglGraphicsInfo) return window.__lwjglGraphicsInfo;
+      const canvas = window.lwjglCanvasElement || document.getElementById('lwjglCanvas') || document.querySelector('#game-container canvas');
       const gl = canvas && canvas.getContext('webgl2');
       if (!gl) return null;
       try {
@@ -419,7 +1069,18 @@ function pixelStats(buffer) {
           colorMask: Array.from(gl.getParameter(gl.COLOR_WRITEMASK)),
           clearColor: Array.from(gl.getParameter(gl.COLOR_CLEAR_VALUE)),
           framebufferStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER),
-          contextAttributes: gl.getContextAttributes()
+          contextAttributes: gl.getContextAttributes(),
+          version: gl.getParameter(gl.VERSION),
+          shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+          vendor: gl.getParameter(gl.VENDOR),
+          renderer: gl.getParameter(gl.RENDERER),
+          maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+          maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+          maxCombinedTextureUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
+          maxDrawBuffers: gl.getParameter(gl.MAX_DRAW_BUFFERS),
+          maxSamples: gl.getParameter(gl.MAX_SAMPLES),
+          extensionCount: gl.getSupportedExtensions()?.length || 0,
+          extensions: gl.getSupportedExtensions() || []
         };
       } catch (error) {
         return { error: String(error && (error.message || error) || error) };
@@ -466,12 +1127,30 @@ function pixelStats(buffer) {
   const campaignCenterSubjectFirst = campaignCenterGate.first;
   const campaignCenterSubjectSecond = campaignCenterGate.second;
   const campaignCenterSubject = campaignCenterGate.overall;
-  const campaignVisualQuality = expectedState !== 'campaign' || Boolean(secondStats
-    && secondStats.nonBlackRatio > 0.03
-    && secondStats.darkRatio < 0.94
-    && secondStats.midToneRatio > 0.025
-    && campaignTextureRichness
-    && campaignCenterSubject);
+  const browserTutorialVisual = expectedState === 'campaign'
+    && !deepGameplay
+    && windowConfig.__STARSECTOR_BROWSER_TUTORIAL__ === true;
+  // The stock tutorial owns the opening composition and may present an almost
+  // full-screen tutorial layer instead of the mature campaign's centered starter
+  // ship. Keep strong render/readability/richness checks, but do not require the
+  // mature center-ship signature while tutorial mode is explicitly active.
+  const tutorialFrameQuality = stats => Boolean(stats
+    && stats.nonBlackRatio > 0.075
+    && stats.darkRatio < 0.97
+    && stats.midToneRatio > 0.025
+    && stats.quantizedColorCount >= 150
+    && stats.variance >= 400);
+  const tutorialVisualQuality = !browserTutorialVisual
+    || tutorialFrameQuality(firstStats)
+    || tutorialFrameQuality(secondStats);
+  const campaignVisualQuality = expectedState !== 'campaign' || (browserTutorialVisual
+    ? tutorialVisualQuality
+    : Boolean(secondStats
+      && secondStats.nonBlackRatio > 0.03
+      && secondStats.darkRatio < 0.94
+      && secondStats.midToneRatio > 0.025
+      && campaignTextureRichness
+      && campaignCenterSubject));
   const campaign = Boolean(campaignSeenAt) || state.bodyState === 'campaign';
   const title = Boolean(titleSeenAt);
   const progressing = updateMax >= 10 || swapMax >= 10 || frameChanged;
@@ -493,10 +1172,17 @@ function pixelStats(buffer) {
     startingSuppliesReady
     && startingSuppliesTarget > 0
     && startingSuppliesAfter >= startingSuppliesTarget - 0.1
+    && (!deepGameplay || (playableResources
+      && playableResources.ready
+      && playableResources.fuel > 0
+      && playableResources.crew + 0.1 >= playableResources.minCrew
+      && (playableResources.maxCargo <= 0 || playableResources.cargoUsed <= playableResources.maxCargo + 0.1)
+      && playableResources.credits >= 1999))
   );
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
-    && immediateBridgeEfficient && errors.length === 0 && !fatalSeenAt
+    && abilityKeysSafe && gameplayPerformanceSafe
+    && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
@@ -528,6 +1214,8 @@ function pixelStats(buffer) {
     campaignCenterSubjectFirst,
     campaignCenterSubjectSecond,
     campaignCenterSubject,
+    browserTutorialVisual,
+    tutorialVisualQuality,
     campaignVisualQuality,
     inputKeyboardResponsive,
     inputMouseResponsive,
@@ -536,6 +1224,11 @@ function pixelStats(buffer) {
     uiControlResults,
     shortcutsResponsive,
     shortcutResults,
+    deepGameplay,
+    abilityKeysSafe,
+    abilityKeyResults,
+    gameplayPerformanceSafe,
+    gameplayPerformance,
     shortcutBefore,
     shortcutAfter,
     jarPackResponses,
@@ -545,6 +1238,7 @@ function pixelStats(buffer) {
     startingSuppliesTarget,
     startingSuppliesAfter,
     startingSuppliesReady,
+    playableResources,
     inputBefore,
     inputAfter,
     nativeStatsEnabled,
@@ -560,6 +1254,10 @@ function pixelStats(buffer) {
     errors,
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
+    runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
+    gameplayEvents,
+    starterAbilityMappingReady,
+    starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
     localNegativeMisses: [...new Set(localNegativeMisses)],
     state,

@@ -9,6 +9,15 @@ WINDOW_CONFIG=${5:-'{}'}
 OUT="test_output/${NAME}"
 mkdir -p "$OUT" .ci-build/fixer .ci-cache
 
+# A deep gameplay run must use the real stock campaign world. The old minimal
+# Corvus/Asharu knobs remain available for explicit bootstrap diagnostics only.
+if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" || "${STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR:-false}" == "true" ]]; then
+    echo 'Deep gameplay refuses minimal Corvus/Asharu world preparation; use the full stock sector/economy.' >&2
+    exit 1
+  fi
+fi
+
 cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
@@ -56,6 +65,7 @@ test -s starsector/starsector/graphics/particlealpha32sq.png
 # class actually used by the current launcher is also patched directly in
 # scripts-precompiled.jar below.
 python3 ci/patch-browser-sector-gen.py
+test "$(grep -c 'runSectorStep("' data/scripts/world/SectorGen.java)" -eq 24
 
 python3 ci/patch-lwjgl-matrix-stack.py
 python3 ci/patch-lwjgl-display-lists.py
@@ -64,7 +74,9 @@ grep -q 'LWJGL_DISPLAY_LIST_NONFATAL_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_CLIENT_ARRAY_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
+grep -q '__lwjglGraphicsInfo' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
 # The browser quick-start keeps the stock 45s fallback available via override,
@@ -74,6 +86,8 @@ grep -q '__STARSECTOR_AUTO_CAMPAIGN_DIRECT_CREATE_SETTLE_MS__ ?? 15000' launch.h
 grep -q 'Number.isFinite(parsedAutoCampaignDirectCreateSettleMs)' launch.html
 grep -q 'starsector.autoCampaignDirectCreateSettleMs=${autoCampaignDirectCreateSettleMs}' launch.html
 grep -q '__STARSECTOR_BROWSER_BULK_SPEC_CACHE__' launch.html
+grep -q '__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__' launch.html
+grep -q 'starsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}' launch.html
 grep -q '__STARSECTOR_BROWSER_FAST_CSV_PARSER__' launch.html
 grep -q 'starsector.browserFastCsvParser=${browserFastCsvParser}' launch.html
 grep -q '__STARSECTOR_BROWSER_FAST_TEXT_PREPROCESS__' launch.html
@@ -83,6 +97,16 @@ grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' la
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
+grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
+grep -q 'starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}' launch.html
+grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
+grep -q 'starsector.browserGameplayPrewarm=${browserGameplayPrewarm}' launch.html
+grep -q '__STARSECTOR_BROWSER_SKIP_OUTER_SECTOR_PROCGEN__ === true' launch.html
+grep -q 'starsector.browserSkipOuterSectorProcGen=${browserSkipOuterSectorProcGen}' launch.html
+grep -q '__STARSECTOR_BROWSER_LIGHTWEIGHT_SECTOR_COMPAT__ === true' launch.html
+grep -q 'starsector.compatibilityFastPath=${browserLightweightSectorCompat}' launch.html
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
@@ -195,6 +219,14 @@ javap -classpath jars/fixer_patch.jar com.fs.starfarer.MainThreadTransitionBridg
   | grep 'public static void disableTitleHandoff()'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserDeferredTextureQueue \
   | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserGameplayProbe \
+  | grep -q 'major version: 52'
+rm -rf .ci-build/verify-gameplay-probe-readiness
+mkdir -p .ci-build/verify-gameplay-probe-readiness
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java
+java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
+  VerifyGameplayProbeReadiness
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
@@ -215,8 +247,23 @@ java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
   VerifyDeferredTextureBehavior
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
-  -d .ci-build/verify-starting-supplies ci/VerifyStartingSupplies.java
+  -d .ci-build/verify-starting-supplies \
+  ci/VerifyStartingSupplies.java \
+  ci/VerifyPlayableStartingResources.java \
+  ci/VerifyStartingAbilities.java \
+  ci/VerifyCampaignWorldReadiness.java \
+  ci/VerifyCampaignProcGenCompat.java
 java -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingSupplies
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyPlayableStartingResources
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingAbilities
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignWorldReadiness
+java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignProcGenCompat
+rm -rf .ci-build/verify-browser-tiled-terrain
+mkdir -p .ci-build/verify-browser-tiled-terrain
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-browser-tiled-terrain ci/VerifyBrowserTiledTerrainCompat.java
+java -Xverify:all -cp ".ci-build/verify-browser-tiled-terrain:jars/fixer_patch.jar:$CP" \
+  VerifyBrowserTiledTerrainCompat
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -289,6 +336,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCoreLifecycleBrowserWorld.java \
   ci/PatchCoreLifecycleDiagnostics.java \
   ci/PatchMiscAcademyFleetCreator.java \
+  ci/PatchBaseTiledTerrainBrowserCodec.java \
   ci/PatchTextureUploadRaster.java \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
@@ -296,6 +344,16 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
+  ci/PatchAbilityGameplayProbe.java \
+  ci/VerifyAbilityGameplayProbePatch.java \
+  ci/PatchCampaignGameplayProbe.java \
+  ci/VerifyCampaignGameplayProbePatch.java \
+  ci/PatchAbilityUiGameplayProbe.java \
+  ci/VerifyAbilityUiGameplayProbePatch.java \
+  ci/PatchControlMatcherGameplayProbe.java \
+  ci/VerifyControlMatcherGameplayProbePatch.java \
+  ci/PatchCampaignPauseGameplayProbe.java \
+  ci/VerifyCampaignPauseGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
@@ -334,6 +392,9 @@ mv .ci-build/starfarer-api-lifecycle-diag.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchMiscAcademyFleetCreator jars/starfarer.api.jar .ci-build/starfarer-api-academy-null.jar
 mv .ci-build/starfarer-api-academy-null.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBaseTiledTerrainBrowserCodec jars/starfarer.api.jar .ci-build/starfarer-api-fast-tiled-terrain.jar
+mv .ci-build/starfarer-api-fast-tiled-terrain.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSlipstreamBrowserAdvance jars/starfarer.api.jar .ci-build/starfarer-api-slipstream-guard.jar
 mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
@@ -397,13 +458,27 @@ javac -encoding UTF-8 --release 8 -cp "jars/starfarer_obf.jar:$CP" \
 java -Xverify:all -cp ".ci-build/verify-janino-negative-behavior:jars/starfarer_obf.jar:$CP" \
   TestJaninoNegativeSourceCache
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar
+  PatchPrecompiledSectorGen jars/scripts-precompiled.jar .ci-build/scripts-precompiled-browser-world.jar \
+  | tee "$OUT/precompiled-sector-gen.log"
+grep -q 'encountered=24 skipped=0' "$OUT/precompiled-sector-gen.log"
 mv .ci-build/scripts-precompiled-browser-world.jar jars/scripts-precompiled.jar
 javap -classpath jars/scripts-precompiled.jar -c data.scripts.world.SectorGen \
   | grep -q 'BrowserSectorGenDiag: executing patched scripts-precompiled SectorGen.generate'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleScreenCampaignCreateGuard jars/starfarer.api.jar .ci-build/starfarer-title-create-guard.jar
 mv .ci-build/starfarer-title-create-guard.jar jars/starfarer.api.jar
+# Deep gameplay mode records real Starsector ability button/activation events without
+# changing ability semantics. The helper itself is property-gated and silent otherwise.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityGameplayProbe jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityGameplayProbePatch .ci-build/starfarer-api-gameplay-probe.jar
+mv .ci-build/starfarer-api-gameplay-probe.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityGameplayProbe jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityGameplayProbePatch .ci-build/starfarer-api-gameplay-probe-repeat.jar
+cmp -s jars/starfarer.api.jar .ci-build/starfarer-api-gameplay-probe-repeat.jar
 
 if [[ "$PATCH_SLEEP" == "true" ]]; then
   javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameState.java
@@ -446,6 +521,53 @@ cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
+# Deep gameplay telemetry around actual CampaignState core-tab open/dismiss paths.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignGameplayProbePatch .ci-build/starfarer-campaign-gameplay-probe.jar
+mv .ci-build/starfarer-campaign-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignGameplayProbePatch .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe-repeat.jar
+# Deep gameplay telemetry at the actual campaign ability-button UI layer. This
+# distinguishes plugin readiness from whether the rendered button has refreshed
+# to enabled and proves numeric-key dispatch reached H.actionPerformed().
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityUiGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityUiGameplayProbePatch .ci-build/starfarer-ability-ui-gameplay-probe.jar
+mv .ci-build/starfarer-ability-ui-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchAbilityUiGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyAbilityUiGameplayProbePatch .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-ability-ui-gameplay-probe-repeat.jar
+# Observe the final named-control shortcut matcher for ability slots 6-8. This
+# preserves the original boolean result at all three returns; telemetry only.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchControlMatcherGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyControlMatcherGameplayProbePatch .ci-build/starfarer-control-matcher-gameplay-probe.jar
+mv .ci-build/starfarer-control-matcher-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchControlMatcherGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyControlMatcherGameplayProbePatch .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-control-matcher-gameplay-probe-repeat.jar
+# Observe actual CampaignEngine pause transitions without changing pause semantics.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignPauseGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignPauseGameplayProbePatch .ci-build/starfarer-campaign-pause-gameplay-probe.jar
+mv .ci-build/starfarer-campaign-pause-gameplay-probe.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignPauseGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignPauseGameplayProbePatch .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-campaign-pause-gameplay-probe-repeat.jar
 # Fast exact smart-quote normalization before SpecStore's original two regex passes.
 # Null from the property-gated helper falls through to the untouched stock body.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -617,6 +739,11 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
+  com.fs.starfarer.BrowserGameplayProbe \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseAbilityPlugin \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseToggleAbility \
+  com.fs.starfarer.api.impl.campaign.abilities.BaseDurationAbility \
+  com.fs.starfarer.api.impl.campaign.abilities.TransponderAbility \
   com.fs.starfarer.campaign.save.CampaignGameManager \
   com.fs.starfarer.loading.ooOo \
   com.fs.starfarer.loading.oOoO \
@@ -669,6 +796,22 @@ STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
+if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
+  TUTORIAL_OUT="${OUT}-tutorial"
+  rm -rf "$TUTORIAL_OUT"
+  STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
+  STARSECTOR_TEST_TIMEOUT_MS=720000 \
+  STARSECTOR_FRAME_SETTLE_MS=5000 \
+  STARSECTOR_EXPECT_STATE=campaign \
+  STARSECTOR_DEEP_GAMEPLAY=false \
+  STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
+  STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
+    node ci/campaign-render-test.js
+  python3 ci/verify-full-campaign-map.py "$TUTORIAL_OUT/browser.log" \
+    --expected-sector-size normal \
+    --expected-start-location Galatia \
+    --require-tutorial
+fi
 # The optimized run is only valid if the real game loaded and used the bulk spec
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
@@ -678,3 +821,18 @@ grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
+if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
+  grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
+fi
+if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
+  python3 ci/verify-full-campaign-map.py "$OUT/browser.log" \
+    --expected-sector-size normal \
+    --expected-start-location Corvus
+  grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=control-match control=CORE_ABILITY_7' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=ability-press' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=core-tab-ready' "$OUT/browser.log"
+fi

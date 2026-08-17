@@ -1,11 +1,42 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import os
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATES = [
     ROOT / 'data' / 'scripts' / 'world' / 'SectorGen.java',
     ROOT / 'starsector' / 'starsector' / 'data' / 'scripts' / 'world' / 'SectorGen.java',
 ]
+
+CORE_STEPS = [
+    'Galatia', 'Askonia', 'Eos', 'Valhalla', 'Arcadia', 'Magec', 'Corvus',
+    'Aztlan', 'Samarra', 'Penelope', 'Yma', 'Hybrasil', 'Duzahk', 'TiaTaxet',
+    'Canaan', 'AlGebbar', 'Isirah', 'KumariKandam', 'Naraka', 'Thule',
+    'Mayasura', 'Zagan', 'Westernesse', 'Tyle',
+]
+LIGHTWEIGHT_DIAGNOSTIC = os.environ.get('STARSECTOR_LIGHTWEIGHT_SOURCE_SECTORGEN', '').lower() == 'true'
+if not LIGHTWEIGHT_DIAGNOSTIC:
+    found = []
+    for path in CANDIDATES:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding='utf-8-sig')
+        missing = []
+        for step in CORE_STEPS:
+            wrapped = f'runSectorStep("{step}"' in text
+            direct = f'new {step}().generate(sector)' in text
+            if not wrapped and not direct:
+                missing.append(step)
+        if missing:
+            raise RuntimeError(
+                f'Full SectorGen source is missing core-system generators in {path.relative_to(ROOT)}: {missing}')
+        found.append(str(path.relative_to(ROOT)))
+    if not found:
+        raise RuntimeError('No SectorGen.java source copy was found')
+    print('Preserved full SectorGen source; all 24 core-system generators are present:')
+    for item in found:
+        print(f'  {item}')
+    raise SystemExit(0)
 
 signature = 'public void generate(SectorAPI sector) {'
 replacement = '''public void generate(SectorAPI sector) {
@@ -111,6 +142,6 @@ for path in CANDIDATES:
 if not patched:
     raise RuntimeError('No SectorGen.java source copy was found')
 
-print('Patched SectorGen.generate source copies for lightweight browser campaign bootstrap:')
+print('Patched SectorGen.generate source copies for explicitly requested lightweight diagnostic bootstrap:')
 for item in patched:
     print(f'  {item}')

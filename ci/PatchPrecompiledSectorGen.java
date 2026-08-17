@@ -27,17 +27,21 @@ import org.objectweb.asm.Opcodes;
  * precompiled generate() therefore wins before Janino can make the loose source
  * rewrite authoritative.
  *
- * By default all 24 heavyweight vanilla system-generator calls are removed. A
- * third optional argument, or STARSECTOR_RETAIN_WORLD_STEPS, may name specific
- * steps to retain (comma-separated), e.g. "Corvus". This keeps the current
- * skip-all isolation test unchanged while allowing evidence-driven restoration
- * of one real system at a time without another source patch for every experiment.
+ * By default all 24 vanilla core-system generator calls are retained. A third
+ * optional argument, or STARSECTOR_RETAIN_WORLD_STEPS, may name a diagnostic
+ * subset (comma-separated), e.g. "Corvus"; the special value "none" skips all.
+ * Production preparation therefore preserves the full core sector.
  *
  * STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR=true is a second, independent diagnostic
  * knob. It keeps all selected system-step behavior above, but before generate()
  * returns it asks BrowserSectorWorldCompat to create only the normal Corvus star
  * and Asharu planet entities. The helper never creates a market; Economy.load()
  * must still build Asharu's stock market from corvus.json.
+ *
+ * The transformed runSectorStep method also emits begin/end timestamps. These are
+ * observational only and let browser CI identify the exact stock system that is
+ * monopolizing the CheerpJ VM without deleting, reordering or short-circuiting any
+ * world-generation work.
  */
 public final class PatchPrecompiledSectorGen {
     private static final String TARGET_ENTRY = "data/scripts/world/SectorGen.class";
@@ -88,6 +92,7 @@ public final class PatchPrecompiledSectorGen {
                 Boolean.parseBoolean(System.getenv("STARSECTOR_MINIMAL_CORVUS_ASHARU_ANCHOR"));
         int[] classSeen = new int[] {0};
         int[] generateSeen = new int[] {0};
+        int[] stepMethodSeen = new int[] {0};
         int[] encounteredSteps = new int[] {0};
         int[] skippedSteps = new int[] {0};
         int[] retainedSteps = new int[] {0};
@@ -112,6 +117,7 @@ public final class PatchPrecompiledSectorGen {
                             retained,
                             minimalAsharuAnchor,
                             generateSeen,
+                            stepMethodSeen,
                             encounteredSteps,
                             skippedSteps,
                             retainedSteps,
@@ -125,6 +131,7 @@ public final class PatchPrecompiledSectorGen {
         int expectedAnchorInjections = minimalAsharuAnchor ? 1 : 0;
         if (classSeen[0] != 1
                 || generateSeen[0] != 1
+                || stepMethodSeen[0] != 1
                 || encounteredSteps[0] != EXPECTED_STEPS
                 || retainedSteps[0] != retained.size()
                 || skippedSteps[0] + retainedSteps[0] != EXPECTED_STEPS
@@ -135,6 +142,8 @@ public final class PatchPrecompiledSectorGen {
                             + classSeen[0]
                             + " generateSeen="
                             + generateSeen[0]
+                            + " stepMethodSeen="
+                            + stepMethodSeen[0]
                             + " encounteredSteps="
                             + encounteredSteps[0]
                             + " skippedSteps="
@@ -157,12 +166,17 @@ public final class PatchPrecompiledSectorGen {
                         + skippedSteps[0]
                         + " retained="
                         + retained
+                        + " stepTimingMethods="
+                        + stepMethodSeen[0]
                         + " minimalAsharuAnchor="
                         + minimalAsharuAnchor);
     }
 
     private static Set<String> parseRetainedSteps(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
+            return new LinkedHashSet<String>(STEP_ORDER);
+        }
+        if ("none".equalsIgnoreCase(raw.trim())) {
             return Collections.emptySet();
         }
         Set<String> retained = new LinkedHashSet<String>();
@@ -192,6 +206,7 @@ public final class PatchPrecompiledSectorGen {
             Set<String> retained,
             boolean minimalAsharuAnchor,
             int[] generateSeen,
+            int[] stepMethodSeen,
             int[] encounteredSteps,
             int[] skippedSteps,
             int[] retainedSteps,
@@ -208,6 +223,81 @@ public final class PatchPrecompiledSectorGen {
                     String[] exceptions) {
                 MethodVisitor delegate =
                         super.visitMethod(access, name, descriptor, signature, exceptions);
+
+                if ("runSectorStep".equals(name) && RUN_STEP_DESC.equals(descriptor)) {
+                    stepMethodSeen[0]++;
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        private void emitStepTiming(String phase) {
+                            super.visitFieldInsn(
+                                    Opcodes.GETSTATIC,
+                                    "java/lang/System",
+                                    "out",
+                                    "Ljava/io/PrintStream;");
+                            super.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+                            super.visitInsn(Opcodes.DUP);
+                            super.visitLdcInsn("BrowserSectorGenStep: " + phase + " ");
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESPECIAL,
+                                    "java/lang/StringBuilder",
+                                    "<init>",
+                                    "(Ljava/lang/String;)V",
+                                    false);
+                            super.visitVarInsn(Opcodes.ALOAD, 1);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKEVIRTUAL,
+                                    "java/lang/StringBuilder",
+                                    "append",
+                                    "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+                                    false);
+                            super.visitLdcInsn(" t=");
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKEVIRTUAL,
+                                    "java/lang/StringBuilder",
+                                    "append",
+                                    "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+                                    false);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    "java/lang/System",
+                                    "currentTimeMillis",
+                                    "()J",
+                                    false);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKEVIRTUAL,
+                                    "java/lang/StringBuilder",
+                                    "append",
+                                    "(J)Ljava/lang/StringBuilder;",
+                                    false);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKEVIRTUAL,
+                                    "java/lang/StringBuilder",
+                                    "toString",
+                                    "()Ljava/lang/String;",
+                                    false);
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKEVIRTUAL,
+                                    "java/io/PrintStream",
+                                    "println",
+                                    "(Ljava/lang/String;)V",
+                                    false);
+                        }
+
+                        @Override
+                        public void visitCode() {
+                            super.visitCode();
+                            emitStepTiming("begin");
+                        }
+
+                        @Override
+                        public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.RETURN) {
+                                emitStepTiming("end");
+                            }
+                            super.visitInsn(opcode);
+                        }
+                    };
+                }
+
                 if (!"generate".equals(name) || !GENERATE_DESC.equals(descriptor)) {
                     return delegate;
                 }

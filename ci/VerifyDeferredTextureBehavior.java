@@ -7,6 +7,9 @@ public final class VerifyDeferredTextureBehavior {
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     public static void main(String[] args) throws Exception {
         System.setProperty("starsector.browserDeferredTextures", "true");
+        System.setProperty("starsector.browserGameplayPrewarm", "true");
+        System.setProperty("starsector.browserGameplayPrewarmDelayMs", "0");
+        System.setProperty("starsector.browserGameplayPrewarmPauseMs", "0");
 
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/portraits/deferred.png", 0);
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/illustrations/optional.jpg", 1);
@@ -38,6 +41,28 @@ public final class VerifyDeferredTextureBehavior {
         require(oOoO.LOADS.get(3).equals("dup=graphics/illustrations/second.jpg"), "duplicate second source ordering: " + oOoO.LOADS);
         require(BrowserDeferredTextureQueue.getPendingCount() == 0, "different-path duplicate must not remain deferred");
 
-        System.out.println("VerifyDeferredTextureBehavior: OK loads=" + oOoO.LOADS);
+        int predecodeBeforeWarm = L.PREDECODE.size();
+        BrowserDeferredTextureQueue.loadOrDefer("skill", "graphics/icons/skills/elite_combat.png");
+        BrowserDeferredTextureQueue.loadOrDefer("ship", "graphics/ships/lasher/lasher_base.png");
+        BrowserDeferredTextureQueue.loadOrDefer("planet", "graphics/planets/terran.jpg");
+        BrowserDeferredTextureQueue.loadOrDefer("combat", "graphics/damage/damage1.png");
+        BrowserDeferredTextureQueue.startGameplayPrewarm();
+        long deadline = System.currentTimeMillis() + 2000L;
+        while (!BrowserDeferredTextureQueue.isGameplayPrewarmDone() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(5L);
+        }
+        require(BrowserDeferredTextureQueue.isGameplayPrewarmDone(), "gameplay prewarm did not complete");
+        require(BrowserDeferredTextureQueue.getGameplayPredecodeCount() == 3L,
+                "expected UI/refit/world predecode count=3 actual=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
+        require(BrowserDeferredTextureQueue.getGameplayPredecodeFailedCount() == 0L, "unexpected predecode failures");
+        require(BrowserDeferredTextureQueue.getGameplayPrewarmPendingCount() == 0, "prewarm queues should drain");
+        require(L.PREDECODE.size() == predecodeBeforeWarm + 3, "unexpected background predecode list=" + L.PREDECODE);
+        require(L.PREDECODE.contains("graphics/icons/skills/elite_combat.png"), "skill missing from prewarm");
+        require(L.PREDECODE.contains("graphics/ships/lasher/lasher_base.png"), "ship missing from prewarm");
+        require(L.PREDECODE.contains("graphics/planets/terran.jpg"), "planet missing from prewarm");
+        require(!L.PREDECODE.contains("graphics/damage/damage1.png"), "combat-only texture should not be background predecoded");
+
+        System.out.println("VerifyDeferredTextureBehavior: OK loads=" + oOoO.LOADS
+                + " predecoded=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
     }
 }

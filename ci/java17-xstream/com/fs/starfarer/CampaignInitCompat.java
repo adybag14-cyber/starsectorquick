@@ -16,6 +16,8 @@ public final class CampaignInitCompat {
     private static boolean sectorConfigNullLogged;
     private static boolean sectorConfigFailureLogged;
     private static boolean procGenSkippedLogged;
+    private static boolean procGenDelegatedLogged;
+    private static boolean procGenCompletedLogged;
 
     private CampaignInitCompat() {}
 
@@ -54,20 +56,40 @@ public final class CampaignInitCompat {
     }
 
     /**
-     * The desktop procedural sector pass constructs many stars, planets and nebulae.
-     * On CheerpJ that pass can monopolize the VM for minutes and uses terrain/planet
-     * constructors that are not yet browser-safe. The lightweight browser SectorGen
-     * already establishes the campaign runtime; defer optional procgen so creation can
-     * return to CampaignState and the game can render/respond.
+     * Browser campaign creation must preserve Starsector's real procedural sector.
+     * Older quick-start builds replaced this pass with a no-op to shorten bootstrap,
+     * which left the player in a lightweight/partial map. Keep the wrapper for browser
+     * diagnostics, but delegate to the stock plugin by default. A deliberately partial
+     * world is now available only through an explicit diagnostic property.
      */
     public static void generateSectorProcGen(
             SectorProcGenPlugin plugin,
             CharacterCreationData data,
             SectorGenProgress progress) {
-        if (!procGenSkippedLogged) {
-            procGenSkippedLogged = true;
+        boolean skip = Boolean.parseBoolean(
+                System.getProperty("starsector.browserSkipOuterSectorProcGen", "false"));
+        if (skip) {
+            if (!procGenSkippedLogged) {
+                procGenSkippedLogged = true;
+                System.out.println(
+                        "Fixer: explicit diagnostic override is skipping outer-sector procedural generation.");
+            }
+            return;
+        }
+        if (plugin == null) {
+            throw new IllegalStateException(
+                    "SectorProcGenPlugin is null while full browser campaign generation is required");
+        }
+        if (!procGenDelegatedLogged) {
+            procGenDelegatedLogged = true;
             System.out.println(
-                    "Fixer: skipping desktop procedural sector generation during CheerpJ bootstrap; entering lightweight campaign world.");
+                    "Fixer: full campaign map enabled; delegating to stock outer-sector procedural generation.");
+        }
+        plugin.generate(data, progress);
+        if (!procGenCompletedLogged) {
+            procGenCompletedLogged = true;
+            System.out.println(
+                    "Fixer: full campaign outer-sector procedural generation complete.");
         }
     }
 

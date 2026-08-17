@@ -6,6 +6,7 @@
 .bd/
 
 # Build artifacts
+.ci-build/
 build/
 target/
 *.class
@@ -52,7 +53,6 @@ quick_test_screenshot.png
 *.tmp
 *.temp
 temp_test.txt
-{console.log('Game
 
 # Python cache
 __pycache__/

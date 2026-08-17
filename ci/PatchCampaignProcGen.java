@@ -13,7 +13,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-/** Routes CampaignGameManager's heavy desktop procgen pass to the browser compat shim. */
+/** Routes CampaignGameManager's procgen pass through a browser policy/diagnostic shim. */
 public final class PatchCampaignProcGen {
     private static final String TARGET =
             "com/fs/starfarer/campaign/save/CampaignGameManager.class";

@@ -38,6 +38,7 @@ jobs:
           STARSECTOR_TEST_TIMEOUT_MS: '720000'
           STARSECTOR_FRAME_SETTLE_MS: '30000'
           STARSECTOR_EXPECT_STATE: 'campaign'
+          STARSECTOR_DEEP_GAMEPLAY: 'true'
         run: node ci/campaign-render-test.js
 
       - name: Upload campaign evidence
