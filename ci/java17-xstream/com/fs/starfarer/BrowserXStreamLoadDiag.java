@@ -60,7 +60,7 @@ public final class BrowserXStreamLoadDiag {
                         + " next-moveDown-after elapsedMs=" + (System.currentTimeMillis() - startedAt)
                         + " node=" + safeNodeName());
             }
-            if (nodes == 1L || nodes % 50000L == 0L) {
+            if (nodes <= 100L || nodes % 1000L == 0L) {
                 System.out.println("BrowserXStreamLoadDiag: reader=" + id
                         + " nodes=" + nodes
                         + " depth=" + depth
@@ -109,14 +109,15 @@ public final class BrowserXStreamLoadDiag {
 
         @Override
         public boolean hasMoreChildren() {
-            final boolean afterFirst = nodes == 1L && depth == 0;
-            if (afterFirst) {
+            final java.lang.String node = safeNodeName();
+            final boolean diagnosticBoundary = (nodes == 1L && depth == 0) || "hyperspace".equals(node);
+            if (diagnosticBoundary) {
                 System.out.println("BrowserXStreamLoadDiag: reader=" + id
                         + " hasMoreChildren-before elapsedMs=" + (System.currentTimeMillis() - startedAt)
-                        + " node=" + safeNodeName());
+                        + " node=" + node);
             }
             final boolean result = super.hasMoreChildren();
-            if (afterFirst) {
+            if (diagnosticBoundary) {
                 System.out.println("BrowserXStreamLoadDiag: reader=" + id
                         + " hasMoreChildren-after result=" + result
                         + " elapsedMs=" + (System.currentTimeMillis() - startedAt)
