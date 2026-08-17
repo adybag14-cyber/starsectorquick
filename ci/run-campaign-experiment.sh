@@ -381,6 +381,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchInitialSavePerfDiagnostics.java \
   ci/PatchCampaignXStreamLoadDiag.java \
   ci/VerifyCampaignXStreamLoadDiagPatch.java \
+  ci/PatchCampaignXStreamProviderDiag.java \
+  ci/VerifyCampaignXStreamProviderDiagPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -440,6 +442,14 @@ javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
   'com.fs.starfarer.campaign.save.CampaignGameManager$5' | grep -q 'BrowserXStreamLoadDiag.wrap'
 javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
   'com.fs.starfarer.campaign.save.CampaignGameManager$6' | grep -q 'BrowserXStreamLoadDiag.logProvider'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserLoggingSunUnsafeReflectionProvider.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignXStreamProviderDiag jars/starfarer_obf.jar .ci-build/starfarer-xstream-provider-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignXStreamProviderDiagPatch .ci-build/starfarer-xstream-provider-diag.jar
+mv .ci-build/starfarer-xstream-provider-diag.jar jars/starfarer_obf.jar
+javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+  'com.fs.starfarer.campaign.save.CampaignGameManager$6' | grep -q 'BrowserLoggingSunUnsafeReflectionProvider'
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar

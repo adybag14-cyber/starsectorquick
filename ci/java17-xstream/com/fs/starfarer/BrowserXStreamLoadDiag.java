@@ -59,6 +59,25 @@ public final class BrowserXStreamLoadDiag {
         }
 
         @Override
+        public java.lang.String getValue() {
+            final java.lang.String node = safeNodeName();
+            final boolean firstCampaignBoolean = "isFastForwardIteration".equals(node);
+            if (firstCampaignBoolean) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " getValue-before node=" + node
+                        + " elapsedMs=" + (System.currentTimeMillis() - startedAt));
+            }
+            final java.lang.String value = super.getValue();
+            if (firstCampaignBoolean) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " getValue-after node=" + node
+                        + " value=" + safeValue(value)
+                        + " elapsedMs=" + (System.currentTimeMillis() - startedAt));
+            }
+            return value;
+        }
+
+        @Override
         public void moveUp() {
             super.moveUp();
             if (depth > 0) depth--;
@@ -71,6 +90,12 @@ public final class BrowserXStreamLoadDiag {
                     + " depth=" + depth
                     + " elapsedMs=" + (System.currentTimeMillis() - startedAt));
             super.close();
+        }
+
+        private java.lang.String safeValue(final java.lang.String value) {
+            if (value == null) return "<null>";
+            final java.lang.String normalized = value.replace('\n', ' ').replace('\r', ' ');
+            return normalized.length() <= 80 ? normalized : normalized.substring(0, 80) + "...";
         }
 
         private java.lang.String safeNodeName() {
