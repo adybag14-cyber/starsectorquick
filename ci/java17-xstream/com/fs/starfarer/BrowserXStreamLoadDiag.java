@@ -46,9 +46,20 @@ public final class BrowserXStreamLoadDiag {
 
         @Override
         public void moveDown() {
+            final boolean nextAfterFirst = nodes == 1L && depth == 0;
+            if (nextAfterFirst) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " next-moveDown-before elapsedMs=" + (System.currentTimeMillis() - startedAt)
+                        + " node=" + safeNodeName());
+            }
             super.moveDown();
             nodes++;
             depth++;
+            if (nextAfterFirst) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " next-moveDown-after elapsedMs=" + (System.currentTimeMillis() - startedAt)
+                        + " node=" + safeNodeName());
+            }
             if (nodes == 1L || nodes % 50000L == 0L) {
                 System.out.println("BrowserXStreamLoadDiag: reader=" + id
                         + " nodes=" + nodes
@@ -79,8 +90,39 @@ public final class BrowserXStreamLoadDiag {
 
         @Override
         public void moveUp() {
+            final java.lang.String node = safeNodeName();
+            final boolean firstCampaignBoolean = "isFastForwardIteration".equals(node);
+            if (firstCampaignBoolean) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " moveUp-before node=" + node
+                        + " elapsedMs=" + (System.currentTimeMillis() - startedAt));
+            }
             super.moveUp();
             if (depth > 0) depth--;
+            if (firstCampaignBoolean) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " moveUp-after depth=" + depth
+                        + " node=" + safeNodeName()
+                        + " elapsedMs=" + (System.currentTimeMillis() - startedAt));
+            }
+        }
+
+        @Override
+        public boolean hasMoreChildren() {
+            final boolean afterFirst = nodes == 1L && depth == 0;
+            if (afterFirst) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " hasMoreChildren-before elapsedMs=" + (System.currentTimeMillis() - startedAt)
+                        + " node=" + safeNodeName());
+            }
+            final boolean result = super.hasMoreChildren();
+            if (afterFirst) {
+                System.out.println("BrowserXStreamLoadDiag: reader=" + id
+                        + " hasMoreChildren-after result=" + result
+                        + " elapsedMs=" + (System.currentTimeMillis() - startedAt)
+                        + " node=" + safeNodeName());
+            }
+            return result;
         }
 
         @Override
