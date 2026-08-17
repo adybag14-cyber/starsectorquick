@@ -86,8 +86,7 @@ public final class BrowserTiledTerrainCompat {
         }
         final int total = (int) totalLong;
         final int expectedRawBytes = (total + 7) >>> 3;
-        final byte[] compressed = decodeConcatenatedBase64(encoded);
-        final byte[] raw = inflateExactly(compressed, expectedRawBytes);
+        final byte[] raw = decodeStockChunkedBytes(encoded, expectedRawBytes);
 
         final int[][] tiles = new int[width][height];
         for (int index = 0; index < total; index++) {
@@ -106,6 +105,15 @@ public final class BrowserTiledTerrainCompat {
      * boundary; unlike standard decoders, padding does not terminate the whole
      * input and the next quartet begins a new stock compression chunk.
      */
+    static byte[] decodeStockChunkedBytes(java.lang.String encoded, int expectedRawBytes)
+            throws DataFormatException {
+        if (expectedRawBytes < 0) {
+            throw new DataFormatException("Negative expected chunked payload size");
+        }
+        final byte[] compressed = decodeConcatenatedBase64(encoded);
+        return inflateExactly(compressed, expectedRawBytes);
+    }
+
     private static byte[] decodeConcatenatedBase64(java.lang.String encoded)
             throws DataFormatException {
         if ((encoded.length() & 3) != 0) {
