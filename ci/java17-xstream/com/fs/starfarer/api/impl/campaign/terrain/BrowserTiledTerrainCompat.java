@@ -169,6 +169,9 @@ public final class BrowserTiledTerrainCompat {
                     out.write(buffer, 0, read);
                     continue;
                 }
+                if (inflater.finished()) {
+                    break;
+                }
                 if (inflater.needsDictionary()) {
                     throw new DataFormatException("Stock tiled-terrain stream needs a dictionary");
                 }
