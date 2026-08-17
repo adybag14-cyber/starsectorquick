@@ -1682,11 +1682,12 @@
 
                 log('Final ClassPath: ' + finalClassPath, '#888');
 
-                log('Starting Main Class: Fixer', '#00d9ff');
+                const requestedMainClass = (window.__STARSECTOR_MAIN_CLASS__ || 'Fixer').toString().trim() || 'Fixer';
+                log('Starting Main Class: ' + requestedMainClass, '#00d9ff');
                 markBootPhase('run-main-start');
-                updateRuntimeState('running', 'Fixer');
-                await cheerpjRunMain('Fixer', finalClassPath);
-                updateRuntimeState('main-returned', 'Fixer returned');
+                updateRuntimeState('running', requestedMainClass);
+                await cheerpjRunMain(requestedMainClass, finalClassPath);
+                updateRuntimeState('main-returned', requestedMainClass + ' returned');
                 btn.textContent = 'RELAUNCH STARSECTOR';
                 btn.disabled = false;
 

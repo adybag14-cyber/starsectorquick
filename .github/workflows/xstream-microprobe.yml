@@ -1,0 +1,75 @@
+name: XStream CheerpJ microprobe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Build minimal XStream compatibility probe
+        run: |
+          set -euo pipefail
+          rm -rf .ci-build/xstream-microprobe
+          mkdir -p .ci-build/xstream-microprobe
+          CP='jars/xstream-1.4.10.jar:jars/txw2-2.3.1.jar'
+          javac -encoding UTF-8 -source 8 -target 8 -cp "$CP" \
+            -d .ci-build/xstream-microprobe \
+            ci/java17-xstream/com/thoughtworks/xstream/core/util/Fields.java \
+            ci/java17-xstream/com/thoughtworks/xstream/core/util/SerializationMembers.java \
+            ci/java17-xstream/com/thoughtworks/xstream/converters/reflection/AbstractAttributedCharacterIteratorAttributeConverter.java \
+            ci/java17-xstream/com/thoughtworks/xstream/converters/reflection/FieldDictionary.java \
+            ci/java17-xstream/XStreamStaxValueProbe.java \
+            ci/java17-xstream/XStreamSunUnsafeProbe.java \
+            ci/java17-xstream/XStreamPureJavaProbe.java
+          jar cf jars/fixer_patch.jar -C .ci-build/xstream-microprobe .
+          python3 - <<'PY'
+          from pathlib import Path
+          names = ['fixer_patch.jar', 'xstream-1.4.10.jar', 'txw2-2.3.1.jar']
+          p = Path('jars/index.list')
+          p.write_text(''.join(f'{name}\t{(Path("jars") / name).stat().st_size}\n' for name in names), encoding='utf-8')
+          PY
+          grep -q 'fixer_patch.jar' jars/index.list
+          grep -q 'xstream-1.4.10.jar' jars/index.list
+          grep -q 'txw2-2.3.1.jar' jars/index.list
+      - name: Install browser
+        run: |
+          npm ci
+          npx playwright install chromium
+      - name: Run CheerpJ XStream probes
+        run: |
+          set -euo pipefail
+          STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
+            node ci/range-server.js >/tmp/xstream-probe-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for _ in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/launch.html >/dev/null; then break; fi
+            sleep 1
+          done
+          XSTREAM_PROBE_URL=http://127.0.0.1:8000/launch.html \
+            node ci/xstream-microprobe.js
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xstream-cheerpj-microprobe
+          path: |
+            test_output/xstream-microprobe
+            /tmp/xstream-probe-http.log
+          if-no-files-found: warn
