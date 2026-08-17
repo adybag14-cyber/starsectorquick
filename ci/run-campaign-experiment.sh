@@ -258,6 +258,12 @@ java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyStartingAbilities
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignWorldReadiness
 java -Xverify:all -cp ".ci-build/verify-starting-supplies:jars/fixer_patch.jar:$CP" VerifyCampaignProcGenCompat
+rm -rf .ci-build/verify-browser-tiled-terrain
+mkdir -p .ci-build/verify-browser-tiled-terrain
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-browser-tiled-terrain ci/VerifyBrowserTiledTerrainCompat.java
+java -Xverify:all -cp ".ci-build/verify-browser-tiled-terrain:jars/fixer_patch.jar:$CP" \
+  VerifyBrowserTiledTerrainCompat
 mkdir -p .ci-build/verify-texture-upload
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-texture-upload ci/VerifyTextureUploadCompat.java
@@ -330,6 +336,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchCoreLifecycleBrowserWorld.java \
   ci/PatchCoreLifecycleDiagnostics.java \
   ci/PatchMiscAcademyFleetCreator.java \
+  ci/PatchBaseTiledTerrainBrowserCodec.java \
   ci/PatchTextureUploadRaster.java \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
@@ -385,6 +392,9 @@ mv .ci-build/starfarer-api-lifecycle-diag.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchMiscAcademyFleetCreator jars/starfarer.api.jar .ci-build/starfarer-api-academy-null.jar
 mv .ci-build/starfarer-api-academy-null.jar jars/starfarer.api.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchBaseTiledTerrainBrowserCodec jars/starfarer.api.jar .ci-build/starfarer-api-fast-tiled-terrain.jar
+mv .ci-build/starfarer-api-fast-tiled-terrain.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSlipstreamBrowserAdvance jars/starfarer.api.jar .ci-build/starfarer-api-slipstream-guard.jar
 mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
