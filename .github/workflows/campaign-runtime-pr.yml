@@ -47,6 +47,7 @@ jobs:
             ci/java17-xstream/XStreamCampaignEngineConverterProbe.java \
             ci/java17-xstream/XStreamCampaignEngineHyperspaceProbe.java \
             ci/java17-xstream/XStreamHyperspaceFieldProbe.java \
+            ci/java17-xstream/ObjectRepositoryRebuildProbe.java \
             ci/java17-xstream/XStreamSunUnsafeProbe.java \
             ci/java17-xstream/XStreamPureJavaProbe.java
           jar cf jars/fixer_patch.jar -C .ci-build/xstream-microprobe .
