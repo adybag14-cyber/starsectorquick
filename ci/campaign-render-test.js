@@ -10,6 +10,8 @@ const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaig
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
 const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
+const saveLoadSmokeEnabled = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_SAVE_LOAD_SMOKE || 'false'));
+const saveLoadSmokeTimeoutMs = Math.max(60000, Number(process.env.STARSECTOR_SAVE_LOAD_TIMEOUT_MS || 360000));
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -1188,6 +1190,142 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       && (playableResources.maxCargo <= 0 || playableResources.cargoUsed <= playableResources.maxCargo + 0.1)
       && playableResources.credits >= 1999))
   );
+  let saveLoadSmoke = {
+    enabled: saveLoadSmokeEnabled,
+    attempted: false,
+    ok: !saveLoadSmokeEnabled,
+    reason: saveLoadSmokeEnabled ? 'not-run' : 'disabled',
+    firstWorld: null,
+    loadedWorld: null,
+    loadedBodyState: null,
+    fallbackNewGameSeen: false,
+    fatalSeen: false,
+    elapsedMs: null,
+  };
+  if (saveLoadSmokeEnabled) {
+    const worldPattern = /Fixer: auto campaign world-ready systems=(\d+)\s+planets=(\d+)\s+markets=(\d+)\s+factions=(\d+)/i;
+    const firstWorldMatch = [...logs].reverse()
+      .map(line => line.match(worldPattern))
+      .find(Boolean);
+    const firstWorld = firstWorldMatch ? {
+      systems: Number(firstWorldMatch[1]),
+      planets: Number(firstWorldMatch[2]),
+      markets: Number(firstWorldMatch[3]),
+      factions: Number(firstWorldMatch[4]),
+    } : null;
+    saveLoadSmoke.firstWorld = firstWorld;
+
+    if (expectedState !== 'campaign') {
+      saveLoadSmoke.reason = 'save/load smoke requires campaign state';
+    } else if (!campaign || !firstWorld || fatalSeenAt || errors.length > 0) {
+      saveLoadSmoke.reason = 'first launch was not a clean full campaign';
+    } else {
+      saveLoadSmoke.attempted = true;
+      const reloadLogs = [];
+      const reloadErrors = [];
+      let reloadFatal = false;
+      let reloadFallbackNewGame = false;
+      let loadedWorld = null;
+      let loadedBodyState = '';
+      const reloadStartedAt = Date.now();
+      const reloadConfig = {
+        ...windowConfig,
+        // Keep the optimized direct-resource path, but make Continue the only
+        // allowed campaign transition. There is deliberately no "new" token,
+        // so a missing/corrupt save cannot be hidden by creating another world.
+        __STARSECTOR_AUTO_CAMPAIGN_MODE__: 'continue_direct',
+        __STARSECTOR_DIRECT_LAUNCH__: false,
+        __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: false,
+        __STARSECTOR_AUTO_CAMPAIGN_FALLBACK_MS__: 300000,
+        __STARSECTOR_BROWSER_TUTORIAL__: false,
+        __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: false,
+      };
+
+      await sleep(1500);
+      await withTimeout(page.close(), 10000, 'first save/load-smoke page close').catch(error => {
+        reloadErrors.push(`first-page-close: ${error.message || error}`);
+      });
+      const reloadPage = await context.newPage();
+      reloadPage.setDefaultTimeout(10000);
+      reloadPage.setDefaultNavigationTimeout(60000);
+      await reloadPage.addInitScript(config => {
+        for (const [key, value] of Object.entries(config)) window[key] = value;
+      }, reloadConfig);
+      reloadPage.on('console', message => {
+        const text = message.text();
+        reloadLogs.push(`[${message.type()}] ${text}`);
+        const world = text.match(worldPattern);
+        if (world) {
+          loadedWorld = {
+            systems: Number(world[1]),
+            planets: Number(world[2]),
+            markets: Number(world[3]),
+            factions: Number(world[4]),
+          };
+        }
+        if (/Fixer: direct-new-game stage=invoke-create(?:\s|$)|Fixer: auto campaign data prepared/i.test(text)) {
+          reloadFallbackNewGame = true;
+        }
+        if (/fatal\s+starsector\s+null|NullPointerException|Exception in thread|(?:^|\b)Fatal\s*:\s*|auto campaign aborting/i.test(text)) {
+          reloadFatal = true;
+        }
+      });
+      reloadPage.on('pageerror', error => {
+        reloadErrors.push(String(error && (error.stack || error.message) || error));
+      });
+
+      const reloadTarget = `${baseUrl}?autostart=1&saveLoadSmoke=1&ci=${Date.now()}`;
+      reloadLogs.push(`[save-load-smoke] opening ${reloadTarget}`);
+      reloadLogs.push(`[save-load-smoke] config=${JSON.stringify(reloadConfig)}`);
+      try {
+        await reloadPage.goto(reloadTarget, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const reloadDeadline = Date.now() + saveLoadSmokeTimeoutMs;
+        while (Date.now() < reloadDeadline && !reloadFatal && !reloadFallbackNewGame && reloadErrors.length === 0) {
+          loadedBodyState = await withTimeout(
+            reloadPage.evaluate(() => document.body.dataset.runtimeState || ''),
+            5000,
+            'save/load-smoke runtime-state evaluate'
+          ).catch(error => {
+            reloadLogs.push(`[diagnostic] ${error.message || error}`);
+            return '';
+          });
+          if (loadedBodyState === 'campaign' && loadedWorld) break;
+          if (['main-returned', 'failed', 'fatal'].includes(loadedBodyState)) break;
+          await sleep(1000);
+        }
+      } catch (error) {
+        reloadErrors.push(`reload-navigation: ${error.message || error}`);
+      }
+
+      const worldMatches = Boolean(loadedWorld
+        && loadedWorld.systems === firstWorld.systems
+        && loadedWorld.planets === firstWorld.planets
+        && loadedWorld.markets === firstWorld.markets
+        && loadedWorld.factions === firstWorld.factions);
+      const reloadOk = loadedBodyState === 'campaign'
+        && worldMatches
+        && !reloadFatal
+        && !reloadFallbackNewGame
+        && reloadErrors.length === 0;
+      saveLoadSmoke = {
+        enabled: true,
+        attempted: true,
+        ok: reloadOk,
+        reason: reloadOk ? 'continued saved full campaign' : 'saved campaign did not reload cleanly',
+        firstWorld,
+        loadedWorld,
+        loadedBodyState,
+        fallbackNewGameSeen: reloadFallbackNewGame,
+        fatalSeen: reloadFatal,
+        errors: reloadErrors,
+        elapsedMs: Date.now() - reloadStartedAt,
+      };
+      reloadLogs.push(`[save-load-smoke] result=${JSON.stringify(saveLoadSmoke)}`);
+      fs.writeFileSync(`${outputDir}/save-load-smoke.log`, reloadLogs.join('\n'));
+      await withTimeout(reloadPage.close(), 10000, 'save/load-smoke reload page close').catch(() => undefined);
+    }
+  }
+
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && abilityKeysSafe && gameplayPerformanceSafe
@@ -1195,6 +1333,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
+    && saveLoadSmoke.ok
     && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(state.bodyState);
 
   const result = {
@@ -1269,6 +1408,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
     localNegativeMisses: [...new Set(localNegativeMisses)],
+    saveLoadSmoke,
     state,
     logTail: logs.slice(-500)
   };
