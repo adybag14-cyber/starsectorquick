@@ -1860,7 +1860,8 @@ public class Fixer {
         final boolean preferDirectNewGameBeforeContinue =
                 directLaunchMode
                         && normalizedMode.indexOf("continue") >= 0
-                        && normalizedMode.indexOf("direct") >= 0;
+                        && normalizedMode.indexOf("direct") >= 0
+                        && normalizedMode.indexOf("new") >= 0;
         final String immediatePlayerFleetNullDefault = visitColonyMode ? "true" : "false";
         final boolean allowImmediatePlayerFleetNullTransition =
                 Boolean.parseBoolean(

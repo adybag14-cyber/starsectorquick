@@ -1234,7 +1234,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         // allowed campaign transition. There is deliberately no "new" token,
         // so a missing/corrupt save cannot be hidden by creating another world.
         __STARSECTOR_AUTO_CAMPAIGN_MODE__: 'continue_direct',
-        __STARSECTOR_DIRECT_LAUNCH__: false,
+        __STARSECTOR_DIRECT_LAUNCH__: true,
         __STARSECTOR_FORCE_CHEERPJ_STORAGE_RESET__: false,
         __STARSECTOR_AUTO_CAMPAIGN_FALLBACK_MS__: 300000,
         __STARSECTOR_BROWSER_TUTORIAL__: false,
