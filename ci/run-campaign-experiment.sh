@@ -780,7 +780,7 @@ curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 # headless CheerpJ while Java source/rules and restored graphics are decoded.
 # Do not terminate the run before the campaign bootstrap has had a chance to run.
 STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=720000 \
+STARSECTOR_TEST_TIMEOUT_MS="${STARSECTOR_TEST_TIMEOUT_MS:-720000}" \
 STARSECTOR_FRAME_SETTLE_MS=30000 \
 STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
