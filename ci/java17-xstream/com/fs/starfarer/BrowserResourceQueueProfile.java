@@ -80,6 +80,34 @@ public final class BrowserResourceQueueProfile {
         }
     }
 
+    public static void printPhase(java.lang.String phase) {
+        if (!enabled()) return;
+        long textureRaw = 0L, textureUnique = 0L;
+        long optionalRaw = 0L, optionalUnique = 0L;
+        long alphaRaw = 0L, alphaUnique = 0L;
+        long soundRaw = 0L, soundUnique = 0L;
+        long fontRaw = 0L, fontUnique = 0L;
+        long scriptsRaw = 0L, scriptsUnique = 0L;
+        synchronized (BrowserResourceQueueProfile.class) {
+            for (Stats s : QUEUED.values()) {
+                if (s.key.startsWith("TEXTURE|")) { textureRaw += s.raw; textureUnique += s.unique; }
+                else if (s.key.startsWith("TEXTURE_OPTIONAL|")) { optionalRaw += s.raw; optionalUnique += s.unique; }
+                else if (s.key.startsWith("TEXTURE_ALPHA_ADDER|")) { alphaRaw += s.raw; alphaUnique += s.unique; }
+                else if (s.key.startsWith("SOUND|")) { soundRaw += s.raw; soundUnique += s.unique; }
+                else if (s.key.startsWith("FONT|")) { fontRaw += s.raw; fontUnique += s.unique; }
+                else if (s.key.startsWith("SCRIPTS|")) { scriptsRaw += s.raw; scriptsUnique += s.unique; }
+            }
+            System.out.println("BrowserResourceQueuePhase: phase=" + phase
+                    + " raw=" + rawCount + " unique=" + uniqueCount
+                    + " texture=" + textureRaw + "/" + textureUnique
+                    + " optional=" + optionalRaw + "/" + optionalUnique
+                    + " alpha=" + alphaRaw + "/" + alphaUnique
+                    + " sound=" + soundRaw + "/" + soundUnique
+                    + " font=" + fontRaw + "/" + fontUnique
+                    + " scripts=" + scriptsRaw + "/" + scriptsUnique);
+        }
+    }
+
     public static void printQueueSummary() {
         if (!enabled()) return;
         List<Stats> values;

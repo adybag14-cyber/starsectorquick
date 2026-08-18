@@ -22,6 +22,9 @@ public final class VerifyResourceQueueProfilePatch {
         final int[] begin = {0};
         final int[] end = {0};
         final int[] loadSummary = {0};
+        final int[] phase = {0};
+        final int[] specStore = {0};
+        final int[] dynamicSprites = {0};
         final int[] executor = {0};
         final int[] textureLoads = {0};
 
@@ -51,7 +54,16 @@ public final class VerifyResourceQueueProfilePatch {
                                     else if ("beginLoad".equals(methodName)) begin[0]++;
                                     else if ("endLoad".equals(methodName)) end[0]++;
                                     else if ("printLoadSummary".equals(methodName)) loadSummary[0]++;
+                                    else if ("printPhase".equals(methodName)) phase[0]++;
                                 }
+                                if (opcode == Opcodes.INVOKESTATIC
+                                        && "com/fs/starfarer/loading/SpecStore".equals(owner)
+                                        && "public".equals(methodName)
+                                        && "(Lcom/fs/starfarer/loading/ResourceLoaderState;)V".equals(methodDescriptor)) specStore[0]++;
+                                if (opcode == Opcodes.INVOKEVIRTUAL
+                                        && "com/fs/starfarer/loading/ResourceLoaderState".equals(owner)
+                                        && "queueShipAndWeaponSprites".equals(methodName)
+                                        && "()V".equals(methodDescriptor)) dynamicSprites[0]++;
                                 if (opcode == Opcodes.INVOKESTATIC
                                         && "java/util/concurrent/Executors".equals(owner)
                                         && "newFixedThreadPool".equals(methodName)) {
@@ -71,7 +83,8 @@ public final class VerifyResourceQueueProfilePatch {
         }
 
         if (queue[0] != 1 || init[0] != 1 || record[0] != 1 || summary[0] != 1
-                || begin[0] != 1 || end[0] != 2 || loadSummary[0] != 1
+                || begin[0] != 1 || end[0] != 2 || loadSummary[0] != 1 || phase[0] != 3
+                || specStore[0] != 1 || dynamicSprites[0] != 1
                 || executor[0] != 1 || textureLoads[0] < 5) {
             throw new AssertionError(
                     "queue profile structure mismatch queue=" + queue[0]
@@ -81,6 +94,9 @@ public final class VerifyResourceQueueProfilePatch {
                             + " begin=" + begin[0]
                             + " end=" + end[0]
                             + " loadSummary=" + loadSummary[0]
+                            + " phase=" + phase[0]
+                            + " specStore=" + specStore[0]
+                            + " dynamicSprites=" + dynamicSprites[0]
                             + " executor=" + executor[0]
                             + " textureLoads=" + textureLoads[0]);
         }
