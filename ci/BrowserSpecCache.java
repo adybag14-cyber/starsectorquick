@@ -29,6 +29,7 @@ public final class BrowserSpecCache {
     private static final AtomicBoolean SYSTEM_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean SKILL_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean VARIANT_DISCOVERY_LOGGED = new AtomicBoolean();
+    private static final AtomicBoolean DIRECT_VARIANT_MANIFEST_LOGGED = new AtomicBoolean();
     private static volatile long loadMs;
 
     private BrowserSpecCache() {}
@@ -63,6 +64,33 @@ public final class BrowserSpecCache {
         } catch (Throwable error) {
             disabled = true;
             System.out.println("BrowserSpecCache: disabled after failure: " + describe(error));
+            return null;
+        }
+    }
+
+    /**
+     * Return the complete generated stock variant manifest before SpecStore performs
+     * any synchronous directory discovery. Null means the caller must execute the
+     * untouched stock discovery path. Recheck enabled mods even when the cache was
+     * loaded earlier so a modded/changed session never takes the stock-only shortcut.
+     */
+    public static List<String> directVariantPathsOrNull() {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || disabled) return null;
+        try {
+            if (!Boolean.getBoolean(SKIP_MOD_CHECK_PROPERTY)) {
+                List<ModManager.ModSpec> enabled = ModManager.getInstance().getEnabledMods();
+                if (enabled != null && !enabled.isEmpty()) return null;
+            }
+            if (files == null) ensureLoaded();
+            List<String> cached = variantPaths;
+            if (cached == null || cached.isEmpty()) return null;
+            if (DIRECT_VARIANT_MANIFEST_LOGGED.compareAndSet(false, true)) {
+                System.out.println("BrowserSpecCache: direct-variant-manifest files=" + cached.size());
+            }
+            return new ArrayList<String>(cached);
+        } catch (Throwable error) {
+            disabled = true;
+            System.out.println("BrowserSpecCache: direct variant manifest disabled after failure: " + describe(error));
             return null;
         }
     }

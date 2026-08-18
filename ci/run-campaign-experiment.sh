@@ -408,6 +408,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchRulesDeadVariableTraversal.java \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
+  ci/PatchSpecStoreDirectVariantManifest.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -720,16 +721,25 @@ mv .ci-build/starfarer-bulk-spec-cache.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreVariantDiscovery jars/starfarer_obf.jar .ci-build/starfarer-variant-discovery.jar
 mv .ci-build/starfarer-variant-discovery.jar jars/starfarer_obf.jar
+# When the same validated stock cache is active, bypass the root/directory probes
+# entirely and jump directly to the complete generated manifest. Null falls through
+# to the untouched discovery body above, including modded/cache-disabled sessions.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpecStoreDirectVariantManifest jars/starfarer_obf.jar .ci-build/starfarer-direct-variant-manifest.jar
+mv .ci-build/starfarer-direct-variant-manifest.jar jars/starfarer_obf.jar
 javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.BrowserSpecCache \
   | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-bulk-spec-patch
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-bulk-spec-patch \
   ci/VerifyLoadingUtilsBulkSpecPatch.java \
-  ci/VerifySpecStoreVariantDiscoveryPatch.java
+  ci/VerifySpecStoreVariantDiscoveryPatch.java \
+  ci/VerifySpecStoreDirectVariantManifestPatch.java
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreVariantDiscoveryPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifySpecStoreDirectVariantManifestPatch jars/starfarer_obf.jar
 # Prove the transformer is idempotent so repeated local/CI preparation cannot
 # accumulate a second fast path in the obfuscated LoadingUtils method.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -742,6 +752,12 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreVariantDiscovery jars/starfarer_obf.jar .ci-build/starfarer-variant-discovery-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreVariantDiscoveryPatch .ci-build/starfarer-variant-discovery-repeat.jar
+# The direct branch must also be byte-idempotent on the final transformed SpecStore.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpecStoreDirectVariantManifest jars/starfarer_obf.jar .ci-build/starfarer-direct-variant-manifest-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifySpecStoreDirectVariantManifestPatch .ci-build/starfarer-direct-variant-manifest-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-direct-variant-manifest-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -860,6 +876,7 @@ fi
 # cache. This prevents a transparent fallback from being mistaken for a speedup.
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
+grep -q 'BrowserSpecCache: direct-variant-manifest files=' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"

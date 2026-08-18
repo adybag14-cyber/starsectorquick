@@ -47,6 +47,11 @@ public final class VerifyBulkSpecCache {
                     "unexpected stock system/skill counts systems=" + expectedSystems + " skills=" + expectedSkills);
         }
         List<String> rootOnly = Arrays.asList("data/variants/sentinel-root.variant");
+        List<String> direct = BrowserSpecCache.directVariantPathsOrNull();
+        if (direct == null || direct.size() != expectedVariants || !direct.contains("data/variants/lasher_Standard.variant")) {
+            throw new AssertionError("direct variant manifest mismatch expected=" + expectedVariants
+                    + " actual=" + (direct == null ? -1 : direct.size()));
+        }
         List<String> expanded = BrowserSpecCache.expandVariantPaths(rootOnly);
         if (expanded == rootOnly || expanded.size() != expectedVariants) {
             throw new AssertionError(
@@ -64,7 +69,8 @@ public final class VerifyBulkSpecCache {
 
         // Disabling the browser cache must restore Starsector's original discovery inputs exactly.
         System.setProperty("starsector.browserBulkSpecCache", "false");
-        if (BrowserSpecCache.expandVariantPaths(rootOnly) != rootOnly
+        if (BrowserSpecCache.directVariantPathsOrNull() != null
+                || BrowserSpecCache.expandVariantPaths(rootOnly) != rootOnly
                 || BrowserSpecCache.filterVariantDirectories(directories) != directories) {
             throw new AssertionError("disabled variant cache did not preserve original discovery lists");
         }
