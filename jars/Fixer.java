@@ -1919,9 +1919,7 @@ public class Fixer {
                 Boolean.parseBoolean(
                         System.getProperty(DIRECT_LAUNCH_PROPERTY, "false"));
         final boolean preferDirectNewGameBeforeContinue =
-                directLaunchMode
-                        && normalizedMode.indexOf("continue") >= 0
-                        && normalizedMode.indexOf("direct") >= 0;
+                shouldPreferDirectNewGameBeforeContinue(directLaunchMode, normalizedMode);
         final String immediatePlayerFleetNullDefault = visitColonyMode ? "true" : "false";
         final boolean allowImmediatePlayerFleetNullTransition =
                 Boolean.parseBoolean(
@@ -20158,6 +20156,15 @@ public class Fixer {
             System.out.println(
                     "Fixer: direct-new-game runtime snapshot failed: " + describeThrowableChain(t));
         }
+    }
+
+    static boolean shouldPreferDirectNewGameBeforeContinue(
+            boolean directLaunchMode, String normalizedMode) {
+        String mode = normalizedMode == null ? "" : normalizedMode;
+        return directLaunchMode
+                && mode.indexOf("continue") >= 0
+                && mode.indexOf("direct") >= 0
+                && mode.indexOf("new") >= 0;
     }
 
     private static long parseLongProperty(String key, long fallback) {
