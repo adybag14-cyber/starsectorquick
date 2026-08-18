@@ -401,6 +401,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyVariantPhaseDiagnosticsPatch.java \
   ci/PatchVariantLoopDiagnostics.java \
   ci/VerifyVariantLoopDiagnosticsPatch.java \
+  ci/PatchVariantResidualDiagnostics.java \
+  ci/VerifyVariantResidualDiagnosticsPatch.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
@@ -653,6 +655,17 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag-repeat.jar jars/fixer_patch.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag-repeat.jar
+# Diagnostic-only split of residual work inside the same variant per-file loop.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantResidualDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-residual-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantResidualDiagnosticsPatch .ci-build/starfarer-variant-residual-diag.jar jars/fixer_patch.jar
+mv .ci-build/starfarer-variant-residual-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantResidualDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-residual-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantResidualDiagnosticsPatch .ci-build/starfarer-variant-residual-diag-repeat.jar jars/fixer_patch.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-residual-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesVariableDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-diag.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -891,6 +904,7 @@ grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
+grep -q 'BrowserVariantResidualDiag: totalMs=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'variant-phase:entry' "$OUT/browser.log"
 grep -q 'variant-phase:relationships' "$OUT/browser.log"
