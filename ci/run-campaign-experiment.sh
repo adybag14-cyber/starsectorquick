@@ -407,6 +407,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesDeadVariableWritesPatch.java \
   ci/PatchRulesDeadVariableTraversal.java \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
+  ci/PatchRuleCommandDiagnostics.java \
+  ci/VerifyRuleCommandDiagnosticsPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -706,6 +708,17 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-traversal-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyRulesDuplicateIndexPatch jars/starfarer_obf.jar
+# Diagnostic-only aggregate profile of rule command class lookup/cache behavior.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRuleCommandDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rule-command-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRuleCommandDiagnosticsPatch .ci-build/starfarer-rule-command-diag.jar jars/fixer_patch.jar
+mv .ci-build/starfarer-rule-command-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRuleCommandDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rule-command-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRuleCommandDiagnosticsPatch .ci-build/starfarer-rule-command-diag-repeat.jar jars/fixer_patch.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rule-command-diag-repeat.jar
 # Ship the Java-8 helper in the same JAR/package as the obfuscated loader, then
 # insert a cache hit before LoadingUtils performs its normal resource-manager read.
 jar uf jars/starfarer_obf.jar \
@@ -864,6 +877,7 @@ grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserRuleCommandDiag: calls=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
