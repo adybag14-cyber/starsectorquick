@@ -88,9 +88,21 @@ public final class BrowserResourceQueueProfile {
         long soundRaw = 0L, soundUnique = 0L;
         long fontRaw = 0L, fontUnique = 0L;
         long scriptsRaw = 0L, scriptsUnique = 0L;
+        long uiRaw = 0L, uiUnique = 0L, fxRaw = 0L, fxUnique = 0L;
+        long backgroundsRaw = 0L, backgroundsUnique = 0L, terrainRaw = 0L, terrainUnique = 0L;
+        long abilityRaw = 0L, abilityUnique = 0L, campaignRaw = 0L, campaignUnique = 0L;
+        long hudRaw = 0L, hudUnique = 0L, portraitsRaw = 0L, portraitsUnique = 0L;
         synchronized (BrowserResourceQueueProfile.class) {
             for (Stats s : QUEUED.values()) {
                 if (s.key.startsWith("TEXTURE|")) { textureRaw += s.raw; textureUnique += s.unique; }
+                if ("TEXTURE|graphics/ui".equals(s.key)) { uiRaw = s.raw; uiUnique = s.unique; }
+                else if ("TEXTURE|graphics/fx".equals(s.key)) { fxRaw = s.raw; fxUnique = s.unique; }
+                else if ("TEXTURE|graphics/backgrounds".equals(s.key)) { backgroundsRaw = s.raw; backgroundsUnique = s.unique; }
+                else if ("TEXTURE|graphics/terrain".equals(s.key)) { terrainRaw = s.raw; terrainUnique = s.unique; }
+                else if ("TEXTURE|graphics/icons/abilities".equals(s.key)) { abilityRaw = s.raw; abilityUnique = s.unique; }
+                else if ("TEXTURE|graphics/icons/campaign".equals(s.key)) { campaignRaw = s.raw; campaignUnique = s.unique; }
+                else if ("TEXTURE|graphics/hud".equals(s.key)) { hudRaw = s.raw; hudUnique = s.unique; }
+                else if ("TEXTURE|graphics/portraits".equals(s.key)) { portraitsRaw = s.raw; portraitsUnique = s.unique; }
                 else if (s.key.startsWith("TEXTURE_OPTIONAL|")) { optionalRaw += s.raw; optionalUnique += s.unique; }
                 else if (s.key.startsWith("TEXTURE_ALPHA_ADDER|")) { alphaRaw += s.raw; alphaUnique += s.unique; }
                 else if (s.key.startsWith("SOUND|")) { soundRaw += s.raw; soundUnique += s.unique; }
@@ -104,7 +116,15 @@ public final class BrowserResourceQueueProfile {
                     + " alpha=" + alphaRaw + "/" + alphaUnique
                     + " sound=" + soundRaw + "/" + soundUnique
                     + " font=" + fontRaw + "/" + fontUnique
-                    + " scripts=" + scriptsRaw + "/" + scriptsUnique);
+                    + " scripts=" + scriptsRaw + "/" + scriptsUnique
+                    + " ui=" + uiRaw + "/" + uiUnique
+                    + " fx=" + fxRaw + "/" + fxUnique
+                    + " backgrounds=" + backgroundsRaw + "/" + backgroundsUnique
+                    + " terrain=" + terrainRaw + "/" + terrainUnique
+                    + " abilities=" + abilityRaw + "/" + abilityUnique
+                    + " campaignIcons=" + campaignRaw + "/" + campaignUnique
+                    + " hud=" + hudRaw + "/" + hudUnique
+                    + " portraits=" + portraitsRaw + "/" + portraitsUnique);
         }
     }
 
