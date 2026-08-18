@@ -470,7 +470,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const screenshotActionTimeoutMs = Math.max(10000, screenshotTimeoutMs - 2000);
   const safeScreenshot = async (path, label) => {
     try {
-      await withTimeout(gameCanvas.waitFor({ state: 'visible', timeout: 10000 }), 12000, `${label} canvas visibility`);
+      await withTimeout(
+        gameCanvas.waitFor({ state: 'visible', timeout: screenshotActionTimeoutMs }),
+        screenshotTimeoutMs,
+        `${label} canvas visibility`,
+      );
       return await withTimeout(
         gameCanvas.screenshot({ path, timeout: screenshotActionTimeoutMs }),
         screenshotTimeoutMs,
