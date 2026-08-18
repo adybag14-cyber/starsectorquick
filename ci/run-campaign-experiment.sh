@@ -397,6 +397,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyJaninoNegativeSourceCachePatch.java \
   ci/PatchResourceLoaderQuickStart.java \
   ci/PatchSpecStoreDiagnostics.java \
+  ci/PatchHullDiscoveryDiagnostics.java \
+  ci/VerifyHullDiscoveryDiagnosticsPatch.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
@@ -565,6 +567,17 @@ cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
+# Diagnostic-only split of hull/skin discovery from their per-file load loops.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchHullDiscoveryDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-hull-discovery-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyHullDiscoveryDiagnosticsPatch .ci-build/starfarer-hull-discovery-diag.jar jars/fixer_patch.jar
+mv .ci-build/starfarer-hull-discovery-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchHullDiscoveryDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-hull-discovery-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyHullDiscoveryDiagnosticsPatch .ci-build/starfarer-hull-discovery-diag-repeat.jar jars/fixer_patch.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-hull-discovery-diag-repeat.jar
 # Deep gameplay telemetry around actual CampaignState core-tab open/dismiss paths.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignGameplayProbe jars/starfarer_obf.jar .ci-build/starfarer-campaign-gameplay-probe.jar
@@ -808,6 +821,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.loading.oOoO \
   com.fs.starfarer.loading.BrowserFastCsvParser \
   com.fs.starfarer.loading.BrowserTextPreprocessor \
+  com.fs.starfarer.loading.BrowserHullDiscoveryDiag \
   com.fs.starfarer.campaign.rules.BrowserRuleDuplicateIndex \
   com.fs.starfarer.BaseGameState
 
@@ -880,6 +894,8 @@ grep -q 'BrowserSpecCache: direct-variant-manifest files=' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
+grep -q 'BrowserHullDiscoveryDiag: kind=hulls' "$OUT/browser.log"
+grep -q 'BrowserHullDiscoveryDiag: kind=skins' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
