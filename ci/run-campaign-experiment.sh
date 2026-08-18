@@ -646,12 +646,12 @@ cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchVariantLoopDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag.jar
+  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag.jar jars/fixer_patch.jar
 mv .ci-build/starfarer-variant-loop-diag.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchVariantLoopDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
-  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag-repeat.jar
+  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag-repeat.jar jars/fixer_patch.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesVariableDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-diag.jar
