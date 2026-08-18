@@ -29,6 +29,8 @@ public final class BrowserSpecCache {
     private static final AtomicBoolean SYSTEM_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean SKILL_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean VARIANT_DISCOVERY_LOGGED = new AtomicBoolean();
+    private static final AtomicBoolean FAST_JSON_LOGGED = new AtomicBoolean();
+    private static final AtomicLong FAST_JSON_PARSES = new AtomicLong();
     private static volatile long loadMs;
 
     private BrowserSpecCache() {}
@@ -65,6 +67,47 @@ public final class BrowserSpecCache {
             System.out.println("BrowserSpecCache: disabled after failure: " + describe(error));
             return null;
         }
+    }
+
+    /**
+     * Parse a stock cached JSON-like spec using the exact comment-removal rules
+     * in LoadingUtils' String,String parser, but without synchronized
+     * StringBuffer operations on every character. This method is called only
+     * after getRaw(path) succeeds, so external-mod/cache-disabled paths retain
+     * Starsector's original parser.
+     */
+    public static JSONObject parseRaw(String path, String raw) throws org.json.JSONException {
+        if (raw == null) return null;
+        try {
+            StringBuilder filtered = new StringBuilder(raw.length());
+            boolean comment = false;
+            boolean quoted = false;
+            for (int i = 0; i < raw.length(); i++) {
+                char ch = raw.charAt(i);
+                if (ch == '"') quoted = !quoted;
+                if (ch == '\n' || ch == '\r') {
+                    comment = false;
+                    quoted = false;
+                    if (ch == '\n') filtered.append('\n');
+                } else if (ch == '#' && !quoted) {
+                    comment = true;
+                } else if (!comment) {
+                    filtered.append(ch);
+                }
+            }
+            JSONObject parsed = new JSONObject(filtered.toString());
+            FAST_JSON_PARSES.incrementAndGet();
+            if (FAST_JSON_LOGGED.compareAndSet(false, true)) {
+                System.out.println("BrowserSpecCache: first-fast-json path=" + normalize(path));
+            }
+            return parsed;
+        } catch (org.json.JSONException error) {
+            throw new org.json.JSONException(String.valueOf(path) + "\n" + error.getMessage());
+        }
+    }
+
+    public static long getFastJsonParseCount() {
+        return FAST_JSON_PARSES.get();
     }
 
     /**

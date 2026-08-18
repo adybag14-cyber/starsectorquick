@@ -3,6 +3,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import org.json.JSONObject;
 
@@ -38,6 +39,34 @@ public final class VerifyBulkSpecCache {
 
         JSONObject payload = new JSONObject(new String(
                 Files.readAllBytes(Paths.get(args[0])), StandardCharsets.UTF_8));
+        JSONObject packed = payload.getJSONObject("files");
+        int parsedFiles = 0;
+        Iterator<?> packedKeys = packed.keys();
+        while (packedKeys.hasNext()) {
+            String path = String.valueOf(packedKeys.next());
+            String raw = packed.getString(path);
+            JSONObject reference = parseLikeStock(path, raw);
+            JSONObject fast = BrowserSpecCache.parseRaw(path, raw);
+            if (!reference.toString().equals(fast.toString())) {
+                throw new AssertionError("fast JSON parser mismatch path=" + path);
+            }
+            parsedFiles++;
+        }
+        if (parsedFiles != payload.getInt("fileCount")
+                || BrowserSpecCache.getFastJsonParseCount() != parsedFiles) {
+            throw new AssertionError(
+                    "fast JSON parser count mismatch parsed=" + parsedFiles
+                            + " counter=" + BrowserSpecCache.getFastJsonParseCount());
+        }
+        String malformed = "{\"broken\":";
+        String referenceError = parseError("bad.variant", malformed, true);
+        String fastError = parseError("bad.variant", malformed, false);
+        if (!referenceError.equals(fastError)) {
+            throw new AssertionError(
+                    "fast JSON parser exception mismatch reference=" + referenceError
+                            + " fast=" + fastError);
+        }
+
         JSONObject extensions = payload.getJSONObject("extensions");
         int expectedVariants = extensions.getInt(".variant");
         int expectedSystems = extensions.getInt(".system");
@@ -88,4 +117,38 @@ public final class VerifyBulkSpecCache {
                         + " hits=" + BrowserSpecCache.getHitCount()
                         + " loadMs=" + BrowserSpecCache.getLoadMs());
     }
+    private static JSONObject parseLikeStock(String path, String raw) throws org.json.JSONException {
+        try {
+            StringBuffer filtered = new StringBuffer();
+            boolean comment = false;
+            boolean quoted = false;
+            for (int i = 0; i < raw.length(); i++) {
+                char ch = raw.charAt(i);
+                if (ch == '"') quoted = !quoted;
+                if (ch == '\n' || ch == '\r') {
+                    comment = false;
+                    quoted = false;
+                    if (ch == '\n') filtered.append('\n');
+                } else if (ch == '#' && !quoted) {
+                    comment = true;
+                } else if (!comment) {
+                    filtered.append(ch);
+                }
+            }
+            return new JSONObject(filtered.toString());
+        } catch (org.json.JSONException error) {
+            throw new org.json.JSONException(path + "\n" + error.getMessage());
+        }
+    }
+
+    private static String parseError(String path, String raw, boolean reference) {
+        try {
+            if (reference) parseLikeStock(path, raw);
+            else BrowserSpecCache.parseRaw(path, raw);
+            return "<no-error>";
+        } catch (org.json.JSONException error) {
+            return error.getMessage();
+        }
+    }
+
 }

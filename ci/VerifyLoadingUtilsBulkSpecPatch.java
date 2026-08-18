@@ -16,11 +16,11 @@ public final class VerifyLoadingUtilsBulkSpecPatch {
         if (args.length != 1) throw new IllegalArgumentException("usage: VerifyLoadingUtilsBulkSpecPatch patched.jar");
         int[] targetMethods = {0};
         int[] cacheCalls = {0};
-        int[] parserCalls = {0};
+        int[] fastParserCalls = {0};
         int[] originalCalls = {0};
         int[] callIndex = {0};
         int[] firstCacheCall = {0};
-        int[] firstParserCall = {0};
+        int[] firstFastParserCall = {0};
         int[] firstOriginalCall = {0};
         boolean[] helperClass = {false};
         try (JarFile jar = new JarFile(Path.of(args[0]).toFile())) {
@@ -44,11 +44,11 @@ public final class VerifyLoadingUtilsBulkSpecPatch {
                                     cacheCalls[0]++;
                                     if (firstCacheCall[0] == 0) firstCacheCall[0] = index;
                                 }
-                                if ("com/fs/starfarer/loading/LoadingUtils".equals(owner)
-                                        && "\u00d600000".equals(methodName)
+                                if ("com/fs/starfarer/loading/BrowserSpecCache".equals(owner)
+                                        && "parseRaw".equals(methodName)
                                         && "(Ljava/lang/String;Ljava/lang/String;)Lorg/json/JSONObject;".equals(methodDescriptor)) {
-                                    parserCalls[0]++;
-                                    if (firstParserCall[0] == 0) firstParserCall[0] = index;
+                                    fastParserCalls[0]++;
+                                    if (firstFastParserCall[0] == 0) firstFastParserCall[0] = index;
                                 }
                                 if (!"com/fs/starfarer/loading/BrowserSpecCache".equals(owner)
                                         && !"com/fs/starfarer/loading/LoadingUtils".equals(owner)) {
@@ -62,26 +62,26 @@ public final class VerifyLoadingUtilsBulkSpecPatch {
             }
         }
         boolean orderedFastPath = firstCacheCall[0] == 1
-                && firstParserCall[0] > firstCacheCall[0]
-                && firstOriginalCall[0] > firstParserCall[0];
+                && firstFastParserCall[0] > firstCacheCall[0]
+                && firstOriginalCall[0] > firstFastParserCall[0];
         if (!helperClass[0] || targetMethods[0] != 1 || cacheCalls[0] != 1
-                || parserCalls[0] < 1 || originalCalls[0] < 3 || !orderedFastPath) {
+                || fastParserCalls[0] != 1 || originalCalls[0] < 3 || !orderedFastPath) {
             throw new AssertionError(
                     "bulk patch mismatch helper=" + helperClass[0]
                             + " methods=" + targetMethods[0]
                             + " cacheCalls=" + cacheCalls[0]
-                            + " parserCalls=" + parserCalls[0]
+                            + " fastParserCalls=" + fastParserCalls[0]
                             + " originalCalls=" + originalCalls[0]
                             + " firstCacheCall=" + firstCacheCall[0]
-                            + " firstParserCall=" + firstParserCall[0]
+                            + " firstFastParserCall=" + firstFastParserCall[0]
                             + " firstOriginalCall=" + firstOriginalCall[0]);
         }
         System.out.println(
                 "VerifyLoadingUtilsBulkSpecPatch: OK cacheCalls=" + cacheCalls[0]
-                        + " parserCalls=" + parserCalls[0]
+                        + " fastParserCalls=" + fastParserCalls[0]
                         + " originalCalls=" + originalCalls[0]
                         + " firstCacheCall=" + firstCacheCall[0]
-                        + " firstParserCall=" + firstParserCall[0]
+                        + " firstFastParserCall=" + firstFastParserCall[0]
                         + " firstOriginalCall=" + firstOriginalCall[0]);
     }
 }

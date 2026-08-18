@@ -21,7 +21,6 @@ public final class PatchLoadingUtilsBulkSpecCache {
     private static final String CACHE = "com/fs/starfarer/loading/BrowserSpecCache";
     private static final String METHOD = "super";
     private static final String DESC = "(Ljava/lang/String;Ljava/util/Set;)Lorg/json/JSONObject;";
-    private static final String PARSER = "\u00d600000";
     private static final String PARSER_DESC = "(Ljava/lang/String;Ljava/lang/String;)Lorg/json/JSONObject;";
 
     public static void main(String[] args) throws Exception {
@@ -99,8 +98,8 @@ public final class PatchLoadingUtilsBulkSpecCache {
                         super.visitVarInsn(Opcodes.ALOAD, 2);
                         super.visitMethodInsn(
                                 Opcodes.INVOKESTATIC,
-                                LOADING_UTILS,
-                                PARSER,
+                                CACHE,
+                                "parseRaw",
                                 PARSER_DESC,
                                 false);
                         super.visitInsn(Opcodes.ARETURN);
