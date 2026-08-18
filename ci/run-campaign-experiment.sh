@@ -399,6 +399,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSpecStoreDiagnostics.java \
   ci/PatchVariantPhaseDiagnostics.java \
   ci/VerifyVariantPhaseDiagnosticsPatch.java \
+  ci/PatchVariantLoopDiagnostics.java \
+  ci/VerifyVariantLoopDiagnosticsPatch.java \
   ci/PatchRulesVariableDiagnostics.java \
   ci/VerifyRulesVariableDiagnosticsPatch.java \
   ci/PatchRulesDuplicateIndex.java \
@@ -640,6 +642,17 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyVariantPhaseDiagnosticsPatch .ci-build/starfarer-variant-phase-diag-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-phase-diag-repeat.jar
+# Diagnostic-only aggregate breakdown of the hot per-file variant loop.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantLoopDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag.jar
+mv .ci-build/starfarer-variant-loop-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchVariantLoopDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyVariantLoopDiagnosticsPatch .ci-build/starfarer-variant-loop-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-variant-loop-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchRulesVariableDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-no-variable-diag.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
