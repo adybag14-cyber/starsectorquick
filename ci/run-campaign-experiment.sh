@@ -96,6 +96,8 @@ grep -q '__STARSECTOR_BROWSER_JANINO_NEGATIVE_CACHE__' launch.html
 grep -q 'starsector.browserJaninoNegativeCache=${browserJaninoNegativeCache}' launch.html
 grep -q '__STARSECTOR_BROWSER_RULE_DUPLICATE_INDEX__' launch.html
 grep -q 'starsector.browserRuleDuplicateIndex=${browserRuleDuplicateIndex}' launch.html
+grep -q '__STARSECTOR_BROWSER_RESOURCE_QUEUE_PROFILE__' launch.html
+grep -q 'starsector.browserResourceQueueProfile=${browserResourceQueueProfile}' launch.html
 grep -q '__STARSECTOR_BROWSER_DEFERRED_TEXTURES__' launch.html
 grep -q '__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__' launch.html
 grep -q 'starsector.browserContinueRenderGuard=${browserContinueRenderGuard}' launch.html
@@ -371,6 +373,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/VerifyDeferredTexturePatches.java \
+  ci/PatchResourceQueueProfile.java \
+  ci/VerifyResourceQueueProfilePatch.java \
   ci/PatchAbilityGameplayProbe.java \
   ci/VerifyAbilityGameplayProbePatch.java \
   ci/PatchCampaignGameplayProbe.java \
@@ -548,6 +552,19 @@ mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderDeferredPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred-predecode.jar
 mv .ci-build/starfarer-resource-deferred-predecode.jar jars/starfarer_obf.jar
+# Diagnostic-only queue aggregation/timing: no resource ordering or load semantics change.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceQueueProfile jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceQueueProfilePatch .ci-build/starfarer-resource-queue-profile.jar
+mv .ci-build/starfarer-resource-queue-profile.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceQueueProfile jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceQueueProfilePatch .ci-build/starfarer-resource-queue-profile-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-resource-queue-profile-repeat.jar
+javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserResourceQueueProfile \
+  | grep -q 'major version: 52'
 # Use the exact-equivalent browser CSV parser only when its property/no-mod gate
 # succeeds. The full stock oOoO parser stays immediately behind the hook.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -782,6 +799,7 @@ java -Xverify:all -cp ".ci-build/verify:jars/fixer_patch.jar:$CP" \
   com.fs.starfarer.util.O \
   com.fs.graphics.TextureLoader \
   com.fs.starfarer.BrowserDeferredTextureQueue \
+  com.fs.starfarer.BrowserResourceQueueProfile \
   com.fs.starfarer.BrowserGameplayProbe \
   com.fs.starfarer.api.impl.campaign.abilities.BaseAbilityPlugin \
   com.fs.starfarer.api.impl.campaign.abilities.BaseToggleAbility \
@@ -864,6 +882,8 @@ grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
+grep -q 'BrowserResourceQueueProfile: queued raw=' "$OUT/browser.log"
+grep -q 'BrowserResourceQueueProfile: loaded calls=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
