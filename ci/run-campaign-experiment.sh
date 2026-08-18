@@ -383,6 +383,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyCampaignPauseGameplayProbePatch.java \
   ci/PatchBrowserFastCsvParser.java \
   ci/VerifyBrowserFastCsvParserPatch.java \
+  ci/PatchRulesCsvLoaderDiagnostics.java \
+  ci/VerifyRulesCsvLoaderDiagnosticsPatch.java \
   ci/PatchBrowserTextPreprocessor.java \
   ci/VerifyBrowserTextPreprocessorPatch.java \
   ci/PatchSlipstreamBrowserAdvance.java \
@@ -561,6 +563,17 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyBrowserFastCsvParserPatch .ci-build/starfarer-fast-csv-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-csv-repeat.jar
+# Aggregate-only diagnostic of the already-fast rules.csv merged-loader stages.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesCsvLoaderDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesCsvLoaderDiagnosticsPatch .ci-build/starfarer-rules-csv-diag.jar
+mv .ci-build/starfarer-rules-csv-diag.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchRulesCsvLoaderDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyRulesCsvLoaderDiagnosticsPatch .ci-build/starfarer-rules-csv-diag-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-rules-csv-diag-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-specstore-diag.jar
 mv .ci-build/starfarer-specstore-diag.jar jars/starfarer_obf.jar
@@ -861,6 +874,7 @@ fi
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
+grep -q 'BrowserRulesCsvLoadDiag: sources=' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
