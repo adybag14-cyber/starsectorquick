@@ -22,6 +22,7 @@ public final class BrowserSpecCache {
     private static final String SKIP_MOD_CHECK_PROPERTY = "starsector.browserBulkSpecCacheSkipModCheck";
     private static volatile Map<String, String> files;
     private static volatile List<String> variantPaths;
+    private static volatile List<String> skinPaths;
     private static volatile boolean disabled;
     private static final AtomicLong HITS = new AtomicLong();
     private static final AtomicLong MISSES = new AtomicLong();
@@ -30,6 +31,7 @@ public final class BrowserSpecCache {
     private static final AtomicBoolean SKILL_HIT_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean VARIANT_DISCOVERY_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean DIRECT_VARIANT_MANIFEST_LOGGED = new AtomicBoolean();
+    private static final AtomicBoolean DIRECT_SKIN_MANIFEST_LOGGED = new AtomicBoolean();
     private static volatile long loadMs;
 
     private BrowserSpecCache() {}
@@ -96,6 +98,32 @@ public final class BrowserSpecCache {
     }
 
     /**
+     * Return the complete generated stock hull-skin manifest before the skin
+     * loader performs synchronous root/child-directory discovery. Null preserves
+     * the untouched stock path, including all modded and cache-failure sessions.
+     */
+    public static List<String> directSkinPathsOrNull() {
+        if (!Boolean.getBoolean(ENABLE_PROPERTY) || disabled) return null;
+        try {
+            if (!Boolean.getBoolean(SKIP_MOD_CHECK_PROPERTY)) {
+                List<ModManager.ModSpec> enabled = ModManager.getInstance().getEnabledMods();
+                if (enabled != null && !enabled.isEmpty()) return null;
+            }
+            if (files == null) ensureLoaded();
+            List<String> cached = skinPaths;
+            if (cached == null || cached.isEmpty()) return null;
+            if (DIRECT_SKIN_MANIFEST_LOGGED.compareAndSet(false, true)) {
+                System.out.println("BrowserSpecCache: direct-skin-manifest files=" + cached.size());
+            }
+            return new ArrayList<String>(cached);
+        } catch (Throwable error) {
+            disabled = true;
+            System.out.println("BrowserSpecCache: direct skin manifest disabled after failure: " + describe(error));
+            return null;
+        }
+    }
+
+    /**
      * Replace SpecStore's root-only variant discovery result with the complete
      * stock variant manifest already present in the browser spec cache. When the
      * cache is unavailable (including external-mod sessions), return the original
@@ -134,6 +162,11 @@ public final class BrowserSpecCache {
 
     public static int getVariantPathCount() {
         List<String> cached = variantPaths;
+        return cached == null ? 0 : cached.size();
+    }
+
+    public static int getSkinPathCount() {
+        List<String> cached = skinPaths;
         return cached == null ? 0 : cached.size();
     }
 
@@ -203,20 +236,29 @@ public final class BrowserSpecCache {
         }
 
         ArrayList<String> variants = new ArrayList<String>();
+        ArrayList<String> skins = new ArrayList<String>();
         for (String path : loaded.keySet()) {
             String normalized = normalize(path);
-            if (normalized.startsWith("data/variants/")
-                    && normalized.toLowerCase(Locale.ROOT).endsWith(".variant")) {
+            String lower = normalized.toLowerCase(Locale.ROOT);
+            if (normalized.startsWith("data/variants/") && lower.endsWith(".variant")) {
                 variants.add(normalized);
+            }
+            if (normalized.startsWith("data/hulls/skins/") && lower.endsWith(".skin")) {
+                skins.add(normalized);
             }
         }
         Collections.sort(variants);
+        Collections.sort(skins);
         if (variants.isEmpty()) {
             throw new IllegalStateException("cache contains no stock variant paths");
+        }
+        if (skins.isEmpty()) {
+            throw new IllegalStateException("cache contains no stock skin paths");
         }
 
         loadMs = Math.max(0L, System.currentTimeMillis() - started);
         variantPaths = Collections.unmodifiableList(variants);
+        skinPaths = Collections.unmodifiableList(skins);
         files = Collections.unmodifiableMap(loaded);
         System.out.println(
                 "BrowserSpecCache: ready files=" + loaded.size()
