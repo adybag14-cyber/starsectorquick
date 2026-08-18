@@ -68,7 +68,11 @@ public final class BrowserDeferredTextureQueue {
      * per-path counters preserve the stock pass multiplicity exactly.
      */
     public static void queueEarlyImagePredecode(java.lang.String path, int resourceTypeOrdinal) {
-        if (!EARLY_PREDECODE_ENABLED || path == null || resourceTypeOrdinal < 0 || resourceTypeOrdinal > 2) return;
+        // Freeze the early set when the worker starts. Resources discovered by SpecStore
+        // and later phases stay on Starsector's normal post-SpecStore predecode pass so
+        // the background decoder cannot compete with the full spec-loading workload.
+        if (!EARLY_PREDECODE_ENABLED || EARLY_PREDECODE_STARTED.get()
+                || path == null || resourceTypeOrdinal < 0 || resourceTypeOrdinal > 2) return;
         if (ENABLED && resourceTypeOrdinal != 2 && shouldDeferPath(path)) return;
         java.lang.String key = normalize(path);
         AtomicLong counter = EARLY_PREDECODE_COUNTS.get(key);

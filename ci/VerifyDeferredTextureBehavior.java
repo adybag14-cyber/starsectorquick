@@ -20,6 +20,12 @@ public final class VerifyDeferredTextureBehavior {
         BrowserDeferredTextureQueue.startEarlyImagePredecode();
         BrowserDeferredTextureQueue.startEarlyImagePredecode();
         require(L.STARTS == 1, "early worker should start once: " + L.STARTS);
+        long queuedAtStart = BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount();
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/late-after-start.png", 0);
+        require(BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount() == queuedAtStart,
+                "early queue must freeze after worker start");
+        require(!L.PREDECODE.contains("graphics/hud/late-after-start.png"),
+                "post-start resource must remain on stock predecode path");
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
         require(L.PREDECODE.size() == 2, "stock pass must consume early multiplicity without requeue: " + L.PREDECODE);
