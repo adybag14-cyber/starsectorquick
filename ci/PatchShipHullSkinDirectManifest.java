@@ -83,6 +83,8 @@ public final class PatchShipHullSkinDirectManifest {
                     boolean targetMethod;
                     boolean injected;
                     boolean placedTarget;
+                    int skinFileListCalls;
+                    boolean childFileListSeen;
                     final Label stockPath = new Label();
                     final Label directTarget = new Label();
 
@@ -110,15 +112,30 @@ public final class PatchShipHullSkinDirectManifest {
                     }
 
                     @Override
-                    public void visitFieldInsn(int opcode, String owner, String fieldName, String fieldDesc) {
-                        if (targetMethod && !placedTarget
-                                && opcode == Opcodes.GETSTATIC
-                                && LOGGER_DESC.equals(fieldDesc)) {
+                    public void visitMethodInsn(int opcode, String owner, String methodName,
+                                                String methodDesc, boolean isInterface) {
+                        if (targetMethod
+                                && opcode == Opcodes.INVOKESTATIC
+                                && "com/fs/starfarer/loading/LoadingUtils".equals(owner)
+                                && "(Ljava/lang/String;Ljava/lang/String;)Ljava/util/List;".equals(methodDesc)) {
+                            skinFileListCalls++;
+                            if (skinFileListCalls >= 2) childFileListSeen = true;
+                        }
+                        super.visitMethodInsn(opcode, owner, methodName, methodDesc, isInterface);
+                    }
+
+                    @Override
+                    public void visitVarInsn(int opcode, int var) {
+                        // After the child-directory file-list call, the next ALOAD 0 is
+                        // the start of the actual skin-list iterator setup. Jump there so
+                        // the direct manifest still executes iterator()/next()/ASTORE path.
+                        if (targetMethod && !placedTarget && childFileListSeen
+                                && opcode == Opcodes.ALOAD && var == 0) {
                             super.visitLabel(directTarget);
                             placedTarget = true;
                             targets[0]++;
                         }
-                        super.visitFieldInsn(opcode, owner, fieldName, fieldDesc);
+                        super.visitVarInsn(opcode, var);
                     }
 
                     @Override
