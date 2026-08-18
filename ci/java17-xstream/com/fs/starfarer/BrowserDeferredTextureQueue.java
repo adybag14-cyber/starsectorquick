@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class BrowserDeferredTextureQueue {
     private static final java.lang.String ENABLE_PROPERTY = "starsector.browserDeferredTextures";
     private static final boolean ENABLED = Boolean.getBoolean(ENABLE_PROPERTY);
+    private static final java.lang.String EARLY_PREDECODE_PROPERTY = "starsector.browserEarlyImagePredecode";
+    private static final boolean EARLY_PREDECODE_ENABLED = Boolean.getBoolean(EARLY_PREDECODE_PROPERTY);
     private static final ConcurrentHashMap<java.lang.String, java.lang.String> DEFERRED = new ConcurrentHashMap<java.lang.String, java.lang.String>();
     private static final AtomicLong DEFERRED_COUNT = new AtomicLong();
     private static final AtomicLong LAZY_LOAD_COUNT = new AtomicLong();
@@ -24,6 +26,10 @@ public final class BrowserDeferredTextureQueue {
     private static final AtomicBoolean PREWARM_DONE = new AtomicBoolean();
     private static final AtomicLong PREDECODE_COUNT = new AtomicLong();
     private static final AtomicLong PREDECODE_FAILED = new AtomicLong();
+    private static final ConcurrentHashMap<java.lang.String, AtomicLong> EARLY_PREDECODE_COUNTS = new ConcurrentHashMap<java.lang.String, AtomicLong>();
+    private static final AtomicLong EARLY_PREDECODE_QUEUED = new AtomicLong();
+    private static final AtomicLong EARLY_PREDECODE_STOCK_SKIPS = new AtomicLong();
+    private static final AtomicBoolean EARLY_PREDECODE_STARTED = new AtomicBoolean();
 
     private BrowserDeferredTextureQueue() {}
 
@@ -56,8 +62,52 @@ public final class BrowserDeferredTextureQueue {
      * ResourceLoaderState$o ordinals are TEXTURE=0, TEXTURE_OPTIONAL=1,
      * TEXTURE_ALPHA_ADDER=2; the alpha-adder path must keep its stock predecode.
      */
+    /**
+     * Queue browser-startup image decode at resource-registration time. This is
+     * the same stock L predecode queue used later by ResourceLoaderState; the
+     * per-path counters preserve the stock pass multiplicity exactly.
+     */
+    public static void queueEarlyImagePredecode(java.lang.String path, int resourceTypeOrdinal) {
+        if (!EARLY_PREDECODE_ENABLED || path == null || resourceTypeOrdinal < 0 || resourceTypeOrdinal > 2) return;
+        if (ENABLED && resourceTypeOrdinal != 2 && shouldDeferPath(path)) return;
+        java.lang.String key = normalize(path);
+        AtomicLong counter = EARLY_PREDECODE_COUNTS.get(key);
+        if (counter == null) {
+            AtomicLong fresh = new AtomicLong();
+            AtomicLong prior = EARLY_PREDECODE_COUNTS.putIfAbsent(key, fresh);
+            counter = prior == null ? fresh : prior;
+        }
+        counter.incrementAndGet();
+        EARLY_PREDECODE_QUEUED.incrementAndGet();
+        com.fs.graphics.L.\u00d600000(path);
+    }
+
+    /** Start the stock ImageIO worker before SpecStore so already-queued UI/fx can overlap it. */
+    public static void startEarlyImagePredecode() {
+        if (!EARLY_PREDECODE_ENABLED || EARLY_PREDECODE_QUEUED.get() <= 0L
+                || !EARLY_PREDECODE_STARTED.compareAndSet(false, true)) return;
+        System.out.println("BrowserEarlyImagePredecode: start queued=" + EARLY_PREDECODE_QUEUED.get()
+                + " paths=" + EARLY_PREDECODE_COUNTS.size());
+        com.fs.graphics.L.o00000();
+    }
+
     public static void queueImagePredecode(java.lang.String path, int resourceTypeOrdinal) {
         if (ENABLED && resourceTypeOrdinal != 2 && shouldDeferPath(path)) return;
+        if (EARLY_PREDECODE_ENABLED && path != null) {
+            java.lang.String key = normalize(path);
+            AtomicLong counter = EARLY_PREDECODE_COUNTS.get(key);
+            if (counter != null) {
+                for (;;) {
+                    long before = counter.get();
+                    if (before <= 0L) break;
+                    if (counter.compareAndSet(before, before - 1L)) {
+                        EARLY_PREDECODE_STOCK_SKIPS.incrementAndGet();
+                        if (before == 1L) EARLY_PREDECODE_COUNTS.remove(key, counter);
+                        return;
+                    }
+                }
+            }
+        }
         com.fs.graphics.L.\u00d600000(path);
     }
 
@@ -280,4 +330,7 @@ public final class BrowserDeferredTextureQueue {
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
     public static long getLazyLoadCount() { return LAZY_LOAD_COUNT.get(); }
     public static int getPendingCount() { return DEFERRED.size(); }
+    public static long getEarlyPredecodeQueuedCount() { return EARLY_PREDECODE_QUEUED.get(); }
+    public static long getEarlyPredecodeStockSkipCount() { return EARLY_PREDECODE_STOCK_SKIPS.get(); }
+    public static int getEarlyPredecodePendingCount() { return EARLY_PREDECODE_COUNTS.size(); }
 }

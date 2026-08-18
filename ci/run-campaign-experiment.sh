@@ -114,6 +114,7 @@ grep -q 'starsector.compatibilityFastPath=${browserLightweightSectorCompat}' lau
 grep -q 'const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`' launch.html
 grep -q 'starsector.browserSpecCachePath=${browserSpecCachePath}' launch.html
 grep -q 'starsector.browserDeferredTextures=${browserDeferredTextures}' launch.html
+grep -q 'starsector.browserEarlyImagePredecode=${browserEarlyImagePredecode}' launch.html
 node ci/verify-service-worker-negative-cache.js
 node ci/verify-campaign-center-subject.js
 
@@ -246,9 +247,13 @@ javac -encoding UTF-8 --release 8 -d .ci-build/verify-deferred-texture-behavior 
   ci/deferred-texture-test/com/fs/graphics/L.java
 javac -encoding UTF-8 --release 8 \
   -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
-  -d .ci-build/verify-deferred-texture-behavior ci/VerifyDeferredTextureBehavior.java
+  -d .ci-build/verify-deferred-texture-behavior \
+  ci/VerifyDeferredTextureBehavior.java \
+  ci/VerifyEarlyImagePredecodeDisabledBehavior.java
 java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
   VerifyDeferredTextureBehavior
+java -cp ".ci-build/verify-deferred-texture-behavior:jars/fixer_patch.jar:$CP" \
+  VerifyEarlyImagePredecodeDisabledBehavior
 mkdir -p .ci-build/verify-starting-supplies
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
   -d .ci-build/verify-starting-supplies \
@@ -370,6 +375,10 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTextureRegistryDeferredLookup.java \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
+  ci/PatchResourceLoaderEarlyPredecode.java \
+  ci/VerifyResourceLoaderEarlyPredecodePatch.java \
+  ci/PatchGraphicsPredecodeWorkerGuard.java \
+  ci/VerifyGraphicsPredecodeWorkerGuardPatch.java \
   ci/VerifyDeferredTexturePatches.java \
   ci/PatchAbilityGameplayProbe.java \
   ci/VerifyAbilityGameplayProbePatch.java \
@@ -468,6 +477,19 @@ mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureRegistryDeferredLookup jars/fs.common_obf.jar .ci-build/fs-common-deferred.jar
 mv .ci-build/fs-common-deferred.jar jars/fs.common_obf.jar
+# The early ImageIO worker may still be draining when ResourceLoader reaches its
+# stock post-SpecStore start. Keep that stock call, but make it idempotent while
+# the current worker is alive so no duplicate decoder threads are created.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchGraphicsPredecodeWorkerGuard jars/fs.common_obf.jar .ci-build/fs-common-predecode-guard.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyGraphicsPredecodeWorkerGuardPatch .ci-build/fs-common-predecode-guard.jar
+mv .ci-build/fs-common-predecode-guard.jar jars/fs.common_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchGraphicsPredecodeWorkerGuard jars/fs.common_obf.jar .ci-build/fs-common-predecode-guard-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyGraphicsPredecodeWorkerGuardPatch .ci-build/fs-common-predecode-guard-repeat.jar
+cmp -s jars/fs.common_obf.jar .ci-build/fs-common-predecode-guard-repeat.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/script-plugin-helper \
   PatchScriptStorePluginFallback jars/starfarer_obf.jar .ci-build/starfarer-script-plugin-fix.jar
 mv .ci-build/starfarer-script-plugin-fix.jar jars/starfarer_obf.jar
@@ -549,6 +571,18 @@ mv .ci-build/starfarer-resource-deferred.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchResourceLoaderDeferredPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-deferred-predecode.jar
 mv .ci-build/starfarer-resource-deferred-predecode.jar jars/starfarer_obf.jar
+# Feed the same stock ImageIO queue as resources are registered and start it before
+# SpecStore. Property-off behavior falls through to the existing later predecode pass.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceLoaderEarlyPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-early-predecode.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceLoaderEarlyPredecodePatch .ci-build/starfarer-resource-early-predecode.jar
+mv .ci-build/starfarer-resource-early-predecode.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchResourceLoaderEarlyPredecode jars/starfarer_obf.jar .ci-build/starfarer-resource-early-predecode-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyResourceLoaderEarlyPredecodePatch .ci-build/starfarer-resource-early-predecode-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-resource-early-predecode-repeat.jar
 # Use the exact-equivalent browser CSV parser only when its property/no-mod gate
 # succeeds. The full stock oOoO parser stays immediately behind the hook.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -883,6 +917,7 @@ grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
+grep -q 'BrowserEarlyImagePredecode: start queued=' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi

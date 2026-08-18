@@ -10,6 +10,25 @@ public final class VerifyDeferredTextureBehavior {
         System.setProperty("starsector.browserGameplayPrewarm", "true");
         System.setProperty("starsector.browserGameplayPrewarmDelayMs", "0");
         System.setProperty("starsector.browserGameplayPrewarmPauseMs", "0");
+        System.setProperty("starsector.browserEarlyImagePredecode", "true");
+
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/portraits/deferred-early.png", 0);
+        require(L.PREDECODE.isEmpty(), "deferred texture must not enter early predecode");
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/early.png", 0);
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/early.png", 0);
+        require(L.PREDECODE.size() == 2, "early predecode multiplicity must be preserved: " + L.PREDECODE);
+        BrowserDeferredTextureQueue.startEarlyImagePredecode();
+        BrowserDeferredTextureQueue.startEarlyImagePredecode();
+        require(L.STARTS == 1, "early worker should start once: " + L.STARTS);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
+        require(L.PREDECODE.size() == 2, "stock pass must consume early multiplicity without requeue: " + L.PREDECODE);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
+        require(L.PREDECODE.size() == 3, "stock pass beyond early multiplicity must queue normally: " + L.PREDECODE);
+        require(BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount() == 2L, "unexpected early queued count");
+        require(BrowserDeferredTextureQueue.getEarlyPredecodeStockSkipCount() == 2L, "unexpected early stock skip count");
+        require(BrowserDeferredTextureQueue.getEarlyPredecodePendingCount() == 0, "early multiplicity counters must drain");
+        L.PREDECODE.clear();
 
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/portraits/deferred.png", 0);
         BrowserDeferredTextureQueue.queueImagePredecode("graphics/illustrations/optional.jpg", 1);
