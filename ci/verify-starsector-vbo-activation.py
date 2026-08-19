@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import re, subprocess, sys
+import os, re, subprocess, sys
 from pathlib import Path
 
 def javap(cls, cp):
     p=subprocess.run(['javap','-classpath',cp,'-c','-p',cls],capture_output=True,text=True,encoding='utf-8',errors='replace')
     if p.returncode: raise SystemExit(p.stderr)
     return p.stdout
-cp='jars/starfarer_obf.jar;jars/fs.common_obf.jar;jars/lwjgl.jar'
+cp=os.pathsep.join(['jars/starfarer_obf.jar','jars/fs.common_obf.jar','jars/lwjgl.jar'])
 caller=javap('com.fs.starfarer.renderers.damage.String',cp)
 batcher=javap('com.fs.graphics.F',cp)
 # The renderer must read forceNoVBO and pass that same local boolean as the third
