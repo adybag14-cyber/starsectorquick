@@ -1009,10 +1009,13 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         let toggleSettleMs = null;
         let toggleFastForwardInput = null;
         if (deactivated.matched) {
-          // ability-settled can arrive in the same render/update burst as the
-          // deactivation callback. Start immediately after the matched
-          // deactivation event so a one-shot settled signal cannot be lost
-          // between the deactivation wait returning and this second wait.
+          // Generic abilities emit ability-settled after fade-down. Transponder
+          // has different stock semantics: after shutdown its durable ready state
+          // is active=false, level=0, usable=true while isInProgress() remains true.
+          // Requiring generic ability-settled therefore produces a false failure
+          // even after the real Transponder fade has completed. Start immediately
+          // after deactivation and accept that exact stock ready-stable state only
+          // for Transponder; every other ability retains the stricter settled event.
           const settleStart = deactivated.index + 1;
           const fastBefore = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
           let settled;
@@ -1020,7 +1023,12 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
             await page.keyboard.down('Shift');
             settled = await waitForGameplayEvent(
               gameplayEvents, settleStart,
-              event => event.id === expectedId && event.event === 'ability-settled',
+              event => event.id === expectedId && (expectedId === 'transponder'
+                ? event.event === 'ability-ready-stable'
+                    && event.active === 'false'
+                    && event.usable === 'true'
+                    && Number(event.level) <= 0.0001
+                : event.event === 'ability-settled'),
               { timeoutMs: 15000, pollMs: 100 }
             );
           } finally {
