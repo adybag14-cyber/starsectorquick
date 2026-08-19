@@ -154,10 +154,10 @@ jobs:
             shift
             body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_BASE_URL}/${path}?source=${SOURCE_SHA}")"
             for marker in "$@"; do
-              printf '%s' "$body" | grep -Fq "$marker" || {
+              if [[ "$body" != *"$marker"* ]]; then
                 echo "Live runtime setting mismatch: ${path} missing ${marker}" >&2
                 exit 1
-              }
+              fi
             done
           }
           check_setting data/config/settings.json '"devMode":true' '"enableMemoryLeakChecking":false'
