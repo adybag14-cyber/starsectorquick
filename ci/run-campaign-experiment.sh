@@ -101,6 +101,8 @@ grep -q '__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__' launch.html
 grep -q 'starsector.browserContinueRenderGuard=${browserContinueRenderGuard}' launch.html
 grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
 grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
+grep -q '__STARSECTOR_BROWSER_XSTREAM_FAST_ID_MARSHALLER__' launch.html
+grep -q 'starsector.browserXstreamFastIdMarshaller=${browserXstreamFastIdMarshaller}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
@@ -312,6 +314,28 @@ java -Dstarsector.browserXstreamUnsafeReadFastPath=true \
   > .ci-build/verify-xstream/unsafe.txt
 cmp .ci-build/verify-xstream/reflection.txt .ci-build/verify-xstream/unsafe.txt
 cat .ci-build/verify-xstream/unsafe.txt
+# The path-light ID marshaller must remain byte-for-byte XML equivalent to stock
+# XStream across shared references, cycles, implicit collections, writeReplace,
+# arrays/maps, and deterministic randomized graphs before the runtime hook exists.
+rm -rf .ci-build/verify-fast-id-marshaller
+mkdir -p .ci-build/verify-fast-id-marshaller
+javac -encoding UTF-8 -source 8 -target 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-fast-id-marshaller ci/VerifyBrowserFastReferenceByIdMarshallingStrategy.java
+java \
+  --add-opens=java.base/java.text=ALL-UNNAMED \
+  --add-opens=java.base/java.lang=ALL-UNNAMED \
+  --add-opens=java.base/java.util=ALL-UNNAMED \
+  --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+  --add-opens=java.base/java.io=ALL-UNNAMED \
+  --add-opens=java.base/java.net=ALL-UNNAMED \
+  --add-opens=java.desktop/java.awt=ALL-UNNAMED \
+  --add-opens=java.desktop/java.awt.font=ALL-UNNAMED \
+  -Xverify:all -cp ".ci-build/verify-fast-id-marshaller:jars/fixer_patch.jar:$CP" \
+  VerifyBrowserFastReferenceByIdMarshallingStrategy
+javap -verbose -classpath jars/fixer_patch.jar \
+  com.thoughtworks.xstream.core.BrowserFastReferenceByIdMarshallingStrategy | grep -q 'major version: 52'
+javap -verbose -classpath jars/fixer_patch.jar \
+  com.fs.starfarer.BrowserXStreamMarshallingCompat | grep -q 'major version: 52'
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
@@ -399,6 +423,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTitleContinueRenderGuard.java \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchCampaignXStreamFastIdMarshaller.java \
+  ci/VerifyCampaignXStreamFastIdMarshallerPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -450,6 +476,20 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+# Replace only CampaignGameManager's browser ID marshalling strategy. The helper
+# is property-gated and stock/no-mod gated; disabled or modded sessions keep XStream's original path.
+jar tf jars/fixer_patch.jar | grep -qx 'com/thoughtworks/xstream/core/BrowserFastReferenceByIdMarshallingStrategy.class'
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserXStreamMarshallingCompat.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignXStreamFastIdMarshaller jars/starfarer_obf.jar .ci-build/starfarer-fast-id-marshaller.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignXStreamFastIdMarshallerPatch .ci-build/starfarer-fast-id-marshaller.jar
+mv .ci-build/starfarer-fast-id-marshaller.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchCampaignXStreamFastIdMarshaller jars/starfarer_obf.jar .ci-build/starfarer-fast-id-marshaller-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyCampaignXStreamFastIdMarshallerPatch .ci-build/starfarer-fast-id-marshaller-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-fast-id-marshaller-repeat.jar
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
@@ -935,6 +975,7 @@ grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 grep -q 'BrowserEarlyImagePredecode: start queued=' "$OUT/browser.log"
+grep -q 'BrowserXStreamFastId: enabled path-light ID-reference marshaller' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi

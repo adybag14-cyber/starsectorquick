@@ -1171,6 +1171,8 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__ !== false;
                 const browserXstreamUnsafeReadFastPath =
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__ !== false;
+                const browserXstreamFastIdMarshaller =
+                    browserQuickResourceLoad && window.__STARSECTOR_BROWSER_XSTREAM_FAST_ID_MARSHALLER__ !== false;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
                 // Full vanilla procedural sector generation is the production default.
@@ -1310,6 +1312,8 @@
                     `starsector.browserContinueRenderGuard=${browserContinueRenderGuard}`,
                     `-Dstarsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}`,
                     `starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}`,
+                    `-Dstarsector.browserXstreamFastIdMarshaller=${browserXstreamFastIdMarshaller}`,
+                    `starsector.browserXstreamFastIdMarshaller=${browserXstreamFastIdMarshaller}`,
                     `-Dstarsector.browserGameplayProbe=${browserGameplayProbe}`,
                     `starsector.browserGameplayProbe=${browserGameplayProbe}`,
                     `-Dstarsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
