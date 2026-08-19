@@ -487,7 +487,11 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	colorAttribArrayChanges: 0,
+	colorAttribArrayCallsSaved: 0,
+	colorAttribConstantUploads: 0,
+	colorAttribConstantUploadsSaved: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -721,17 +725,45 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 			return false;
 		}
 	}
-	glCtx.enableVertexAttribArray(attributeLocation);
+	if(attributeLocation == colorLocation) setColorAttribArrayEnabled(true);
+	else glCtx.enableVertexAttribArray(attributeLocation);
 	return true;
+}
+// WEBGL_COLOR_ATTRIB_CACHE_V1
+// WebGL generic vertex attributes persist independently of array enable state.
+// Track the color array enable bit and last uploaded constant color so draws
+// without a color array do not repeat two identical WebGL calls every time.
+var colorAttribCacheEnabled = typeof window === "undefined" || window.__LWJGL_COLOR_ATTRIB_CACHE__ !== false;
+var colorAttribArrayEnabled = false;
+var uploadedConstantColor = [null, null, null, null];
+function setColorAttribArrayEnabled(enabled)
+{
+	enabled = !!enabled;
+	if(colorAttribCacheEnabled && colorAttribArrayEnabled === enabled)
+	{
+		presentationStats.colorAttribArrayCallsSaved++;
+		return;
+	}
+	colorAttribArrayEnabled = enabled;
+	if(enabled) glCtx.enableVertexAttribArray(colorLocation);
+	else glCtx.disableVertexAttribArray(colorLocation);
+	presentationStats.colorAttribArrayChanges++;
 }
 function applyCurrentColorAttrib()
 {
-	glCtx.disableVertexAttribArray(colorLocation);
-	glCtx.vertexAttrib4f(colorLocation,
-		immediateModeData.currentColor[0],
-		immediateModeData.currentColor[1],
-		immediateModeData.currentColor[2],
-		immediateModeData.currentColor[3]);
+	setColorAttribArrayEnabled(false);
+	var c = immediateModeData.currentColor;
+	var same = uploadedConstantColor[0] === c[0] && uploadedConstantColor[1] === c[1] &&
+		uploadedConstantColor[2] === c[2] && uploadedConstantColor[3] === c[3];
+	if(colorAttribCacheEnabled && same)
+	{
+		presentationStats.colorAttribConstantUploadsSaved++;
+		return;
+	}
+	glCtx.vertexAttrib4f(colorLocation, c[0], c[1], c[2], c[3]);
+	uploadedConstantColor[0] = c[0]; uploadedConstantColor[1] = c[1];
+	uploadedConstantColor[2] = c[2]; uploadedConstantColor[3] = c[3];
+	presentationStats.colorAttribConstantUploads++;
 }
 function uploadData(v, data, buffer, attributeLocation, count)
 {
