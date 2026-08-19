@@ -4,8 +4,8 @@ from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
 ORDER = ['baseline-a', 'browser-loop', 'baseline-b']
-BASELINE_SHA = '8efd0225f6d8e2c03e14080255ea9911c7eabf88'
-CANDIDATE_SHA = '612c4e60b050de83ce4f73f04659ec36afc7e097'
+BASELINE_SHA = '5c63758d57057b582eecac474f1f72fb021fd90a'
+CANDIDATE_SHA = '32594bb4d3b0798188caff5e7f006f4e3b51493e'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 

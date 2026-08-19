@@ -9,8 +9,9 @@ if 'FRAME_TAIL_TELEMETRY_BENCH_V1' not in s:
     s=s.replace(anchor,anchor+'\ttargetFps: presentationTargetFps,\n\ttargetFrameMs: 1000 / presentationTargetFps,\n',1)
     anchor='\trecentFrameMs: 0,\n'; assert anchor in s
     s=s.replace(anchor,anchor+'\tlastFrameMs: 0,\n\tframeP50Ms: 0,\n\tframeP95Ms: 0,\n\tframeP99Ms: 0,\n\tframeMinMs: 0,\n\tframeMaxMs: 0,\n\tframeJitterStdDevMs: 0,\n\tframeJitterP95Ms: 0,\n\trecentLongFrameCount: 0,\n\tlongFrameCount: 0,\n\trecentDroppedFrameEstimate: 0,\n\tdroppedFrameEstimate: 0,\n',1)
-    anchor='var recentSwapTimes = [];\n'; assert anchor in s
+    anchor='if(typeof window !== "undefined")\n'; assert anchor in s
     funcs='''var recentFrameIntervals = [];
+var lastPresentationSwapTime = NaN;
 function presentationPercentile(sorted, fraction)
 {
 \tif(sorted.length == 0) return 0;
@@ -49,11 +50,11 @@ function updatePresentationTimingStats()
 \tpresentationStats.recentDroppedFrameEstimate = recentDroppedFrames;
 }
 '''
-    s=s.replace(anchor,anchor+funcs,1)
+    s=s.replace(anchor,funcs+anchor,1)
     anchor='\tvar swapNow = performance.now();\n'; assert anchor in s
-    block='''\tif(recentSwapTimes.length > 0)
+    block='''\tif(Number.isFinite(lastPresentationSwapTime))
 \t{
-\t\tvar frameInterval = swapNow - recentSwapTimes[recentSwapTimes.length - 1];
+\t\tvar frameInterval = swapNow - lastPresentationSwapTime;
 \t\tif(Number.isFinite(frameInterval) && frameInterval >= 0 && frameInterval < 10000)
 \t\t{
 \t\t\tpresentationStats.lastFrameMs = frameInterval;
@@ -64,10 +65,11 @@ function updatePresentationTimingStats()
 \t\t\tpresentationStats.droppedFrameEstimate += Math.max(0, Math.round(frameInterval / targetFrameMs) - 1);
 \t\t}
 \t}
+\tlastPresentationSwapTime = swapNow;
 '''
     s=s.replace(anchor,anchor+block,1)
-    anchor='\t\tpresentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;\n\t}\n'; assert anchor in s
-    s=s.replace(anchor,anchor+'\tif(presentationStats.swapCount <= 3 || (presentationStats.swapCount % 15) == 0) updatePresentationTimingStats();\n',1)
+    anchor='\tif(presentationReadbackDiagnostics && presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))\n'; assert anchor in s
+    s=s.replace(anchor,'\tif(presentationStats.swapCount <= 3 || (presentationStats.swapCount % 15) == 0) updatePresentationTimingStats();\n'+anchor,1)
 p.write_text(s,encoding='utf-8',newline='\n')
 
 p=Path('ci/campaign-render-test.js')
