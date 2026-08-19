@@ -926,16 +926,9 @@ for _ in {1..30}; do
 done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
-# The stock ResourceLoaderState can legitimately take several minutes under
-# headless CheerpJ while Java source/rules and restored graphics are decoded.
-# Do not terminate the run before the campaign bootstrap has had a chance to run.
-STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
-STARSECTOR_TEST_TIMEOUT_MS=720000 \
-STARSECTOR_FRAME_SETTLE_MS=30000 \
-STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
-STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
-STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
-  node ci/campaign-render-test.js
+# VBO activation belongs to the combat damage renderer, not campaign rendering.
+# Prove that subsystem first so an unrelated deep-gameplay/ability probe failure
+# cannot hide or erase the VBO result.
 if [[ "${STARSECTOR_VBO_COMBAT_SMOKE:-false}" == "true" ]]; then
   VBO_COMBAT_OUT="${OUT}-vbo-combat"
   rm -rf "$VBO_COMBAT_OUT"
@@ -956,6 +949,17 @@ assert int(s.get('vboDraws') or 0)>=1
 print('Verified browser combat ARB VBO activation:', s)
 PYVBO
 fi
+
+# The stock ResourceLoaderState can legitimately take several minutes under
+# headless CheerpJ while Java source/rules and restored graphics are decoded.
+# Do not terminate the run before the campaign bootstrap has had a chance to run.
+STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
+STARSECTOR_TEST_TIMEOUT_MS=720000 \
+STARSECTOR_FRAME_SETTLE_MS=30000 \
+STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
+STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
+STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
+  node ci/campaign-render-test.js
 if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   TUTORIAL_OUT="${OUT}-tutorial"
   rm -rf "$TUTORIAL_OUT"
