@@ -700,7 +700,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         });
         const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
-        const beforeFrame = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const shortcutStartedAt = Date.now();
@@ -733,7 +733,24 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
             transition = { opened: false, listenerReadyMs: null, visualReadyMs: null, visualDiff: 0, readyMatched: false };
           }
         } else {
-          await sleep(1600);
+          // Dev mode can leave keyup queued for a later Keyboard.next() drain even
+          // though the DOM bridge captured both events and the panel already opened.
+          // Validate the non-deep/tutorial path by the actual canvas transition,
+          // instead of requiring both queue entries to be consumed immediately.
+          const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+            timeoutMs: 8000,
+            pollMs: 800,
+            threshold: panelVisualThreshold(expectedTab),
+            region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+          });
+          shortcutFrame = visual.frame;
+          transition = {
+            opened: visual.opened,
+            listenerReadyMs: null,
+            visualReadyMs: visual.opened ? Date.now() - shortcutStartedAt : null,
+            visualDiff: visual.visualDiff,
+            readyMatched: false,
+          };
         }
         const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const runtime = await page.evaluate(() => ({
@@ -788,7 +805,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   ).catch(() => ({}));
   const shortcutsResponsive = expectedState !== 'campaign' || Boolean(
     shortcutResults.length === shortcutKeys.length
-    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= (deepGameplay ? 1 : 2) && item.globalDelta >= 2)
+    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= 1 && item.globalDelta >= 2 && item.semanticOpened)
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
