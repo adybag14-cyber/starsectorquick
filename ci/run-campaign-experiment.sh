@@ -418,6 +418,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/VerifyRulesDeadVariableTraversalPatch.java \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchSpecStoreDirectVariantManifest.java \
+  ci/PatchShipHullSkinDirectManifest.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -761,19 +762,28 @@ mv .ci-build/starfarer-variant-discovery.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchSpecStoreDirectVariantManifest jars/starfarer_obf.jar .ci-build/starfarer-direct-variant-manifest.jar
 mv .ci-build/starfarer-direct-variant-manifest.jar jars/starfarer_obf.jar
+# Hull skins have the same stock-only root/child directory walk, but their
+# measured parse/register work is ~0.1s versus ~2.6s of discovery. Use the exact
+# cached skin paths when stock/no-mod invariants hold; null preserves stock discovery.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchShipHullSkinDirectManifest jars/starfarer_obf.jar .ci-build/starfarer-direct-skin-manifest.jar
+mv .ci-build/starfarer-direct-skin-manifest.jar jars/starfarer_obf.jar
 javap -verbose -classpath jars/starfarer_obf.jar com.fs.starfarer.loading.BrowserSpecCache \
   | grep -q 'major version: 52'
 mkdir -p .ci-build/verify-bulk-spec-patch
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-bulk-spec-patch \
   ci/VerifyLoadingUtilsBulkSpecPatch.java \
   ci/VerifySpecStoreVariantDiscoveryPatch.java \
-  ci/VerifySpecStoreDirectVariantManifestPatch.java
+  ci/VerifySpecStoreDirectVariantManifestPatch.java \
+  ci/VerifyShipHullSkinDirectManifestPatch.java
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyLoadingUtilsBulkSpecPatch jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreVariantDiscoveryPatch jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreDirectVariantManifestPatch jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifyShipHullSkinDirectManifestPatch jars/starfarer_obf.jar
 # Prove the transformer is idempotent so repeated local/CI preparation cannot
 # accumulate a second fast path in the obfuscated LoadingUtils method.
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
@@ -792,6 +802,12 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifySpecStoreDirectVariantManifestPatch .ci-build/starfarer-direct-variant-manifest-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-direct-variant-manifest-repeat.jar
+# Skin direct discovery is independently byte-idempotent as well.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchShipHullSkinDirectManifest jars/starfarer_obf.jar .ci-build/starfarer-direct-skin-manifest-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
+  VerifyShipHullSkinDirectManifestPatch .ci-build/starfarer-direct-skin-manifest-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-direct-skin-manifest-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
@@ -912,6 +928,7 @@ fi
 grep -q 'BrowserSpecCache: ready' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: first-hit' "$OUT/browser.log"
 grep -q 'BrowserSpecCache: direct-variant-manifest files=' "$OUT/browser.log"
+grep -q 'BrowserSpecCache: direct-skin-manifest files=' "$OUT/browser.log"
 grep -q 'BrowserFastCsvParser: enabled stock fast path' "$OUT/browser.log"
 grep -q 'BrowserTextPreprocessor: enabled exact linear smart-quote normalization' "$OUT/browser.log"
 grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
