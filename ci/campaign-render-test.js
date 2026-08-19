@@ -159,6 +159,28 @@ async function waitForCampaignFrame(canvas, options = {}) {
   return { ready: false, readyMs: null, frame: lastFrame, stats: lastStats };
 }
 
+async function waitForCampaignReturn(canvas, panelFrame, expectedTab, options = {}) {
+  const timeoutMs = Number(options.timeoutMs ?? 10000);
+  const pollMs = Math.max(100, Number(options.pollMs ?? 500));
+  const region = { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
+  const threshold = Math.max(0.002, panelVisualThreshold(expectedTab) * 0.5);
+  const started = Date.now();
+  let lastFrame = null;
+  let lastStats = null;
+  let lastVisualDiff = null;
+  while (Date.now() - started <= timeoutMs) {
+    await sleep(pollMs);
+    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastStats = pixelStats(lastFrame);
+    lastVisualDiff = panelFrame ? pixelDiffRatio(panelFrame, lastFrame, region) : null;
+    const visuallyReturned = !panelFrame || lastVisualDiff >= threshold;
+    if (visuallyReturned && isCampaignFramePlayable(lastStats)) {
+      return { ready: true, readyMs: Date.now() - started, frame: lastFrame, stats: lastStats, visualDiff: lastVisualDiff };
+    }
+  }
+  return { ready: false, readyMs: null, frame: lastFrame, stats: lastStats, visualDiff: lastVisualDiff };
+}
+
 async function waitForLogMatch(logs, startIndex, pattern, options = {}) {
   const timeoutMs = Number(options.timeoutMs ?? 10000);
   const pollMs = Math.max(25, Number(options.pollMs ?? 100));
@@ -569,7 +591,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         if (fatalSeenAt || errors.length > 0) break;
         const x = box.x + box.width * nx;
         const y = box.y + box.height * ny;
-        const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const beforePanel = await gameCanvas.screenshot({ timeout: 10000 });
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const panelStartedAt = Date.now();
@@ -582,7 +604,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         let panelVisualDiff = null;
         let listenerReadyMs = null;
         let visualReadyMs = null;
-        let panelOpened = !deepGameplay;
+        let panelOpened = false;
         if (deepGameplay) {
           tabReady = await waitForGameplayEvent(
             gameplayEvents, gameplayStart,
@@ -603,7 +625,16 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
             visualReadyMs = panelOpened ? Date.now() - panelStartedAt : null;
           }
         } else {
-          await sleep(2200);
+          const visual = await waitForVisualTransition(gameCanvas, beforePanel, {
+            timeoutMs: 9000,
+            pollMs: 800,
+            threshold: panelVisualThreshold(expectedTab),
+            region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+          });
+          panelFrame = visual.frame;
+          panelVisualDiff = visual.visualDiff;
+          panelOpened = visual.opened;
+          visualReadyMs = panelOpened ? Date.now() - panelStartedAt : null;
         }
         if (panelFrame) fs.writeFileSync(`${outputDir}/gameplay-panel-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, panelFrame);
         const afterClick = await withTimeout(page.evaluate(() => ({
@@ -646,24 +677,23 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
             await sleep(350);
           }
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignReturn(gameCanvas, panelFrame, expectedTab, { timeoutMs: 10000, pollMs: 500 });
           const returnFrame = returned.frame;
           if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
           controlResult.returnReadyMs = returned.readyMs;
-          controlResult.returnVisualDiff = returnFrame && panelFrame
-            ? pixelDiffRatio(panelFrame, returnFrame, { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 })
-            : 0;
+          controlResult.returnVisualDiff = returned.visualDiff ?? 0;
           controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
           controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
           logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
           flushLogs();
         } else if (!deepGameplay) {
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 10000, pollMs: 500 });
+          const returned = await waitForCampaignReturn(gameCanvas, panelFrame, expectedTab, { timeoutMs: 10000, pollMs: 500 });
+          controlResult.returnVisualDiff = returned.visualDiff ?? 0;
           controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
           controlResult.returnReadyMs = returned.readyMs;
           controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
-          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} failed=${controlResult.failed}`);
+          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} visualDiff=${controlResult.returnVisualDiff.toFixed(4)} failed=${controlResult.failed}`);
           flushLogs();
         }
         if (controlResult.failed) break;
@@ -789,17 +819,19 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
 
         if (deepGameplay && transition?.readyMatched) {
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignReturn(gameCanvas, shortcutFrame, expectedTab, { timeoutMs: 10000, pollMs: 500 });
+          shortcutResult.returnVisualDiff = returned.visualDiff ?? 0;
           shortcutResult.returnedToCampaign = returned.ready;
           shortcutResult.returnReadyMs = returned.readyMs;
           shortcutResult.failed = shortcutResult.failed || !returned.ready;
         } else if (!deepGameplay) {
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 10000, pollMs: 500 });
+          const returned = await waitForCampaignReturn(gameCanvas, shortcutFrame, expectedTab, { timeoutMs: 10000, pollMs: 500 });
+          shortcutResult.returnVisualDiff = returned.visualDiff ?? 0;
           shortcutResult.returnedToCampaign = returned.ready && !fatalSeenAt;
           shortcutResult.returnReadyMs = returned.readyMs;
           shortcutResult.failed = shortcutResult.failed || !shortcutResult.returnedToCampaign;
-          logs.push(`[shortcut-probe] return ${name} returned=${shortcutResult.returnedToCampaign} readyMs=${shortcutResult.returnReadyMs ?? 'n/a'} failed=${shortcutResult.failed}`);
+          logs.push(`[shortcut-probe] return ${name} returned=${shortcutResult.returnedToCampaign} readyMs=${shortcutResult.returnReadyMs ?? 'n/a'} visualDiff=${(shortcutResult.returnVisualDiff ?? 0).toFixed(4)} failed=${shortcutResult.failed}`);
           flushLogs();
         }
         if (shortcutResult.failed) break;
