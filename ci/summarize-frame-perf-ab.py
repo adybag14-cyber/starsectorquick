@@ -3,9 +3,10 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'interleaved', 'baseline-b']
+ORDER = ['baseline-a', 'interleaved', 'interleaved-texture', 'baseline-b']
 BASELINE_SHA = 'd4be7870e41eece34b9a73b3fe7a685818e4a5d6'
 CANDIDATE_SHA = '7b80ff795da2a52eb7e985a8cadeff3528062592'
+TEXTURE_SHA = '5351c93843620a42b9c5acf2e8fd432d9d964a75'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -52,17 +53,15 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['interleaved'], by['baseline-b']
-    c['drift_adjusted'] = {}
-    for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
-        av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
-        expected = None if av is None or bv is None else (float(av) + float(bv)) / 2.0
-        delta = None if expected is None or cv is None else float(cv) - expected
-        c['drift_adjusted'][metric] = {
-            'expected': expected,
-            'delta': delta,
-            'pct': None if expected in (None, 0) or delta is None else delta / expected * 100.0,
-        }
+    a, c, t, b = by['baseline-a'], by['interleaved'], by['interleaved-texture'], by['baseline-b']
+    for pos, row in ((1, c), (2, t)):
+        row['drift_adjusted'] = {}
+        fraction = pos / 3.0
+        for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
+            av, bv, cv = a.get(metric), b.get(metric), row.get(metric)
+            expected = None if av is None or bv is None else float(av) + (float(bv)-float(av))*fraction
+            delta = None if expected is None or cv is None else float(cv) - expected
+            row['drift_adjusted'][metric] = {'expected': expected, 'delta': delta, 'pct': None if expected in (None,0) or delta is None else delta/expected*100.0}
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
@@ -74,15 +73,16 @@ def main():
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
         lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {r.get('webgl_draws','-')} | {r.get('interleaved_saved','-')} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
-    d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted interleaved delta:']
-    for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
-        v = d[metric]
-        lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
-    lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
+    for label, row in (('interleaved', c), ('interleaved-texture', t)):
+        d = row['drift_adjusted']
+        lines += ['', f'Drift-adjusted {label} delta:']
+        for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
+            v=d[metric]
+            lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
+        lines.append(f"- upload traffic: draws={row.get('interleaved_draws')} uploads={row.get('interleaved_uploads')} saved={row.get('interleaved_saved')} bytes={row.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('interleaved', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('interleaved', CANDIDATE_SHA), ('interleaved-texture', TEXTURE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -92,14 +92,11 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    if not (c.get('interleaved_draws') and c.get('interleaved_draws') > 1000):
-        raise SystemExit(f'interleaved draw marker inactive: {c}')
-    if c.get('interleaved_uploads') != c.get('interleaved_draws'):
-        raise SystemExit(f'interleaved upload/draw mismatch: {c}')
-    if c.get('interleaved_saved') != c.get('interleaved_uploads') * 2:
-        raise SystemExit(f'interleaved saved-call mismatch: {c}')
-    if not (c.get('interleaved_bytes') and c.get('interleaved_bytes') > 0):
-        raise SystemExit(f'interleaved byte marker inactive: {c}')
+    for row in (c, t):
+        if not (row.get('interleaved_draws') and row.get('interleaved_draws') > 1000): raise SystemExit(f'interleaved marker inactive: {row}')
+        if row.get('interleaved_uploads') != row.get('interleaved_draws'): raise SystemExit(f'interleaved upload/draw mismatch: {row}')
+        if row.get('interleaved_saved') != row.get('interleaved_uploads') * 2: raise SystemExit(f'interleaved saved-call mismatch: {row}')
+        if not (row.get('interleaved_bytes') and row.get('interleaved_bytes') > 0): raise SystemExit(f'interleaved byte marker inactive: {row}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
