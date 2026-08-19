@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-interleaved-production-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/dev-noleak-production-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate interleaved fixed-seed A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-interleaved-production-ab'
+    name: dev no-leak fixed-seed A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/dev-noleak-production-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/perf/direct-skin-manifest-ui-predecode:refs/remotes/origin/perf/direct-skin-manifest-ui-predecode \
-            refs/heads/perf/immediate-interleaved-production:refs/remotes/origin/perf/immediate-interleaved-production
+            refs/heads/perf/devmode-no-leak-no-pacer:refs/remotes/origin/perf/devmode-no-leak-no-pacer
           test "$(git rev-parse origin/perf/direct-skin-manifest-ui-predecode)" = "d4be7870e41eece34b9a73b3fe7a685818e4a5d6"
-          test "$(git rev-parse origin/perf/immediate-interleaved-production)" = "7b80ff795da2a52eb7e985a8cadeff3528062592"
+          test "$(git rev-parse origin/perf/devmode-no-leak-no-pacer)" = "d864e05a5d9cd22c2add3873f1bb7330dbc0c1e9"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -186,7 +186,7 @@ jobs:
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/perf/direct-skin-manifest-ui-predecode
       - name: Interleaved immediate uploads
-        run: bash ci/run-frame-perf-ab-variant.sh interleaved origin/perf/immediate-interleaved-production
+        run: bash ci/run-frame-perf-ab-variant.sh dev-noleak origin/perf/devmode-no-leak-no-pacer
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/perf/direct-skin-manifest-ui-predecode
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-interleaved-fixed-seed-ab
+          name: dev-noleak-fixed-seed-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
