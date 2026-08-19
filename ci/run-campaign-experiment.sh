@@ -944,7 +944,7 @@ if [[ "${STARSECTOR_DEEP_GAMEPLAY:-false}" == "true" ]]; then
     --expected-sector-size normal \
     --expected-start-location Corvus
   grep -q 'Fixer: auto campaign deep escape ability id=fracture_jump ready=true' "$OUT/browser.log"
-  grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' "$OUT/browser.log"
+  grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=32.0' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' "$OUT/browser.log"
   grep -q 'BrowserGameplayProbe: .*event=control-match control=CORE_ABILITY_7' "$OUT/browser.log"

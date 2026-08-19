@@ -332,7 +332,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     __STARSECTOR_RENDER_HEIGHT__: 768,
     __LWJGL_FIRST_LOG_LIMIT__: 512,
     __STARSECTOR_BROWSER_GAMEPLAY_PROBE__: deepGameplay,
-    __STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__: deepGameplay ? 8 : 0
+    __STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__: deepGameplay ? 32 : 0
   };
   const windowConfig = { ...defaultConfig, ...configOverrides };
   await page.addInitScript(config => {
@@ -819,6 +819,35 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
+  let gameplayPerformance = null;
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+    const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const started = Date.now();
+    await page.keyboard.down('w');
+    await sleep(2200);
+    await page.keyboard.up('w');
+    await sleep(5800);
+    const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    gameplayPerformance = {
+      durationMs: Date.now() - started,
+      swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
+      recentFps: Number(perfAfter.recentFps || 0),
+      recentFrameMs: Number(perfAfter.recentFrameMs || 0),
+      webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
+      quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
+      quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
+      quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
+      immediateInterleavedDrawDelta: Number(perfAfter.immediateInterleavedDraws || 0) - Number(perfBefore.immediateInterleavedDraws || 0),
+      immediateInterleavedUploadDelta: Number(perfAfter.immediateInterleavedUploads || 0) - Number(perfBefore.immediateInterleavedUploads || 0),
+      immediateInterleavedUploadsSavedDelta: Number(perfAfter.immediateInterleavedUploadsSaved || 0) - Number(perfBefore.immediateInterleavedUploadsSaved || 0),
+      immediateInterleavedBytesDelta: Number(perfAfter.immediateInterleavedBytes || 0) - Number(perfBefore.immediateInterleavedBytes || 0),
+    };
+    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} responsive=${gameplayPerformance.responsive}`);
+  }
+  const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
+
+
   const expectedAbilityIds = [
     'transponder', 'go_dark', 'sensor_burst', 'emergency_burn',
     'sustained_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
@@ -827,10 +856,12 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     'sensor_burst', 'emergency_burn', 'scavenge', 'interdiction_pulse', 'distress_call',
   ]);
   const contextUnavailableAbilityIds = new Set(['scavenge']);
-  // Exercise short/independent abilities before the long Emergency Burn so a
-  // slow software-rendered campaign clock cannot hide coverage of keys 7/8.
-  const abilityExecutionOrder = [1, 2, 3, 5, 7, 8, 6, 4];
-  const terminalDurationAbilityIds = new Set(['emergency_burn']);
+  // Exercise the long Emergency Burn with 32x test-only fast-forward and let it
+  // reach its real settled state before probing Distress Call. Distress Call is
+  // intentionally terminal: its response fleet may immediately start an encounter
+  // and pause CampaignState, which must not contaminate any later ability probe.
+  const abilityExecutionOrder = [1, 2, 3, 5, 7, 6, 4, 8];
+  const terminalDurationAbilityIds = new Set(['distress_call']);
   const abilityKeyResults = [];
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const abilityRegion = { x0: 0.25, y0: 0.76, x1: 0.93, y1: 0.96 };
@@ -1072,34 +1103,6 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     && abilityKeyResults.every(item => !item.failed && item.mapped && item.expectedId === expectedAbilityIds[item.digit - 1])
     && abilityKeyResults.filter(item => item.usable && item.stateChanged).length >= 4
   );
-
-  let gameplayPerformance = null;
-  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
-    const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
-    const started = Date.now();
-    await page.keyboard.down('w');
-    await sleep(2200);
-    await page.keyboard.up('w');
-    await sleep(5800);
-    const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
-    gameplayPerformance = {
-      durationMs: Date.now() - started,
-      swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
-      recentFps: Number(perfAfter.recentFps || 0),
-      recentFrameMs: Number(perfAfter.recentFrameMs || 0),
-      webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
-      quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
-      quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
-      quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
-      immediateInterleavedDrawDelta: Number(perfAfter.immediateInterleavedDraws || 0) - Number(perfBefore.immediateInterleavedDraws || 0),
-      immediateInterleavedUploadDelta: Number(perfAfter.immediateInterleavedUploads || 0) - Number(perfBefore.immediateInterleavedUploads || 0),
-      immediateInterleavedUploadsSavedDelta: Number(perfAfter.immediateInterleavedUploadsSaved || 0) - Number(perfBefore.immediateInterleavedUploadsSaved || 0),
-      immediateInterleavedBytesDelta: Number(perfAfter.immediateInterleavedBytes || 0) - Number(perfBefore.immediateInterleavedBytes || 0),
-    };
-    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
-    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} responsive=${gameplayPerformance.responsive}`);
-  }
-  const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
