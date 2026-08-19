@@ -981,8 +981,20 @@ var mouseInputState = {
 	lastX: null,
 	lastY: null
 };
+inputStats.directKeyboardEnqueued = 0;
 inputStats.directKeyboardDelivered = 0;
+inputStats.directKeyboardDropped = 0;
+inputStats.directKeyboardLatencySamples = 0;
+inputStats.directKeyboardLatencyAvgMs = 0;
+inputStats.directKeyboardLatencyMaxMs = 0;
+inputStats.directKeyboardLastLatencyMs = 0;
+inputStats.directMouseEnqueued = 0;
 inputStats.directMouseDelivered = 0;
+inputStats.directMouseDropped = 0;
+inputStats.directMouseLatencySamples = 0;
+inputStats.directMouseLatencyAvgMs = 0;
+inputStats.directMouseLatencyMaxMs = 0;
+inputStats.directMouseLastLatencyMs = 0;
 inputStats.keyboardStateQueries = 0;
 inputStats.keyboardPressedQueries = 0;
 inputStats.mouseButtonQueries = 0;
@@ -990,6 +1002,9 @@ inputStats.mousePressedQueries = 0;
 inputStats.mousePositionQueries = 0;
 inputStats.keyboardQueueHighWater = 0;
 inputStats.mouseQueueHighWater = 0;
+inputStats.keyboardQueueDepth = 0;
+inputStats.mouseQueueDepth = 0;
+inputStats.keyboardDownCount = 0;
 inputStats.keyboardGlobalCaptures = 0;
 
 function inputEventNanos()
@@ -1003,8 +1018,11 @@ function enqueueKeyboardDirect(event)
 	{
 		keyboardInputState.queue.shift();
 		inputStats.droppedEvents++;
+		inputStats.directKeyboardDropped++;
 	}
 	keyboardInputState.queue.push(event);
+	inputStats.directKeyboardEnqueued++;
+	inputStats.keyboardQueueDepth = keyboardInputState.queue.length;
 	inputStats.keyboardQueueHighWater = Math.max(inputStats.keyboardQueueHighWater, keyboardInputState.queue.length);
 }
 function enqueueMouseDirect(event, coalesceMove)
@@ -1022,8 +1040,11 @@ function enqueueMouseDirect(event, coalesceMove)
 		if(staleMove >= 0) queue.splice(staleMove, 1);
 		else queue.shift();
 		inputStats.droppedEvents++;
+		inputStats.directMouseDropped++;
 	}
 	queue.push(event);
+	inputStats.directMouseEnqueued++;
+	inputStats.mouseQueueDepth = queue.length;
 	inputStats.mouseQueueHighWater = Math.max(inputStats.mouseQueueHighWater, queue.length);
 }
 
@@ -1223,7 +1244,16 @@ function keyHandler(e)
 	const lwjglKey = lwjglKeyForEvent(e);
 	const charCode = typeof e.key === "string" && e.key.length === 1 ? e.key.codePointAt(0) : 0;
 	const down = e.type === "keydown";
-	if(lwjglKey > 0 && lwjglKey < keyboardInputState.down.length) keyboardInputState.down[lwjglKey] = down ? 1 : 0;
+	if(lwjglKey > 0 && lwjglKey < keyboardInputState.down.length)
+	{
+		const wasDown = keyboardInputState.down[lwjglKey] !== 0;
+		if(wasDown !== down)
+		{
+			keyboardInputState.down[lwjglKey] = down ? 1 : 0;
+			inputStats.keyboardDownCount += down ? 1 : -1;
+			if(inputStats.keyboardDownCount < 0) inputStats.keyboardDownCount = 0;
+		}
+	}
 	enqueueKeyboardDirect({key:lwjglKey, state:down, charCode, nanos:inputEventNanos(), repeat:!!e.repeat});
 	enqueueInputEvent({
 		type: e.type,
@@ -1245,6 +1275,8 @@ function Java_org_lwjgl_input_Keyboard_nReset()
 	keyboardInputState.down.fill(0);
 	keyboardInputState.queue.length = 0;
 	keyboardInputState.current = null;
+	inputStats.keyboardQueueDepth = 0;
+	inputStats.keyboardDownCount = 0;
 }
 function Java_org_lwjgl_input_Keyboard_nPoll() {}
 function Java_org_lwjgl_input_Keyboard_nIsKeyDown(lib, key)
@@ -1257,7 +1289,16 @@ function Java_org_lwjgl_input_Keyboard_nIsKeyDown(lib, key)
 function Java_org_lwjgl_input_Keyboard_nNext()
 {
 	keyboardInputState.current = keyboardInputState.queue.shift() || null;
-	if(keyboardInputState.current) inputStats.directKeyboardDelivered++;
+	inputStats.keyboardQueueDepth = keyboardInputState.queue.length;
+	if(keyboardInputState.current)
+	{
+		inputStats.directKeyboardDelivered++;
+		var latencyMs = Math.max(0, (inputEventNanos() - Number(keyboardInputState.current.nanos || 0)) / 1000000);
+		inputStats.directKeyboardLastLatencyMs = latencyMs;
+		inputStats.directKeyboardLatencySamples++;
+		inputStats.directKeyboardLatencyAvgMs += (latencyMs - inputStats.directKeyboardLatencyAvgMs) / inputStats.directKeyboardLatencySamples;
+		inputStats.directKeyboardLatencyMaxMs = Math.max(inputStats.directKeyboardLatencyMaxMs, latencyMs);
+	}
 	return keyboardInputState.current != null;
 }
 function Java_org_lwjgl_input_Keyboard_nGetEventKey() { return keyboardInputState.current ? keyboardInputState.current.key : 0; }
@@ -1275,6 +1316,7 @@ function Java_org_lwjgl_input_Mouse_nReset()
 	mouseInputState.queue.length = 0;
 	mouseInputState.current = null;
 	mouseInputState.lastX = mouseInputState.lastY = null;
+	inputStats.mouseQueueDepth = 0;
 }
 function Java_org_lwjgl_input_Mouse_nPoll() {}
 function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
@@ -1287,7 +1329,16 @@ function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
 function Java_org_lwjgl_input_Mouse_nNext()
 {
 	mouseInputState.current = mouseInputState.queue.shift() || null;
-	if(mouseInputState.current) inputStats.directMouseDelivered++;
+	inputStats.mouseQueueDepth = mouseInputState.queue.length;
+	if(mouseInputState.current)
+	{
+		inputStats.directMouseDelivered++;
+		var latencyMs = Math.max(0, (inputEventNanos() - Number(mouseInputState.current.nanos || 0)) / 1000000);
+		inputStats.directMouseLastLatencyMs = latencyMs;
+		inputStats.directMouseLatencySamples++;
+		inputStats.directMouseLatencyAvgMs += (latencyMs - inputStats.directMouseLatencyAvgMs) / inputStats.directMouseLatencySamples;
+		inputStats.directMouseLatencyMaxMs = Math.max(inputStats.directMouseLatencyMaxMs, latencyMs);
+	}
 	return mouseInputState.current != null;
 }
 function Java_org_lwjgl_input_Mouse_nGetEventButton() { return mouseInputState.current ? mouseInputState.current.button : -1; }
