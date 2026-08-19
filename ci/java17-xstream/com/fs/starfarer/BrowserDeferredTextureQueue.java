@@ -75,6 +75,10 @@ public final class BrowserDeferredTextureQueue {
                 || path == null || resourceTypeOrdinal < 0 || resourceTypeOrdinal > 2) return;
         if (ENABLED && resourceTypeOrdinal != 2 && shouldDeferPath(path)) return;
         java.lang.String key = normalize(path);
+        // UI is the highest-cost pre-SpecStore group and is already fully queued here.
+        // Keep early overlap bounded to this group so ImageIO does not starve SpecStore
+        // or leave a large decoder backlog for ResourceLoaderState finalization.
+        if (!key.startsWith("graphics/ui/")) return;
         AtomicLong counter = EARLY_PREDECODE_COUNTS.get(key);
         if (counter == null) {
             AtomicLong fresh = new AtomicLong();
@@ -86,7 +90,7 @@ public final class BrowserDeferredTextureQueue {
         com.fs.graphics.L.\u00d600000(path);
     }
 
-    /** Start the stock ImageIO worker before SpecStore so already-queued UI/fx can overlap it. */
+    /** Start the stock ImageIO worker before SpecStore so already-queued UI can overlap it. */
     public static void startEarlyImagePredecode() {
         if (!EARLY_PREDECODE_ENABLED || EARLY_PREDECODE_QUEUED.get() <= 0L
                 || !EARLY_PREDECODE_STARTED.compareAndSet(false, true)) return;

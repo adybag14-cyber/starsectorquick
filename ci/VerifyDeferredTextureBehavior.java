@@ -14,22 +14,22 @@ public final class VerifyDeferredTextureBehavior {
 
         BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/portraits/deferred-early.png", 0);
         require(L.PREDECODE.isEmpty(), "deferred texture must not enter early predecode");
-        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/early.png", 0);
-        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/early.png", 0);
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/ui/early.png", 0);
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/ui/early.png", 0);
         require(L.PREDECODE.size() == 2, "early predecode multiplicity must be preserved: " + L.PREDECODE);
         BrowserDeferredTextureQueue.startEarlyImagePredecode();
         BrowserDeferredTextureQueue.startEarlyImagePredecode();
         require(L.STARTS == 1, "early worker should start once: " + L.STARTS);
         long queuedAtStart = BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount();
-        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/hud/late-after-start.png", 0);
+        BrowserDeferredTextureQueue.queueEarlyImagePredecode("graphics/ui/late-after-start.png", 0);
         require(BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount() == queuedAtStart,
                 "early queue must freeze after worker start");
-        require(!L.PREDECODE.contains("graphics/hud/late-after-start.png"),
+        require(!L.PREDECODE.contains("graphics/ui/late-after-start.png"),
                 "post-start resource must remain on stock predecode path");
-        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
-        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/ui/early.png", 0);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/ui/early.png", 0);
         require(L.PREDECODE.size() == 2, "stock pass must consume early multiplicity without requeue: " + L.PREDECODE);
-        BrowserDeferredTextureQueue.queueImagePredecode("graphics/hud/early.png", 0);
+        BrowserDeferredTextureQueue.queueImagePredecode("graphics/ui/early.png", 0);
         require(L.PREDECODE.size() == 3, "stock pass beyond early multiplicity must queue normally: " + L.PREDECODE);
         require(BrowserDeferredTextureQueue.getEarlyPredecodeQueuedCount() == 2L, "unexpected early queued count");
         require(BrowserDeferredTextureQueue.getEarlyPredecodeStockSkipCount() == 2L, "unexpected early stock skip count");
