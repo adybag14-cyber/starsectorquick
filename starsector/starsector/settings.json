@@ -71,7 +71,7 @@
 	
 	"profilerEnabled":false,
 	"forceNoVBO":true,
-	"useGLFlush":true,
+	"useGLFlush":false,
 	"useGLFinish":false,
 	"idleWhileWindowNotVisible":true,
 	"doNotIdleWhenUndecoratedFullcreen":true, # idling in an undecorated fullscreen window can cause issues with alt-tabbing
