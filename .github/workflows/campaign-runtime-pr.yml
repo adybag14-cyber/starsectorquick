@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-interleaved-production-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-interleaved-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate interleaved fixed-seed A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-interleaved-production-ab'
+    name: immediate interleaved frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-interleaved-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:

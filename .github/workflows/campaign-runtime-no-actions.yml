@@ -17,7 +17,7 @@ concurrency:
 jobs:
   experiment:
     name: campaign worker/title-guard diagnostic
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-interleaved-production-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-interleaved-frame-tail-ab'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

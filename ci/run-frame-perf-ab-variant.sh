@@ -21,6 +21,8 @@ cp "$ROOT/ci/patch-frame-perf-fixed-seed.py" "$WORKTREE/ci/patch-frame-perf-fixe
 (
   cd "$WORKTREE"
   python3 ci/patch-frame-perf-fixed-seed.py
+  python3 ci/patch-frame-tail-telemetry.py
+  node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
 )
 
 cleanup_server() {

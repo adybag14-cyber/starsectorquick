@@ -29,7 +29,7 @@ def parse(name):
         row.update(
             ok=data.get('ok'), fatal=data.get('fatalSeenAt'), errors=len(data.get('errors') or []),
             runtime_errors=len(data.get('runtimeErrorSignals') or []), graphics_errors=len(data.get('graphicsErrors') or []),
-            fps=gp.get('recentFps'), frame_ms=gp.get('recentFrameMs'), swaps=gp.get('swapDelta'),
+            fps=gp.get('recentFps'), frame_ms=gp.get('recentFrameMs'), p50_ms=gp.get('frameP50Ms'), p95_ms=gp.get('frameP95Ms'), p99_ms=gp.get('frameP99Ms'), jitter_p95_ms=gp.get('frameJitterP95Ms'), swaps=gp.get('swapDelta'),
             webgl_draws=gp.get('webglDrawDelta'), quad_saved=gp.get('quadDrawCallsSavedDelta'),
             interleaved_draws=gp.get('immediateInterleavedDrawDelta'),
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
@@ -53,32 +53,33 @@ def main():
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
     a, c, b = by['baseline-a'], by['interleaved'], by['baseline-b']
-    expected_fps = (float(a['fps']) + float(b['fps'])) / 2.0 if a.get('fps') is not None and b.get('fps') is not None else None
-    expected_frame = (float(a['frame_ms']) + float(b['frame_ms'])) / 2.0 if a.get('frame_ms') is not None and b.get('frame_ms') is not None else None
-    fps_delta = None if expected_fps is None or c.get('fps') is None else float(c['fps']) - expected_fps
-    frame_delta = None if expected_frame is None or c.get('frame_ms') is None else float(c['frame_ms']) - expected_frame
-    c['drift_adjusted'] = {
-        'fps_expected': expected_fps, 'fps_delta': fps_delta,
-        'fps_pct': None if expected_fps in (None, 0) or fps_delta is None else fps_delta / expected_fps * 100.0,
-        'frame_expected': expected_frame, 'frame_delta': frame_delta,
-        'frame_pct': None if expected_frame in (None, 0) or frame_delta is None else frame_delta / expected_frame * 100.0,
-    }
+    c['drift_adjusted'] = {}
+    for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
+        av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
+        expected = None if av is None or bv is None else (float(av) + float(bv)) / 2.0
+        delta = None if expected is None or cv is None else float(cv) - expected
+        c['drift_adjusted'][metric] = {
+            'expected': expected,
+            'delta': delta,
+            'pct': None if expected in (None, 0) or delta is None else delta / expected * 100.0,
+        }
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
         '# Production vs immediate-interleaved same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | draws | interleaved saved | shortcut avg | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | draws | saved | shortcut avg | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {r.get('webgl_draws','-')} | {r.get('interleaved_saved','-')} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {r.get('webgl_draws','-')} | {r.get('interleaved_saved','-')} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted interleaved delta:',
-              f"- fps={d['fps_delta']:+.3f} ({d['fps_pct']:+.2f}%)" if d['fps_delta'] is not None else '- fps=n/a',
-              f"- frame_ms={d['frame_delta']:+.3f} ({d['frame_pct']:+.2f}%)" if d['frame_delta'] is not None else '- frame_ms=n/a',
-              f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}"]
+    lines += ['', 'Drift-adjusted interleaved delta:']
+    for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
+        v = d[metric]
+        lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
+    lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
     for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('interleaved', CANDIDATE_SHA)]:
