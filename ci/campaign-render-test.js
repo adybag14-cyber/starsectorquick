@@ -1116,12 +1116,14 @@ ${fallback}`);
   let gameplayPerformance = null;
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const vboPerfBefore = await page.evaluate(() => ({ ...(window.__lwjglVboStats || {}) }));
     const started = Date.now();
     await page.keyboard.down('w');
     await sleep(2200);
     await page.keyboard.up('w');
     await sleep(5800);
     const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const vboPerfAfter = await page.evaluate(() => ({ ...(window.__lwjglVboStats || {}) }));
     gameplayPerformance = {
       durationMs: Date.now() - started,
       swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
@@ -1139,9 +1141,14 @@ ${fallback}`);
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
       quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
+      vboDrawDelta: Number(vboPerfAfter.vboDraws || 0) - Number(vboPerfBefore.vboDraws || 0),
+      vboSubDataCallDelta: Number(vboPerfAfter.subDataCalls || 0) - Number(vboPerfBefore.subDataCalls || 0),
+      vboPhysicalBindCallDelta: Number(vboPerfAfter.physicalBindCalls || 0) - Number(vboPerfBefore.physicalBindCalls || 0),
+      vboPhysicalBindChangeDelta: Number(vboPerfAfter.physicalBindChanges || 0) - Number(vboPerfBefore.physicalBindChanges || 0),
+      vboPhysicalBindSkippedDelta: Number(vboPerfAfter.physicalBindSkipped || 0) - Number(vboPerfBefore.physicalBindSkipped || 0),
     };
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
-    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} max=${gameplayPerformance.frameMaxMs.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.longFrameDelta} droppedEstimate=${gameplayPerformance.droppedFrameEstimateDelta} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} responsive=${gameplayPerformance.responsive}`);
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} max=${gameplayPerformance.frameMaxMs.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.longFrameDelta} droppedEstimate=${gameplayPerformance.droppedFrameEstimateDelta} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} vboDraws=${gameplayPerformance.vboDrawDelta} vboSubData=${gameplayPerformance.vboSubDataCallDelta} vboBinds=${gameplayPerformance.vboPhysicalBindCallDelta}/${gameplayPerformance.vboPhysicalBindChangeDelta}/${gameplayPerformance.vboPhysicalBindSkippedDelta} responsive=${gameplayPerformance.responsive}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 

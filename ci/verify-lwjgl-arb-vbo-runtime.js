@@ -16,7 +16,7 @@ function expect(v,m){ if(!v) throw new Error(m); }
 const path=process.argv[2]; if(!path) throw new Error('usage: node ci/verify-lwjgl-arb-vbo-runtime.js <lwjgl.js>');
 const source=fs.readFileSync(path,'utf8');
 for(const marker of ['LWJGL_ARB_VBO_COMPAT_V1','data.vbo > 0','window.__lwjglVboStats']) expect(source.includes(marker),`missing ${marker}`);
-const names=['arbBufferTarget','arbBoundBufferId','arbBindPhysical',
+const names=['arbBufferTarget','arbBoundBufferId','bindArrayBufferPhysical','arbBindPhysical',
  'Java_org_lwjgl_opengl_ARBBufferObject_nglGenBuffersARB','Java_org_lwjgl_opengl_ARBBufferObject_nglDeleteBuffersARB',
  'Java_org_lwjgl_opengl_ARBBufferObject_nglBindBufferARB','Java_org_lwjgl_opengl_ARBBufferObject_nglBufferDataARB',
  'Java_org_lwjgl_opengl_ARBBufferObject_nglBufferSubDataARB','normalizeLegacyClientArrayLayout','clientArrayComponentBytes',
@@ -37,7 +37,8 @@ const glCtx={
 };
 const mem=new ArrayBuffer(512); const lib={getJNIDataView(){return new DataView(mem);}};
 const ctx=vm.createContext({glCtx,arbBufferObjects:[null],arbBoundArrayBufferId:0,arbBoundElementArrayBufferId:0,
- arbVboStats:{generated:0,deleted:0,dataBytes:0,subDataBytes:0,subDataCalls:0,vboDraws:0},
+ arbVboStats:{generated:0,deleted:0,dataBytes:0,subDataBytes:0,subDataCalls:0,vboDraws:0,physicalBindCalls:0,physicalBindChanges:0,physicalBindSkipped:0},
+ physicalArrayBufferBinding:null,
  clientArrayWarnings:new Set(),warnOnce(){},assert(v){if(!v)throw new Error('assert');},
  colorLocation:1,texCoord:2,Math,Number,Uint8Array,Uint32Array,DataView,Set,console});
 vm.runInContext(code,ctx);
@@ -59,10 +60,13 @@ const data={enabled:true,size:2,type:glCtx.FLOAT,stride:0,pointer:64,vbo:id,buf:
 const used=ctx.uploadData(null,data,{temporary:true},7,4); expect(used===true,'VBO uploadData did not report resident path');
 const ptr=calls.filter(c=>c[0]==='ptr').at(-1); expect(ptr&&ptr[1]===7&&ptr[2]===2&&ptr[3]===glCtx.FLOAT&&ptr[4]===false&&ptr[5]===0&&ptr[6]===64,`pointer mismatch ${JSON.stringify(ptr)}`);
 expect(!calls.some(c=>c[0]==='data'&&Array.isArray(c[2])),'VBO pointer path copied client data');
+expect(ctx.arbVboStats.physicalBindChanges===1,`expected one real resident bind, got ${ctx.arbVboStats.physicalBindChanges}`);
+expect(ctx.arbVboStats.physicalBindSkipped>=3,`expected repeated resident binds to be skipped, got ${ctx.arbVboStats.physicalBindSkipped}`);
 // Deleting a bound id clears logical binding; WebGL deleteBuffer handles physical detachment.
 new Uint32Array(mem,32,1)[0]=id;
 ctx.Java_org_lwjgl_opengl_ARBBufferObject_nglDeleteBuffersARB(lib,1,32,0);
 expect(ctx.arbBufferObjects[id]===null,'delete did not clear object'); expect(ctx.arbBoundArrayBufferId===0,'delete did not clear logical binding'); expect(ctx.arbVboStats.deleted===1,'delete stat');
 ctx.Java_org_lwjgl_opengl_ARBBufferObject_nglBindBufferARB(lib,0x8892,0,0);
-expect(calls.filter(c=>c[0]==='bind').at(-1)[2]===0,'unbind mismatch');
-console.log(`verify-lwjgl-arb-vbo-runtime: OK id=${id} dataBytes=${ctx.arbVboStats.dataBytes} subDataBytes=${ctx.arbVboStats.subDataBytes} ptrOffset=${ptr[6]}`);
+expect(ctx.physicalArrayBufferBinding===null,'delete/unbind physical tracker mismatch');
+const rawArrayBinds=(source.match(/glCtx\.bindBuffer\(glCtx\.ARRAY_BUFFER/g)||[]).length; expect(rawArrayBinds===1,`ARRAY_BUFFER bind bypass count=${rawArrayBinds}`);
+console.log(`verify-lwjgl-arb-vbo-runtime: OK id=${id} dataBytes=${ctx.arbVboStats.dataBytes} subDataBytes=${ctx.arbVboStats.subDataBytes} ptrOffset=${ptr[6]} bindChanges=${ctx.arbVboStats.physicalBindChanges} bindSkipped=${ctx.arbVboStats.physicalBindSkipped}`);

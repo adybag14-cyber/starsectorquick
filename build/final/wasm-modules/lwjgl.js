@@ -598,7 +598,12 @@ function ensureFramebufferSize()
 var arbBufferObjects = [null];
 var arbBoundArrayBufferId = 0;
 var arbBoundElementArrayBufferId = 0;
-var arbVboStats = { generated: 0, deleted: 0, dataBytes: 0, subDataBytes: 0, subDataCalls: 0, vboDraws: 0 };
+// WEBGL_ARB_VBO_PHYSICAL_BIND_CACHE_V1
+// Track the actual WebGL ARRAY_BUFFER binding across both ARB-VBO and legacy
+// client-array uploads. All ARRAY_BUFFER binds in this module route here, so a
+// temporary client upload invalidates the resident VBO binding automatically.
+var physicalArrayBufferBinding = null;
+var arbVboStats = { generated: 0, deleted: 0, dataBytes: 0, subDataBytes: 0, subDataCalls: 0, vboDraws: 0, physicalBindCalls: 0, physicalBindChanges: 0, physicalBindSkipped: 0 };
 if(typeof window !== "undefined") window.__lwjglVboStats = arbVboStats;
 
 function arbBufferTarget(target)
@@ -613,11 +618,26 @@ function arbBoundBufferId(target)
 	if(target == 0x8893/*GL_ELEMENT_ARRAY_BUFFER_ARB*/) return arbBoundElementArrayBufferId;
 	return 0;
 }
+function bindArrayBufferPhysical(obj)
+{
+	obj = obj || null;
+	arbVboStats.physicalBindCalls++;
+	if(physicalArrayBufferBinding === obj)
+	{
+		arbVboStats.physicalBindSkipped++;
+		return;
+	}
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, obj);
+	physicalArrayBufferBinding = obj;
+	arbVboStats.physicalBindChanges++;
+}
 function arbBindPhysical(target)
 {
 	var id = arbBoundBufferId(target);
 	var obj = id > 0 ? arbBufferObjects[id] : null;
-	glCtx.bindBuffer(arbBufferTarget(target), obj || null);
+	var webTarget = arbBufferTarget(target);
+	if(webTarget == glCtx.ARRAY_BUFFER) bindArrayBufferPhysical(obj);
+	else glCtx.bindBuffer(webTarget, obj || null);
 	return obj;
 }
 function Java_org_lwjgl_opengl_ARBBufferObject_nglGenBuffersARB(lib, count, memPtr, funcPtr)
@@ -647,6 +667,7 @@ function Java_org_lwjgl_opengl_ARBBufferObject_nglDeleteBuffersARB(lib, count, m
 		if(obj)
 		{
 			glCtx.deleteBuffer(obj);
+			if(physicalArrayBufferBinding === obj) physicalArrayBufferBinding = null;
 			arbBufferObjects[id] = null;
 			arbVboStats.deleted++;
 		}
@@ -665,7 +686,9 @@ function Java_org_lwjgl_opengl_ARBBufferObject_nglBindBufferARB(lib, target, id,
 		warnOnce(clientArrayWarnings, "unknown-vbo-" + id, "LWJGL attempted to bind unknown VBO id=" + id);
 		return;
 	}
-	glCtx.bindBuffer(arbBufferTarget(target), obj || null);
+	var webTarget = arbBufferTarget(target);
+	if(webTarget == glCtx.ARRAY_BUFFER) bindArrayBufferPhysical(obj);
+	else glCtx.bindBuffer(webTarget, obj || null);
 }
 function Java_org_lwjgl_opengl_ARBBufferObject_nglBufferDataARB(lib, target, size, dataPtr, usage, funcPtr)
 {
@@ -820,7 +843,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		uploadStride = 0;
 		normalized = false;
 	}
-	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
+	bindArrayBufferPhysical(buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
@@ -864,7 +887,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 				return;
 			}
 			var normalized = attributeLocation == colorLocation && isIntegerClientArrayType(layout.type);
-			glCtx.bindBuffer(glCtx.ARRAY_BUFFER, obj);
+			bindArrayBufferPhysical(obj);
 			glCtx.vertexAttribPointer(attributeLocation, data.size, layout.type, normalized, layout.stride, Math.max(0, Number(data.pointer)));
 			glCtx.enableVertexAttribArray(attributeLocation);
 			return true;
