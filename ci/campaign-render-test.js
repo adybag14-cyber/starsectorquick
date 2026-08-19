@@ -1056,9 +1056,13 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
       quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
+      immediateInterleavedDrawDelta: Number(perfAfter.immediateInterleavedDraws || 0) - Number(perfBefore.immediateInterleavedDraws || 0),
+      immediateInterleavedUploadDelta: Number(perfAfter.immediateInterleavedUploads || 0) - Number(perfBefore.immediateInterleavedUploads || 0),
+      immediateInterleavedUploadsSavedDelta: Number(perfAfter.immediateInterleavedUploadsSaved || 0) - Number(perfBefore.immediateInterleavedUploadsSaved || 0),
+      immediateInterleavedBytesDelta: Number(perfAfter.immediateInterleavedBytes || 0) - Number(perfBefore.immediateInterleavedBytes || 0),
     };
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
-    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} responsive=${gameplayPerformance.responsive}`);
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} responsive=${gameplayPerformance.responsive}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 

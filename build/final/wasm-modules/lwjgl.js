@@ -451,9 +451,16 @@ var immediateModeData =
 	colorBuf: new Float32Array(32),
 	colorPos: 0,
 	currentColor: [1, 1, 1, 1],
+	currentTexCoord: [0, 0],
 	texCoordBuf: new Float32Array(32),
-	texCoordPos: 0
+	texCoordPos: 0,
+	interleavedBuf: new Float32Array(96),
+	interleavedPos: 0
 };
+// WEBGL_IMMEDIATE_INTERLEAVED_V1: immediate mode already captures exactly
+// position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
+// so glEnd performs one WebGL upload instead of three independent uploads.
+var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
@@ -470,7 +477,11 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	immediateInterleavedDraws: 0,
+	immediateInterleavedUploads: 0,
+	immediateInterleavedUploadsSaved: 0,
+	immediateInterleavedBytes: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2238,12 +2249,20 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	immediateModeData.vertexPos = 0;
 	immediateModeData.colorPos = 0;
 	immediateModeData.texCoordPos = 0;
+	immediateModeData.interleavedPos = 0;
+	// Preserve the existing bridge begin-local texcoord semantics: a vertex
+	// without an explicit texcoord in a new begin/end block starts at (0, 0).
+	immediateModeData.currentTexCoord[0] = 0;
+	immediateModeData.currentTexCoord[1] = 0;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTexCoord2f);
+	immediateModeData.currentTexCoord[0] = x;
+	immediateModeData.currentTexCoord[1] = y;
+	if(immediateInterleavedEnabled) return;
 	var curPos = immediateModeData.texCoordPos;
 	immediateModeData.texCoordBuf =
 		ensureImmediateArrayCapacity(immediateModeData.texCoordBuf, curPos + 2);
@@ -2255,6 +2274,25 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 // LWJGL_IMMEDIATE_VERTEX_BATCH_V1
 function appendImmediateVertex(x, y, z, texS, texT)
 {
+	if(immediateInterleavedEnabled)
+	{
+		var pos = immediateModeData.interleavedPos;
+		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
+		var out = immediateModeData.interleavedBuf;
+		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
+		out[pos + 3] = immediateModeData.currentColor[0];
+		out[pos + 4] = immediateModeData.currentColor[1];
+		out[pos + 5] = immediateModeData.currentColor[2];
+		out[pos + 6] = immediateModeData.currentColor[3];
+		out[pos + 7] = texS; out[pos + 8] = texT;
+		immediateModeData.interleavedPos = pos + 9;
+		immediateModeData.vertexPos += 3;
+		immediateModeData.colorPos += 4;
+		immediateModeData.texCoordPos += 2;
+		immediateModeData.currentTexCoord[0] = texS;
+		immediateModeData.currentTexCoord[1] = texT;
+		return;
+	}
 	var curPos = immediateModeData.vertexPos;
 	immediateModeData.vertexBuf = ensureImmediateArrayCapacity(immediateModeData.vertexBuf, curPos + 3);
 	immediateModeData.vertexBuf[curPos] = x;
@@ -2286,29 +2324,57 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
 	var texPos = immediateModeData.texCoordPos;
-	var texS = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0;
-	var texT = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0;
+	var texS = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[0] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0);
+	var texT = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[1] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0);
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
+function uploadImmediateInterleaved(vertexCount)
+{
+	var floatCount = vertexCount * 9;
+	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
+	var stride = 9 * 4;
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+	glCtx.enableVertexAttribArray(vertexPosition);
+	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
+	glCtx.enableVertexAttribArray(colorLocation);
+	glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
+	glCtx.enableVertexAttribArray(texCoord);
+	if(strictWebGLValidation)
+	{
+		var attribErr = glCtx.getError();
+		if(attribErr != glCtx.NO_ERROR)
+			warnOnce(clientArrayWarnings, "immediate-interleaved-attrib-error-" + attribErr,
+				"LWJGL interleaved immediate vertexAttribPointer error=" + attribErr);
+	}
+	presentationStats.immediateInterleavedDraws++;
+	presentationStats.immediateInterleavedUploads++;
+	presentationStats.immediateInterleavedUploadsSaved += 2;
+	presentationStats.immediateInterleavedBytes += floatCount * 4;
+}
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
-	// Upload vertex data
-	uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
-	// Upload the OpenGL immediate-mode color captured for each vertex.
-	uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
-	// Upload tex coord data when present; otherwise use the OpenGL default (0, 0).
-	if(immediateModeData.texCoordPos >= vertexCount * 2)
+	if(immediateInterleavedEnabled)
 	{
-		uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
+		uploadImmediateInterleaved(vertexCount);
 	}
 	else
 	{
-		glCtx.disableVertexAttribArray(texCoord);
-		glCtx.vertexAttrib2f(texCoord, 0, 0);
+		// Exact legacy fallback: three independent position/color/texcoord uploads.
+		uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
+		uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
+		if(immediateModeData.texCoordPos >= vertexCount * 2)
+			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
+		else
+		{
+			glCtx.disableVertexAttribArray(texCoord);
+			glCtx.vertexAttrib2f(texCoord, 0, 0);
+		}
 	}
 	// NOTE: We count vertices
 	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
