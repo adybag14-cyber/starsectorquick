@@ -22,6 +22,7 @@ public final class Display {
     private static int updateCount = 0;
     private static int swapBuffersCount = 0;
     private static boolean inputPumpFailureLogged = false;
+    private static final boolean LEGACY_INPUT_POLL = Boolean.getBoolean("starsector.browserLegacyInputPoll");
     static {
         System.out.println("Bridge Display.<clinit>()");
     }
@@ -36,9 +37,21 @@ public final class Display {
 
     private Display() {}
 
+    private static boolean shouldLogLoop(int count) {
+        return count <= 3 || count == 10 || count % 300 == 0;
+    }
+
     private static void maybeLogLoop(String kind, int count) {
-        if (count <= 3 || count == 10 || count % 300 == 0) {
+        if (shouldLogLoop(count)) {
             System.out.println("Bridge Display." + kind + " count=" + count);
+        }
+    }
+
+    // BROWSER_DISPLAY_UPDATE_NO_STRING_CHURN_V1: do not construct the update
+    // label on every frame just to discard it in the sparse loop logger.
+    private static void maybeLogUpdate(boolean processMessages, int count) {
+        if (shouldLogLoop(count)) {
+            System.out.println("Bridge Display.update(" + processMessages + ") count=" + count);
         }
     }
 
@@ -242,7 +255,7 @@ public final class Display {
 
     public static void update(boolean process_messages) {
         updateCount++;
-        maybeLogLoop("update(" + process_messages + ")", updateCount);
+        maybeLogUpdate(process_messages, updateCount);
         LinuxContextImplementation.nSwapBuffers();
         if (process_messages) {
             processMessages();
@@ -269,13 +282,16 @@ public final class Display {
     }
 
     public static void processMessages() {
+        // BROWSER_DIRECT_INPUT_NO_POLL_V1
+        // DOM listeners in lwjgl.js update keyboard/mouse state and append queue
+        // entries immediately. The direct bridge's Keyboard.nPoll/Mouse.nPoll JNI
+        // functions are intentional no-ops, so invoking them once per Display.update
+        // only pays two Java->JS transitions without changing state or event order.
+        if (!LEGACY_INPUT_POLL) {
+            return;
+        }
         try {
-            // Desktop LWJGL drains the X11 event queue here. The browser bridge
-            // synthesizes those X11 events from DOM input in lwjgl.js, so skipping
-            // this call leaves keyboard/mouse events permanently queued.
-            // DOM listeners in lwjgl.js maintain direct LWJGL input state; the
-            // bridge LinuxDisplay class is intentionally minimal, so polling the
-            // devices is the browser equivalent of desktop processMessages().
+            // Differential fallback: preserve the previous browser path exactly.
             pollDevices();
         } catch (Throwable t) {
             if (!inputPumpFailureLogged) {
