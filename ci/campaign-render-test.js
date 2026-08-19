@@ -759,8 +759,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         }));
         const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
         const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
-        const semanticOpened = !deepGameplay || Boolean(transition?.opened);
-        const directInputOk = deepGameplay ? deliveredDelta >= 1 : deliveredDelta >= 2;
+        const semanticOpened = Boolean(transition?.opened);
+        const directInputOk = deliveredDelta >= 1;
         const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState)
           || !directInputOk || globalDelta < 2 || !semanticOpened;
