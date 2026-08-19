@@ -29,7 +29,7 @@ public final class PatchResourceLoaderQuickStart {
     private static final String INIT_METHOD = "init";
     private static final String INIT_DESC = "(Ljava/util/Map;)V";
     private static final String PROPERTY = "starsector.browserQuickResourceLoad";
-    private static final int EXPECTED_STAGE_MARKERS = 9;
+    private static final int EXPECTED_STAGE_MARKERS = 19;
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
@@ -126,6 +126,8 @@ public final class PatchResourceLoaderQuickStart {
 
     private static MethodVisitor initStages(MethodVisitor delegate, int[] stageMarkers) {
         return new MethodVisitor(Opcodes.ASM9, delegate) {
+            private boolean inFinalizers;
+
             @Override
             public void visitCode() {
                 super.visitCode();
@@ -145,6 +147,13 @@ public final class PatchResourceLoaderQuickStart {
                         && "new".equals(methodName)
                         && "()V".equals(methodDescriptor)) {
                     emitStage(this.mv, "resource-queue-loop-complete", stageMarkers);
+                }
+                if (inFinalizers
+                        && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/combat/entities/ship/A/I".equals(owner)
+                        && "super".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-mod-plugins-ready", stageMarkers);
                 }
 
                 super.visitMethodInsn(opcode, owner, methodName, methodDescriptor, isInterface);
@@ -174,11 +183,56 @@ public final class PatchResourceLoaderQuickStart {
                         && "new".equals(methodName)
                         && "()V".equals(methodDescriptor)) {
                     emitStage(this.mv, "graphics-finalize-ready", stageMarkers);
-                } else if (opcode == Opcodes.INVOKESTATIC
+                    inFinalizers = true;
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/loading/scripts/ScriptStore".equals(owner)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-script-store-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/api/impl/campaign/procgen/MarkovNames".equals(owner)
+                        && "loadIfNeeded".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-markov-names-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/combat/entities/ship/A/I".equals(owner)
+                        && "super".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-ship-static-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESPECIAL
+                        && "com/fs/starfarer/Version".equals(owner)
+                        && "<init>".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-version-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESPECIAL
+                        && "com/fs/graphics/particle/SmoothParticle".equals(owner)
+                        && "<init>".equals(methodName)) {
+                    emitStage(this.mv, "finalizer-particle-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESPECIAL
+                        && "com/fs/graphics/util/super".equals(owner)
+                        && "<init>".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-graphics-util-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/renderers/H".equals(owner)
+                        && "o00000".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-renderer-h-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/util/F".equals(owner)
+                        && "Object".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-util-f-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
+                        && "com/fs/starfarer/renderers/public".equals(owner)
+                        && "o00000".equals(methodName)
+                        && "()V".equals(methodDescriptor)) {
+                    emitStage(this.mv, "finalizer-renderer-public-ready", stageMarkers);
+                } else if (inFinalizers && opcode == Opcodes.INVOKESTATIC
                         && "com/fs/starfarer/api/impl/campaign/velfield/SlipstreamManager".equals(owner)
                         && "validateConfigs".equals(methodName)
                         && "()V".equals(methodDescriptor)) {
                     emitStage(this.mv, "finalizers-ready", stageMarkers);
+                    inFinalizers = false;
                 }
             }
         };
