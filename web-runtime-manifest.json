@@ -1,15 +1,15 @@
 {
   "profile": {
     "profile": "full-stock-campaign",
-    "sourceSha": "8efd0225f6d8e2c03e14080255ea9911c7eabf88",
-    "workflowRunId": "32304942885",
-    "generatedAt": "2026-08-19T21:41:32.642045+00:00",
-    "overlayFiles": 874,
+    "sourceSha": "5c63758d57057b582eecac474f1f72fb021fd90a",
+    "workflowRunId": "32307684833",
+    "generatedAt": "2026-08-19T22:14:35.317733+00:00",
+    "overlayFiles": 878,
     "dataPack": {
       "version": 1,
       "fileCount": 1696,
       "bytes": 10099127,
-      "sha256": "c2751f4250870505abb3e61731f9c9d26477391d82ed272082f57303dca92c3e"
+      "sha256": "62043c6f8517f04bb5057ce3715d38d9d6ba8098bd3c7c995363893ec248bf1d"
     },
     "graphicsPack": {
       "version": 1,
@@ -173,6 +173,11 @@
       "path": "data/config/index.list",
       "bytes": 234,
       "sha256": "f817cad4f58511d6e7ab817cb3dbe6cf36c683f0f4cf06d5f396f07d5e61175b"
+    },
+    {
+      "path": "data/config/settings.json",
+      "bytes": 99933,
+      "sha256": "c6630ffd9b64a6c5d4184516b139965f93555607e358f6d44f17a431aa1683bd"
     },
     {
       "path": "data/hullmods/index.list",
@@ -607,12 +612,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "2577bd8cb3083bfaf9ba91944c77a3c042a6c55f0c45305e9c89c3332f4f2264"
+      "sha256": "d3cb30edc4e1c4ebe1e194f8bc41cc59340624988ba4c0a7c6afc12878cfea7d"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 253768,
-      "sha256": "9150ecb54e71963e57b8ea8b021b0abea7700da71f5faf49af4d0003fc69cc67"
+      "sha256": "65df644effe888f0eb0a18433ecf470521359510cfe45dbe4551a9862a94b301"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -637,7 +642,7 @@
     {
       "path": "jars/starfarer_obf.jar",
       "bytes": 6029585,
-      "sha256": "d40fb17b5834b99e106ee62aa4814b575139d066eaef1af07d9bc407974fd81a"
+      "sha256": "e27c233b0711cdfba8d8b1baee221d27d3a56b2013500235d16a12f6cc2ed02e"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -650,14 +655,19 @@
       "sha256": "bf76f5287168e857881114bd6b8bc40b072b1931e724a0e160c961bb6311af22"
     },
     {
+      "path": "resources/settings.json",
+      "bytes": 85948,
+      "sha256": "5b6fdd2db212bd3f95400611da3d213666e7350c616fddebeec7ab8efc4555ea"
+    },
+    {
       "path": "starsector-data-pack-v1.bin",
       "bytes": 10099127,
-      "sha256": "c2751f4250870505abb3e61731f9c9d26477391d82ed272082f57303dca92c3e"
+      "sha256": "62043c6f8517f04bb5057ce3715d38d9d6ba8098bd3c7c995363893ec248bf1d"
     },
     {
       "path": "starsector-data-pack-v1.json",
       "bytes": 176548,
-      "sha256": "acbc709e2fb8a01521d6247f690c167a163fbca98b810b40fbbec56d58f68d76"
+      "sha256": "2254637bbfbeff75305e5e78686a3b1a96cdb9840874561497456878464c4cbf"
     },
     {
       "path": "starsector-graphics-pack-v1.json",
@@ -933,6 +943,11 @@
       "path": "starsector/starsector/data/config/index.list",
       "bytes": 234,
       "sha256": "f817cad4f58511d6e7ab817cb3dbe6cf36c683f0f4cf06d5f396f07d5e61175b"
+    },
+    {
+      "path": "starsector/starsector/data/config/settings.json",
+      "bytes": 99933,
+      "sha256": "c6630ffd9b64a6c5d4184516b139965f93555607e358f6d44f17a431aa1683bd"
     },
     {
       "path": "starsector/starsector/data/hullmods/index.list",
@@ -4288,6 +4303,11 @@
       "path": "starsector/starsector/mods/index.list",
       "bytes": 21,
       "sha256": "1c74da8319192ff952155abf56a7d0da5cdf8295f055695730398121c211ee03"
+    },
+    {
+      "path": "starsector/starsector/settings.json",
+      "bytes": 85948,
+      "sha256": "5b6fdd2db212bd3f95400611da3d213666e7350c616fddebeec7ab8efc4555ea"
     },
     {
       "path": "starsector/starsector/sounds/index.list",

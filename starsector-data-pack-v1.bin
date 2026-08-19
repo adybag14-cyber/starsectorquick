@@ -54584,7 +54584,7 @@ Orbital Solar Array,solar_array,"show_in_planet_list, planet_search",TRUE,,com.f
 	
 	"vsync":true,
 	"fps":60,
-	"devMode":false,
+	"devMode":true,
 	"godMode":false, # 100x damage dealt, no damage taken
 	"playtestingMode":false, # turns off some debug flags while in dev mode, doesn't do anything if not in dev mode.
 	
@@ -54613,7 +54613,7 @@ Orbital Solar Array,solar_array,"show_in_planet_list, planet_search",TRUE,,com.f
 	
 	"doRAMandVRAMChecksWhenRunningWithMods":true, # will periodically check if ram/vram is low and warn the player
 	"memoryCheckVerbose":false,
-	"enableMemoryLeakChecking":true,
+	"enableMemoryLeakChecking":false,
 	"enableMemoryLeakCheckingDevModeOnly":true,
 	
 	"colorblindMode":false,
