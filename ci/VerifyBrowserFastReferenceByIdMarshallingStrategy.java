@@ -1,5 +1,11 @@
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.core.BrowserFastReferenceByIdMarshallingStrategy;
+import com.thoughtworks.xstream.core.ReferencingMarshallingContext;
+import com.thoughtworks.xstream.converters.Converter;
+import com.thoughtworks.xstream.converters.MarshallingContext;
+import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import com.thoughtworks.xstream.io.HierarchicalStreamReader;
+import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -17,6 +23,7 @@ public final class VerifyBrowserFastReferenceByIdMarshallingStrategy {
         compare("implicit-list", buildImplicitList());
         compare("write-replace", buildWriteReplace());
         compare("collections", buildCollections());
+        compare("path-probe", buildPathProbe());
         Random random = new Random(0x5A17E55L);
         for (int i = 0; i < 1000; i++) compare("fuzz-" + i, buildFuzz(random, i));
         benchmark();
@@ -47,6 +54,9 @@ public final class VerifyBrowserFastReferenceByIdMarshallingStrategy {
         x.alias("Replaceable", Replaceable.class);
         x.alias("Replacement", Replacement.class);
         x.alias("CollectionsHolder", CollectionsHolder.class);
+        x.alias("PathProbeHolder", PathProbeHolder.class);
+        x.alias("PathProbe", PathProbe.class);
+        x.registerConverter(new PathProbeConverter());
         x.addImplicitCollection(ImplicitHolder.class, "children");
         return x;
     }
@@ -96,6 +106,17 @@ public final class VerifyBrowserFastReferenceByIdMarshallingStrategy {
         holder.map.put("one", shared);
         holder.map.put("self", holder.map);
         holder.array = new Object[] { shared, "x", shared };
+        return holder;
+    }
+
+
+    private static PathProbeHolder buildPathProbe() {
+        PathProbeHolder holder = new PathProbeHolder();
+        holder.probes.add(new PathProbe());
+        holder.probes.add(new PathProbe());
+        holder.probes.add(new PathProbe());
+        holder.nested.add(holder.probes.get(0));
+        holder.nested.add(holder.probes.get(1));
         return holder;
     }
 
@@ -182,5 +203,23 @@ public final class VerifyBrowserFastReferenceByIdMarshallingStrategy {
         List<Object> list = new ArrayList<Object>();
         Map<String, Object> map = new LinkedHashMap<String, Object>();
         Object[] array;
+    }
+
+    public static final class PathProbeHolder {
+        List<PathProbe> probes = new ArrayList<PathProbe>();
+        List<PathProbe> nested = new ArrayList<PathProbe>();
+    }
+
+    public static final class PathProbe {}
+
+    public static final class PathProbeConverter implements Converter {
+        @Override public boolean canConvert(Class type) { return type == PathProbe.class; }
+        @Override public void marshal(Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            ReferencingMarshallingContext referencing = (ReferencingMarshallingContext) context;
+            writer.addAttribute("currentPath", referencing.currentPath().toString());
+        }
+        @Override public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+            return new PathProbe();
+        }
     }
 }
