@@ -709,7 +709,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		normalized = false;
 	}
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STREAM_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
 	{
