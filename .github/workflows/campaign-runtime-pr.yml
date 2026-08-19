@@ -163,7 +163,8 @@ jobs:
             refs/heads/perf/frame-pacing-dev-mode:refs/remotes/origin/perf/frame-pacing-dev-mode \
             refs/heads/perf/frame-state-cache:refs/remotes/origin/perf/frame-state-cache \
             refs/heads/perf/frame-attrib-cache:refs/remotes/origin/perf/frame-attrib-cache \
-            refs/heads/perf/gl-attrib-shadow:refs/remotes/origin/perf/gl-attrib-shadow
+            refs/heads/perf/gl-attrib-shadow:refs/remotes/origin/perf/gl-attrib-shadow \
+            refs/heads/perf/client-buffer-streaming:refs/remotes/origin/perf/client-buffer-streaming
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -191,6 +192,8 @@ jobs:
         run: bash ci/run-frame-perf-ab-variant.sh attrib origin/perf/frame-attrib-cache
       - name: glPushAttrib shadow state
         run: bash ci/run-frame-perf-ab-variant.sh shadow origin/perf/gl-attrib-shadow
+      - name: Client buffer streaming
+        run: bash ci/run-frame-perf-ab-variant.sh streaming origin/perf/client-buffer-streaming
       - name: Baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/perf/frame-pacing-dev-mode
       - name: Summarize drift-adjusted frame and latency metrics
