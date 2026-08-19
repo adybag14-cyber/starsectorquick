@@ -289,6 +289,37 @@ var alphaTestWarnings = new Set();
 var texture2DEnabled = false;
 var attribStateStack = [];
 var attribStateWarnings = new Set();
+var attribStateShadowEnabled = typeof window === "undefined" || window.__LWJGL_ATTRIB_STATE_SHADOW__ !== false;
+// LWJGL_ATTRIB_STATE_SHADOW_V1
+// glPushAttrib is a CPU-side compatibility feature here. Avoid synchronous
+// WebGL getParameter/isEnabled round-trips by shadowing every state value that
+// this bridge can mutate and that snapshotAttribState currently preserves.
+var attribEnableShadow = Object.create(null);
+attribEnableShadow[glCtx.BLEND] = false;
+attribEnableShadow[glCtx.CULL_FACE] = false;
+attribEnableShadow[glCtx.DEPTH_TEST] = false;
+attribEnableShadow[glCtx.SCISSOR_TEST] = false;
+attribEnableShadow[glCtx.STENCIL_TEST] = false;
+var attribStateShadow = {
+	color: {
+		blendSrcRgb: glCtx.ONE,
+		blendDstRgb: glCtx.ZERO,
+		blendSrcAlpha: glCtx.ONE,
+		blendDstAlpha: glCtx.ZERO,
+		colorMask: [true, true, true, true],
+		clearColor: [0, 0, 0, 0]
+	},
+	depth: { writeMask: true, func: glCtx.LESS, clearValue: 1 },
+	viewport: {
+		box: [0, 0, glCtx.drawingBufferWidth, glCtx.drawingBufferHeight],
+		depthRange: [0, 1]
+	},
+	stencil: {
+		func: glCtx.ALWAYS, ref: 0, valueMask: 0xffffffff,
+		writeMask: 0xffffffff, fail: glCtx.KEEP, depthFail: glCtx.KEEP,
+		depthPass: glCtx.KEEP, clearValue: 0
+	}
+};
 function syncAlphaTestUniforms()
 {
 	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
@@ -300,10 +331,15 @@ function setTexture2DEnabled(enabled)
 	texture2DEnabled = !!enabled;
 	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
 }
+function hasTrackedEnableState(cap)
+{
+	return Object.prototype.hasOwnProperty.call(attribEnableShadow, cap);
+}
 function getCompatEnableState(cap)
 {
 	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
 	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
+	if(hasTrackedEnableState(cap)) return attribEnableShadow[cap];
 	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
 }
 function setCompatEnableState(cap, enabled)
@@ -319,16 +355,118 @@ function setCompatEnableState(cap, enabled)
 		setTexture2DEnabled(enabled);
 		return;
 	}
+	if(hasTrackedEnableState(cap)) attribEnableShadow[cap] = !!enabled;
 	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
 }
-function snapshotAttribState(mask)
+function setBlendFuncSeparateShadow(srcRgb, dstRgb, srcAlpha, dstAlpha)
+{
+	var state = attribStateShadow.color;
+	state.blendSrcRgb = srcRgb;
+	state.blendDstRgb = dstRgb;
+	state.blendSrcAlpha = srcAlpha;
+	state.blendDstAlpha = dstAlpha;
+	return glCtx.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
+}
+function setBlendFuncShadow(src, dst)
+{
+	var state = attribStateShadow.color;
+	state.blendSrcRgb = state.blendSrcAlpha = src;
+	state.blendDstRgb = state.blendDstAlpha = dst;
+	return glCtx.blendFunc(src, dst);
+}
+function setColorMaskShadow(r, g, b, a)
+{
+	attribStateShadow.color.colorMask = [!!r, !!g, !!b, !!a];
+	return glCtx.colorMask(r, g, b, a);
+}
+function setClearColorShadow(r, g, b, a)
+{
+	attribStateShadow.color.clearColor = [Number(r), Number(g), Number(b), Number(a)];
+	return glCtx.clearColor(r, g, b, a);
+}
+function setDepthMaskShadow(enabled)
+{
+	attribStateShadow.depth.writeMask = !!enabled;
+	return glCtx.depthMask(enabled);
+}
+function setDepthFuncShadow(func)
+{
+	attribStateShadow.depth.func = func;
+	return glCtx.depthFunc(func);
+}
+function setClearDepthShadow(value)
+{
+	attribStateShadow.depth.clearValue = Number(value);
+	return glCtx.clearDepth(value);
+}
+function setViewportShadow(x, y, width, height)
+{
+	attribStateShadow.viewport.box = [x, y, width, height];
+	return glCtx.viewport(x, y, width, height);
+}
+function setDepthRangeShadow(nearValue, farValue)
+{
+	attribStateShadow.viewport.depthRange = [Number(nearValue), Number(farValue)];
+	return glCtx.depthRange(nearValue, farValue);
+}
+function setStencilFuncShadow(func, ref, mask)
+{
+	attribStateShadow.stencil.func = func;
+	attribStateShadow.stencil.ref = ref;
+	attribStateShadow.stencil.valueMask = mask >>> 0;
+	return glCtx.stencilFunc(func, ref, mask >>> 0);
+}
+function setStencilMaskShadow(mask)
+{
+	attribStateShadow.stencil.writeMask = mask >>> 0;
+	return glCtx.stencilMask(mask >>> 0);
+}
+function setStencilOpShadow(fail, depthFail, depthPass)
+{
+	attribStateShadow.stencil.fail = fail;
+	attribStateShadow.stencil.depthFail = depthFail;
+	attribStateShadow.stencil.depthPass = depthPass;
+	return glCtx.stencilOp(fail, depthFail, depthPass);
+}
+function setClearStencilShadow(value)
+{
+	attribStateShadow.stencil.clearValue = value;
+	return glCtx.clearStencil(value);
+}
+function cloneAttribArray(values)
+{
+	return values.slice();
+}
+function attribSnapshotQueryCount(mask)
+{
+	var count = 0;
+	if(mask & 0x2000/*GL_ENABLE_BIT*/) count += 5;
+	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/) count += 6;
+	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/) count += 3;
+	if(mask & 0x0800/*GL_VIEWPORT_BIT*/) count += 2;
+	if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/) count += 8;
+	return count;
+}
+function noteAttribSnapshot(mask)
+{
+	if(typeof presentationStats === "undefined" || !presentationStats) return;
+	presentationStats.attribPushCount++;
+	var queryCount = attribSnapshotQueryCount(mask);
+	if(attribStateShadowEnabled) presentationStats.attribSnapshotQueriesAvoided += queryCount;
+	else presentationStats.attribSnapshotQueriesExecuted += queryCount;
+}
+function snapshotAttribStateLegacy(mask)
 {
 	var state = { mask: mask };
 	if(mask & 0x2000/*GL_ENABLE_BIT*/)
 	{
 		state.enable = {};
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
-			state.enable[cap] = getCompatEnableState(cap);
+		{
+			if(cap == 0x0BC0/*GL_ALPHA_TEST*/) state.enable[cap] = alphaTestState.enabled;
+			else if(cap == glCtx.TEXTURE_2D) state.enable[cap] = texture2DEnabled;
+			else state.enable[cap] = glCtx.isEnabled(cap);
+		}
 	}
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
@@ -368,6 +506,53 @@ function snapshotAttribState(mask)
 	}
 	return state;
 }
+function snapshotAttribState(mask)
+{
+	noteAttribSnapshot(mask);
+	if(!attribStateShadowEnabled) return snapshotAttribStateLegacy(mask);
+	var state = { mask: mask };
+	if(mask & 0x2000/*GL_ENABLE_BIT*/)
+	{
+		state.enable = {};
+		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
+			state.enable[cap] = getCompatEnableState(cap);
+	}
+	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
+	{
+		var color = attribStateShadow.color;
+		state.color = {
+			blendSrcRgb: color.blendSrcRgb,
+			blendDstRgb: color.blendDstRgb,
+			blendSrcAlpha: color.blendSrcAlpha,
+			blendDstAlpha: color.blendDstAlpha,
+			colorMask: cloneAttribArray(color.colorMask),
+			clearColor: cloneAttribArray(color.clearColor)
+		};
+		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
+	}
+	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
+	{
+		var depth = attribStateShadow.depth;
+		state.depth = { writeMask: depth.writeMask, func: depth.func, clearValue: depth.clearValue };
+	}
+	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
+	{
+		state.viewport = {
+			box: cloneAttribArray(attribStateShadow.viewport.box),
+			depthRange: cloneAttribArray(attribStateShadow.viewport.depthRange)
+		};
+	}
+	if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/)
+	{
+		var stencil = attribStateShadow.stencil;
+		state.stencil = {
+			func: stencil.func, ref: stencil.ref, valueMask: stencil.valueMask,
+			writeMask: stencil.writeMask, fail: stencil.fail, depthFail: stencil.depthFail,
+			depthPass: stencil.depthPass, clearValue: stencil.clearValue
+		};
+	}
+	return state;
+}
 function restoreAttribState(state)
 {
 	if(state.enable)
@@ -376,27 +561,27 @@ function restoreAttribState(state)
 	}
 	if(state.color)
 	{
-		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
-		glCtx.colorMask(...state.color.colorMask);
-		glCtx.clearColor(...state.color.clearColor);
+		setBlendFuncSeparateShadow(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
+		setColorMaskShadow(...state.color.colorMask);
+		setClearColorShadow(...state.color.clearColor);
 	}
 	if(state.depth)
 	{
-		glCtx.depthMask(state.depth.writeMask);
-		glCtx.depthFunc(state.depth.func);
-		glCtx.clearDepth(state.depth.clearValue);
+		setDepthMaskShadow(state.depth.writeMask);
+		setDepthFuncShadow(state.depth.func);
+		setClearDepthShadow(state.depth.clearValue);
 	}
 	if(state.viewport)
 	{
-		glCtx.viewport(...state.viewport.box);
-		glCtx.depthRange(...state.viewport.depthRange);
+		setViewportShadow(...state.viewport.box);
+		setDepthRangeShadow(...state.viewport.depthRange);
 	}
 	if(state.stencil)
 	{
-		glCtx.stencilFunc(state.stencil.func, state.stencil.ref, state.stencil.valueMask);
-		glCtx.stencilMask(state.stencil.writeMask);
-		glCtx.stencilOp(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
-		glCtx.clearStencil(state.stencil.clearValue);
+		setStencilFuncShadow(state.stencil.func, state.stencil.ref, state.stencil.valueMask);
+		setStencilMaskShadow(state.stencil.writeMask);
+		setStencilOpShadow(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
+		setClearStencilShadow(state.stencil.clearValue);
 	}
 	// GL_COLOR_BUFFER_BIT owns the alpha comparison function/reference. The
 	// alpha-test enable itself is restored above through GL_ENABLE_BIT.
@@ -406,6 +591,7 @@ function restoreAttribState(state)
 		alphaTestState.ref = state.alpha.ref;
 		syncAlphaTestUniforms();
 	}
+	if(typeof presentationStats !== "undefined" && presentationStats) presentationStats.attribPopCount++;
 }
 var vertexData =
 {
@@ -487,7 +673,11 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	attribPushCount: 0,
+	attribPopCount: 0,
+	attribSnapshotQueriesAvoided: 0,
+	attribSnapshotQueriesExecuted: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -1629,7 +1819,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval()
 function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 {
 	checkNoList(curList);
-	return glCtx.clearColor(r, g, b, a);
+	return setClearColorShadow(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
@@ -1770,7 +1960,7 @@ function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPt
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglViewport);
-	glCtx.viewport(x, y, width, height);
+	setViewportShadow(x, y, width, height);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
@@ -1778,7 +1968,7 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.disable(a);
+		setCompatEnableState(a, false);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = false;
@@ -1797,7 +1987,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.enable(a);
+		setCompatEnableState(a, true);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = true;
@@ -2048,14 +2238,14 @@ function Java_org_lwjgl_opengl_GL11_nglClearDepth(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglClearDepth);
-	glCtx.clearDepth(a);
+	setClearDepthShadow(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
-	glCtx.depthFunc(a);
+	setDepthFuncShadow(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
@@ -2124,21 +2314,21 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
-	glCtx.depthMask(a);
+	setDepthMaskShadow(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
-	glCtx.blendFunc(sfactor, dfactor);
+	setBlendFuncShadow(sfactor, dfactor);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
-	glCtx.colorMask(r, g, b, a);
+	setColorMaskShadow(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
@@ -2331,12 +2521,12 @@ function Java_org_lwjgl_opengl_GL11_nglScissor(lib, x, y, width, height, funcPtr
 function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilFunc);
-	glCtx.stencilFunc(func, ref, mask >>> 0);
+	setStencilFuncShadow(func, ref, mask);
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilOp);
-	glCtx.stencilOp(sfail, dpfail, dppass);
+	setStencilOpShadow(sfail, dpfail, dppass);
 }
 
 // LWJGL_POINT_SIZE_COMPAT_V1

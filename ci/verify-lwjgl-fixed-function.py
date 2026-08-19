@@ -63,6 +63,14 @@ def main() -> int:
     snapshot = function_block(text, "snapshotAttribState")
     restore = function_block(text, "restoreAttribState")
     set_compat = function_block(text, "setCompatEnableState")
+    set_blend_separate = function_block(text, "setBlendFuncSeparateShadow")
+    set_color_mask = function_block(text, "setColorMaskShadow")
+    set_depth_mask = function_block(text, "setDepthMaskShadow")
+    set_depth_func = function_block(text, "setDepthFuncShadow")
+    set_viewport = function_block(text, "setViewportShadow")
+    set_depth_range = function_block(text, "setDepthRangeShadow")
+    set_stencil_func = function_block(text, "setStencilFuncShadow")
+    set_stencil_op = function_block(text, "setStencilOpShadow")
     get_integer = function_block(text, "Java_org_lwjgl_opengl_GL11_nglGetIntegerv")
     pixel_store = function_block(text, "Java_org_lwjgl_opengl_GL11_nglPixelStorei")
     tex_parameter = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTexParameteri")
@@ -93,11 +101,13 @@ def main() -> int:
     require(tex_sub_image, "glCtx.generateMipmap(target);", "level-0 texture sub-upload mipmaps")
     require(vertex_batch, "appendImmediateVertex", "combined immediate-mode vertex path")
     require(scissor, "glCtx.scissor", "scissor state")
-    require(stencil_func, "glCtx.stencilFunc", "stencil comparison state")
-    require(stencil_op, "glCtx.stencilOp", "stencil operations")
+    require(stencil_func, "setStencilFuncShadow(func, ref, mask);", "stencil comparison routing")
+    require(set_stencil_func, "glCtx.stencilFunc", "stencil comparison state")
+    require(stencil_op, "setStencilOpShadow(sfail, dpfail, dppass);", "stencil operation routing")
+    require(set_stencil_op, "glCtx.stencilOp", "stencil operations")
     require(point_size, "glCtx.uniform1f(pointSizeLocation", "point-size state")
     require(snapshot, "0x0400/*GL_STENCIL_BUFFER_BIT*/", "attribute snapshot stencil state")
-    require(restore, "glCtx.stencilFunc", "attribute restoration stencil state")
+    require(restore, "setStencilFuncShadow", "attribute restoration stencil state")
     require(copy_tex_image, "glCtx.copyTexImage2D", "texture framebuffer copy")
     require(copy_tex_image, "glCtx.generateMipmap(target);", "level-0 texture framebuffer-copy mipmaps")
     require(quad_indices, "new Uint32Array(quadCount * 6)", "quad index cache")
@@ -119,14 +129,24 @@ def main() -> int:
         require(snapshot, mask, "attribute snapshot")
 
     for token in (
-        "glCtx.blendFuncSeparate",
-        "glCtx.colorMask",
-        "glCtx.depthMask",
-        "glCtx.depthFunc",
-        "glCtx.viewport",
-        "glCtx.depthRange",
+        "setBlendFuncSeparateShadow",
+        "setColorMaskShadow",
+        "setDepthMaskShadow",
+        "setDepthFuncShadow",
+        "setViewportShadow",
+        "setDepthRangeShadow",
     ):
         require(restore, token, "attribute restoration")
+
+    for helper, token, context in (
+        (set_blend_separate, "glCtx.blendFuncSeparate", "blend restoration helper"),
+        (set_color_mask, "glCtx.colorMask", "color-mask restoration helper"),
+        (set_depth_mask, "glCtx.depthMask", "depth-mask restoration helper"),
+        (set_depth_func, "glCtx.depthFunc", "depth-function restoration helper"),
+        (set_viewport, "glCtx.viewport", "viewport restoration helper"),
+        (set_depth_range, "glCtx.depthRange", "depth-range restoration helper"),
+    ):
+        require(helper, token, context)
 
     for export in (
         "Java_org_lwjgl_opengl_GL11_nglIsEnabled,",
