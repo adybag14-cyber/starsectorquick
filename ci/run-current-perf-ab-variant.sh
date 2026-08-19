@@ -11,7 +11,10 @@ STATUS_FILE="$OUT_ROOT/status.tsv"
 
 mkdir -p "$OUT_ROOT"
 rm -rf "$WORKTREE"
-git worktree add --detach "$WORKTREE" "$REF"
+if ! GIT_LFS_SKIP_SMUDGE=1 git worktree add --detach "$WORKTREE" "$REF"; then
+  printf '%s\t%s\t%s\t%s\n' "$NAME" "$REF" "125" "125" >> "$STATUS_FILE"
+  exit 0
+fi
 mkdir -p "$WORKTREE/.ci-cache"
 cp "$ARCHIVE" "$WORKTREE/.ci-cache/starsector_linux-0.98a-RC8.zip"
 
