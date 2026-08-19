@@ -487,7 +487,12 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	clientArrayAttributeUploads: 0,
+	clientArrayUploadBytes: 0,
+	immediateEnds: 0,
+	immediateAttributeUploads: 0,
+	immediateUploadBytes: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -745,6 +750,8 @@ function uploadData(v, data, buffer, attributeLocation, count)
 			warnOnce(clientArrayWarnings, "bad-stride-" + data.type, "Unable to determine LWJGL client array stride type=" + data.type + " size=" + data.size);
 			return;
 		}
+		presentationStats.clientArrayAttributeUploads++;
+		presentationStats.clientArrayUploadBytes += byteLength;
 		var buf = data.buf;
 		if(buf == null)
 		{
@@ -2425,6 +2432,16 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
+	presentationStats.immediateEnds++;
+	var immediateUploads = 2;
+	var immediateBytes = (immediateModeData.vertexPos + vertexCount * 4) * 4;
+	if(immediateModeData.texCoordPos >= vertexCount * 2)
+	{
+		immediateUploads++;
+		immediateBytes += vertexCount * 2 * 4;
+	}
+	presentationStats.immediateAttributeUploads += immediateUploads;
+	presentationStats.immediateUploadBytes += immediateBytes;
 	// Upload vertex data
 	uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
 	// Upload the OpenGL immediate-mode color captured for each vertex.
