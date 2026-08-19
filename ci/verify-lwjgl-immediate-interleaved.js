@@ -12,6 +12,8 @@ const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjg
 const src=fs.readFileSync(path,'utf8');
 for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved']) expect(src.includes(marker),`missing ${marker}`);
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
+const attribCachePresent=src.includes('LWJGL_VERTEX_ATTRIB_STATE_CACHE_V1');
+if(attribCachePresent) names.unshift('setVertexAttribArrayEnabledCached','setVertexAttribPointerCached');
 const code=names.map(n=>extract(src,n)).join('\n');
 function make(enabled){
   const calls=[]; const legacy=[]; const draws=[];
@@ -22,7 +24,8 @@ function make(enabled){
   const c=vm.createContext({
     glCtx, immediateInterleavedEnabled:enabled, curList:null, pushInList(){throw new Error('unexpected list');},
     immediateModeData:{mode:0,vertexBuf:new Float32Array(32),vertexPos:0,colorBuf:new Float32Array(32),colorPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0],texCoordBuf:new Float32Array(32),texCoordPos:0,interleavedBuf:new Float32Array(96),interleavedPos:0},
-    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0},
+    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,vertexAttribPointerUpdates:0,vertexAttribPointerUpdatesSaved:0,vertexAttribEnableChanges:0,vertexAttribEnableChangesSaved:0,vertexBufferUploads:0,vertexUploadBytes:0},
+    vertexAttribStateCacheEnabled:true, vertexAttribEnabledState:Object.create(null), vertexAttribPointerState:Object.create(null),
     vertexBuffer:{id:'v'}, colorBuffer:{id:'c'}, texCoordBuffer:{id:'t'}, vertexPosition:3,colorLocation:4,texCoord:5,
     strictWebGLValidation:false,clientArrayWarnings:new Set(),warnOnce(){},
     uploadDataImpl:(buf,buffer,attr,size,type,stride)=>legacy.push({data:Array.from(buf),buffer,attr,size,type,stride}),
@@ -50,6 +53,11 @@ expect(c.presentationStats.immediateInterleavedUploadsSaved===2,'saved upload st
 // Existing bridge semantics reset current texcoord at each begin/end block.
 c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,9,8,7,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 uploads=x.calls.filter(a=>a[0]==='bufferData'); const last=uploads[uploads.length-1][2]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
+if(attribCachePresent){
+  const ptrAfterSecond=x.calls.filter(a=>a[0]==='pointer'); expect(ptrAfterSecond.length===3,`cached pointer count after two draws ${ptrAfterSecond.length}`);
+  expect(c.presentationStats.vertexAttribPointerUpdatesSaved===3,'interleaved pointer cache did not save second draw');
+  expect(c.presentationStats.vertexAttribEnableChangesSaved===3,'interleaved enable cache did not save second draw');
+}
 // Disabled mode must retain the exact three independent attribute uploads.
 x=make(false); x.c.Java_org_lwjgl_opengl_GL11_nglBegin(null,7,0); x.c.immediateModeData.currentColor=[.2,.4,.6,.8]; x.c.Java_org_lwjgl_opengl_GL11_nglTexCoord2f(null,.3,.7,0); x.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,2,4,6,0); x.c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 expect(x.legacy.length===3,`fallback uploads=${x.legacy.length}`); expect(x.calls.filter(a=>a[0]==='bufferData').length===0,'fallback direct interleaved upload');
