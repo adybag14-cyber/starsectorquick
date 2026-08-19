@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/current-perf-same-runner'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/frame-perf-same-runner'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -136,11 +136,11 @@ jobs:
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
           if-no-files-found: warn
 
-  current-perf-same-runner:
-    name: current fixed-seed same-runner A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/current-perf-same-runner'
+  frame-perf-same-runner:
+    name: frame fixed-seed same-runner A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/frame-perf-same-runner'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout benchmark harness
         uses: actions/checkout@v4
@@ -160,10 +160,10 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin \
-            refs/heads/diag/fractal-fixed-seed-baseline-current:refs/remotes/origin/diag/fractal-fixed-seed-baseline-current \
-            refs/heads/diag/fractal-fixed-seed-current:refs/remotes/origin/diag/fractal-fixed-seed-current \
-            refs/heads/diag/xstream-fast-id-fixed-seed:refs/remotes/origin/diag/xstream-fast-id-fixed-seed \
-            refs/heads/diag/xstream-pathtracker-fixed-seed:refs/remotes/origin/diag/xstream-pathtracker-fixed-seed
+            refs/heads/perf/frame-pacing-dev-mode:refs/remotes/origin/perf/frame-pacing-dev-mode \
+            refs/heads/perf/frame-state-cache:refs/remotes/origin/perf/frame-state-cache \
+            refs/heads/perf/frame-attrib-cache:refs/remotes/origin/perf/frame-attrib-cache \
+            refs/heads/perf/gl-attrib-shadow:refs/remotes/origin/perf/gl-attrib-shadow
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -184,22 +184,22 @@ jobs:
           unzip -tq "$archive"
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Baseline A
-        run: bash ci/run-current-perf-ab-variant.sh baseline-a origin/diag/fractal-fixed-seed-baseline-current
-      - name: Fractal candidate
-        run: bash ci/run-current-perf-ab-variant.sh fractal origin/diag/fractal-fixed-seed-current
-      - name: Fast ID candidate
-        run: bash ci/run-current-perf-ab-variant.sh fast-id origin/diag/xstream-fast-id-fixed-seed
-      - name: PathTracker candidate
-        run: bash ci/run-current-perf-ab-variant.sh pathtracker origin/diag/xstream-pathtracker-fixed-seed
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/perf/frame-pacing-dev-mode
+      - name: Matrix uniform cache
+        run: bash ci/run-frame-perf-ab-variant.sh matrix origin/perf/frame-state-cache
+      - name: Matrix + vertex attribute cache
+        run: bash ci/run-frame-perf-ab-variant.sh attrib origin/perf/frame-attrib-cache
+      - name: glPushAttrib shadow state
+        run: bash ci/run-frame-perf-ab-variant.sh shadow origin/perf/gl-attrib-shadow
       - name: Baseline B
-        run: bash ci/run-current-perf-ab-variant.sh baseline-b origin/diag/fractal-fixed-seed-baseline-current
-      - name: Summarize drift-adjusted timings
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/perf/frame-pacing-dev-mode
+      - name: Summarize drift-adjusted frame and latency metrics
         if: always()
-        run: python3 ci/summarize-current-perf-ab.py
+        run: python3 ci/summarize-frame-perf-ab.py
       - name: Upload same-runner evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: current-fixed-seed-same-runner-ab
-          path: test_output/current-perf-ab
+          name: frame-fixed-seed-same-runner-ab
+          path: test_output/frame-perf-ab
           if-no-files-found: error
