@@ -2,7 +2,7 @@ package com.fs.starfarer;
 
 /** Browser frame pacer for BaseGameState's existing sleep boundary. */
 public final class BrowserFramePacer {
-    private static final String ENABLE_PROPERTY = "starsector.browserFramePacing";
+    private static final java.lang.String ENABLE_PROPERTY = "starsector.browserFramePacing";
     private static long nextDeadlineNanos;
     private static float targetFps;
     private static long calls;
@@ -60,7 +60,7 @@ public final class BrowserFramePacer {
     }
 
     private static boolean isEnabled() {
-        String value = System.getProperty(ENABLE_PROPERTY);
+        java.lang.String value = System.getProperty(ENABLE_PROPERTY);
         if (value == null) return true;
         value = value.trim();
         return !("false".equalsIgnoreCase(value) || "0".equals(value) || "off".equalsIgnoreCase(value));
