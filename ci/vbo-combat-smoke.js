@@ -11,8 +11,11 @@ function fatalLine(text){
   // Do not treat status counters such as `failed=0` as fatal. Runtime state and
   // pageerror are stronger signals; console matching is limited to unmistakable
   // process/linkage failures.
-  return /(?:uncaught|unhandled|fatal(?:\s+error)?|linkageerror|unsatisfiedlinkerror|exception in thread|cheerpj.*\babort\b|direct CombatMain boot failed)/i.test(text)
-    && !/(?:fallback|probe|expected|handled)/i.test(text);
+  // Page errors and runtime/body fatal state are authoritative. Console text is
+  // only used for explicit linkage/process failures; bootstrap messages such as
+  // `default uncaught exception handler installed` are informational.
+  return /(?:fatal(?:\s+error)?[: ]|linkageerror|unsatisfiedlinkerror|exception in thread|cheerpj.*\babort\b|direct CombatMain boot failed)/i.test(text)
+    && !/(?:fallback|probe|expected|handler installed)/i.test(text);
 }
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swiftshader']});
