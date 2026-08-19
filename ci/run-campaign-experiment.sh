@@ -22,7 +22,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/xstream-1.4.10.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -399,6 +399,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTitleContinueRenderGuard.java \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchXStreamMarshalTiming.java \
+  ci/VerifyXStreamMarshalTimingPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -449,6 +451,17 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+# Diagnostic-only shallow timing around recursive XStream marshal conversion.
+jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserXStreamMarshalDiag.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchXStreamMarshalTiming jars/xstream-1.4.10.jar .ci-build/xstream-marshal-timing.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyXStreamMarshalTimingPatch .ci-build/xstream-marshal-timing.jar
+mv .ci-build/xstream-marshal-timing.jar jars/xstream-1.4.10.jar
+javap -classpath "jars/fixer_patch.jar:jars/xstream-1.4.10.jar:$CP" -c -p \
+  com.thoughtworks.xstream.core.TreeMarshaller | grep -q 'BrowserXStreamMarshalDiag.enter'
+javap -classpath "jars/fixer_patch.jar:jars/xstream-1.4.10.jar:$CP" -c -p \
+  com.thoughtworks.xstream.core.TreeMarshaller | grep -q 'BrowserXStreamMarshalDiag.exit'
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
