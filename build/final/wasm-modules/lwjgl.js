@@ -487,7 +487,12 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	clientRangeUploadCalls: 0,
+	clientRangeUploadBytes: 0,
+	clientRangeViewsAvoided: 0,
+	clientRangeFallbackViews: 0,
+	clientMemoryViewRefreshes: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -673,7 +678,41 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 	}
 	return out;
 }
-function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
+// WEBGL_CLIENT_RANGE_UPLOAD_V1
+// WebGL2 bufferData accepts a source ArrayBufferView plus source element offset
+// and length. Use that overload to preserve orphaning while avoiding transient
+// subarray/Uint8Array view objects on each draw. Disabled mode materializes the
+// exact legacy subarray and uses the original three-argument bufferData call.
+var clientRangeUploadEnabled = typeof window === "undefined" || window.__LWJGL_CLIENT_RANGE_UPLOAD__ !== false;
+var clientMemoryByteView = null;
+function getClientMemoryByteView(buffer)
+{
+	if(clientMemoryByteView == null || clientMemoryByteView.buffer !== buffer)
+	{
+		clientMemoryByteView = new Uint8Array(buffer);
+		presentationStats.clientMemoryViewRefreshes++;
+	}
+	return clientMemoryByteView;
+}
+function uploadBufferDataRange(uploadBuf, srcOffsetElements, srcLengthElements)
+{
+	var hasRange = Number.isFinite(srcOffsetElements) && Number.isFinite(srcLengthElements);
+	if(clientRangeUploadEnabled && hasRange)
+	{
+		glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW, srcOffsetElements, srcLengthElements);
+		presentationStats.clientRangeUploadCalls++;
+		presentationStats.clientRangeUploadBytes += srcLengthElements * uploadBuf.BYTES_PER_ELEMENT;
+		presentationStats.clientRangeViewsAvoided++;
+		return;
+	}
+	if(hasRange)
+	{
+		uploadBuf = uploadBuf.subarray(srcOffsetElements, srcOffsetElements + srcLengthElements);
+		presentationStats.clientRangeFallbackViews++;
+	}
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+}
+function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count, srcOffsetElements, srcLengthElements)
 {
 	var originalType = type;
 	var originalStride = stride;
@@ -697,7 +736,13 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	var uploadStride = stride;
 	if(!isWebGLClientArrayType(type))
 	{
-		uploadBuf = convertDesktopClientArrayToFloat(buf, size, type, stride, count, normalized);
+		var conversionBuf = buf;
+		if(Number.isFinite(srcOffsetElements) && Number.isFinite(srcLengthElements))
+		{
+			conversionBuf = buf.subarray(srcOffsetElements, srcOffsetElements + srcLengthElements);
+			presentationStats.clientRangeFallbackViews++;
+		}
+		uploadBuf = convertDesktopClientArrayToFloat(conversionBuf, size, type, stride, count, normalized);
 		if(uploadBuf == null)
 		{
 			warnOnce(clientArrayWarnings, "convert-failed-" + type, "Failed to convert LWJGL client array type=" + type);
@@ -707,9 +752,11 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		uploadType = glCtx.FLOAT;
 		uploadStride = 0;
 		normalized = false;
+		srcOffsetElements = undefined;
+		srcLengthElements = undefined;
 	}
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+	uploadBufferDataRange(uploadBuf, srcOffsetElements, srcLengthElements);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
 	{
@@ -749,6 +796,12 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		if(buf == null)
 		{
 			assert(v && data.pointer);
+			if(clientRangeUploadEnabled)
+			{
+				buf = getClientMemoryByteView(v.buffer);
+				uploadDataImpl(buf, buffer, attributeLocation, data.size, layout.type, layout.stride, count, data.pointer, byteLength);
+				return;
+			}
 			buf = new Uint8Array(v.buffer, data.pointer, byteLength);
 		}
 		uploadDataImpl(buf, buffer, attributeLocation, data.size, layout.type, layout.stride, count);
@@ -2426,13 +2479,13 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
 	// Upload vertex data
-	uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
+	uploadDataImpl(immediateModeData.vertexBuf, vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4, vertexCount, 0, immediateModeData.vertexPos);
 	// Upload the OpenGL immediate-mode color captured for each vertex.
-	uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
+	uploadDataImpl(immediateModeData.colorBuf, colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4, vertexCount, 0, vertexCount * 4);
 	// Upload tex coord data when present; otherwise use the OpenGL default (0, 0).
 	if(immediateModeData.texCoordPos >= vertexCount * 2)
 	{
-		uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
+		uploadDataImpl(immediateModeData.texCoordBuf, texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4, vertexCount, 0, vertexCount * 2);
 	}
 	else
 	{

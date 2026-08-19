@@ -78,6 +78,7 @@ grep -q '__lwjglGraphicsInfo' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-client-range-upload.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-input-telemetry.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
