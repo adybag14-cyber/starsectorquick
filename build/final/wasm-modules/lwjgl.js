@@ -483,7 +483,23 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0
 };
-var recentSwapTimes = [];
+// WEBGL_RECENT_SWAP_RING_V1: fixed-size ring avoids Array.shift() element moves
+// on every frame after the 121-sample FPS window is warm.
+var recentSwapTimes = new Float64Array(121);
+var recentSwapTimeCount = 0;
+var recentSwapTimeNext = 0;
+function recordRecentSwapTime(swapNow)
+{
+	recentSwapTimes[recentSwapTimeNext] = swapNow;
+	recentSwapTimeNext = (recentSwapTimeNext + 1) % recentSwapTimes.length;
+	if(recentSwapTimeCount < recentSwapTimes.length) recentSwapTimeCount++;
+	if(recentSwapTimeCount < 2) return;
+	var firstIndex = (recentSwapTimeNext - recentSwapTimeCount + recentSwapTimes.length) % recentSwapTimes.length;
+	var lastIndex = (recentSwapTimeNext - 1 + recentSwapTimes.length) % recentSwapTimes.length;
+	var recentDuration = recentSwapTimes[lastIndex] - recentSwapTimes[firstIndex];
+	presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimeCount - 1) * 1000 / recentDuration : 0;
+	presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimeCount - 1) : 0;
+}
 if(typeof window !== "undefined")
 	window.__lwjglPresentationStats = presentationStats;
 // Set to a non-zero value to stop after a certain number of frames
@@ -1543,14 +1559,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	presentationStats.swapCount++;
 	var swapNow = performance.now();
-	recentSwapTimes.push(swapNow);
-	if(recentSwapTimes.length > 121) recentSwapTimes.shift();
-	if(recentSwapTimes.length >= 2)
-	{
-		var recentDuration = recentSwapTimes[recentSwapTimes.length - 1] - recentSwapTimes[0];
-		presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimes.length - 1) * 1000 / recentDuration : 0;
-		presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;
-	}
+	recordRecentSwapTime(swapNow);
 	if(presentationReadbackDiagnostics && presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
 	{
 		try
