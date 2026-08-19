@@ -41,6 +41,11 @@ if (!path) throw new Error('usage: node ci/verify-lwjgl-quad-batching.js <lwjgl.
 const source = fs.readFileSync(path, 'utf8');
 const ensureQuad = extractFunction(source, 'ensureQuadIndexCapacity');
 const drawArrays = extractFunction(source, 'drawArraysImpl');
+expect(source.includes('WEBGL_QUAD_INDEX_BIND_STICKY_V1'), 'sticky quad index binding marker missing');
+expect((source.match(/glCtx\.bindBuffer\(glCtx\.ELEMENT_ARRAY_BUFFER/g) || []).length === 1,
+  'runtime must have exactly one ELEMENT_ARRAY_BUFFER bind site');
+expect(!drawArrays.includes('bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER'),
+  'drawArraysImpl must not re-bind the sticky quad index buffer');
 
 const calls = [];
 let uploadedIndices = null;
@@ -102,12 +107,16 @@ expect(context.presentationStats.quadQuads === 2, 'quad count telemetry missing'
 expect(context.presentationStats.quadDrawCallsSaved === 1, 'two quads should save one draw call');
 expect(context.presentationStats.webglDrawCalls === 1, 'two quads should count as one WebGL draw');
 expect(context.presentationStats.quadIndexBufferUploads === 1, 'first batch should upload one cached index buffer');
+expect(calls.filter(call => call[0] === 'bindBuffer' && call[1] === glCtx.ELEMENT_ARRAY_BUFFER).length === 1,
+  'first quad batch should bind the element buffer exactly once during capacity allocation');
 
 const uploadsAfterFirst = calls.filter(call => call[0] === 'bufferData').length;
 context.drawArraysImpl(7, 0, 12);
 expect(calls.filter(call => call[0] === 'drawElements').length === 2, 'three quads should add one indexed draw');
 expect(calls.filter(call => call[0] === 'bufferData').length === uploadsAfterFirst,
   'smaller follow-up batch should reuse geometric index capacity');
+expect(calls.filter(call => call[0] === 'bindBuffer' && call[1] === glCtx.ELEMENT_ARRAY_BUFFER).length === 1,
+  'follow-up quad batch must reuse the already-bound element buffer');
 expect(context.presentationStats.quadDrawCallsSaved === 3,
   `expected cumulative three saved calls, got ${context.presentationStats.quadDrawCallsSaved}`);
 
