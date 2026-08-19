@@ -27,6 +27,10 @@ REQUIRED_FILES = {
     "launch.html",
     "starsectorquick-sw.js",
     "build/final/wasm-modules/lwjgl.js",
+    "data/config/settings.json",
+    "resources/settings.json",
+    "starsector/starsector/data/config/settings.json",
+    "starsector/starsector/settings.json",
     "jars/Fixer.java",
     "jars/fixer_patch.jar",
     "jars/fs.common_obf.jar",
@@ -181,6 +185,18 @@ def main() -> int:
         raise RuntimeError("LWJGL candidate is missing production preserveDrawingBuffer=false")
     if 'powerPreference: "high-performance"' not in lwjgl_js:
         raise RuntimeError("LWJGL candidate is missing high-performance WebGL context preference")
+
+    settings_expectations = {
+        "data/config/settings.json": ('"devMode":true', '"enableMemoryLeakChecking":false'),
+        "resources/settings.json": ('"devMode":true',),
+        "starsector/starsector/data/config/settings.json": ('"devMode":true', '"enableMemoryLeakChecking":false'),
+        "starsector/starsector/settings.json": ('"devMode":true',),
+    }
+    for settings_rel, markers in settings_expectations.items():
+        settings_text = (ROOT / settings_rel).read_text(encoding="utf-8-sig")
+        missing = [marker for marker in markers if marker not in settings_text]
+        if missing:
+            raise RuntimeError(f"runtime settings mismatch {settings_rel}: missing={missing}")
 
     for econ_rel in (
         "data/campaign/econ/economy.json",
