@@ -481,7 +481,13 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	vertexAttribPointerUpdates: 0,
+	vertexAttribPointerUpdatesSaved: 0,
+	vertexAttribEnableChanges: 0,
+	vertexAttribEnableChangesSaved: 0,
+	vertexBufferUploads: 0,
+	vertexUploadBytes: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -534,6 +540,43 @@ function ensureFramebufferSize()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
 }
+// LWJGL_VERTEX_ATTRIB_STATE_CACHE_V1
+// vertexAttribPointer captures the ARRAY_BUFFER binding. These three legacy
+// attributes always reuse stable WebGLBuffer objects, so unchanged pointer and
+// enable state does not need to be resent for every draw.
+var vertexAttribStateCacheEnabled = typeof window === "undefined" || window.__LWJGL_VERTEX_ATTRIB_STATE_CACHE__ !== false;
+var vertexAttribEnabledState = Object.create(null);
+var vertexAttribPointerState = Object.create(null);
+function setVertexAttribArrayEnabledCached(attributeLocation, enabled)
+{
+	var previous = vertexAttribEnabledState[attributeLocation];
+	if(vertexAttribStateCacheEnabled && previous === enabled)
+	{
+		presentationStats.vertexAttribEnableChangesSaved++;
+		return;
+	}
+	if(enabled) glCtx.enableVertexAttribArray(attributeLocation);
+	else glCtx.disableVertexAttribArray(attributeLocation);
+	vertexAttribEnabledState[attributeLocation] = enabled;
+	presentationStats.vertexAttribEnableChanges++;
+}
+function setVertexAttribPointerCached(attributeLocation, buffer, size, type, normalized, stride, offset)
+{
+	var previous = vertexAttribPointerState[attributeLocation];
+	if(vertexAttribStateCacheEnabled && previous && previous.buffer === buffer &&
+		previous.size === size && previous.type === type && previous.normalized === normalized &&
+		previous.stride === stride && previous.offset === offset)
+	{
+		presentationStats.vertexAttribPointerUpdatesSaved++;
+		return;
+	}
+	glCtx.vertexAttribPointer(attributeLocation, size, type, normalized, stride, offset);
+	vertexAttribPointerState[attributeLocation] = {
+		buffer: buffer, size: size, type: type, normalized: normalized, stride: stride, offset: offset
+	};
+	presentationStats.vertexAttribPointerUpdates++;
+}
+
 // LWJGL_CLIENT_ARRAY_COMPAT_V1
 // Desktop OpenGL permits tightly-packed stride=0 and client array scalar types
 // that WebGL2 does not accept in vertexAttribPointer(). Normalize both here.
@@ -658,7 +701,9 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	}
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
-	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
+	presentationStats.vertexBufferUploads++;
+	presentationStats.vertexUploadBytes += Number(uploadBuf.byteLength || 0);
+	setVertexAttribPointerCached(attributeLocation, buffer, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -669,12 +714,12 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 			return false;
 		}
 	}
-	glCtx.enableVertexAttribArray(attributeLocation);
+	setVertexAttribArrayEnabledCached(attributeLocation, true);
 	return true;
 }
 function applyCurrentColorAttrib()
 {
-	glCtx.disableVertexAttribArray(colorLocation);
+	setVertexAttribArrayEnabledCached(colorLocation, false);
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -709,7 +754,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		}
 		else
 		{
-			glCtx.disableVertexAttribArray(attributeLocation);
+			setVertexAttribArrayEnabledCached(attributeLocation, false);
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -2336,12 +2381,14 @@ function uploadImmediateInterleaved(vertexCount)
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
-	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
-	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
-	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
-	glCtx.enableVertexAttribArray(texCoord);
+	presentationStats.vertexBufferUploads++;
+	presentationStats.vertexUploadBytes += Number(data.byteLength || 0);
+	setVertexAttribPointerCached(vertexPosition, vertexBuffer, 3, glCtx.FLOAT, false, stride, 0);
+	setVertexAttribArrayEnabledCached(vertexPosition, true);
+	setVertexAttribPointerCached(colorLocation, vertexBuffer, 4, glCtx.FLOAT, false, stride, 3 * 4);
+	setVertexAttribArrayEnabledCached(colorLocation, true);
+	setVertexAttribPointerCached(texCoord, vertexBuffer, 2, glCtx.FLOAT, false, stride, 7 * 4);
+	setVertexAttribArrayEnabledCached(texCoord, true);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2372,7 +2419,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
 		else
 		{
-			glCtx.disableVertexAttribArray(texCoord);
+			setVertexAttribArrayEnabledCached(texCoord, false);
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}
