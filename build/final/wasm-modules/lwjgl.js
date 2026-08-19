@@ -289,22 +289,88 @@ var alphaTestWarnings = new Set();
 var texture2DEnabled = false;
 var attribStateStack = [];
 var attribStateWarnings = new Set();
+// WEBGL_CORE_RENDER_STATE_CACHE_V1
+// Track only WebGL states with deterministic defaults and bridge-owned mutations.
+// Disabling this cache preserves the prior raw WebGL calls and state queries.
+var coreRenderStateCacheEnabled = typeof window === "undefined" || window.__LWJGL_CORE_RENDER_STATE_CACHE__ !== false;
+var coreEnableState = Object.create(null);
+coreEnableState[glCtx.BLEND] = false;
+coreEnableState[glCtx.CULL_FACE] = false;
+coreEnableState[glCtx.DEPTH_TEST] = false;
+coreEnableState[glCtx.SCISSOR_TEST] = false;
+coreEnableState[glCtx.STENCIL_TEST] = false;
+var coreColorState = {
+	blendSrcRgb: glCtx.ONE, blendDstRgb: glCtx.ZERO,
+	blendSrcAlpha: glCtx.ONE, blendDstAlpha: glCtx.ZERO,
+	colorMask: [true, true, true, true], clearColor: [0, 0, 0, 0]
+};
+var coreDepthState = { writeMask: true, func: glCtx.LESS, clearValue: 1 };
+var alphaUniformState = { enabled: null, func: null, ref: null };
+var uploadedTexture2DEnabled = null;
+function hasCoreEnableState(cap)
+{
+	return Object.prototype.hasOwnProperty.call(coreEnableState, cap);
+}
+function noteCoreStateCall(changed)
+{
+	presentationStats.coreStateCalls++;
+	if(changed) presentationStats.coreStateChanges++;
+	else presentationStats.coreStateSkipped++;
+}
 function syncAlphaTestUniforms()
 {
-	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
-	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
-	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	var enabled = alphaTestState.enabled ? 1 : 0;
+	if(!coreRenderStateCacheEnabled || alphaUniformState.enabled !== enabled)
+	{
+		glCtx.uniform1f(alphaTestEnabledLocation, enabled);
+		alphaUniformState.enabled = enabled;
+		presentationStats.alphaUniformUploads++;
+	}
+	else presentationStats.alphaUniformUploadsSaved++;
+	if(!coreRenderStateCacheEnabled || alphaUniformState.func !== alphaTestState.func)
+	{
+		glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+		alphaUniformState.func = alphaTestState.func;
+		presentationStats.alphaUniformUploads++;
+	}
+	else presentationStats.alphaUniformUploadsSaved++;
+	if(!coreRenderStateCacheEnabled || alphaUniformState.ref !== alphaTestState.ref)
+	{
+		glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+		alphaUniformState.ref = alphaTestState.ref;
+		presentationStats.alphaUniformUploads++;
+	}
+	else presentationStats.alphaUniformUploadsSaved++;
 }
 function setTexture2DEnabled(enabled)
 {
-	texture2DEnabled = !!enabled;
-	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
+	enabled = !!enabled;
+	texture2DEnabled = enabled;
+	if(coreRenderStateCacheEnabled && uploadedTexture2DEnabled === enabled)
+	{
+		presentationStats.textureMaskUniformUploadsSaved++;
+		return;
+	}
+	glCtx.uniform1f(texMaskLocation, enabled ? 1 : 0);
+	uploadedTexture2DEnabled = enabled;
+	presentationStats.textureMaskUniformUploads++;
 }
 function getCompatEnableState(cap)
 {
 	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
 	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
+	if(coreRenderStateCacheEnabled && hasCoreEnableState(cap)) return coreEnableState[cap];
 	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
+}
+function setCoreEnableState(cap, enabled)
+{
+	enabled = !!enabled;
+	var tracked = hasCoreEnableState(cap);
+	var same = tracked && coreEnableState[cap] === enabled;
+	if(tracked) coreEnableState[cap] = enabled;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
+	noteCoreStateCall(true);
 }
 function setCompatEnableState(cap, enabled)
 {
@@ -319,7 +385,64 @@ function setCompatEnableState(cap, enabled)
 		setTexture2DEnabled(enabled);
 		return;
 	}
-	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
+	setCoreEnableState(cap, enabled);
+}
+function setCoreBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha)
+{
+	var same = coreColorState.blendSrcRgb === srcRgb && coreColorState.blendDstRgb === dstRgb &&
+		coreColorState.blendSrcAlpha === srcAlpha && coreColorState.blendDstAlpha === dstAlpha;
+	coreColorState.blendSrcRgb = srcRgb; coreColorState.blendDstRgb = dstRgb;
+	coreColorState.blendSrcAlpha = srcAlpha; coreColorState.blendDstAlpha = dstAlpha;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
+	noteCoreStateCall(true);
+}
+function setCoreBlendFunc(src, dst)
+{
+	var same = coreColorState.blendSrcRgb === src && coreColorState.blendDstRgb === dst &&
+		coreColorState.blendSrcAlpha === src && coreColorState.blendDstAlpha === dst;
+	coreColorState.blendSrcRgb = coreColorState.blendSrcAlpha = src;
+	coreColorState.blendDstRgb = coreColorState.blendDstAlpha = dst;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.blendFunc(src, dst);
+	noteCoreStateCall(true);
+}
+function setCoreColorMask(r, g, b, a)
+{
+	var v = coreColorState.colorMask;
+	var same = v[0] === !!r && v[1] === !!g && v[2] === !!b && v[3] === !!a;
+	v[0]=!!r; v[1]=!!g; v[2]=!!b; v[3]=!!a;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.colorMask(r, g, b, a);
+	noteCoreStateCall(true);
+}
+function setCoreClearColor(r, g, b, a)
+{
+	var v = coreColorState.clearColor;
+	var nr=Number(r), ng=Number(g), nb=Number(b), na=Number(a);
+	var same = v[0] === nr && v[1] === ng && v[2] === nb && v[3] === na;
+	v[0]=nr; v[1]=ng; v[2]=nb; v[3]=na;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.clearColor(r, g, b, a);
+	noteCoreStateCall(true);
+}
+function setCoreDepthMask(enabled)
+{
+	enabled=!!enabled; var same=coreDepthState.writeMask===enabled; coreDepthState.writeMask=enabled;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.depthMask(enabled); noteCoreStateCall(true);
+}
+function setCoreDepthFunc(func)
+{
+	var same=coreDepthState.func===func; coreDepthState.func=func;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.depthFunc(func); noteCoreStateCall(true);
+}
+function setCoreClearDepth(value)
+{
+	value=Number(value); var same=coreDepthState.clearValue===value; coreDepthState.clearValue=value;
+	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	glCtx.clearDepth(value); noteCoreStateCall(true);
 }
 function snapshotAttribState(mask)
 {
@@ -329,26 +452,33 @@ function snapshotAttribState(mask)
 		state.enable = {};
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
 			state.enable[cap] = getCompatEnableState(cap);
+		if(coreRenderStateCacheEnabled) presentationStats.coreStateSnapshotQueriesAvoided += 5;
 	}
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
-		state.color = {
-			blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
-			blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
-			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
-			blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
-			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
-			clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
-		};
+		if(coreRenderStateCacheEnabled)
+		{
+			state.color = { blendSrcRgb: coreColorState.blendSrcRgb, blendDstRgb: coreColorState.blendDstRgb,
+				blendSrcAlpha: coreColorState.blendSrcAlpha, blendDstAlpha: coreColorState.blendDstAlpha,
+				colorMask: coreColorState.colorMask.slice(), clearColor: coreColorState.clearColor.slice() };
+			presentationStats.coreStateSnapshotQueriesAvoided += 6;
+		}
+		else
+		{
+			state.color = { blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB), blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+				blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA), blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+				colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)), clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)) };
+		}
 		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
 	}
 	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
 	{
-		state.depth = {
-			writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
-			func: glCtx.getParameter(glCtx.DEPTH_FUNC),
-			clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE)
-		};
+		if(coreRenderStateCacheEnabled)
+		{
+			state.depth = { writeMask: coreDepthState.writeMask, func: coreDepthState.func, clearValue: coreDepthState.clearValue };
+			presentationStats.coreStateSnapshotQueriesAvoided += 3;
+		}
+		else state.depth = { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK), func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
 	}
 	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
 	{
@@ -376,15 +506,15 @@ function restoreAttribState(state)
 	}
 	if(state.color)
 	{
-		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
-		glCtx.colorMask(...state.color.colorMask);
-		glCtx.clearColor(...state.color.clearColor);
+		setCoreBlendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
+		setCoreColorMask(...state.color.colorMask);
+		setCoreClearColor(...state.color.clearColor);
 	}
 	if(state.depth)
 	{
-		glCtx.depthMask(state.depth.writeMask);
-		glCtx.depthFunc(state.depth.func);
-		glCtx.clearDepth(state.depth.clearValue);
+		setCoreDepthMask(state.depth.writeMask);
+		setCoreDepthFunc(state.depth.func);
+		setCoreClearDepth(state.depth.clearValue);
 	}
 	if(state.viewport)
 	{
@@ -487,7 +617,15 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	coreStateCalls: 0,
+	coreStateChanges: 0,
+	coreStateSkipped: 0,
+	coreStateSnapshotQueriesAvoided: 0,
+	alphaUniformUploads: 0,
+	alphaUniformUploadsSaved: 0,
+	textureMaskUniformUploads: 0,
+	textureMaskUniformUploadsSaved: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -1629,7 +1767,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval()
 function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 {
 	checkNoList(curList);
-	return glCtx.clearColor(r, g, b, a);
+	return setCoreClearColor(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
@@ -1778,7 +1916,7 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.disable(a);
+		setCoreEnableState(a, false);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = false;
@@ -1797,7 +1935,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.enable(a);
+		setCoreEnableState(a, true);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = true;
@@ -2048,14 +2186,14 @@ function Java_org_lwjgl_opengl_GL11_nglClearDepth(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglClearDepth);
-	glCtx.clearDepth(a);
+	setCoreClearDepth(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
-	glCtx.depthFunc(a);
+	setCoreDepthFunc(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
@@ -2124,21 +2262,21 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
-	glCtx.depthMask(a);
+	setCoreDepthMask(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
-	glCtx.blendFunc(sfactor, dfactor);
+	setCoreBlendFunc(sfactor, dfactor);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
-	glCtx.colorMask(r, g, b, a);
+	setCoreColorMask(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
