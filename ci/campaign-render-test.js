@@ -659,7 +659,12 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           flushLogs();
         } else if (!deepGameplay) {
           await page.keyboard.press('Escape');
-          await sleep(900);
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 10000, pollMs: 500 });
+          controlResult.returnedToCampaign = returned.ready && !fatalSeenAt;
+          controlResult.returnReadyMs = returned.readyMs;
+          controlResult.failed = controlResult.failed || !controlResult.returnedToCampaign;
+          logs.push(`[ui-probe] return ${name} returned=${controlResult.returnedToCampaign} readyMs=${controlResult.returnReadyMs ?? 'n/a'} failed=${controlResult.failed}`);
+          flushLogs();
         }
         if (controlResult.failed) break;
       }
@@ -790,7 +795,12 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           shortcutResult.failed = shortcutResult.failed || !returned.ready;
         } else if (!deepGameplay) {
           await page.keyboard.press('Escape');
-          await sleep(900);
+          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 10000, pollMs: 500 });
+          shortcutResult.returnedToCampaign = returned.ready && !fatalSeenAt;
+          shortcutResult.returnReadyMs = returned.readyMs;
+          shortcutResult.failed = shortcutResult.failed || !shortcutResult.returnedToCampaign;
+          logs.push(`[shortcut-probe] return ${name} returned=${shortcutResult.returnedToCampaign} readyMs=${shortcutResult.returnReadyMs ?? 'n/a'} failed=${shortcutResult.failed}`);
+          flushLogs();
         }
         if (shortcutResult.failed) break;
       }
