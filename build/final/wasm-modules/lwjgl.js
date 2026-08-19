@@ -492,7 +492,13 @@ var presentationStats = {
 	clientArrayUploadBytes: 0,
 	immediateEnds: 0,
 	immediateAttributeUploads: 0,
-	immediateUploadBytes: 0
+	immediateUploadBytes: 0,
+	immediateSingleQuadEnds: 0,
+	immediateMultiQuadEnds: 0,
+	immediateTriangleEnds: 0,
+	immediateLineEnds: 0,
+	immediateOtherEnds: 0,
+	immediateVertices: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -2433,6 +2439,11 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
 	presentationStats.immediateEnds++;
+	presentationStats.immediateVertices += vertexCount;
+	if(immediateModeData.mode == 7/*QUADS*/) { if(vertexCount == 4) presentationStats.immediateSingleQuadEnds++; else presentationStats.immediateMultiQuadEnds++; }
+	else if(immediateModeData.mode == 4/*TRIANGLES*/ || immediateModeData.mode == 5/*TRIANGLE_STRIP*/ || immediateModeData.mode == 6/*TRIANGLE_FAN*/) presentationStats.immediateTriangleEnds++;
+	else if(immediateModeData.mode == 1/*LINES*/ || immediateModeData.mode == 2/*LINE_LOOP*/ || immediateModeData.mode == 3/*LINE_STRIP*/) presentationStats.immediateLineEnds++;
+	else presentationStats.immediateOtherEnds++;
 	var immediateUploads = 2;
 	var immediateBytes = (immediateModeData.vertexPos + vertexCount * 4) * 4;
 	if(immediateModeData.texCoordPos >= vertexCount * 2)
