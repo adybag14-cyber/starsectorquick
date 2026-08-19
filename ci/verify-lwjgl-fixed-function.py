@@ -76,10 +76,24 @@ def main() -> int:
     copy_tex_image = function_block(text, "Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D")
     quad_indices = function_block(text, "ensureQuadIndexCapacity")
     draw_arrays = function_block(text, "drawArraysImpl")
+    core_state_cache = "WEBGL_CORE_RENDER_STATE_CACHE_V1" in text
+    if core_state_cache:
+        set_core_enable = function_block(text, "setCoreEnableState")
+        set_core_blend_separate = function_block(text, "setCoreBlendFuncSeparate")
+        set_core_color_mask = function_block(text, "setCoreColorMask")
+        set_core_clear_color = function_block(text, "setCoreClearColor")
+        set_core_depth_mask = function_block(text, "setCoreDepthMask")
+        set_core_depth_func = function_block(text, "setCoreDepthFunc")
+        set_core_clear_depth = function_block(text, "setCoreClearDepth")
 
     require(enable, "setTexture2DEnabled(true);", "glEnable")
     reject(enable, "uniform1f(texMaskLocation", "glEnable")
     require(disable, "setTexture2DEnabled(false);", "glDisable")
+    if core_state_cache:
+        require(enable, "setCoreEnableState(a, true);", "cached glEnable")
+        require(disable, "setCoreEnableState(a, false);", "cached glDisable")
+        require(set_core_enable, "glCtx.enable(cap)", "core enable helper")
+        require(set_core_enable, "glCtx.disable(cap)", "core disable helper")
     require(is_enabled, "return getCompatEnableState(cap);", "glIsEnabled")
     require(push, "attribStateStack.push(snapshotAttribState(mask));", "glPushAttrib")
     require(pop, "restoreAttribState(attribStateStack.pop());", "glPopAttrib")
@@ -118,15 +132,34 @@ def main() -> int:
     ):
         require(snapshot, mask, "attribute snapshot")
 
-    for token in (
-        "glCtx.blendFuncSeparate",
-        "glCtx.colorMask",
-        "glCtx.depthMask",
-        "glCtx.depthFunc",
-        "glCtx.viewport",
-        "glCtx.depthRange",
-    ):
-        require(restore, token, "attribute restoration")
+    if core_state_cache:
+        for token in (
+            "setCoreBlendFuncSeparate",
+            "setCoreColorMask",
+            "setCoreClearColor",
+            "setCoreDepthMask",
+            "setCoreDepthFunc",
+            "setCoreClearDepth",
+            "glCtx.viewport",
+            "glCtx.depthRange",
+        ):
+            require(restore, token, "cached attribute restoration")
+        require(set_core_blend_separate, "glCtx.blendFuncSeparate", "core blend helper")
+        require(set_core_color_mask, "glCtx.colorMask", "core color-mask helper")
+        require(set_core_clear_color, "glCtx.clearColor", "core clear-color helper")
+        require(set_core_depth_mask, "glCtx.depthMask", "core depth-mask helper")
+        require(set_core_depth_func, "glCtx.depthFunc", "core depth-func helper")
+        require(set_core_clear_depth, "glCtx.clearDepth", "core clear-depth helper")
+    else:
+        for token in (
+            "glCtx.blendFuncSeparate",
+            "glCtx.colorMask",
+            "glCtx.depthMask",
+            "glCtx.depthFunc",
+            "glCtx.viewport",
+            "glCtx.depthRange",
+        ):
+            require(restore, token, "attribute restoration")
 
     for export in (
         "Java_org_lwjgl_opengl_GL11_nglIsEnabled,",
