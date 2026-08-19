@@ -487,8 +487,50 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	clientArrayBufferAllocations: 0,
+	clientArrayBufferSubDataCalls: 0,
+	clientArrayBufferReuses: 0,
+	clientArrayLegacyBufferDataCalls: 0,
+	clientArrayUploadBytes: 0,
+	clientArrayBufferCapacityBytes: 0
 };
+// WEBGL_CLIENT_BUFFER_STREAMING_V1
+// The three client-array buffers are reused for every legacy draw. Grow their
+// backing stores geometrically and update bytes in-place instead of replacing
+// WebGL buffer storage on every vertex/color/texcoord upload. A kill switch
+// preserves the exact previous bufferData(BufferSource, STATIC_DRAW) behavior.
+var clientBufferStreamingEnabled = typeof window === "undefined" || window.__LWJGL_CLIENT_BUFFER_STREAMING__ !== false;
+var clientArrayBufferCapacities = new Map();
+function uploadClientArrayBuffer(buffer, uploadBuf)
+{
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
+	var byteLength = uploadBuf && Number.isFinite(uploadBuf.byteLength) ? uploadBuf.byteLength : 0;
+	presentationStats.clientArrayUploadBytes += byteLength;
+	if(!clientBufferStreamingEnabled)
+	{
+		glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+		presentationStats.clientArrayLegacyBufferDataCalls++;
+		return;
+	}
+	var capacity = clientArrayBufferCapacities.get(buffer) || 0;
+	if(byteLength > capacity)
+	{
+		var nextCapacity = Math.max(256, capacity || 256);
+		while(nextCapacity < byteLength)
+			nextCapacity *= 2;
+		glCtx.bufferData(glCtx.ARRAY_BUFFER, nextCapacity, glCtx.STREAM_DRAW);
+		clientArrayBufferCapacities.set(buffer, nextCapacity);
+		presentationStats.clientArrayBufferCapacityBytes += nextCapacity - capacity;
+		presentationStats.clientArrayBufferAllocations++;
+	}
+	else
+	{
+		presentationStats.clientArrayBufferReuses++;
+	}
+	glCtx.bufferSubData(glCtx.ARRAY_BUFFER, 0, uploadBuf);
+	presentationStats.clientArrayBufferSubDataCalls++;
+}
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
 function presentationPercentile(sorted, fraction)
@@ -708,8 +750,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		uploadStride = 0;
 		normalized = false;
 	}
-	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
+	uploadClientArrayBuffer(buffer, uploadBuf);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
 	{
