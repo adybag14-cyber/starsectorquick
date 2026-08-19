@@ -741,9 +741,20 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
         }));
         const deliveredDelta = Number(after.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
+        const enqueuedDelta = Number(after.directKeyboardEnqueued || 0) - Number(before.directKeyboardEnqueued || 0);
+        const droppedDelta = Number(after.directKeyboardDropped || 0) - Number(before.directKeyboardDropped || 0);
         const globalDelta = Number(after.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
+        const queueDepthBefore = Number(before.keyboardQueueDepth || 0);
+        const queueDepthAfter = Number(after.keyboardQueueDepth || 0);
+        const downCountBefore = Number(before.keyboardDownCount || 0);
+        const downCountAfter = Number(after.keyboardDownCount || 0);
         const semanticOpened = !deepGameplay || Boolean(transition?.opened);
-        const directInputOk = deepGameplay ? deliveredDelta >= 1 : deliveredDelta >= 2;
+        // Opening a panel can change when Starsector drains Keyboard.next(). Dev mode
+        // exposes that timing: keydown is consumed immediately while keyup may remain
+        // queued. Validate the bridge at the enqueue/state boundary instead of requiring
+        // both events to be consumed within an arbitrary 1.6 s window.
+        const queueIntegrityOk = enqueuedDelta >= 2 && droppedDelta === 0 && downCountAfter === downCountBefore;
+        const directInputOk = deliveredDelta >= 1 && queueIntegrityOk;
         const failed = Boolean(fatalSeenAt) || runtime.runtime?.state === 'fatal'
           || ['main-returned', 'failed', 'fatal', 'unresponsive'].includes(runtime.bodyState)
           || !directInputOk || globalDelta < 2 || !semanticOpened;
@@ -753,7 +764,16 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           expectedTab,
           activeBefore,
           deliveredDelta,
+          enqueuedDelta,
+          droppedDelta,
           globalDelta,
+          queueDepthBefore,
+          queueDepthAfter,
+          downCountBefore,
+          downCountAfter,
+          keyboardLatencyAvgMs: Number(after.directKeyboardLatencyAvgMs || 0),
+          keyboardLatencyMaxMs: Number(after.directKeyboardLatencyMaxMs || 0),
+          directInputOk,
           semanticOpened,
           tabReady: Boolean(transition?.readyMatched),
           listenerReadyMs: transition?.listenerReadyMs ?? null,
@@ -762,7 +782,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           failed,
         };
         shortcutResults.push(shortcutResult);
-        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
+        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} enqueuedDelta=${enqueuedDelta} droppedDelta=${droppedDelta} globalDelta=${globalDelta} queue=${queueDepthBefore}->${queueDepthAfter} down=${downCountBefore}->${downCountAfter} latencyAvgMs=${shortcutResult.keyboardLatencyAvgMs.toFixed(2)} latencyMaxMs=${shortcutResult.keyboardLatencyMaxMs.toFixed(2)} opened=${semanticOpened} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
 
         if (deepGameplay && transition?.readyMatched) {
@@ -788,7 +808,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   ).catch(() => ({}));
   const shortcutsResponsive = expectedState !== 'campaign' || Boolean(
     shortcutResults.length === shortcutKeys.length
-    && shortcutResults.every(item => !item.failed && item.deliveredDelta >= (deepGameplay ? 1 : 2) && item.globalDelta >= 2)
+    && shortcutResults.every(item => !item.failed && item.directInputOk && item.globalDelta >= 2)
     && Number(shortcutAfter.keyboardGlobalCaptures || 0) > Number(shortcutBefore.keyboardGlobalCaptures || 0)
   );
 
