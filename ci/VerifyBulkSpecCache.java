@@ -40,6 +40,7 @@ public final class VerifyBulkSpecCache {
                 Files.readAllBytes(Paths.get(args[0])), StandardCharsets.UTF_8));
         JSONObject extensions = payload.getJSONObject("extensions");
         int expectedVariants = extensions.getInt(".variant");
+        int expectedSkins = extensions.getInt(".skin");
         int expectedSystems = extensions.getInt(".system");
         int expectedSkills = extensions.getInt(".skill");
         if (expectedSystems != 63 || expectedSkills != 70) {
@@ -51,6 +52,12 @@ public final class VerifyBulkSpecCache {
         if (direct == null || direct.size() != expectedVariants || !direct.contains("data/variants/lasher_Standard.variant")) {
             throw new AssertionError("direct variant manifest mismatch expected=" + expectedVariants
                     + " actual=" + (direct == null ? -1 : direct.size()));
+        }
+        List<String> directSkins = BrowserSpecCache.directSkinPathsOrNull();
+        if (directSkins == null || directSkins.size() != expectedSkins
+                || !directSkins.contains("data/hulls/skins/afflictor_d_pirates.skin")) {
+            throw new AssertionError("direct skin manifest mismatch expected=" + expectedSkins
+                    + " actual=" + (directSkins == null ? -1 : directSkins.size()));
         }
         List<String> expanded = BrowserSpecCache.expandVariantPaths(rootOnly);
         if (expanded == rootOnly || expanded.size() != expectedVariants) {
@@ -70,6 +77,7 @@ public final class VerifyBulkSpecCache {
         // Disabling the browser cache must restore Starsector's original discovery inputs exactly.
         System.setProperty("starsector.browserBulkSpecCache", "false");
         if (BrowserSpecCache.directVariantPathsOrNull() != null
+                || BrowserSpecCache.directSkinPathsOrNull() != null
                 || BrowserSpecCache.expandVariantPaths(rootOnly) != rootOnly
                 || BrowserSpecCache.filterVariantDirectories(directories) != directories) {
             throw new AssertionError("disabled variant cache did not preserve original discovery lists");
@@ -78,17 +86,20 @@ public final class VerifyBulkSpecCache {
 
         if (BrowserSpecCache.getFileCount() < 1000
                 || BrowserSpecCache.getHitCount() != 4L
-                || BrowserSpecCache.getVariantPathCount() != expectedVariants) {
+                || BrowserSpecCache.getVariantPathCount() != expectedVariants
+                || BrowserSpecCache.getSkinPathCount() != expectedSkins) {
             throw new AssertionError(
                     "unexpected cache state files=" + BrowserSpecCache.getFileCount()
                             + " hits=" + BrowserSpecCache.getHitCount()
                             + " variants=" + BrowserSpecCache.getVariantPathCount()
+                            + " skins=" + BrowserSpecCache.getSkinPathCount()
                             + " systems=" + expectedSystems
                             + " skills=" + expectedSkills);
         }
         System.out.println(
                 "VerifyBulkSpecCache: OK files=" + BrowserSpecCache.getFileCount()
                         + " variants=" + BrowserSpecCache.getVariantPathCount()
+                        + " skins=" + BrowserSpecCache.getSkinPathCount()
                         + " systems=" + expectedSystems
                         + " skills=" + expectedSkills
                         + " hits=" + BrowserSpecCache.getHitCount()
