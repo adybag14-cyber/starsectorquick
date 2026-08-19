@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "full-stock-campaign",
-    "sourceSha": "3a3008ec9dd0600f48da4b23945ac58ec8ce113c",
-    "workflowRunId": "32157301067",
-    "generatedAt": "2026-08-18T15:57:15.754185+00:00",
+    "sourceSha": "546967504345074d658e0f86fb4426fbe9d6266f",
+    "workflowRunId": "32244649218",
+    "generatedAt": "2026-08-19T10:52:57.187863+00:00",
     "overlayFiles": 874,
     "dataPack": {
       "version": 1,
@@ -607,12 +607,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "8c8050bfcbee9f90ab55fa68c3cd36046b431e62f9d46287b7f6f49bb765afeb"
+      "sha256": "41bbcfa54bf4ff6b9f77c3f041d3e3c655a452acc97c9bcd01dff6dc56f8e154"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 253149,
-      "sha256": "3744d90ff5e32077e805c6d26b65efd5e8a3209fa48366088bf0429a2c60119b"
+      "sha256": "6d04ed10da04a325b08c5736cef1b52e8f6444ee722568bb1f5f790286748cae"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -622,7 +622,7 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "e6716e45715b69383969221172f2b8ac6fef4006749f10425e9b708af192fc5c"
+      "sha256": "6f1657d034410e504f13de14fc77d5d6892e104bf4e015c831ad22afec6de01d"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -636,8 +636,8 @@
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6028969,
-      "sha256": "f8307d358930bc5addf05adb444c59f22bfd373027762071bf5d0356d0dc6301"
+      "bytes": 6029230,
+      "sha256": "db920f3345f0ff0b556c3fd63e40b499adc251cf0a6584761923248edb3f1b7b"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
