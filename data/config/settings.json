@@ -7,7 +7,7 @@
 	
 	"vsync":true,
 	"fps":60,
-	"devMode":true,
+	"devMode":false,
 	"godMode":false, # 100x damage dealt, no damage taken
 	"playtestingMode":false, # turns off some debug flags while in dev mode, doesn't do anything if not in dev mode.
 	
