@@ -3,7 +3,7 @@ import json, math, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'matrix', 'attrib', 'shadow', 'streaming', 'baseline-b']
+ORDER = ['baseline-a', 'stream-hint', 'texture', 'leak-off', 'matrix-inplace', 'baseline-b']
 METRICS = ['fps','frame_ms','p50_ms','p95_ms','p99_ms','max_ms','jitter_stddev_ms','jitter_p95_ms','shortcut_avg_ms','shortcut_p95_ms','shortcut_max_ms','dropped_estimate']
 
 def pct(values, q):
@@ -33,7 +33,11 @@ def parse(name):
           attrib_enable_changes=gp.get('vertexAttribEnableChangeDelta'), attrib_enable_saved=gp.get('vertexAttribEnableSavedDelta'),
           vertex_buffer_uploads=gp.get('vertexBufferUploadDelta'), vertex_upload_bytes=gp.get('vertexUploadBytesDelta'),
           attrib_pushes=gp.get('attribPushDelta'), attrib_pops=gp.get('attribPopDelta'),
-          attrib_queries_avoided=gp.get('attribSnapshotQueriesAvoidedDelta'), attrib_queries_executed=gp.get('attribSnapshotQueriesExecutedDelta'))
+          attrib_queries_avoided=gp.get('attribSnapshotQueriesAvoidedDelta'), attrib_queries_executed=gp.get('attribSnapshotQueriesExecutedDelta'),
+          texture_bind_calls=gp.get('textureBindCallsDelta'), texture_bind_changes=gp.get('textureBindChangesDelta'),
+          texture_bind_skipped=gp.get('textureBindSkippedDelta'), texture_bind_invalidations=gp.get('textureBindInvalidationsDelta'),
+          matrix_inplace_ops=gp.get('matrixInPlaceOpsDelta'), matrix_temp_alloc_avoided=gp.get('matrixTempAllocationsAvoidedDelta'),
+          matrix_legacy_ops=gp.get('matrixLegacyOpsDelta'))
         shortcuts=[float(x['listenerReadyMs']) for x in (data.get('shortcutResults') or []) if x.get('listenerReadyMs') is not None]
         if shortcuts:
             row.update(shortcut_avg_ms=round(statistics.fmean(shortcuts),2), shortcut_p95_ms=pct(shortcuts,.95), shortcut_max_ms=max(shortcuts), shortcut_count=len(shortcuts))
@@ -74,13 +78,13 @@ def main():
         world='-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
         lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
     lines += ['', 'Drift-adjusted candidate deltas:']
-    for name in ['matrix','attrib','shadow','streaming']:
+    for name in ['stream-hint','texture','leak-off','matrix-inplace']:
         r=by[name]; parts=[]
         for m in ['fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms','shortcut_avg_ms']:
             v=r['drift_adjusted'].get(m)
             parts.append(f"{m}=n/a" if v is None else f"{m}={v['delta']:+.2f} ({v['pct']:+.2f}%)")
         lines.append(f"- {name}: "+', '.join(parts))
-        lines.append(f"  counters: matrix={r.get('matrix_uploads','-')}/{r.get('matrix_saved','-')} attribPtr={r.get('attrib_pointer_updates','-')}/{r.get('attrib_pointer_saved','-')} attribEnable={r.get('attrib_enable_changes','-')}/{r.get('attrib_enable_saved','-')} push/queryAvoided={r.get('attrib_pushes','-')}/{r.get('attrib_queries_avoided','-')}")
+        lines.append(f"  counters: texture={r.get('texture_bind_calls','-')}calls/{r.get('texture_bind_changes','-')}changes/{r.get('texture_bind_skipped','-')}skipped/{r.get('texture_bind_invalidations','-')}invalidations matrixInPlace={r.get('matrix_inplace_ops','-')} ops/{r.get('matrix_temp_alloc_avoided','-')} tempAllocAvoided legacyMatrix={r.get('matrix_legacy_ops','-')}")
     (ROOT/'summary.md').write_text('\n'.join(lines)+'\n',encoding='utf-8'); print('\n'.join(lines))
     for name in ['baseline-a','baseline-b']:
         r=by[name]
