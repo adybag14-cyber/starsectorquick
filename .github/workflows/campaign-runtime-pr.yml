@@ -185,7 +185,7 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/perf/direct-skin-manifest-ui-predecode
-      - name: Interleaved immediate uploads
+      - name: Dev mode without leak scanner
         run: bash ci/run-frame-perf-ab-variant.sh dev-noleak origin/perf/devmode-no-leak-no-pacer
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/perf/direct-skin-manifest-ui-predecode
