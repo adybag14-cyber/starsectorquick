@@ -147,6 +147,7 @@ python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-keyboard.javap \
   .ci-build/bridge-runtime-mouse.javap \
   build/final/wasm-modules/lwjgl.js
+python3 ci/verify-direct-input-noop-poll.py .ci-build/bridge-runtime-display.javap build/final/wasm-modules/lwjgl.js
 
 # Keep Keyboard.getKeyName/getKeyIndex byte-for-byte behavior aligned with the
 # stock LWJGL 2 table. Starsector renders these names directly in campaign HUD
