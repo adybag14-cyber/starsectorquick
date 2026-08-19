@@ -22,7 +22,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/xstream-1.4.10.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -101,6 +101,8 @@ grep -q '__STARSECTOR_BROWSER_CONTINUE_RENDER_GUARD__' launch.html
 grep -q 'starsector.browserContinueRenderGuard=${browserContinueRenderGuard}' launch.html
 grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
 grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
+grep -q '__STARSECTOR_BROWSER_XSTREAM_FAST_PATH_TRACKER__' launch.html
+grep -q 'starsector.browserXstreamFastPathTracker=${browserXstreamFastPathTracker}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
@@ -312,6 +314,16 @@ java -Dstarsector.browserXstreamUnsafeReadFastPath=true \
   > .ci-build/verify-xstream/unsafe.txt
 cmp .ci-build/verify-xstream/reflection.txt .ci-build/verify-xstream/unsafe.txt
 cat .ci-build/verify-xstream/unsafe.txt
+rm -rf .ci-build/verify-fast-pathtracker
+mkdir -p .ci-build/verify-fast-pathtracker
+javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+  -d .ci-build/verify-fast-pathtracker ci/VerifyBrowserFastPathTracker.java
+java -Xverify:all -Dstarsector.browserXstreamFastPathTracker=true \
+  -cp ".ci-build/verify-fast-pathtracker:jars/fixer_patch.jar:$CP" VerifyBrowserFastPathTracker
+java -Xverify:all -Dstarsector.browserXstreamFastPathTracker=false \
+  -cp ".ci-build/verify-fast-pathtracker:jars/fixer_patch.jar:$CP" VerifyBrowserFastPathTracker
+javap -verbose -classpath jars/fixer_patch.jar \
+  com.thoughtworks.xstream.io.path.BrowserFastPathTracker | grep -q 'major version: 52'
 python3 - <<'PY'
 from pathlib import Path
 p = Path('jars/index.list')
@@ -399,6 +411,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTitleContinueRenderGuard.java \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/PatchXStreamFastPathTracker.java \
+  ci/VerifyXStreamFastPathTrackerPatch.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -450,6 +464,17 @@ mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
+jar tf jars/fixer_patch.jar | grep -qx 'com/thoughtworks/xstream/io/path/BrowserFastPathTracker.class'
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchXStreamFastPathTracker jars/xstream-1.4.10.jar .ci-build/xstream-fast-pathtracker.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyXStreamFastPathTrackerPatch .ci-build/xstream-fast-pathtracker.jar
+mv .ci-build/xstream-fast-pathtracker.jar jars/xstream-1.4.10.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchXStreamFastPathTracker jars/xstream-1.4.10.jar .ci-build/xstream-fast-pathtracker-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyXStreamFastPathTrackerPatch .ci-build/xstream-fast-pathtracker-repeat.jar
+cmp -s jars/xstream-1.4.10.jar .ci-build/xstream-fast-pathtracker-repeat.jar
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
@@ -935,6 +960,7 @@ grep -q 'BrowserJaninoNegativeCache: remember path=' "$OUT/browser.log"
 grep -q 'BrowserRuleDuplicateIndex: rules=' "$OUT/browser.log"
 grep -q 'BrowserDeferredTexture: first-deferred' "$OUT/browser.log"
 grep -q 'BrowserEarlyImagePredecode: start queued=' "$OUT/browser.log"
+grep -q 'BrowserFastPathTracker: enabled exact indexed path cache' "$OUT/browser.log"
 if [[ "${STARSECTOR_EXPECT_GAMEPLAY_PREWARM:-false}" == "true" ]]; then
   grep -q 'BrowserDeferredTexturePrewarm: scheduled' "$OUT/browser.log"
 fi
