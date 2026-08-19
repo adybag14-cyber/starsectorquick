@@ -149,11 +149,6 @@ python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-keyboard.javap \
   .ci-build/bridge-runtime-mouse.javap \
   build/final/wasm-modules/lwjgl.js
-javac -encoding UTF-8 -source 8 -target 8 \
-  -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" \
-  -d .ci-build/bridge-runtime ci/ProbeDisplaySync.java
-java -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" ProbeDisplaySync
-
 # Keep Keyboard.getKeyName/getKeyIndex byte-for-byte behavior aligned with the
 # stock LWJGL 2 table. Starsector renders these names directly in campaign HUD
 # shortcut labels; placeholder names such as unknown_33 are therefore visible UI
@@ -559,6 +554,25 @@ if [[ "$PATCH_SLEEP" == "true" ]]; then
   java -cp .ci-build/asm/asm.jar:.ci-build/transform \
     PatchBaseGameState jars/starfarer_obf.jar .ci-build/starfarer-no-sleep.jar
   mv .ci-build/starfarer-no-sleep.jar jars/starfarer_obf.jar
+else
+  # Production keeps Starsector's existing sleep boundary, but routes it through
+  # an absolute-deadline pacer so integer-ms truncation/oversleep cannot accumulate.
+  javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateFramePacing.java
+  java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+    PatchBaseGameStateFramePacing jars/starfarer_obf.jar .ci-build/starfarer-frame-paced.jar
+  mv .ci-build/starfarer-frame-paced.jar jars/starfarer_obf.jar
+  javap -classpath "jars/fixer_patch.jar:jars/starfarer_obf.jar:$CP" -c -p \
+    com.fs.starfarer.BaseGameState > .ci-build/base-game-state-frame-paced.javap
+  grep -q 'BrowserFramePacer.sleep' .ci-build/base-game-state-frame-paced.javap
+  test "$(grep -c 'Thread.sleep' .ci-build/base-game-state-frame-paced.javap)" -eq 1
+  test "$(grep -c 'BrowserFramePacer.sleep' .ci-build/base-game-state-frame-paced.javap)" -eq 1
+  javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserFramePacer \
+    | grep -q 'major version: 52'
+  rm -rf .ci-build/frame-pacer-probe
+  mkdir -p .ci-build/frame-pacer-probe
+  javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
+    -d .ci-build/frame-pacer-probe ci/ProbeBrowserFramePacer.java
+  java -cp ".ci-build/frame-pacer-probe:jars/fixer_patch.jar:$CP" ProbeBrowserFramePacer
 fi
 
 javac -cp .ci-build/asm/asm.jar -d .ci-build/transform ci/PatchBaseGameStateTransition.java
