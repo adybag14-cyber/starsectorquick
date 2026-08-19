@@ -1424,7 +1424,7 @@ ${fallback}`);
 
   const ok = reachedExpected && rendered && campaignVisualQuality && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
-    && abilityKeysSafe && gameplayPerformanceSafe && vboActive
+    && abilityKeysSafe && gameplayPerformanceSafe
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0

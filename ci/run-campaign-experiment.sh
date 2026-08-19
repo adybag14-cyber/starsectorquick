@@ -935,6 +935,26 @@ STARSECTOR_EXPECT_STATE="$EXPECT_STATE" \
 STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
 STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
+if [[ "${STARSECTOR_VBO_COMBAT_SMOKE:-false}" == "true" ]]; then
+  VBO_COMBAT_OUT="${OUT}-vbo-combat"
+  rm -rf "$VBO_COMBAT_OUT"
+  STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
+  STARSECTOR_VBO_COMBAT_TIMEOUT_MS=360000 \
+  STARSECTOR_VBO_COMBAT_OUTPUT_DIR="$VBO_COMBAT_OUT" \
+    node ci/vbo-combat-smoke.js
+  python3 - "$VBO_COMBAT_OUT/result.json" <<'PYVBO'
+import json, sys
+p=sys.argv[1]; d=json.load(open(p,encoding='utf-8'))
+s=d.get('stats') or {}
+assert d.get('ok') is True and d.get('active') is True, d
+assert int(s.get('generated') or 0)>=1
+assert int(s.get('dataBytes') or 0)>0
+assert int(s.get('subDataCalls') or 0)>=1
+assert int(s.get('subDataBytes') or 0)>0
+assert int(s.get('vboDraws') or 0)>=1
+print('Verified browser combat ARB VBO activation:', s)
+PYVBO
+fi
 if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   TUTORIAL_OUT="${OUT}-tutorial"
   rm -rf "$TUTORIAL_OUT"

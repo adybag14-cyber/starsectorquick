@@ -33,7 +33,15 @@ for token in ('glGenBuffersARB()', 'glDeleteBuffersARB(int buffer)', 'glBindBuff
 campaign = Path('ci/campaign-render-test.js').read_text(encoding='utf-8')
 for token in ('vboActive', 'vboStats.generated', 'vboStats.subDataCalls', 'vboStats.vboDraws'):
     if token not in campaign:
-        raise SystemExit(f'missing VBO runtime gate: {token}')
+        raise SystemExit(f'missing VBO campaign telemetry: {token}')
+combat = Path('ci/vbo-combat-smoke.js').read_text(encoding='utf-8')
+for token in ('__STARSECTOR_BOOT__', "'combat'", 'stats.generated', 'stats.subDataCalls', 'stats.vboDraws', '[vbo-combat-smoke]'):
+    if token not in combat:
+        raise SystemExit(f'missing VBO combat activation gate: {token}')
+runner = Path('ci/run-campaign-experiment.sh').read_text(encoding='utf-8')
+for token in ('STARSECTOR_VBO_COMBAT_SMOKE', 'node ci/vbo-combat-smoke.js', 'Verified browser combat ARB VBO activation'):
+    if token not in runner:
+        raise SystemExit(f'missing VBO combat workflow hook: {token}')
 
 import json
 import re
