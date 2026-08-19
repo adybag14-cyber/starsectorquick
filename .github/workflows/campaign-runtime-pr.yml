@@ -203,4 +203,3 @@ jobs:
           name: current-fixed-seed-same-runner-ab
           path: test_output/current-perf-ab
           if-no-files-found: error
-
