@@ -1173,6 +1173,8 @@
                     browserQuickResourceLoad && window.__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__ !== false;
                 const browserGameplayProbe =
                     window.__STARSECTOR_BROWSER_GAMEPLAY_PROBE__ === true;
+                const browserFramePacing =
+                    window.__STARSECTOR_BROWSER_FRAME_PACING__ !== false;
                 // Full vanilla procedural sector generation is the production default.
                 // This opt-in exists only for narrowly scoped bootstrap diagnostics.
                 const browserSkipOuterSectorProcGen =
@@ -1312,6 +1314,8 @@
                     `starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}`,
                     `-Dstarsector.browserGameplayProbe=${browserGameplayProbe}`,
                     `starsector.browserGameplayProbe=${browserGameplayProbe}`,
+                    `-Dstarsector.browserFramePacing=${browserFramePacing}`,
+                    `starsector.browserFramePacing=${browserFramePacing}`,
                     `-Dstarsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
                     `starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}`,
                     `-Dstarsector.browserGameplayPrewarm=${browserGameplayPrewarm}`,

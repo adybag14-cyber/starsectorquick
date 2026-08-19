@@ -458,13 +458,30 @@ var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
 var frameCount = 0;
+var presentationTargetFps = typeof window !== "undefined"
+	? Math.max(1, Math.min(1000, Number(window.__STARSECTOR_BROWSER_TARGET_FPS__ || 60) || 60))
+	: 60;
 var presentationStats = {
 	swapCount: 0,
 	samples: [],
 	lastFramebufferStatus: null,
 	lastViewport: null,
+	targetFps: presentationTargetFps,
+	targetFrameMs: 1000 / presentationTargetFps,
 	recentFps: 0,
 	recentFrameMs: 0,
+	lastFrameMs: 0,
+	frameP50Ms: 0,
+	frameP95Ms: 0,
+	frameP99Ms: 0,
+	frameMinMs: 0,
+	frameMaxMs: 0,
+	frameJitterStdDevMs: 0,
+	frameJitterP95Ms: 0,
+	recentLongFrameCount: 0,
+	longFrameCount: 0,
+	recentDroppedFrameEstimate: 0,
+	droppedFrameEstimate: 0,
 	legacyDrawCalls: 0,
 	webglDrawCalls: 0,
 	quadBatches: 0,
@@ -473,6 +490,52 @@ var presentationStats = {
 	quadIndexBufferUploads: 0
 };
 var recentSwapTimes = [];
+var recentFrameIntervals = [];
+function presentationPercentile(sorted, fraction)
+{
+	if(sorted.length == 0) return 0;
+	var index = Math.ceil(fraction * sorted.length) - 1;
+	index = Math.max(0, Math.min(sorted.length - 1, index));
+	return sorted[index];
+}
+function updatePresentationTimingStats()
+{
+	if(recentFrameIntervals.length == 0) return;
+	var sorted = recentFrameIntervals.slice().sort(function(a, b) { return a - b; });
+	var sum = 0;
+	for(var i = 0;i < recentFrameIntervals.length;i++) sum += recentFrameIntervals[i];
+	var mean = sum / recentFrameIntervals.length;
+	var variance = 0;
+	for(var j = 0;j < recentFrameIntervals.length;j++)
+	{
+		var delta = recentFrameIntervals[j] - mean;
+		variance += delta * delta;
+	}
+	variance /= recentFrameIntervals.length;
+	var median = presentationPercentile(sorted, 0.5);
+	var deviations = new Array(recentFrameIntervals.length);
+	var recentLongFrames = 0;
+	var recentDroppedFrames = 0;
+	var targetFrameMs = presentationStats.targetFrameMs;
+	var longFrameThresholdMs = Math.max(25, targetFrameMs * 1.5);
+	for(var k = 0;k < recentFrameIntervals.length;k++)
+	{
+		var interval = recentFrameIntervals[k];
+		deviations[k] = Math.abs(interval - median);
+		if(interval > longFrameThresholdMs) recentLongFrames++;
+		recentDroppedFrames += Math.max(0, Math.round(interval / targetFrameMs) - 1);
+	}
+	deviations.sort(function(a, b) { return a - b; });
+	presentationStats.frameP50Ms = median;
+	presentationStats.frameP95Ms = presentationPercentile(sorted, 0.95);
+	presentationStats.frameP99Ms = presentationPercentile(sorted, 0.99);
+	presentationStats.frameMinMs = sorted[0];
+	presentationStats.frameMaxMs = sorted[sorted.length - 1];
+	presentationStats.frameJitterStdDevMs = Math.sqrt(variance);
+	presentationStats.frameJitterP95Ms = presentationPercentile(deviations, 0.95);
+	presentationStats.recentLongFrameCount = recentLongFrames;
+	presentationStats.recentDroppedFrameEstimate = recentDroppedFrames;
+}
 if(typeof window !== "undefined")
 	window.__lwjglPresentationStats = presentationStats;
 // Set to a non-zero value to stop after a certain number of frames
@@ -1532,6 +1595,19 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	presentationStats.swapCount++;
 	var swapNow = performance.now();
+	if(recentSwapTimes.length > 0)
+	{
+		var frameInterval = swapNow - recentSwapTimes[recentSwapTimes.length - 1];
+		if(Number.isFinite(frameInterval) && frameInterval >= 0 && frameInterval < 10000)
+		{
+			presentationStats.lastFrameMs = frameInterval;
+			recentFrameIntervals.push(frameInterval);
+			if(recentFrameIntervals.length > 240) recentFrameIntervals.shift();
+			var targetFrameMs = presentationStats.targetFrameMs;
+			if(frameInterval > Math.max(25, targetFrameMs * 1.5)) presentationStats.longFrameCount++;
+			presentationStats.droppedFrameEstimate += Math.max(0, Math.round(frameInterval / targetFrameMs) - 1);
+		}
+	}
 	recentSwapTimes.push(swapNow);
 	if(recentSwapTimes.length > 121) recentSwapTimes.shift();
 	if(recentSwapTimes.length >= 2)
@@ -1540,6 +1616,8 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimes.length - 1) * 1000 / recentDuration : 0;
 		presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;
 	}
+	if(presentationStats.swapCount <= 3 || (presentationStats.swapCount % 15) == 0)
+		updatePresentationTimingStats();
 	if(presentationReadbackDiagnostics && presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
 	{
 		try

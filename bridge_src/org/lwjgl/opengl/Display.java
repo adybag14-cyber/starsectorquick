@@ -21,7 +21,13 @@ public final class Display {
     private static boolean getPixelScaleLogged = false;
     private static int updateCount = 0;
     private static int swapBuffersCount = 0;
+    private static int syncCount = 0;
     private static boolean inputPumpFailureLogged = false;
+    private static int syncTargetFps = 0;
+    private static long nextFrameDeadlineNanos = 0L;
+    private static long syncSleepCount = 0L;
+    private static long syncLateCount = 0L;
+    private static long syncResetCount = 0L;
     static {
         System.out.println("Bridge Display.<clinit>()");
     }
@@ -249,7 +255,75 @@ public final class Display {
         }
     }
 
-    public static void sync(int fps) {}
+    private static boolean isBrowserFramePacingEnabled() {
+        String value = System.getProperty("starsector.browserFramePacing");
+        if (value == null) return true;
+        value = value.trim();
+        return !("false".equalsIgnoreCase(value) || "0".equals(value) || "off".equalsIgnoreCase(value));
+    }
+
+    private static void resetFramePacing() {
+        syncTargetFps = 0;
+        nextFrameDeadlineNanos = 0L;
+    }
+
+    public static void sync(int fps) {
+        syncCount++;
+        boolean pacingEnabled = isBrowserFramePacingEnabled();
+        if (syncCount <= 3 || syncCount == 10 || syncCount % 300 == 0) {
+            System.out.println(
+                    "Bridge Display.sync(" + fps + ") count=" + syncCount
+                            + " pacing=" + pacingEnabled
+                            + " sleeps=" + syncSleepCount
+                            + " late=" + syncLateCount
+                            + " resets=" + syncResetCount);
+        }
+        if (!pacingEnabled || fps <= 0) {
+            resetFramePacing();
+            return;
+        }
+
+        // Clamp only pathological values; normal Starsector settings pass 60.
+        int targetFps = Math.max(1, Math.min(1000, fps));
+        long frameNanos = 1000000000L / targetFps;
+        long now = System.nanoTime();
+        if (syncTargetFps != targetFps || nextFrameDeadlineNanos <= 0L) {
+            syncTargetFps = targetFps;
+            nextFrameDeadlineNanos = now + frameNanos;
+            syncResetCount++;
+            return;
+        }
+
+        long remaining = nextFrameDeadlineNanos - now;
+        if (remaining > 0L) {
+            long sleepMillis = remaining / 1000000L;
+            int sleepNanos = (int) (remaining % 1000000L);
+            try {
+                Thread.sleep(sleepMillis, sleepNanos);
+                syncSleepCount++;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                resetFramePacing();
+                return;
+            }
+            now = System.nanoTime();
+        } else {
+            syncLateCount++;
+        }
+
+        // Keep cadence anchored to the prior deadline. If the browser was paused
+        // or a frame missed several periods, skip those periods instead of issuing
+        // a burst of catch-up frames (a major source of visible pacing jitter).
+        long behind = now - nextFrameDeadlineNanos;
+        if (behind > frameNanos * 4L) {
+            nextFrameDeadlineNanos = now + frameNanos;
+            syncResetCount++;
+        } else if (behind >= 0L) {
+            nextFrameDeadlineNanos += (behind / frameNanos + 1L) * frameNanos;
+        } else {
+            nextFrameDeadlineNanos += frameNanos;
+        }
+    }
 
     public static void makeCurrent() throws LWJGLException {
         LinuxContextImplementation.nMakeCurrent();

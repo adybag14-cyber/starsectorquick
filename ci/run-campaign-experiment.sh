@@ -77,6 +77,7 @@ grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q '__lwjglGraphicsInfo' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
 # The browser quick-start keeps the stock 45s fallback available via override,
@@ -103,6 +104,8 @@ grep -q '__STARSECTOR_BROWSER_XSTREAM_UNSAFE_READ_FAST_PATH__' launch.html
 grep -q 'starsector.browserXstreamUnsafeReadFastPath=${browserXstreamUnsafeReadFastPath}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PROBE__' launch.html
 grep -q 'starsector.browserGameplayProbe=${browserGameplayProbe}' launch.html
+grep -q '__STARSECTOR_BROWSER_FRAME_PACING__' launch.html
+grep -q 'starsector.browserFramePacing=${browserFramePacing}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_SPEEDUP_MULT__' launch.html
 grep -q 'starsector.browserGameplaySpeedupMult=${browserGameplaySpeedupMult}' launch.html
 grep -q '__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__' launch.html
@@ -146,6 +149,10 @@ python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-keyboard.javap \
   .ci-build/bridge-runtime-mouse.javap \
   build/final/wasm-modules/lwjgl.js
+javac -encoding UTF-8 -source 8 -target 8 \
+  -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" \
+  -d .ci-build/bridge-runtime ci/ProbeDisplaySync.java
+java -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" ProbeDisplaySync
 
 # Keep Keyboard.getKeyName/getKeyIndex byte-for-byte behavior aligned with the
 # stock LWJGL 2 table. Starsector renders these names directly in campaign HUD

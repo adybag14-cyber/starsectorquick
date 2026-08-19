@@ -1052,13 +1052,21 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
       recentFps: Number(perfAfter.recentFps || 0),
       recentFrameMs: Number(perfAfter.recentFrameMs || 0),
+      frameP50Ms: Number(perfAfter.frameP50Ms || 0),
+      frameP95Ms: Number(perfAfter.frameP95Ms || 0),
+      frameP99Ms: Number(perfAfter.frameP99Ms || 0),
+      frameMaxMs: Number(perfAfter.frameMaxMs || 0),
+      frameJitterStdDevMs: Number(perfAfter.frameJitterStdDevMs || 0),
+      frameJitterP95Ms: Number(perfAfter.frameJitterP95Ms || 0),
+      longFrameDelta: Number(perfAfter.longFrameCount || 0) - Number(perfBefore.longFrameCount || 0),
+      droppedFrameEstimateDelta: Number(perfAfter.droppedFrameEstimate || 0) - Number(perfBefore.droppedFrameEstimate || 0),
       webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
       quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),
     };
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
-    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} responsive=${gameplayPerformance.responsive}`);
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} max=${gameplayPerformance.frameMaxMs.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.longFrameDelta} droppedEstimate=${gameplayPerformance.droppedFrameEstimateDelta} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} responsive=${gameplayPerformance.responsive}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
