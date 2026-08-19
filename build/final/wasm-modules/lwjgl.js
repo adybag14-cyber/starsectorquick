@@ -266,6 +266,11 @@ glCtx.useProgram(program);
 var vertexBuffer = glCtx.createBuffer();
 var colorBuffer = glCtx.createBuffer();
 var texCoordBuffer = glCtx.createBuffer();
+// Dedicated persistent buffer for interleaved immediate-mode vertices. Keeping
+// this separate from the client-array buffers means either path can upload data
+// without invalidating the other's capacity or attribute source.
+var immediateInterleavedBuffer = glCtx.createBuffer();
+var immediateInterleavedBufferFloatCapacity = 0;
 // WEBGL_QUAD_INDEX_BATCH_V2: WebGL2 has no GL_QUADS. Cache an index buffer that
 // expands each legacy 4-vertex quad into two triangles so a whole OpenGL quad
 // batch is submitted in one WebGL draw call instead of one call per quad.
@@ -481,7 +486,10 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	immediateInterleavedBufferGrowths: 0,
+	immediateInterleavedSubDataCalls: 0,
+	immediateInterleavedSubDataViewAvoided: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2329,13 +2337,28 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
+function ensureImmediateInterleavedBufferCapacity(floatCount)
+{
+	if(floatCount <= immediateInterleavedBufferFloatCapacity) return;
+	var next = Math.max(64, immediateInterleavedBufferFloatCapacity || 64);
+	while(next < floatCount) next *= 2;
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, immediateInterleavedBuffer);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, next * 4, glCtx.DYNAMIC_DRAW);
+	immediateInterleavedBufferFloatCapacity = next;
+	presentationStats.immediateInterleavedBufferGrowths++;
+}
 function uploadImmediateInterleaved(vertexCount)
 {
 	var floatCount = vertexCount * 9;
-	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
 	var stride = 9 * 4;
-	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	ensureImmediateInterleavedBufferCapacity(floatCount);
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, immediateInterleavedBuffer);
+	// WebGL2 accepts a typed array plus source element offset/length. This avoids
+	// allocating a new subarray view for every glEnd while uploading exactly the
+	// same floatCount elements.
+	glCtx.bufferSubData(glCtx.ARRAY_BUFFER, 0, immediateModeData.interleavedBuf, 0, floatCount);
+	presentationStats.immediateInterleavedSubDataCalls++;
+	presentationStats.immediateInterleavedSubDataViewAvoided++;
 	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
 	glCtx.enableVertexAttribArray(vertexPosition);
 	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
