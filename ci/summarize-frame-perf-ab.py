@@ -3,7 +3,7 @@ import json, math, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'leak-off', 'texture', 'matrix-inplace', 'core-state', 'color', 'quad-index', 'baseline-b']
+ORDER = ['baseline-a', 'dev-mode', 'pacer', 'leak-off', 'baseline-b']
 METRICS = ['fps','frame_ms','p50_ms','p95_ms','p99_ms','max_ms','jitter_stddev_ms','jitter_p95_ms','shortcut_avg_ms','shortcut_p95_ms','shortcut_max_ms','dropped_estimate']
 
 def pct(values, q):
@@ -80,7 +80,7 @@ def main():
         world='-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
         lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
     lines += ['', 'Drift-adjusted candidate deltas:']
-    for name in ['leak-off','texture','matrix-inplace','core-state','color','quad-index']:
+    for name in ['dev-mode','pacer','leak-off']:
         r=by[name]; parts=[]
         for m in ['fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms','shortcut_avg_ms']:
             v=r['drift_adjusted'].get(m)
