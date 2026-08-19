@@ -39,6 +39,7 @@ function expect(condition, message) {
 const path = process.argv[2];
 if (!path) throw new Error('usage: node ci/verify-lwjgl-matrix-uniform-cache.js <lwjgl.js>');
 const source = fs.readFileSync(path, 'utf8');
+const ensureStack = extractFunction(source, 'ensureCurMatrixStack');
 const uploadMatrices = extractFunction(source, 'uploadCurrentMatrices');
 const markDirty = extractFunction(source, 'markCurrentMatrixDirty');
 const setTop = extractFunction(source, 'setCurMatrixTop');
@@ -50,6 +51,12 @@ const texture = [{ name: 'texture-0' }];
 const presentationStats = { matrixUniformUploads: 0, matrixUniformUploadsSaved: 0 };
 const context = vm.createContext({
   glCtx: { uniformMatrix4fv(loc, transpose, value) { uploads.push([loc, transpose, value.name]); } },
+  Array,
+  Error,
+  Set,
+  matrixStackWarnings: new Set(),
+  warnOnce(set, key) { set.add(key); },
+  glMatrix: { mat4: { create() { return { name: 'recovered-identity' }; } } },
   mvLocation: 'mv',
   projLocation: 'proj',
   modelViewMatrixStack: model,
@@ -64,7 +71,13 @@ const context = vm.createContext({
   uploadedProjMatrixGeneration: 0,
   presentationStats,
 });
-vm.runInContext(`${markDirty}\n${setTop}\n${uploadMatrices}`, context);
+vm.runInContext(`${ensureStack}\n${markDirty}\n${setTop}\n${uploadMatrices}`, context);
+
+context.curMatrixStack = [];
+const recovered = context.ensureCurMatrixStack();
+expect(recovered.length === 1 && recovered[0].name === 'recovered-identity', 'matrix-stack guard recovery mismatch');
+expect(context.matrixStackWarnings.has('matrix-stack-empty-recovery'), 'matrix-stack recovery warning missing');
+context.curMatrixStack = model;
 
 context.uploadCurrentMatrices();
 expect(uploads.length === 2, `first draw must upload both matrices, got ${uploads.length}`);
