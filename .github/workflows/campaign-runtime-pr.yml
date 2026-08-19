@@ -161,7 +161,7 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/perf/direct-skin-manifest-ui-predecode:refs/remotes/origin/perf/direct-skin-manifest-ui-predecode \
-            refs/heads/perf/immediate-interleaved-production:refs/remotes/origin/perf/immediate-interleaved-production
+            refs/heads/perf/immediate-interleaved-production:refs/remotes/origin/perf/immediate-interleaved-production \
             refs/heads/perf/interleaved-texture-production:refs/remotes/origin/perf/interleaved-texture-production
           test "$(git rev-parse origin/perf/direct-skin-manifest-ui-predecode)" = "d4be7870e41eece34b9a73b3fe7a685818e4a5d6"
           test "$(git rev-parse origin/perf/immediate-interleaved-production)" = "7b80ff795da2a52eb7e985a8cadeff3528062592"
