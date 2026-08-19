@@ -865,8 +865,11 @@ function drawArraysImpl(mode, first, count)
 		}
 		else
 		{
+			// WEBGL_QUAD_INDEX_BIND_STICKY_V1: ensureQuadIndexCapacity() binds the
+			// only ELEMENT_ARRAY_BUFFER used by this WebGL context. Nothing else in
+			// the runtime changes that binding, so re-binding it every quad batch is
+			// redundant after the first allocation/growth.
 			ensureQuadIndexCapacity(count);
-			glCtx.bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER, quadIndexBuffer);
 			glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);
 			presentationStats.webglDrawCalls++;
 			presentationStats.quadBatches++;
