@@ -30,8 +30,9 @@ function rng(seed){ let x=seed>>>0; return ()=>{ x=(Math.imul(x,1664525)+1013904
 const path=process.argv[2]; if(!path) throw new Error('usage: node ci/verify-lwjgl-matrix-inplace.js <lwjgl.js>');
 const source=fs.readFileSync(path,'utf8');
 expect(source.includes('LWJGL_MATRIX_IN_PLACE_V1'),'missing in-place marker');
+expect(source.includes('LWJGL_MATRIX_STACK_GUARD_V1'),'missing matrix-stack guard marker');
 for(const token of ['if(!matrixInPlaceEnabled)','matrixTransformScratch','matrixVectorScratch','noteMatrixInPlace']) expect(source.includes(token),`missing ${token}`);
-const names=['setMatrixVectorScratch','noteMatrixInPlace','getCurMatrixTop','setCurMatrixTop','Java_org_lwjgl_opengl_GL11_nglOrtho','Java_org_lwjgl_opengl_GL11_nglTranslatef','Java_org_lwjgl_opengl_GL11_nglMultMatrixf','Java_org_lwjgl_opengl_GL11_nglRotatef','Java_org_lwjgl_opengl_GL11_nglScalef'];
+const names=['setMatrixVectorScratch','noteMatrixInPlace','ensureCurMatrixStack','getCurMatrixTop','setCurMatrixTop','Java_org_lwjgl_opengl_GL11_nglPushMatrix','Java_org_lwjgl_opengl_GL11_nglPopMatrix','Java_org_lwjgl_opengl_GL11_nglOrtho','Java_org_lwjgl_opengl_GL11_nglTranslatef','Java_org_lwjgl_opengl_GL11_nglMultMatrixf','Java_org_lwjgl_opengl_GL11_nglRotatef','Java_org_lwjgl_opengl_GL11_nglScalef'];
 const code=names.map(n=>extractFunction(source,n)).join('\n');
 const stats={matrixInPlaceOps:0,matrixTempAllocationsAvoided:0,matrixLegacyOps:0};
 const context=vm.createContext({
@@ -47,6 +48,9 @@ const context=vm.createContext({
   Math,
   Float32Array,
   Number,
+  Array,
+  matrixStackWarnings:new Set(),
+  warnOnce(set,key,message){ if(!set.has(key)) set.add(key); },
 });
 context.curMatrixStack=context.modelViewMatrixStack;
 vm.runInContext(code,context);
@@ -83,4 +87,19 @@ for(let i=0;i<5000;i++) {
 expect(stats.matrixInPlaceOps===5000,`expected 5000 fast ops, got ${stats.matrixInPlaceOps}`);
 expect(stats.matrixLegacyOps===5000,`expected 5000 legacy ops, got ${stats.matrixLegacyOps}`);
 expect(stats.matrixTempAllocationsAvoided===9000,`expected 9000 avoided temporaries, got ${stats.matrixTempAllocationsAvoided}`);
+// Matrix-stack safety must remain exact while the transforms run in place.
+context.curMatrixStack=context.modelViewMatrixStack;
+context.modelViewMatrixStack.length=1;
+const baseBefore=clone(context.modelViewMatrixStack[0]);
+context.Java_org_lwjgl_opengl_GL11_nglPopMatrix(null,0);
+expect(context.modelViewMatrixStack.length===1,'base matrix pop underflow was not guarded');
+expect(maxDiff(baseBefore,context.modelViewMatrixStack[0])===0,'base matrix changed during guarded pop');
+context.modelViewMatrixStack.length=0;
+const recovered=context.ensureCurMatrixStack();
+expect(recovered.length===1,'empty matrix stack was not recovered');
+expect(maxDiff(recovered[0],glMatrix.mat4.create())===0,'empty matrix stack did not recover to identity');
+context.Java_org_lwjgl_opengl_GL11_nglPushMatrix(null,0);
+expect(recovered.length===2,'push after empty-stack recovery failed');
+context.Java_org_lwjgl_opengl_GL11_nglPopMatrix(null,0);
+expect(recovered.length===1,'pop after guarded push failed');
 console.log(`verify-lwjgl-matrix-inplace: OK cases=5000 worstDiff=${worst} avoided=${stats.matrixTempAllocationsAvoided}`);
