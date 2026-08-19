@@ -36,7 +36,7 @@
 	
 	"doRAMandVRAMChecksWhenRunningWithMods":true, # will periodically check if ram/vram is low and warn the player
 	"memoryCheckVerbose":false,
-	"enableMemoryLeakChecking":true,
+	"enableMemoryLeakChecking":false,
 	"enableMemoryLeakCheckingDevModeOnly":true,
 	
 	"colorblindMode":false,
