@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+NAME=${1:?variant name required}
+REF=${2:?git ref required}
+ROOT=${GITHUB_WORKSPACE:-$(pwd)}
+WORKTREE="${RUNNER_TEMP:-/tmp}/starsector-perf-${NAME}"
+ARCHIVE="$ROOT/.ci-cache/starsector_linux-0.98a-RC8.zip"
+OUT_ROOT="$ROOT/test_output/current-perf-ab"
+STATUS_FILE="$OUT_ROOT/status.tsv"
+
+mkdir -p "$OUT_ROOT"
+rm -rf "$WORKTREE"
+git worktree add --detach "$WORKTREE" "$REF"
+mkdir -p "$WORKTREE/.ci-cache"
+cp "$ARCHIVE" "$WORKTREE/.ci-cache/starsector_linux-0.98a-RC8.zip"
+
+cleanup_server() {
+  if [[ -s /tmp/starsector-http.pid ]]; then
+    kill "$(cat /tmp/starsector-http.pid)" 2>/dev/null || true
+    rm -f /tmp/starsector-http.pid
+  fi
+}
+cleanup_server
+
+set +e
+(
+  cd "$WORKTREE"
+  STARSECTOR_DEEP_GAMEPLAY=false \
+  STARSECTOR_PUBLIC_TUTORIAL_SMOKE=false \
+  STARSECTOR_SAVE_LOAD_SMOKE=false \
+  STARSECTOR_TEST_TIMEOUT_MS=720000 \
+    bash ci/run-campaign-experiment.sh "$NAME" sync false campaign '{}'
+)
+RC=$?
+set -e
+cleanup_server
+
+if [[ -d "$WORKTREE/test_output/$NAME" ]]; then
+  rm -rf "$OUT_ROOT/$NAME"
+  cp -a "$WORKTREE/test_output/$NAME" "$OUT_ROOT/$NAME"
+fi
+
+VERIFY_RC=0
+if [[ "$RC" -eq 0 && -s "$OUT_ROOT/$NAME/browser.log" ]]; then
+  python3 "$WORKTREE/ci/verify-full-campaign-map.py" "$OUT_ROOT/$NAME/browser.log" \
+    --expected-sector-size normal \
+    --expected-start-location Galatia \
+    --expected-seed SEK968276040 || VERIFY_RC=$?
+fi
+
+printf '%s\t%s\t%s\t%s\n' "$NAME" "$REF" "$RC" "$VERIFY_RC" >> "$STATUS_FILE"
+git worktree remove --force "$WORKTREE" || true
+
+# Deliberately return success so all variants execute on this same runner.
+exit 0
