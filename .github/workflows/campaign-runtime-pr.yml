@@ -160,9 +160,9 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin \
-            refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
+            refs/heads/fix/pages-publish-runtime-settings:refs/remotes/origin/fix/pages-publish-runtime-settings \
             refs/heads/perf/direct-input-noop-poll-current:refs/remotes/origin/perf/direct-input-noop-poll-current
-          test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "5c63758d57057b582eecac474f1f72fb021fd90a"
+          test "$(git rev-parse origin/fix/pages-publish-runtime-settings)" = "5c63758d57057b582eecac474f1f72fb021fd90a"
           test "$(git rev-parse origin/perf/direct-input-noop-poll-current)" = "32594bb4d3b0798188caff5e7f006f4e3b51493e"
       - name: Restore official release cache
         uses: actions/cache@v4
@@ -184,11 +184,11 @@ jobs:
           unzip -tq "$archive"
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-publish-runtime-settings
       - name: Browser loop overhead candidate
         run: bash ci/run-frame-perf-ab-variant.sh browser-loop origin/perf/direct-input-noop-poll-current
       - name: Production baseline B
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-publish-runtime-settings
       - name: Summarize drift-adjusted frame metrics
         if: always()
         run: python3 ci/summarize-frame-perf-ab.py
