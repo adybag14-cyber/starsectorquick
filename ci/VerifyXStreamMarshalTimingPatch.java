@@ -7,9 +7,9 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-/** Structural verifier for the diagnostic TreeMarshaller conversion timer. */
+/** Structural verifier for the diagnostic AbstractReferenceMarshaller conversion timer. */
 public final class VerifyXStreamMarshalTimingPatch {
-    private static final String TARGET = "com/thoughtworks/xstream/core/TreeMarshaller.class";
+    private static final String TARGET = "com/thoughtworks/xstream/core/AbstractReferenceMarshaller.class";
     private static final String HELPER = "com/fs/starfarer/BrowserXStreamMarshalDiag";
     private static final String CONVERT_DESC = "(Ljava/lang/Object;Lcom/thoughtworks/xstream/converters/Converter;)V";
 
@@ -42,10 +42,10 @@ public final class VerifyXStreamMarshalTimingPatch {
                 }, 0);
             }
         }
-        if (methods[0] != 1 || enters[0] != 1 || exits[0] != 2 || marshalCalls[0] != 1) {
+        if (methods[0] != 1 || enters[0] != 1 || exits[0] != 1 || marshalCalls[0] != 2) {
             throw new IllegalStateException("XStream marshal timing verification failed methods=" + methods[0]
                     + " enters=" + enters[0] + " exits=" + exits[0] + " marshalCalls=" + marshalCalls[0]);
         }
-        System.out.println("VerifyXStreamMarshalTimingPatch: OK methods=1 enters=1 exits=2 marshalCalls=1");
+        System.out.println("VerifyXStreamMarshalTimingPatch: OK methods=1 enters=1 exits=1 marshalCalls=2");
     }
 }

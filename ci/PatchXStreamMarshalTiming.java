@@ -13,9 +13,9 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-/** Diagnostic-only timing hooks around TreeMarshaller.convert(). */
+/** Diagnostic-only timing hooks around AbstractReferenceMarshaller.convert(). */
 public final class PatchXStreamMarshalTiming {
-    private static final String TARGET = "com/thoughtworks/xstream/core/TreeMarshaller.class";
+    private static final String TARGET = "com/thoughtworks/xstream/core/AbstractReferenceMarshaller.class";
     private static final String HELPER = "com/fs/starfarer/BrowserXStreamMarshalDiag";
     private static final String CONVERT_DESC = "(Ljava/lang/Object;Lcom/thoughtworks/xstream/converters/Converter;)V";
 
@@ -45,12 +45,12 @@ public final class PatchXStreamMarshalTiming {
                 out.closeEntry();
             }
         }
-        if (classes[0] != 1 || methods[0] != 1 || enters[0] != 1 || exits[0] != 2) {
+        if (classes[0] != 1 || methods[0] != 1 || enters[0] != 1 || exits[0] != 1) {
             Files.deleteIfExists(output);
             throw new IllegalStateException("XStream marshal timing shape mismatch classes=" + classes[0]
                     + " methods=" + methods[0] + " enters=" + enters[0] + " exits=" + exits[0]);
         }
-        System.out.println("Patched XStream marshal timing methods=1 enters=1 exits=2");
+        System.out.println("Patched XStream marshal timing methods=1 enters=1 exits=1");
     }
 
     private static byte[] patch(byte[] input, int[] methods, int[] enters, int[] exits) {

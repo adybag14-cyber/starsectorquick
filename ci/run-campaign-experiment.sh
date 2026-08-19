@@ -459,9 +459,9 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyXStreamMarshalTimingPatch .ci-build/xstream-marshal-timing.jar
 mv .ci-build/xstream-marshal-timing.jar jars/xstream-1.4.10.jar
 javap -classpath "jars/fixer_patch.jar:jars/xstream-1.4.10.jar:$CP" -c -p \
-  com.thoughtworks.xstream.core.TreeMarshaller | grep -q 'BrowserXStreamMarshalDiag.enter'
+  com.thoughtworks.xstream.core.AbstractReferenceMarshaller | grep -q 'BrowserXStreamMarshalDiag.enter'
 javap -classpath "jars/fixer_patch.jar:jars/xstream-1.4.10.jar:$CP" -c -p \
-  com.thoughtworks.xstream.core.TreeMarshaller | grep -q 'BrowserXStreamMarshalDiag.exit'
+  com.thoughtworks.xstream.core.AbstractReferenceMarshaller | grep -q 'BrowserXStreamMarshalDiag.exit'
 jar tf jars/fixer_patch.jar | grep -qx 'com/fs/starfarer/BrowserTitleContinueCompat.class'
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTitleContinueRenderGuard jars/starfarer_obf.jar .ci-build/starfarer-title-continue.jar
