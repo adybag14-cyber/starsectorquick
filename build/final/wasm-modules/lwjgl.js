@@ -487,7 +487,10 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	matrixInPlaceOps: 0,
+	matrixTempAllocationsAvoided: 0,
+	matrixLegacyOps: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -554,6 +557,22 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_MATRIX_IN_PLACE_V1
+var matrixInPlaceEnabled = typeof window === "undefined" || window.__LWJGL_MATRIX_IN_PLACE__ !== false;
+var matrixTransformScratch = glMatrix.mat4.create();
+var matrixVectorScratch = glMatrix.vec3.create();
+function setMatrixVectorScratch(x, y, z)
+{
+	matrixVectorScratch[0] = x;
+	matrixVectorScratch[1] = y;
+	matrixVectorScratch[2] = z;
+	return matrixVectorScratch;
+}
+function noteMatrixInPlace(avoided)
+{
+	presentationStats.matrixInPlaceOps++;
+	presentationStats.matrixTempAllocationsAvoided += avoided;
+}
 function getCurMatrixTop()
 {
 	return curMatrixStack[curMatrixStack.length - 1];
@@ -1751,10 +1770,19 @@ function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, near
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglOrtho);
 	var m = getCurMatrixTop();
-	var o = glMatrix.mat4.create();
-	glMatrix.mat4.ortho(o, left, right, bottom, top, nearVal, farVal);
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.multiply(out, m, o));
+	if(!matrixInPlaceEnabled)
+	{
+		var o = glMatrix.mat4.create();
+		glMatrix.mat4.ortho(o, left, right, bottom, top, nearVal, farVal);
+		var out = glMatrix.mat4.create();
+		setCurMatrixTop(glMatrix.mat4.multiply(out, m, o));
+		presentationStats.matrixLegacyOps++;
+		return;
+	}
+	glMatrix.mat4.ortho(matrixTransformScratch, left, right, bottom, top, nearVal, farVal);
+	glMatrix.mat4.multiply(m, m, matrixTransformScratch);
+	setCurMatrixTop(m);
+	noteMatrixInPlace(2);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTranslatef(lib, x, y, z, funcPtr)
@@ -1762,8 +1790,16 @@ function Java_org_lwjgl_opengl_GL11_nglTranslatef(lib, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTranslatef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.translate(out, m, glMatrix.vec3.fromValues(x, y, z)));
+	if(!matrixInPlaceEnabled)
+	{
+		var out = glMatrix.mat4.create();
+		setCurMatrixTop(glMatrix.mat4.translate(out, m, glMatrix.vec3.fromValues(x, y, z)));
+		presentationStats.matrixLegacyOps++;
+		return;
+	}
+	glMatrix.mat4.translate(m, m, setMatrixVectorScratch(x, y, z));
+	setCurMatrixTop(m);
+	noteMatrixInPlace(2);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPtr)
@@ -2107,8 +2143,16 @@ function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
 	var m = getCurMatrixTop();
 	var v = lib.getJNIDataView();
 	var buf = new Float32Array(v.buffer, Number(memPtr), 16);
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.multiply(out, m, buf));
+	if(!matrixInPlaceEnabled)
+	{
+		var out = glMatrix.mat4.create();
+		setCurMatrixTop(glMatrix.mat4.multiply(out, m, buf));
+		presentationStats.matrixLegacyOps++;
+		return;
+	}
+	glMatrix.mat4.multiply(m, m, buf);
+	setCurMatrixTop(m);
+	noteMatrixInPlace(1);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglRotatef(lib, angle, x, y, z, funcPtr)
@@ -2116,8 +2160,16 @@ function Java_org_lwjgl_opengl_GL11_nglRotatef(lib, angle, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglRotatef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.rotate(out, m, angle * Math.PI / 180.0, glMatrix.vec3.fromValues(x, y, z)));
+	if(!matrixInPlaceEnabled)
+	{
+		var out = glMatrix.mat4.create();
+		setCurMatrixTop(glMatrix.mat4.rotate(out, m, angle * Math.PI / 180.0, glMatrix.vec3.fromValues(x, y, z)));
+		presentationStats.matrixLegacyOps++;
+		return;
+	}
+	var rotated = glMatrix.mat4.rotate(m, m, angle * Math.PI / 180.0, setMatrixVectorScratch(x, y, z));
+	setCurMatrixTop(rotated == null ? null : m);
+	noteMatrixInPlace(2);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
@@ -2163,8 +2215,16 @@ function Java_org_lwjgl_opengl_GL11_nglScalef(lib, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScalef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.scale(out, m, glMatrix.vec3.fromValues(x, y, z)));
+	if(!matrixInPlaceEnabled)
+	{
+		var out = glMatrix.mat4.create();
+		setCurMatrixTop(glMatrix.mat4.scale(out, m, glMatrix.vec3.fromValues(x, y, z)));
+		presentationStats.matrixLegacyOps++;
+		return;
+	}
+	glMatrix.mat4.scale(m, m, setMatrixVectorScratch(x, y, z));
+	setCurMatrixTop(m);
+	noteMatrixInPlace(2);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
