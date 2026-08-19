@@ -487,7 +487,9 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	matrixUniformUploads: 0,
+	matrixUniformUploadsSaved: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -554,13 +556,45 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+var matrixUniformCacheEnabled = typeof window === "undefined" || window.__LWJGL_MATRIX_UNIFORM_CACHE__ !== false;
+var modelViewMatrixGeneration = 1;
+var projMatrixGeneration = 1;
+var textureMatrixGeneration = 1;
+var uploadedModelViewMatrixGeneration = 0;
+var uploadedProjMatrixGeneration = 0;
 function getCurMatrixTop()
 {
 	return curMatrixStack[curMatrixStack.length - 1];
 }
+function markCurrentMatrixDirty()
+{
+	if(curMatrixStack === modelViewMatrixStack) modelViewMatrixGeneration++;
+	else if(curMatrixStack === projMatrixStack) projMatrixGeneration++;
+	else if(curMatrixStack === textureMatrixStack) textureMatrixGeneration++;
+}
 function setCurMatrixTop(m)
 {
 	curMatrixStack[curMatrixStack.length - 1] = m;
+	markCurrentMatrixDirty();
+}
+function uploadCurrentMatrices()
+{
+	if(!matrixUniformCacheEnabled || uploadedModelViewMatrixGeneration != modelViewMatrixGeneration)
+	{
+		glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+		presentationStats.matrixUniformUploads++;
+		uploadedModelViewMatrixGeneration = modelViewMatrixGeneration;
+	}
+	else
+		presentationStats.matrixUniformUploadsSaved++;
+	if(!matrixUniformCacheEnabled || uploadedProjMatrixGeneration != projMatrixGeneration)
+	{
+		glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+		presentationStats.matrixUniformUploads++;
+		uploadedProjMatrixGeneration = projMatrixGeneration;
+	}
+	else
+		presentationStats.matrixUniformUploadsSaved++;
 }
 
 function ensureFramebufferSize()
@@ -847,9 +881,9 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
-	// TODO: Conditional
-	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	// Fixed-function matrices are persistent WebGL uniforms. Upload only after
+	// the corresponding legacy matrix stack changes instead of twice per draw.
+	uploadCurrentMatrices();
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -1693,6 +1727,7 @@ function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLoadIdentity);
 	glMatrix.mat4.identity(getCurMatrixTop());
+	markCurrentMatrixDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, nearVal, farVal, funcPtr)
@@ -2047,6 +2082,7 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
 	curMatrixStack.pop();
+	markCurrentMatrixDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)

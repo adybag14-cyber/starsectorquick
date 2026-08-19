@@ -40,6 +40,7 @@ const path = process.argv[2];
 if (!path) throw new Error('usage: node ci/verify-lwjgl-quad-batching.js <lwjgl.js>');
 const source = fs.readFileSync(path, 'utf8');
 const ensureQuad = extractFunction(source, 'ensureQuadIndexCapacity');
+const uploadMatrices = extractFunction(source, 'uploadCurrentMatrices');
 const drawArrays = extractFunction(source, 'drawArraysImpl');
 
 const calls = [];
@@ -76,7 +77,14 @@ const context = vm.createContext({
     quadQuads: 0,
     quadDrawCallsSaved: 0,
     quadIndexBufferUploads: 0,
+    matrixUniformUploads: 0,
+    matrixUniformUploadsSaved: 0,
   },
+  matrixUniformCacheEnabled: true,
+  modelViewMatrixGeneration: 1,
+  projMatrixGeneration: 1,
+  uploadedModelViewMatrixGeneration: 0,
+  uploadedProjMatrixGeneration: 0,
   mvLocation: {},
   projLocation: {},
   modelViewMatrixStack: [[]],
@@ -88,7 +96,7 @@ const context = vm.createContext({
   Math,
   Uint32Array,
 });
-vm.runInContext(`${ensureQuad}\n${drawArrays}`, context);
+vm.runInContext(`${ensureQuad}\n${uploadMatrices}\n${drawArrays}`, context);
 
 context.drawArraysImpl(7, 0, 8);
 let draws = calls.filter(call => call[0] === 'drawElements');
