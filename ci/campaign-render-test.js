@@ -469,6 +469,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     : 12000;
   const screenshotActionTimeoutMs = Math.max(10000, screenshotTimeoutMs - 2000);
   const safeScreenshot = async (path, label) => {
+    let primaryError = null;
     try {
       await withTimeout(
         gameCanvas.waitFor({ state: 'visible', timeout: screenshotActionTimeoutMs }),
@@ -481,8 +482,52 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         label,
       );
     } catch (error) {
-      screenshotErrors.push(String(error && (error.stack || error.message) || error));
-      logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
+      primaryError = error;
+      // A hot continuously-rendering canvas can occasionally make Playwright's
+      // Locator.screenshot actionability/stability wait hit its timeout even
+      // though the WebGL surface is present and rendering. Retry once through a
+      // clipped Page screenshot, which captures the same canvas pixels without
+      // requiring locator stability. Keep the gate strict if this fallback fails.
+      logs.push(`[diagnostic] ${label} locator capture failed; retrying clipped page capture: ${error.message || error}`);
+      flushLogs();
+    }
+
+    try {
+      await sleep(250);
+      const box = await withTimeout(
+        gameCanvas.boundingBox(),
+        screenshotTimeoutMs,
+        `${label} fallback bounding box`,
+      );
+      if (!box || box.width <= 0 || box.height <= 0) {
+        throw new Error(`${label} fallback canvas has no visible bounding box`);
+      }
+      const viewport = page.viewportSize();
+      const x = Math.max(0, box.x);
+      const y = Math.max(0, box.y);
+      const right = viewport ? Math.min(viewport.width, box.x + box.width) : box.x + box.width;
+      const bottom = viewport ? Math.min(viewport.height, box.y + box.height) : box.y + box.height;
+      const clip = {
+        x,
+        y,
+        width: Math.max(1, right - x),
+        height: Math.max(1, bottom - y),
+      };
+      const fallback = await withTimeout(
+        page.screenshot({ path, clip }),
+        screenshotTimeoutMs,
+        `${label} clipped page fallback`,
+      );
+      logs.push(`[diagnostic] ${label} recovered with clipped page capture`);
+      flushLogs();
+      return fallback;
+    } catch (fallbackError) {
+      const primary = String(primaryError && (primaryError.stack || primaryError.message) || primaryError || 'unknown locator screenshot failure');
+      const fallback = String(fallbackError && (fallbackError.stack || fallbackError.message) || fallbackError);
+      screenshotErrors.push(`${primary}
+Fallback screenshot failed:
+${fallback}`);
+      logs.push(`[diagnostic] ${label} failed after clipped fallback: ${fallbackError.message || fallbackError}`);
       flushLogs();
       return null;
     }
