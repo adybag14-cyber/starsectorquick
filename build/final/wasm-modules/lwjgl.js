@@ -487,7 +487,11 @@ var presentationStats = {
 	quadBatches: 0,
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
-	quadIndexBufferUploads: 0
+	quadIndexBufferUploads: 0,
+	textureBindCalls: 0,
+	textureBindChanges: 0,
+	textureBindSkipped: 0,
+	textureBindInvalidations: 0
 };
 var recentSwapTimes = [];
 var recentFrameIntervals = [];
@@ -580,6 +584,7 @@ function ensureFramebufferSize()
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 	glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
 	glCtx.bindTexture(glCtx.TEXTURE_2D, null);
+	invalidateBoundTexture2D();
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
 	glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH24_STENCIL8, fbWidth, fbHeight);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, null);
@@ -928,7 +933,14 @@ var cmdLists = [null];
 // The first null implicitly solves resetting on 0 id
 var textureObjects = [null];
 var textureGenerateMipmap = [false];
-var boundTexture2DId = 0;
+// WEBGL_TEXTURE_BIND_CACHE_V1
+var textureBindCacheEnabled = typeof window === "undefined" || window.__LWJGL_TEXTURE_BIND_CACHE__ !== false;
+var boundTexture2DId = -1;
+function invalidateBoundTexture2D()
+{
+	boundTexture2DId = -1;
+	presentationStats.textureBindInvalidations++;
+}
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
 glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
@@ -938,6 +950,7 @@ glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
 glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, getCanvasWidth(), getCanvasHeight(), 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
 glCtx.bindTexture(glCtx.TEXTURE_2D, null);
+invalidateBoundTexture2D();
 mainFb = glCtx.createFramebuffer();
 glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
@@ -1831,8 +1844,15 @@ function Java_org_lwjgl_opengl_GL11_nglBindTexture(lib, target, id, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBindTexture);
 	assert(target == glCtx.TEXTURE_2D);
+	presentationStats.textureBindCalls++;
+	if(textureBindCacheEnabled && boundTexture2DId === id)
+	{
+		presentationStats.textureBindSkipped++;
+		return;
+	}
 	boundTexture2DId = id;
 	glCtx.bindTexture(target, textureObjects[id]);
+	presentationStats.textureBindChanges++;
 }
 
 // LWJGL_GENERATE_MIPMAP_COMPAT_V1
