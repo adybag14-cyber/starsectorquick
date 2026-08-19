@@ -8,7 +8,10 @@ fs.mkdirSync(outDir, { recursive: true });
 const logs=[]; const errors=[];
 let fatal=null;
 function fatalLine(text){
-  return /(?:uncaught|unhandled|fatal(?:\s+error)?|linkageerror|unsatisfiedlinkerror|exception in thread|cheerpj.*(?:abort|failed))/i.test(text)
+  // Do not treat status counters such as `failed=0` as fatal. Runtime state and
+  // pageerror are stronger signals; console matching is limited to unmistakable
+  // process/linkage failures.
+  return /(?:uncaught|unhandled|fatal(?:\s+error)?|linkageerror|unsatisfiedlinkerror|exception in thread|cheerpj.*\babort\b|direct CombatMain boot failed)/i.test(text)
     && !/(?:fallback|probe|expected|handled)/i.test(text);
 }
 (async()=>{
@@ -37,8 +40,16 @@ function fatalLine(text){
           stats:{...(window.__lwjglVboStats||{})},
           graphics:window.__lwjglGraphicsInfo||null,
           timing:window.__STARSECTOR_BOOT_TIMING__||null,
+          runtime:window.__STARSECTOR_RUNTIME_STATE__||null,
+          bodyState:document.body?.dataset?.runtimeState||'',
+          bodyDetail:document.body?.dataset?.runtimeDetail||'',
         }));
         stats=state.stats||{}; graphics=state.graphics;
+        const runtimeState=String(state.runtime?.state||state.bodyState||'').toLowerCase();
+        if(runtimeState==='fatal' || runtimeState==='failed') {
+          fatal=`runtime state=${runtimeState} detail=${state.bodyDetail||state.runtime?.detail||''}`;
+          break;
+        }
         if(Number(stats.generated||0)>=1 && Number(stats.dataBytes||0)>0 && Number(stats.subDataCalls||0)>=1 && Number(stats.subDataBytes||0)>0 && Number(stats.vboDraws||0)>=1) break;
       } catch(e){ errors.push(`poll:${String(e)}`); }
       await page.waitForTimeout(500);
