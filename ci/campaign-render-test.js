@@ -495,12 +495,22 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     try {
       await sleep(250);
       const box = await withTimeout(
-        gameCanvas.boundingBox(),
-        screenshotTimeoutMs,
-        `${label} fallback bounding box`,
+        page.evaluate(() => {
+          const canvas = document.getElementById('lwjglCanvas');
+          if (!canvas || !canvas.isConnected) return null;
+          const rect = canvas.getBoundingClientRect();
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          };
+        }),
+        5000,
+        `${label} fallback DOM bounds`,
       );
       if (!box || box.width <= 0 || box.height <= 0) {
-        throw new Error(`${label} fallback canvas has no visible bounding box`);
+        throw new Error(`${label} fallback canvas has no visible DOM bounds`);
       }
       const viewport = page.viewportSize();
       const x = Math.max(0, box.x);
