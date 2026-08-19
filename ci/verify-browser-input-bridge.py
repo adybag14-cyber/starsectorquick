@@ -45,16 +45,24 @@ def main() -> int:
     ):
         require(keyboard, token, "Keyboard bridge")
     for token in (
-        "nIsButtonDown:(I)Z",
+        "nPoll:()J",
         "nNext:()Z",
-        "nGetX:()I",
-        "nGetY:()I",
         "nGetDX:()I",
         "nGetDY:()I",
     ):
         require(mouse, token, "Mouse bridge")
+    for token in (
+        "nIsButtonDown:(I)Z",
+        "nGetX:()I",
+        "nGetY:()I",
+        "nIsInsideWindow:()Z",
+    ):
+        reject(mouse, token, "obsolete per-query Mouse JNI bridge")
 
     require(js, "LWJGL_DIRECT_INPUT_BRIDGE_V1", "JavaScript input bridge")
+    require(js, "LWJGL_MOUSE_POLL_SNAPSHOT_V2", "mouse poll snapshot")
+    require(js, "inputStats.mousePollSnapshots++", "mouse poll telemetry")
+    require(js, "meta * 1099511627776", "49-bit mouse snapshot packing")
     require(js, "glCanvas.tabIndex = 0", "keyboard focus")
     require(js, 'glCanvas.addEventListener("wheel"', "mouse wheel")
     require(js, 'window.addEventListener("keydown", keyHandler, true)', "keyboard capture")
@@ -71,12 +79,17 @@ def main() -> int:
     for token in (
         "Java_org_lwjgl_input_Keyboard_nIsKeyDown,",
         "Java_org_lwjgl_input_Keyboard_nNext,",
-        "Java_org_lwjgl_input_Mouse_nIsButtonDown,",
+        "Java_org_lwjgl_input_Mouse_nPoll,",
         "Java_org_lwjgl_input_Mouse_nNext,",
-        "Java_org_lwjgl_input_Mouse_nGetX,",
-        "Java_org_lwjgl_input_Mouse_nGetY,",
     ):
         require(js, token, "input JNI exports")
+    for token in (
+        "Java_org_lwjgl_input_Mouse_nIsButtonDown,",
+        "Java_org_lwjgl_input_Mouse_nGetX,",
+        "Java_org_lwjgl_input_Mouse_nGetY,",
+        "Java_org_lwjgl_input_Mouse_nIsInsideWindow,",
+    ):
+        reject(js, token, "obsolete per-query Mouse JNI export")
 
     # Keep the legacy Linux/X11 path valid too. Direct-buffer access must be
     # relative to the buffer address, never absolute offset zero.

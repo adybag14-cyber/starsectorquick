@@ -79,6 +79,7 @@ python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-interleaved.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-core-state-cache.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-mouse-poll-snapshot.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
 # The browser quick-start keeps the stock 45s fallback available via override,
@@ -148,7 +149,10 @@ python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-keyboard.javap \
   .ci-build/bridge-runtime-mouse.javap \
   build/final/wasm-modules/lwjgl.js
-
+javac -encoding UTF-8 -source 8 -target 8 \
+  -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" \
+  -d .ci-build/bridge-runtime ci/ProbeMousePollSnapshot.java
+java -cp ".ci-build/bridge-runtime:jars/bridge.jar:jars/lwjgl.jar" ProbeMousePollSnapshot
 # Keep Keyboard.getKeyName/getKeyIndex byte-for-byte behavior aligned with the
 # stock LWJGL 2 table. Starsector renders these names directly in campaign HUD
 # shortcut labels; placeholder names such as unknown_33 are therefore visible UI
