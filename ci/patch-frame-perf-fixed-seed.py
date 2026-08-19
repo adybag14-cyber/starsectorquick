@@ -19,6 +19,21 @@ if "__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__" not in s:
     s = s.replace(location_fixed, location_fixed + f"    __STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__: '{SEED}',\n", 1)
 test.write_text(s, encoding="utf-8", newline="\n")
 
+# The runtime experiment's deep-gameplay post-check normally expects Corvus.
+# Fixed-seed frame benchmarks intentionally pin the campaign to Galatia, so the
+# final shell verification must use the same location or a valid result returns rc=1.
+runner = Path("ci/run-campaign-experiment.sh")
+r = runner.read_text(encoding="utf-8")
+corvus = "    --expected-start-location Corvus\n"
+galatia = "    --expected-start-location Galatia\n"
+if corvus in r:
+    if r.count(corvus) != 1:
+        raise SystemExit("deep-gameplay location verifier anchor mismatch")
+    r = r.replace(corvus, galatia, 1)
+elif galatia not in r:
+    raise SystemExit("deep-gameplay location verifier anchor missing")
+runner.write_text(r, encoding="utf-8", newline="\n")
+
 launch = Path("launch.html")
 s = launch.read_text(encoding="utf-8")
 if "const autoCampaignSeedString" not in s:
