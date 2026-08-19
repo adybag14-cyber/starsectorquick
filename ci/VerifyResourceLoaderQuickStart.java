@@ -28,6 +28,16 @@ public final class VerifyResourceLoaderQuickStart {
             "queued-resource-load-start",
             "resource-queue-loop-complete",
             "graphics-finalize-ready",
+            "finalizer-script-store-ready",
+            "finalizer-markov-names-ready",
+            "finalizer-mod-plugins-ready",
+            "finalizer-ship-static-ready",
+            "finalizer-version-ready",
+            "finalizer-particle-ready",
+            "finalizer-graphics-util-ready",
+            "finalizer-renderer-h-ready",
+            "finalizer-util-f-ready",
+            "finalizer-renderer-public-ready",
             "finalizers-ready");
 
     public static void main(String[] args) throws Exception {
