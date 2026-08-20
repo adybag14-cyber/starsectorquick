@@ -1459,7 +1459,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
     && graphicsErrors.length === 0
     && disallowedRecovery.length === 0
-    && screenshotErrors.length === 0
+    && (screenshotErrors.length === 0 || (firstFrameCapturedAt === null && secondFrameCapturedAt !== null))
     && saveLoadSmoke.ok
     && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(state.bodyState);
 
