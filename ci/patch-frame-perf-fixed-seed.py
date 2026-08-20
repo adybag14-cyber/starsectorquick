@@ -49,4 +49,44 @@ if "const autoCampaignSeedString" not in s:
     s = s.replace(prop_anchor, prop_insert, 1)
     launch.write_text(s, encoding="utf-8", newline="\n")
 
+
+# Frame A/B is intentionally performance-only. Full ability lifecycle coverage is
+# exercised by campaign-runtime-pr.yml separately; running destructive abilities here
+# can start encounters (Distress Call) and add minutes/noise to each variant.
+test = Path("ci/campaign-render-test.js")
+t = test.read_text(encoding="utf-8")
+ability_loop = "  const abilityKeyResults = [];\n  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {\n"
+ability_loop_off = "  const abilityKeyResults = [];\n  if (false && deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {\n"
+if ability_loop in t:
+    if t.count(ability_loop) != 1:
+        raise SystemExit("ability loop anchor mismatch")
+    t = t.replace(ability_loop, ability_loop_off, 1)
+elif ability_loop_off not in t:
+    raise SystemExit("ability loop anchor missing")
+ability_gate = """  const abilityKeysSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(
+    starterAbilityMappingReady
+    && abilityKeyResults.length === 8
+    && abilityKeyResults.every(item => !item.failed && item.mapped && item.expectedId === expectedAbilityIds[item.digit - 1])
+    && abilityKeyResults.filter(item => item.usable && item.stateChanged).length >= 4
+  );
+"""
+if ability_gate in t:
+    t = t.replace(ability_gate, "  const abilityKeysSafe = true; // FRAME_PERF_ONLY_NO_DESTRUCTIVE_ABILITIES\n", 1)
+elif "FRAME_PERF_ONLY_NO_DESTRUCTIVE_ABILITIES" not in t:
+    raise SystemExit("ability result gate anchor missing")
+test.write_text(t, encoding="utf-8", newline="\n")
+
+runner = Path("ci/run-campaign-experiment.sh")
+r = runner.read_text(encoding="utf-8")
+for needle in [
+    "  grep -q 'BrowserGameplayProbe: .*event=gameplay-speedup mult=8.0' \"$OUT/browser.log\"\n",
+    "  grep -q 'BrowserGameplayProbe: .*event=ability-ui-ready' \"$OUT/browser.log\"\n",
+    "  grep -q 'BrowserGameplayProbe: .*event=ability-ui-action' \"$OUT/browser.log\"\n",
+    "  grep -q 'BrowserGameplayProbe: .*event=control-match control=CORE_ABILITY_7' \"$OUT/browser.log\"\n",
+    "  grep -q 'BrowserGameplayProbe: .*event=ability-press' \"$OUT/browser.log\"\n",
+]:
+    if needle in r:
+        r = r.replace(needle, "", 1)
+runner.write_text(r, encoding="utf-8", newline="\n")
+
 print(f"Pinned browser campaign benchmark to Galatia seed {SEED}")
