@@ -138,7 +138,7 @@ jobs:
 
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
-    if: github.ref_name == 'diag/texture-registry-miss-fixed-1080' || github.head_ref == 'diag/texture-registry-miss-fixed-1080'
+    if: github.ref_name == 'diag/registry-miss-original-seed-1080' || github.head_ref == 'diag/registry-miss-original-seed-1080'
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -167,12 +167,12 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228910843"}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
         run: bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Verify Full HD framebuffer and input
         run: |
           grep -Fq 'BrowserDeferredTexture: first-direct-miss-load key=' test_output/resolution-fullhd/browser.log
-          grep -Fq 'seedString=SEK228910843' test_output/resolution-fullhd/browser.log
+          grep -Fq 'seedString=SEK228275323' test_output/resolution-fullhd/browser.log
           python3 - <<'PY'
           import json
           from pathlib import Path
