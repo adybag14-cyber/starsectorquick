@@ -422,34 +422,21 @@ function snapshotAttribState(mask)
 	{
 		state.enable = {};
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
-			state.enable[cap] = getCompatEnableState(cap);
-		if(coreRenderStateCacheEnabled) presentationStats.coreStateSnapshotQueriesAvoided += 5;
+		{
+			if(cap == 0x0BC0/*GL_ALPHA_TEST*/ || cap == glCtx.TEXTURE_2D) state.enable[cap] = getCompatEnableState(cap);
+			else { try { state.enable[cap] = glCtx.isEnabled(cap); } catch(_) { state.enable[cap] = false; } }
+		}
 	}
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
-		if(coreRenderStateCacheEnabled)
-		{
-			state.color = { blendSrcRgb: coreColorState.blendSrcRgb, blendDstRgb: coreColorState.blendDstRgb,
-				blendSrcAlpha: coreColorState.blendSrcAlpha, blendDstAlpha: coreColorState.blendDstAlpha,
-				colorMask: coreColorState.colorMask.slice(), clearColor: coreColorState.clearColor.slice() };
-			presentationStats.coreStateSnapshotQueriesAvoided += 6;
-		}
-		else
-		{
-			state.color = { blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB), blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
-				blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA), blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
-				colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)), clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)) };
-		}
+		state.color = { blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB), blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA), blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)), clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)) };
 		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
 	}
 	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
 	{
-		if(coreRenderStateCacheEnabled)
-		{
-			state.depth = { writeMask: coreDepthState.writeMask, func: coreDepthState.func, clearValue: coreDepthState.clearValue };
-			presentationStats.coreStateSnapshotQueriesAvoided += 3;
-		}
-		else state.depth = { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK), func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
+		state.depth = { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK), func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
 	}
 	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
 	{
