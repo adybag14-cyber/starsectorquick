@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: browser loop overhead frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/browser-loop-frame-tail-ab'
+    name: mouse snapshot frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/mouse-snapshot-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -160,10 +160,10 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin \
-            refs/heads/fix/pages-publish-runtime-settings:refs/remotes/origin/fix/pages-publish-runtime-settings \
-            refs/heads/perf/direct-input-noop-poll-current:refs/remotes/origin/perf/direct-input-noop-poll-current
-          test "$(git rev-parse origin/fix/pages-publish-runtime-settings)" = "5c63758d57057b582eecac474f1f72fb021fd90a"
-          test "$(git rev-parse origin/perf/direct-input-noop-poll-current)" = "32594bb4d3b0798188caff5e7f006f4e3b51493e"
+            refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
+            refs/heads/perf/mouse-snapshot-production:refs/remotes/origin/perf/mouse-snapshot-production
+          test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
+          test "$(git rev-parse origin/perf/mouse-snapshot-production)" = "0ad69a40b9ca1d7ae6936dcd3deb4a169e6d17ff"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -184,11 +184,11 @@ jobs:
           unzip -tq "$archive"
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-publish-runtime-settings
-      - name: Browser loop overhead candidate
-        run: bash ci/run-frame-perf-ab-variant.sh browser-loop origin/perf/direct-input-noop-poll-current
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
+      - name: Mouse snapshot candidate
+        run: bash ci/run-frame-perf-ab-variant.sh mouse-snapshot origin/perf/mouse-snapshot-production
       - name: Production baseline B
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-publish-runtime-settings
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
         if: always()
         run: python3 ci/summarize-frame-perf-ab.py
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-loop-frame-tail-ab
+          name: mouse-snapshot-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
