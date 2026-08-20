@@ -138,7 +138,7 @@ jobs:
 
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
-    if: github.ref_name == 'feat/custom-resolution' || github.head_ref == 'feat/custom-resolution'
+    if: github.ref_name == 'diag/sprite-rehydrate-miss-trace' || github.head_ref == 'diag/sprite-rehydrate-miss-trace'
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
