@@ -222,8 +222,8 @@ jobs:
           path: .ci-cache/starsector_linux-0.98a-RC8.zip
           key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
           fail-on-cache-miss: true
-      - name: Known-good 1024 seed at 1920x1080
-        id: known1080
+      - name: Former-crash seed at 1920x1080
+        id: crash1080
         continue-on-error: true
         env:
           CHEERPJ_JAVA_VERSION: '17'
@@ -231,11 +231,11 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228910843"}'
-        run: bash ci/run-campaign-experiment.sh 'resolution-knownseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Reset runtime patch state before second seed
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
+        run: bash ci/run-campaign-experiment.sh 'resolution-crashseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Reset runtime patch state before 1024 control
         run: git reset --hard HEAD
-      - name: Previously-crashing 1080 seed at 1024x768
+      - name: Same former-crash seed at 1024x768
         id: crash1024
         continue-on-error: true
         env:
@@ -253,7 +253,7 @@ jobs:
           import json
           from pathlib import Path
           cases = [
-              ('known-seed@1080', Path('test_output/resolution-knownseed-1080'), 1920, 1080, 'SEK228910843'),
+              ('crash-seed@1080', Path('test_output/resolution-crashseed-1080'), 1920, 1080, 'SEK228275323'),
               ('crash-seed@1024', Path('test_output/resolution-crashseed-1024'), 1024, 768, 'SEK228275323'),
           ]
           results = {}
@@ -271,12 +271,9 @@ jobs:
               assert f'seedString={seed}' in log, f'{name}: runtime did not consume seed {seed}'
               results[name] = {'ok': data.get('ok') is True, 'fatal': bool(data.get('fatalSeenAt')), 'runtimeErrors': len(data.get('runtimeErrorSignals') or []), 'graphicsErrors': len(data.get('graphicsErrors') or []), 'canvas': canvases[0]}
           print(json.dumps(results, indent=2))
-          known_ok = results['known-seed@1080']['ok']; crash_ok = results['crash-seed@1024']['ok']
-          assert known_ok and crash_ok, f'Refit resolution fix failed: {results}'
-          if known_ok and not crash_ok: print('CLASSIFICATION: seed/fleet-specific failure strongly indicated; 1080 itself passes the known-good seed.')
-          elif not known_ok and crash_ok: print('CLASSIFICATION: resolution-specific failure strongly indicated; the crashing seed is healthy at 1024.')
-          elif known_ok and crash_ok: print('CLASSIFICATION: both missing cells pass; prior Refit crash was not deterministic.')
-          else: print('CLASSIFICATION: both missing cells fail; run a full 2x2 repeat before attribution.')
+          crash1080_ok = results['crash-seed@1080']['ok']; crash1024_ok = results['crash-seed@1024']['ok']
+          assert crash1080_ok and crash1024_ok, f'Refit resolution fix failed: {results}'
+          print('REFIT_SAFE_COLOR_FIXED_SEED_PASS: former-crash seed is healthy at both 1920x1080 and 1024x768')
           PY
       - name: Upload resolution differential evidence
         if: always()
@@ -284,6 +281,6 @@ jobs:
         with:
           name: resolution-seed-refit-differential
           path: |
-            test_output/resolution-knownseed-1080
+            test_output/resolution-crashseed-1080
             test_output/resolution-crashseed-1024
           if-no-files-found: warn
