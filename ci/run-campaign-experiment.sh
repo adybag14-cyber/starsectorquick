@@ -374,6 +374,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTextureLoaderBulkUpload.java \
   ci/VerifyTextureLoaderBulkUploadPatch.java \
   ci/PatchTextureRegistryDeferredLookup.java \
+  ci/PatchSpriteDeferredTextureRehydrate.java \
+  ci/VerifySpriteDeferredTextureRehydrate.java \
   ci/PatchResourceLoaderDeferredTextures.java \
   ci/PatchResourceLoaderDeferredPredecode.java \
   ci/PatchResourceLoaderEarlyPredecode.java \
@@ -479,6 +481,19 @@ mv .ci-build/fs-common-texture-bulk.jar jars/fs.common_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchTextureRegistryDeferredLookup jars/fs.common_obf.jar .ci-build/fs-common-deferred.jar
 mv .ci-build/fs-common-deferred.jar jars/fs.common_obf.jar
+# A Sprite(String) created while its registry entry is still deferred used to lose
+# both texture and textureId. Preserve the key and rehydrate exactly on first
+# getTexture(); loaded Sprites only pay the initial null check.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpriteDeferredTextureRehydrate jars/fs.common_obf.jar .ci-build/fs-common-sprite-rehydrate.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifySpriteDeferredTextureRehydrate .ci-build/fs-common-sprite-rehydrate.jar
+mv .ci-build/fs-common-sprite-rehydrate.jar jars/fs.common_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchSpriteDeferredTextureRehydrate jars/fs.common_obf.jar .ci-build/fs-common-sprite-rehydrate-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifySpriteDeferredTextureRehydrate .ci-build/fs-common-sprite-rehydrate-repeat.jar
+cmp -s jars/fs.common_obf.jar .ci-build/fs-common-sprite-rehydrate-repeat.jar
 # The early ImageIO worker may still be draining when ResourceLoader reaches its
 # stock post-SpecStore start. Keep that stock call, but make it idempotent while
 # the current worker is alive so no duplicate decoder threads are created.
