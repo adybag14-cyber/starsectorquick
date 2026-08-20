@@ -45,7 +45,8 @@ def main() -> int:
     ):
         require(keyboard, token, "Keyboard bridge")
     for token in (
-        "nPoll:()J",
+        "nPollPosition:()I",
+        "nPollMeta:()I",
         "nNext:()Z",
         "nGetDX:()I",
         "nGetDY:()I",
@@ -60,9 +61,9 @@ def main() -> int:
         reject(mouse, token, "obsolete per-query Mouse JNI bridge")
 
     require(js, "LWJGL_DIRECT_INPUT_BRIDGE_V1", "JavaScript input bridge")
-    require(js, "LWJGL_MOUSE_POLL_SNAPSHOT_V2", "mouse poll snapshot")
+    require(js, "LWJGL_MOUSE_POLL_SNAPSHOT_V3_INT_PAIR", "mouse poll snapshot")
     require(js, "inputStats.mousePollSnapshots++", "mouse poll telemetry")
-    require(js, "meta * 1099511627776", "49-bit mouse snapshot packing")
+    require(js, "return (x | (y << 16))", "32-bit mouse position snapshot packing")
     require(js, "glCanvas.tabIndex = 0", "keyboard focus")
     require(js, 'glCanvas.addEventListener("wheel"', "mouse wheel")
     require(js, 'window.addEventListener("keydown", keyHandler, true)', "keyboard capture")
@@ -79,7 +80,8 @@ def main() -> int:
     for token in (
         "Java_org_lwjgl_input_Keyboard_nIsKeyDown,",
         "Java_org_lwjgl_input_Keyboard_nNext,",
-        "Java_org_lwjgl_input_Mouse_nPoll,",
+        "Java_org_lwjgl_input_Mouse_nPollPosition,",
+        "Java_org_lwjgl_input_Mouse_nPollMeta,",
         "Java_org_lwjgl_input_Mouse_nNext,",
     ):
         require(js, token, "input JNI exports")

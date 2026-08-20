@@ -937,6 +937,7 @@ inputStats.mouseButtonQueries = 0;
 inputStats.mousePressedQueries = 0;
 inputStats.mousePositionQueries = 0;
 inputStats.mousePollSnapshots = 0;
+inputStats.mousePollMetaSnapshots = 0;
 inputStats.mousePollPackedClamps = 0;
 inputStats.keyboardQueueHighWater = 0;
 inputStats.mouseQueueHighWater = 0;
@@ -1226,27 +1227,33 @@ function Java_org_lwjgl_input_Mouse_nReset()
 	mouseInputState.current = null;
 	mouseInputState.lastX = mouseInputState.lastY = null;
 }
-// LWJGL_MOUSE_POLL_SNAPSHOT_V2
-// Pack once-per-display-poll non-consuming mouse state into an exactly
-// representable 49-bit integer: signed 20-bit x/y + 8 buttons + inside flag.
-function packMousePollSigned20(value)
+// LWJGL_MOUSE_POLL_SNAPSHOT_V3_INT_PAIR
+// Avoid CheerpJ Java-long marshalling: one 32-bit int carries signed x/y and a
+// second carries buttons + inside. JS cannot process DOM events between these
+// synchronous native calls, so both values describe the same browser turn.
+function packMousePollSigned16(value)
 {
 	var rounded = Math.round(Number(value) || 0);
-	var clamped = Math.max(-524288, Math.min(524287, rounded));
+	var clamped = Math.max(-32768, Math.min(32767, rounded));
 	if(clamped !== rounded) inputStats.mousePollPackedClamps++;
-	return clamped & 0xfffff;
+	return clamped & 0xffff;
 }
-function Java_org_lwjgl_input_Mouse_nPoll()
+function Java_org_lwjgl_input_Mouse_nPollPosition()
 {
 	inputStats.mousePollSnapshots++;
-	var x = packMousePollSigned20(mouseInputState.x);
-	var y = packMousePollSigned20(mouseInputState.y);
+	var x = packMousePollSigned16(mouseInputState.x);
+	var y = packMousePollSigned16(mouseInputState.y);
+	return (x | (y << 16));
+}
+function Java_org_lwjgl_input_Mouse_nPollMeta()
+{
+	inputStats.mousePollMetaSnapshots++;
 	var meta = mouseInputState.inside ? 0x100 : 0;
 	for(var button = 0; button < mouseInputState.buttons.length && button < 8; button++)
 	{
 		if(mouseInputState.buttons[button] !== 0) meta |= (1 << button);
 	}
-	return x + y * 1048576 + meta * 1099511627776;
+	return meta;
 }
 function Java_org_lwjgl_input_Mouse_nNext()
 {
@@ -2523,7 +2530,8 @@ export default {
 	Java_org_lwjgl_input_Keyboard_nIsRepeatEvent,
 	Java_org_lwjgl_input_Keyboard_nSetRepeatEvents,
 	Java_org_lwjgl_input_Mouse_nReset,
-	Java_org_lwjgl_input_Mouse_nPoll,
+	Java_org_lwjgl_input_Mouse_nPollPosition,
+	Java_org_lwjgl_input_Mouse_nPollMeta,
 	Java_org_lwjgl_input_Mouse_nNext,
 	Java_org_lwjgl_input_Mouse_nGetEventButton,
 	Java_org_lwjgl_input_Mouse_nGetEventButtonState,
