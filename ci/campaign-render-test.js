@@ -583,7 +583,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     748 / 768,
   ]);
   const uiControlResults = [];
-  if (expectedState === 'campaign' && !fatalSeenAt) {
+  // The public tutorial intentionally uses a different bottom HUD and does not
+  // expose the mature campaign's seven fixed tab buttons at these coordinates.
+  // Mouse responsiveness is validated independently; fixed tab click geometry is
+  // therefore a mature/deep-gameplay gate only.
+  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
     try {
       const box = await gameCanvas.boundingBox();
       if (!box) throw new Error('campaign canvas has no bounding box');
@@ -702,7 +706,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       errors.push(`campaign UI control probe failed: ${error.message || error}`);
     }
   }
-  const uiControlsSafe = expectedState !== 'campaign' || Boolean(
+  const uiControlsSafe = expectedState !== 'campaign' || !deepGameplay || Boolean(
     uiControlResults.length === campaignUiControls.length
     && uiControlResults.every(item => !item.failed)
     && !fatalSeenAt
