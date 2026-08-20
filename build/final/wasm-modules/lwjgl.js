@@ -289,31 +289,24 @@ var alphaTestWarnings = new Set();
 var texture2DEnabled = false;
 var attribStateStack = [];
 var attribStateWarnings = new Set();
-// WEBGL_CORE_RENDER_STATE_CACHE_V1
-// Track only WebGL states with deterministic defaults and bridge-owned mutations.
-// Disabling this cache preserves the prior raw WebGL calls and state queries.
-var coreRenderStateCacheEnabled = typeof window === "undefined" || window.__LWJGL_CORE_RENDER_STATE_CACHE__ !== false;
+// WEBGL_CORE_ENABLE_QUERY_CACHE_V1
+// Shadow only the five WebGL enable bits queried by GL_ENABLE_BIT snapshots.
+// All state-setting calls still execute; this cache only avoids synchronous isEnabled().
+var coreEnableQueryCacheEnabled = typeof window === "undefined" || window.__LWJGL_CORE_ENABLE_QUERY_CACHE__ !== false;
 var coreEnableState = Object.create(null);
 coreEnableState[glCtx.BLEND] = false;
 coreEnableState[glCtx.CULL_FACE] = false;
 coreEnableState[glCtx.DEPTH_TEST] = false;
 coreEnableState[glCtx.SCISSOR_TEST] = false;
 coreEnableState[glCtx.STENCIL_TEST] = false;
-var coreColorState = {
-	blendSrcRgb: glCtx.ONE, blendDstRgb: glCtx.ZERO,
-	blendSrcAlpha: glCtx.ONE, blendDstAlpha: glCtx.ZERO,
-	colorMask: [true, true, true, true], clearColor: [0, 0, 0, 0]
-};
-var coreDepthState = { writeMask: true, func: glCtx.LESS, clearValue: 1 };
 function hasCoreEnableState(cap)
 {
 	return Object.prototype.hasOwnProperty.call(coreEnableState, cap);
 }
-function noteCoreStateCall(changed)
+function noteCoreEnableStateCall()
 {
 	presentationStats.coreStateCalls++;
-	if(changed) presentationStats.coreStateChanges++;
-	else presentationStats.coreStateSkipped++;
+	presentationStats.coreStateChanges++;
 }
 function syncAlphaTestUniforms()
 {
@@ -330,16 +323,15 @@ function getCompatEnableState(cap)
 {
 	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
 	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
-	if(coreRenderStateCacheEnabled && hasCoreEnableState(cap)) return coreEnableState[cap];
+	if(coreEnableQueryCacheEnabled && hasCoreEnableState(cap)) return coreEnableState[cap];
 	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
 }
 function setCoreEnableState(cap, enabled)
 {
 	enabled = !!enabled;
-	var tracked = hasCoreEnableState(cap);
-	if(tracked) coreEnableState[cap] = enabled;
+	if(hasCoreEnableState(cap)) coreEnableState[cap] = enabled;
 	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
-	noteCoreStateCall(true);
+	noteCoreEnableStateCall();
 }
 function setCompatEnableState(cap, enabled)
 {
@@ -356,50 +348,6 @@ function setCompatEnableState(cap, enabled)
 	}
 	setCoreEnableState(cap, enabled);
 }
-function setCoreBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha)
-{
-	coreColorState.blendSrcRgb = srcRgb; coreColorState.blendDstRgb = dstRgb;
-	coreColorState.blendSrcAlpha = srcAlpha; coreColorState.blendDstAlpha = dstAlpha;
-	glCtx.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
-	noteCoreStateCall(true);
-}
-function setCoreBlendFunc(src, dst)
-{
-	coreColorState.blendSrcRgb = coreColorState.blendSrcAlpha = src;
-	coreColorState.blendDstRgb = coreColorState.blendDstAlpha = dst;
-	glCtx.blendFunc(src, dst);
-	noteCoreStateCall(true);
-}
-function setCoreColorMask(r, g, b, a)
-{
-	var v = coreColorState.colorMask;
-	v[0]=!!r; v[1]=!!g; v[2]=!!b; v[3]=!!a;
-	glCtx.colorMask(r, g, b, a);
-	noteCoreStateCall(true);
-}
-function setCoreClearColor(r, g, b, a)
-{
-	var v = coreColorState.clearColor;
-	var nr=Number(r), ng=Number(g), nb=Number(b), na=Number(a);
-	v[0]=nr; v[1]=ng; v[2]=nb; v[3]=na;
-	glCtx.clearColor(r, g, b, a);
-	noteCoreStateCall(true);
-}
-function setCoreDepthMask(enabled)
-{
-	enabled=!!enabled; coreDepthState.writeMask=enabled;
-	glCtx.depthMask(enabled); noteCoreStateCall(true);
-}
-function setCoreDepthFunc(func)
-{
-	coreDepthState.func=func;
-	glCtx.depthFunc(func); noteCoreStateCall(true);
-}
-function setCoreClearDepth(value)
-{
-	value=Number(value); coreDepthState.clearValue=value;
-	glCtx.clearDepth(value); noteCoreStateCall(true);
-}
 function snapshotAttribState(mask)
 {
 	var state = { mask: mask };
@@ -408,33 +356,27 @@ function snapshotAttribState(mask)
 		state.enable = {};
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
 			state.enable[cap] = getCompatEnableState(cap);
-		if(coreRenderStateCacheEnabled) presentationStats.coreStateSnapshotQueriesAvoided += 5;
+		if(coreEnableQueryCacheEnabled) presentationStats.coreStateSnapshotQueriesAvoided += 5;
 	}
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
-		if(coreRenderStateCacheEnabled)
-		{
-			state.color = { blendSrcRgb: coreColorState.blendSrcRgb, blendDstRgb: coreColorState.blendDstRgb,
-				blendSrcAlpha: coreColorState.blendSrcAlpha, blendDstAlpha: coreColorState.blendDstAlpha,
-				colorMask: coreColorState.colorMask.slice(), clearColor: coreColorState.clearColor.slice() };
-			presentationStats.coreStateSnapshotQueriesAvoided += 6;
-		}
-		else
-		{
-			state.color = { blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB), blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
-				blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA), blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
-				colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)), clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)) };
-		}
+		state.color = {
+			blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+			blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
+			blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
+			clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
+		};
 		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
 	}
 	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
 	{
-		if(coreRenderStateCacheEnabled)
-		{
-			state.depth = { writeMask: coreDepthState.writeMask, func: coreDepthState.func, clearValue: coreDepthState.clearValue };
-			presentationStats.coreStateSnapshotQueriesAvoided += 3;
-		}
-		else state.depth = { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK), func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
+		state.depth = {
+			writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
+			func: glCtx.getParameter(glCtx.DEPTH_FUNC),
+			clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE)
+		};
 	}
 	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
 	{
@@ -462,15 +404,15 @@ function restoreAttribState(state)
 	}
 	if(state.color)
 	{
-		setCoreBlendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
-		setCoreColorMask(...state.color.colorMask);
-		setCoreClearColor(...state.color.clearColor);
+		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
+		glCtx.colorMask(...state.color.colorMask);
+		glCtx.clearColor(...state.color.clearColor);
 	}
 	if(state.depth)
 	{
-		setCoreDepthMask(state.depth.writeMask);
-		setCoreDepthFunc(state.depth.func);
-		setCoreClearDepth(state.depth.clearValue);
+		glCtx.depthMask(state.depth.writeMask);
+		glCtx.depthFunc(state.depth.func);
+		glCtx.clearDepth(state.depth.clearValue);
 	}
 	if(state.viewport)
 	{
@@ -1616,7 +1558,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval()
 function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 {
 	checkNoList(curList);
-	return setCoreClearColor(r, g, b, a);
+	return glCtx.clearColor(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
@@ -2020,14 +1962,14 @@ function Java_org_lwjgl_opengl_GL11_nglClearDepth(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglClearDepth);
-	setCoreClearDepth(a);
+	glCtx.clearDepth(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
-	setCoreDepthFunc(a);
+	glCtx.depthFunc(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
@@ -2096,21 +2038,21 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
-	setCoreDepthMask(a);
+	glCtx.depthMask(a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
-	setCoreBlendFunc(sfactor, dfactor);
+	glCtx.blendFunc(sfactor, dfactor);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
-	setCoreColorMask(r, g, b, a);
+	glCtx.colorMask(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
