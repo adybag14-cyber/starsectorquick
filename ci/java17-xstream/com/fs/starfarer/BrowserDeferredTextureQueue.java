@@ -230,7 +230,6 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/ui/buttons/")
                 || isDeferredFleetTabStockAsset(value)) return 0;
         if (value.startsWith("graphics/ships/")
-                || value.startsWith("graphics/weapons/")
                 || value.startsWith("graphics/icons/hullsys/")) return 1;
         if (value.startsWith("graphics/factions/")
                 || value.startsWith("graphics/planets/")
@@ -289,8 +288,6 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/planets/")
                 || value.startsWith("graphics/stations/")
                 || value.startsWith("graphics/warroom/")
-                || value.startsWith("graphics/weapons/")
-                || value.startsWith("graphics/ships/")
                 || value.startsWith("graphics/ui/buttons/")
                 || isDeferredFleetTabStockAsset(value)
                 || value.startsWith("graphics/damage/")
