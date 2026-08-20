@@ -28,16 +28,15 @@ public class Mouse {
     }
 
     public static void poll() {
-        long state = nPoll();
-        polledX = decodeSigned20(state);
-        polledY = decodeSigned20(state >>> 20);
-        int meta = (int) (state >>> 40);
+        int position = nPollPosition();
+        polledX = decodeSigned16(position);
+        polledY = decodeSigned16(position >>> 16);
+        int meta = nPollMeta();
         polledButtons = meta & 0xff;
         polledInside = (meta & 0x100) != 0;
     }
-    private static int decodeSigned20(long value) {
-        int raw = (int) (value & 0xfffffL);
-        return (raw & 0x80000) != 0 ? raw | ~0xfffff : raw;
+    private static int decodeSigned16(int value) {
+        return (short) (value & 0xffff);
     }
     public static void updateCursor() {}
     public static boolean isCreated() { return created; }
@@ -83,7 +82,8 @@ public class Mouse {
     public static void setClipMouseCoordinatesToWindow(boolean clip) {}
 
     private static native void nReset();
-    private static native long nPoll();
+    private static native int nPollPosition();
+    private static native int nPollMeta();
     private static native boolean nNext();
     private static native int nGetEventButton();
     private static native boolean nGetEventButtonState();
