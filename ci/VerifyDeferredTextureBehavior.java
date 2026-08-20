@@ -77,13 +77,14 @@ public final class VerifyDeferredTextureBehavior {
             Thread.sleep(5L);
         }
         require(BrowserDeferredTextureQueue.isGameplayPrewarmDone(), "gameplay prewarm did not complete");
-        require(BrowserDeferredTextureQueue.getGameplayPredecodeCount() == 3L,
-                "expected UI/refit/world predecode count=3 actual=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
+        require(BrowserDeferredTextureQueue.getGameplayPredecodeCount() == 2L,
+                "expected UI/world deferred predecode count=2 actual=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
         require(BrowserDeferredTextureQueue.getGameplayPredecodeFailedCount() == 0L, "unexpected predecode failures");
         require(BrowserDeferredTextureQueue.getGameplayPrewarmPendingCount() == 0, "prewarm queues should drain");
-        require(L.PREDECODE.size() == predecodeBeforeWarm + 3, "unexpected background predecode list=" + L.PREDECODE);
+        require(L.PREDECODE.size() == predecodeBeforeWarm + 2, "unexpected background predecode list=" + L.PREDECODE);
         require(L.PREDECODE.contains("graphics/icons/skills/elite_combat.png"), "skill missing from prewarm");
-        require(L.PREDECODE.contains("graphics/ships/lasher/lasher_base.png"), "ship missing from prewarm");
+        require(!L.PREDECODE.contains("graphics/ships/lasher/lasher_base.png"), "eager ship must not enter deferred prewarm");
+        require(oOoO.LOADS.contains("ship=graphics/ships/lasher/lasher_base.png"), "ship should register eagerly: " + oOoO.LOADS);
         require(L.PREDECODE.contains("graphics/planets/terran.jpg"), "planet missing from prewarm");
         require(!L.PREDECODE.contains("graphics/damage/damage1.png"), "combat-only texture should not be background predecoded");
 
