@@ -22,6 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/browser-loop-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -134,3 +135,67 @@ jobs:
             test_output/pages-overlays/pr-check/web-runtime-profile.json
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
           if-no-files-found: warn
+
+  frame-perf-same-runner:
+    name: core snapshot query frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/core-query-frame-tail-ab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Checkout benchmark harness
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false
+      - name: Use Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Fetch exact comparison refs
+        run: |
+          set -euo pipefail
+          git fetch origin \
+            refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
+            refs/heads/perf/core-query-cache-current:refs/remotes/origin/perf/core-query-cache-current
+          test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
+          test "$(git rev-parse origin/perf/core-query-cache-current)" = "84cb87635af203b3c2ee66e3a5e1e400e55cf1c5"
+      - name: Restore official release cache
+        uses: actions/cache@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+      - name: Ensure official 0.98a-RC8 archive
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-cache
+          archive=.ci-cache/starsector_linux-0.98a-RC8.zip
+          if [[ ! -s "$archive" ]] || ! unzip -tq "$archive" >/dev/null 2>&1; then
+            rm -f "$archive"
+            curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 1200 \
+              --connect-timeout 30 --max-time 900 --continue-at - \
+              -o "$archive" \
+              https://f005.backblazeb2.com/file/fractalsoftworks/release/starsector_linux-0.98a-RC8.zip
+          fi
+          unzip -tq "$archive"
+          test "$(wc -c < "$archive")" -gt 200000000
+      - name: Production baseline A
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
+      - name: Core state no-uniform candidate
+        run: bash ci/run-frame-perf-ab-variant.sh core-query origin/perf/core-query-cache-current
+      - name: Production baseline B
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
+      - name: Summarize drift-adjusted frame metrics
+        if: always()
+        run: python3 ci/summarize-frame-perf-ab.py
+      - name: Upload same-runner evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-query-frame-tail-ab
+          path: test_output/frame-perf-ab
+          if-no-files-found: error
