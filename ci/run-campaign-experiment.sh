@@ -420,6 +420,8 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchSpecStoreVariantDiscovery.java \
   ci/PatchSpecStoreDirectVariantManifest.java \
   ci/PatchShipHullSkinDirectManifest.java \
+  ci/PatchShipSlotCoverSafeAverageColor.java \
+  ci/VerifyShipSlotCoverSafeAverageColorPatch.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -809,6 +811,20 @@ java -cp .ci-build/asm/asm.jar:.ci-build/transform \
 java -cp .ci-build/asm/asm.jar:.ci-build/verify-bulk-spec-patch \
   VerifyShipHullSkinDirectManifestPatch .ci-build/starfarer-direct-skin-manifest-repeat.jar
 cmp -s jars/starfarer_obf.jar .ci-build/starfarer-direct-skin-manifest-repeat.jar
+# Ship slot-cover tinting historically dereferences Sprite.getTexture() directly.
+# Browser deferred textures can leave that transient texture null until first use;
+# use Sprite's stock null-safe getAverageColor() instead without changing loaded visuals.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchShipSlotCoverSafeAverageColor jars/starfarer_obf.jar .ci-build/starfarer-slot-cover-safe-color.jar
+mv .ci-build/starfarer-slot-cover-safe-color.jar jars/starfarer_obf.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyShipSlotCoverSafeAverageColorPatch jars/starfarer_obf.jar
+# Require byte-idempotence so repeat builds cannot stack the compatibility patch.
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  PatchShipSlotCoverSafeAverageColor jars/starfarer_obf.jar .ci-build/starfarer-slot-cover-safe-color-repeat.jar
+java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+  VerifyShipSlotCoverSafeAverageColorPatch .ci-build/starfarer-slot-cover-safe-color-repeat.jar
+cmp -s jars/starfarer_obf.jar .ci-build/starfarer-slot-cover-safe-color-repeat.jar
 mkdir -p .ci-build/verify-resource-loader
 javac -cp .ci-build/asm/asm.jar -d .ci-build/verify-resource-loader \
   ci/VerifyResourceLoaderQuickStart.java
