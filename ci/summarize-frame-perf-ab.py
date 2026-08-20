@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'core-no-uniform', 'baseline-b']
+ORDER = ['baseline-a', 'core-query', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = '269950e397ab35d47480dbc0e0bddcde52a9ebb0'
+CANDIDATE_SHA = '84cb87635af203b3c2ee66e3a5e1e400e55cf1c5'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -59,7 +59,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['core-no-uniform'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['core-query'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -82,14 +82,14 @@ def main():
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
         lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('core_calls','-')} | {r.get('core_skipped','-')} | {r.get('core_changes','-')} | {r.get('core_queries_avoided','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted core-no-uniform delta:']
+    lines += ['', 'Drift-adjusted core-query delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('core-no-uniform', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('core-query', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -103,8 +103,10 @@ def main():
     skipped = int(c.get('core_skipped') or 0)
     changes = int(c.get('core_changes') or 0)
     avoided = int(c.get('core_queries_avoided') or 0)
-    if calls < 100 or skipped <= 0 or changes <= 0 or skipped + changes != calls or avoided < 100:
-        raise SystemExit(f'core-no-uniform cache activation evidence invalid: {c}')
+    if calls < 100 or skipped != 0 or changes != calls:
+        raise SystemExit(f'core-query cache must preserve every state write: {c}')
+    if avoided < 100:
+        raise SystemExit(f'core-query cache query evidence invalid: {c}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
