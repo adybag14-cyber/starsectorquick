@@ -138,7 +138,7 @@ jobs:
 
   frame-perf-same-runner:
     name: core state no-uniform frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/core-state-no-uniform-frame-tail-ab'
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/core-no-uniform-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
