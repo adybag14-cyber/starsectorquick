@@ -33,6 +33,14 @@ public final class GL11 {
     private static float savedListTexCoordS = 0.0f;
     private static float savedListTexCoordT = 0.0f;
     private static boolean compilingList = false;
+    // BROWSER_COLOR_JNI_CACHE_V1: OpenGL current color starts at opaque white.
+    // Keep only explicit Java-side color calls cached; display-list playback and
+    // attrib restores invalidate this shadow because they can mutate color in JS.
+    private static boolean currentColorCacheValid = true;
+    private static float currentColorR = 1.0f;
+    private static float currentColorG = 1.0f;
+    private static float currentColorB = 1.0f;
+    private static float currentColorA = 1.0f;
     private static final Set<Integer> liveTextureIds = new HashSet<Integer>();
 
     private GL11() {}
@@ -131,7 +139,10 @@ public final class GL11 {
     public static void glBlendFunc(int p0, int p1) { nglBlendFunc(p0, p1, 0L); }
     static native void nglBlendFunc(int p0, int p1, long p2);
 
-    public static void glCallList(int p0) { nglCallList(p0, 0L); }
+    public static void glCallList(int p0) {
+        nglCallList(p0, 0L);
+        currentColorCacheValid = false;
+    }
     static native void nglCallList(int p0, long p1);
 
     public static void glClear(int p0) { nglClear(p0, 0L); }
@@ -142,12 +153,46 @@ public final class GL11 {
 
     public static void glColor3d(double p0, double p1, double p2) { glColor3f((float) p0, (float) p1, (float) p2); }
 
-    public static void glColor3f(float p0, float p1, float p2) { nglColor3f(p0, p1, p2, 0L); }
+    public static void glColor3f(float p0, float p1, float p2) {
+        if (!compilingList
+                && currentColorCacheValid
+                && currentColorR == p0
+                && currentColorG == p1
+                && currentColorB == p2
+                && currentColorA == 1.0f) {
+            return;
+        }
+        nglColor3f(p0, p1, p2, 0L);
+        if (!compilingList) {
+            currentColorR = p0;
+            currentColorG = p1;
+            currentColorB = p2;
+            currentColorA = 1.0f;
+            currentColorCacheValid = true;
+        }
+    }
     static native void nglColor3f(float p0, float p1, float p2, long p3);
 
     public static void glColor3ub(byte p0, byte p1, byte p2) { glColor4ub(p0, p1, p2, (byte) 255); }
 
-    public static void glColor4f(float p0, float p1, float p2, float p3) { nglColor4f(p0, p1, p2, p3, 0L); }
+    public static void glColor4f(float p0, float p1, float p2, float p3) {
+        if (!compilingList
+                && currentColorCacheValid
+                && currentColorR == p0
+                && currentColorG == p1
+                && currentColorB == p2
+                && currentColorA == p3) {
+            return;
+        }
+        nglColor4f(p0, p1, p2, p3, 0L);
+        if (!compilingList) {
+            currentColorR = p0;
+            currentColorG = p1;
+            currentColorB = p2;
+            currentColorA = p3;
+            currentColorCacheValid = true;
+        }
+    }
     static native void nglColor4f(float p0, float p1, float p2, float p3, long p4);
 
     public static void glColor4ub(byte p0, byte p1, byte p2, byte p3) {
@@ -360,6 +405,7 @@ public final class GL11 {
             System.out.println("Bridge GL11.glPopAttrib()");
         }
         nglPopAttrib(0L);
+        currentColorCacheValid = false;
     }
     static native void nglPopAttrib(long p0);
 

@@ -142,6 +142,9 @@ javap -classpath jars/bridge.jar -c org.lwjgl.opengl.Display > .ci-build/bridge-
 javap -classpath jars/bridge.jar -c org.lwjgl.input.Keyboard > .ci-build/bridge-runtime-keyboard.javap
 javap -classpath jars/bridge.jar -c org.lwjgl.input.Mouse > .ci-build/bridge-runtime-mouse.javap
 python3 ci/verify-bridge-client-arrays.py .ci-build/bridge-runtime-gl11.javap
+python3 ci/verify-gl11-color-jni-cache.py \
+  bridge_src/org/lwjgl/opengl/GL11.java \
+  .ci-build/bridge-runtime-gl11.javap
 python3 ci/verify-browser-input-bridge.py \
   .ci-build/bridge-runtime-display.javap \
   .ci-build/bridge-runtime-keyboard.javap \
