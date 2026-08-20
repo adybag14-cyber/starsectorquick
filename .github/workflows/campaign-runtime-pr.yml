@@ -138,7 +138,7 @@ jobs:
 
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
-    if: github.ref_name == 'diag/refit-eager-fixed-seed' || github.head_ref == 'diag/refit-eager-fixed-seed'
+    if: github.ref_name == 'diag/sprite-rehydrate-fixed-seed' || github.head_ref == 'diag/sprite-rehydrate-fixed-seed'
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
