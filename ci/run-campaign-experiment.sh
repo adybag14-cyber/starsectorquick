@@ -422,6 +422,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchShipHullSkinDirectManifest.java \
   ci/PatchShipSlotCoverSafeAverageColor.java \
   ci/VerifyShipSlotCoverSafeAverageColorPatch.java \
+  ci/PatchWeaponCtorNullDiagnostics.java \
   ci/PatchLoadingUtilsBulkSpecCache.java
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignOrbitalJunk jars/starfarer.api.jar .ci-build/starfarer-api-no-junk.jar
@@ -832,6 +833,15 @@ java -cp .ci-build/asm/asm.jar:.ci-build/verify-resource-loader \
   VerifyResourceLoaderQuickStart jars/starfarer_obf.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   VerifyDeferredTexturePatches jars/starfarer_obf.jar jars/fs.common_obf.jar
+
+if [[ "${STARSECTOR_WEAPON_CTOR_DIAGNOSTICS:-false}" == "true" ]]; then
+  java -cp .ci-build/asm/asm.jar:.ci-build/transform \
+    PatchWeaponCtorNullDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-weapon-ctor-null-diag.jar
+  mv .ci-build/starfarer-weapon-ctor-null-diag.jar jars/starfarer_obf.jar
+  javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.combat.entities.ship.A.J \
+    > "$OUT/weapon-ctor-null-diagnostic.javap"
+  grep -q 'WeaponCtorNullDiag:' "$OUT/weapon-ctor-null-diagnostic.javap"
+fi
 
 mkdir -p .ci-build/verify-script-plugin
 javac -encoding UTF-8 -source 8 -target 8 -cp "jars/starfarer_obf.jar:$CP" \

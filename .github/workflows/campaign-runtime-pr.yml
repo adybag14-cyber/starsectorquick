@@ -167,6 +167,7 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          STARSECTOR_WEAPON_CTOR_DIAGNOSTICS: 'true'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
         run: bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Verify Full HD framebuffer and input
@@ -200,7 +201,7 @@ jobs:
 
   resolution_seed_differential:
     name: Resolution/seed Refit differential
-    if: (github.event_name == 'pull_request' && github.head_ref == 'diag/refit-safe-color-resolution') || (github.event_name == 'workflow_dispatch' && github.ref_name == 'diag/refit-safe-color-resolution')
+    if: (github.event_name == 'pull_request' && github.head_ref == 'diag/refit-weapon-ctor-null') || (github.event_name == 'workflow_dispatch' && github.ref_name == 'diag/refit-weapon-ctor-null')
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -233,47 +234,25 @@ jobs:
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
         run: bash ci/run-campaign-experiment.sh 'resolution-crashseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Reset runtime patch state before 1024 control
-        run: git reset --hard HEAD
-      - name: Same former-crash seed at 1024x768
-        id: crash1024
-        continue-on-error: true
-        env:
-          CHEERPJ_JAVA_VERSION: '17'
-          STARSECTOR_DEEP_GAMEPLAY: 'false'
-          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
-          STARSECTOR_SAVE_LOAD_SMOKE: 'false'
-          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1024,"__STARSECTOR_RENDER_HEIGHT__":768,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
-        run: bash ci/run-campaign-experiment.sh 'resolution-crashseed-1024' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
-      - name: Classify resolution vs seed behavior
+      - name: Verify fixed-seed weapon-constructor diagnostic
         if: always()
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
-          cases = [
-              ('crash-seed@1080', Path('test_output/resolution-crashseed-1080'), 1920, 1080, 'SEK228275323'),
-              ('crash-seed@1024', Path('test_output/resolution-crashseed-1024'), 1024, 768, 'SEK228275323'),
-          ]
-          results = {}
-          for name, root, width, height, seed in cases:
-              p = root / 'result.json'
-              assert p.exists(), f'missing {p}'
-              data = json.loads(p.read_text(encoding='utf-8'))
-              cfg = data.get('windowConfig') or {}
-              assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == width, (name, cfg)
-              assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == height, (name, cfg)
-              assert cfg.get('__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__') == seed, (name, cfg)
-              canvases = ((data.get('state') or {}).get('canvases') or [])
-              assert canvases and int(canvases[0].get('width', 0)) == width and int(canvases[0].get('height', 0)) == height, (name, canvases)
-              log = (root / 'browser.log').read_text(encoding='utf-8', errors='ignore')
-              assert f'seedString={seed}' in log, f'{name}: runtime did not consume seed {seed}'
-              results[name] = {'ok': data.get('ok') is True, 'fatal': bool(data.get('fatalSeenAt')), 'runtimeErrors': len(data.get('runtimeErrorSignals') or []), 'graphicsErrors': len(data.get('graphicsErrors') or []), 'canvas': canvases[0]}
-          print(json.dumps(results, indent=2))
-          crash1080_ok = results['crash-seed@1080']['ok']; crash1024_ok = results['crash-seed@1024']['ok']
-          assert crash1080_ok and crash1024_ok, f'Refit resolution fix failed: {results}'
-          print('REFIT_SAFE_COLOR_FIXED_SEED_PASS: former-crash seed is healthy at both 1920x1080 and 1024x768')
+          root = Path('test_output/resolution-crashseed-1080')
+          data = json.loads((root / 'result.json').read_text(encoding='utf-8'))
+          cfg = data.get('windowConfig') or {}
+          assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == 1920, cfg
+          assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == 1080, cfg
+          assert cfg.get('__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__') == 'SEK228275323', cfg
+          canvases = ((data.get('state') or {}).get('canvases') or [])
+          assert canvases and int(canvases[0].get('width', 0)) == 1920 and int(canvases[0].get('height', 0)) == 1080, canvases
+          log = (root / 'browser.log').read_text(encoding='utf-8', errors='ignore')
+          assert 'seedString=SEK228275323' in log, 'runtime did not consume fixed seed'
+          assert 'WeaponCtorNullDiag:' in log, 'weapon constructor null probe did not fire'
+          assert data.get('fatalSeenAt'), 'expected fixed-seed 1080 crash did not reproduce'
+          print('WEAPON_CTOR_NULL_DIAG_CAPTURED')
           PY
       - name: Upload resolution differential evidence
         if: always()
@@ -282,5 +261,4 @@ jobs:
           name: resolution-seed-refit-differential
           path: |
             test_output/resolution-crashseed-1080
-            test_output/resolution-crashseed-1024
           if-no-files-found: warn
