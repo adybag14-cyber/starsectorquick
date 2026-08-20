@@ -253,6 +253,7 @@ jobs:
           assert 'seedString=SEK228275323' in log, 'runtime did not consume fixed seed'
           assert 'WeaponCtorEntryDiag: A.J.<init>' in log, 'weapon constructor entry probe did not fire'
           assert 'WeaponCtorNullDiag:' in log, 'weapon constructor null probe did not fire'
+          assert 'WeaponCtorContextDiag: weapon=' in log, 'weapon constructor context probe did not fire'
           assert data.get('fatalSeenAt'), 'expected fixed-seed 1080 crash did not reproduce'
           print('WEAPON_CTOR_NULL_DIAG_CAPTURED')
           PY

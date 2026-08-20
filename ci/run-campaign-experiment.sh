@@ -841,6 +841,8 @@ if [[ "${STARSECTOR_WEAPON_CTOR_DIAGNOSTICS:-false}" == "true" ]]; then
   javap -classpath jars/starfarer_obf.jar -c -p com.fs.starfarer.combat.entities.ship.A.J \
     > "$OUT/weapon-ctor-null-diagnostic.javap"
   grep -q 'WeaponCtorNullDiag:' "$OUT/weapon-ctor-null-diagnostic.javap"
+  grep -q 'WeaponCtorEntryDiag:' "$OUT/weapon-ctor-null-diagnostic.javap"
+  grep -q 'WeaponCtorContextDiag:' "$OUT/weapon-ctor-null-diagnostic.javap"
 fi
 
 mkdir -p .ci-build/verify-script-plugin
