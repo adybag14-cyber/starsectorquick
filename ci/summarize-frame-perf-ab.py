@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'mouse-snapshot', 'baseline-b']
+ORDER = ['baseline-a', 'color-jni', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = '0ad69a40b9ca1d7ae6936dcd3deb4a169e6d17ff'
+CANDIDATE_SHA = '601d1c759a52febe58c9c67987bd6fa80a2d2be0'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -57,7 +57,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['mouse-snapshot'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['color-jni'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -71,23 +71,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Production vs mouse snapshot same-runner A/B', '',
+        '# Production vs color JNI dedupe same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | mouse snaps | mouse pos JNI | mouse button JNI | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('mouse_snapshots','-')} | {r.get('mouse_position_queries','-')} | {r.get('mouse_button_queries','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted mouse-snapshot delta:']
+    lines += ['', 'Drift-adjusted color-JNI delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('mouse-snapshot', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('color-jni', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -97,15 +97,6 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    if c.get('mouse_snapshots', 0) < 100:
-        raise SystemExit(f'mouse snapshot marker inactive: {c}')
-    if c.get('mouse_snapshot_clamps', 0) != 0:
-        raise SystemExit(f'mouse snapshot unexpectedly clamped: {c}')
-    if c.get('mouse_position_queries', 0) != 0 or c.get('mouse_button_queries', 0) != 0:
-        raise SystemExit(f'legacy mouse JNI queries still active: {c}')
-    if (a.get('mouse_position_queries', 0) <= 0 or b.get('mouse_position_queries', 0) <= 0
-            or a.get('mouse_button_queries', 0) <= 0 or b.get('mouse_button_queries', 0) <= 0):
-        raise SystemExit(f'baseline mouse JNI query evidence missing: {a} {b}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
