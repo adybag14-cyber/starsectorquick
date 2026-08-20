@@ -737,12 +737,15 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           document.body.tabIndex = -1;
           document.body.focus({ preventScroll: true });
         });
-        const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+        let before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
-        const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+        let beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
-        const shortcutStartedAt = Date.now();
+        let shortcutStartedAt = Date.now();
+        let recoveredTutorialModal = false;
+        let tutorialRecoveryMs = null;
+        let tutorialRecoveryVisualDiff = null;
         await page.keyboard.press(key);
         let transition = null;
         let shortcutFrame = null;
@@ -772,24 +775,63 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
             transition = { opened: false, listenerReadyMs: null, visualReadyMs: null, visualDiff: 0, readyMatched: false };
           }
         } else {
-          // Dev mode can leave keyup queued for a later Keyboard.next() drain even
-          // though the DOM bridge captured both events and the panel already opened.
-          // Validate the non-deep/tutorial path by the actual canvas transition,
-          // instead of requiring both queue entries to be consumed immediately.
-          const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
-            timeoutMs: 8000,
-            pollMs: 800,
-            threshold: panelVisualThreshold(expectedTab),
-            region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
-          });
-          shortcutFrame = visual.frame;
-          transition = {
-            opened: visual.opened,
-            listenerReadyMs: null,
-            visualReadyMs: visual.opened ? Date.now() - shortcutStartedAt : null,
-            visualDiff: visual.visualDiff,
-            readyMatched: false,
+          const runTutorialShortcutVisual = async () => {
+            const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              timeoutMs: 8000,
+              pollMs: 800,
+              threshold: panelVisualThreshold(expectedTab),
+              region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
+            });
+            shortcutFrame = visual.frame;
+            return {
+              opened: visual.opened,
+              listenerReadyMs: null,
+              visualReadyMs: visual.opened ? Date.now() - shortcutStartedAt : null,
+              visualDiff: visual.visualDiff,
+              readyMatched: false,
+            };
           };
+
+          transition = await runTutorialShortcutVisual();
+          if (!transition.opened) {
+            // A fresh tutorial can present an initial modal over the campaign HUD.
+            // The key event is still delivered to LWJGL, but the modal owns the action.
+            // Recover exactly once, prove Escape returned to campaign, reset the input
+            // baseline so Escape cannot satisfy the shortcut gate, then retry the same key.
+            const blockedAfter = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+            const blockedRuntime = await page.evaluate(() => ({
+              bodyState: document.body.dataset.runtimeState || '',
+              runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
+            }));
+            const blockedDelivered = Number(blockedAfter.directKeyboardDelivered || 0) - Number(before.directKeyboardDelivered || 0);
+            const blockedGlobal = Number(blockedAfter.keyboardGlobalCaptures || 0) - Number(before.keyboardGlobalCaptures || 0);
+            const recoverable = blockedDelivered >= 1 && blockedGlobal >= 2
+              && blockedRuntime.runtime?.state !== 'fatal'
+              && !['main-returned', 'failed', 'fatal', 'unresponsive'].includes(blockedRuntime.bodyState);
+            if (recoverable) {
+              await page.keyboard.press('Escape');
+              const recovered = await waitForCampaignReturn(gameCanvas, shortcutFrame || beforeFrame, expectedTab, {
+                timeoutMs: 10000,
+                pollMs: 500,
+              });
+              recoveredTutorialModal = recovered.ready && !fatalSeenAt;
+              tutorialRecoveryMs = recovered.readyMs;
+              tutorialRecoveryVisualDiff = recovered.visualDiff;
+              logs.push(`[shortcut-probe] tutorial-modal-recovery ${name} recovered=${recoveredTutorialModal} readyMs=${tutorialRecoveryMs ?? 'n/a'} visualDiff=${tutorialRecoveryVisualDiff == null ? 'n/a' : tutorialRecoveryVisualDiff.toFixed(4)}`);
+              flushLogs();
+              if (recoveredTutorialModal) {
+                await page.evaluate(() => {
+                  document.body.tabIndex = -1;
+                  document.body.focus({ preventScroll: true });
+                });
+                before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
+                beforeFrame = recovered.frame || await gameCanvas.screenshot({ timeout: 10000 });
+                shortcutStartedAt = Date.now();
+                await page.keyboard.press(key);
+                transition = await runTutorialShortcutVisual();
+              }
+            }
+          }
         }
         const after = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const runtime = await page.evaluate(() => ({
@@ -811,6 +853,9 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           deliveredDelta,
           globalDelta,
           semanticOpened,
+          recoveredTutorialModal,
+          tutorialRecoveryMs,
+          tutorialRecoveryVisualDiff,
           tabReady: Boolean(transition?.readyMatched),
           listenerReadyMs: transition?.listenerReadyMs ?? null,
           visualReadyMs: transition?.visualReadyMs ?? null,
@@ -818,7 +863,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
           failed,
         };
         shortcutResults.push(shortcutResult);
-        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
+        logs.push(`[shortcut-probe] ${name} key=${key} expectedTab=${expectedTab} activeBefore=${activeBefore} deliveredDelta=${deliveredDelta} globalDelta=${globalDelta} opened=${semanticOpened} recoveredTutorialModal=${recoveredTutorialModal} listenerReadyMs=${shortcutResult.listenerReadyMs ?? 'n/a'} visualReadyMs=${shortcutResult.visualReadyMs ?? 'n/a'} visualDiff=${transition?.visualDiff == null ? 'n/a' : transition.visualDiff.toFixed(4)} failed=${failed}`);
         flushLogs();
 
         if (deepGameplay && transition?.readyMatched) {
