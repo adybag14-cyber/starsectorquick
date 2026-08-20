@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'immediate-stream', 'baseline-b']
+ORDER = ['baseline-a', 'immediate-persistent-safe', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = '35c5c6df2ca207a911b40295ff83573ace31bf83'
+CANDIDATE_SHA = 'dbaef3a803defd9f228f79dd178146a94a9a5c03'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -26,6 +26,7 @@ def parse(name):
     if rp.exists():
         data = json.loads(rp.read_text(encoding='utf-8'))
         gp = data.get('gameplayPerformance') or {}
+        ps = data.get('presentationStats') or {}
         row.update(
             ok=data.get('ok'), fatal=data.get('fatalSeenAt'), errors=len(data.get('errors') or []),
             runtime_errors=len(data.get('runtimeErrorSignals') or []), graphics_errors=len(data.get('graphicsErrors') or []),
@@ -37,6 +38,7 @@ def parse(name):
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
+            persistent_growths=ps.get('immediateInterleavedBufferGrowths'),
         )
         shortcuts = [float(x['listenerReadyMs']) for x in (data.get('shortcutResults') or []) if x.get('listenerReadyMs') is not None]
         if shortcuts: row['shortcut_avg_ms'] = round(statistics.fmean(shortcuts), 2)
@@ -51,6 +53,7 @@ def parse(name):
         if worlds: row['world'] = tuple(int(x) for x in worlds[-1])
         seeds = re.findall(r'seedString=(SEK\d+)', text)
         if seeds: row['seed'] = seeds[-1]
+        row['buffer_overflow_count'] = text.count('bufferSubData: buffer overflow')
     return row
 
 def fmt(v): return '-' if v is None else f'{float(v):.2f}'
@@ -59,7 +62,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['immediate-stream'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['immediate-persistent-safe'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -73,23 +76,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Production vs immediate STREAM_DRAW same-runner A/B', '',
+        '# Production vs safe persistent immediate-buffer same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | growths | overflows | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {r.get('persistent_growths','-')} | {r.get('buffer_overflow_count','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted immediate-stream delta:']
+    lines += ['', 'Drift-adjusted immediate-persistent-safe delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('immediate-stream', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('immediate-persistent-safe', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -99,8 +102,10 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000:
-        raise SystemExit(f'immediate-stream activation evidence invalid: {c}')
+    if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000 or int(c.get('persistent_growths') or 0) <= 0:
+        raise SystemExit(f'persistent activation evidence invalid: {c}')
+    if int(c.get('buffer_overflow_count') or 0) != 0:
+        raise SystemExit(f'persistent upload overflow detected: {c}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
