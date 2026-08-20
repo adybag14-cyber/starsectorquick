@@ -138,7 +138,7 @@ jobs:
 
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
-    if: github.ref_name == 'feat/custom-resolution' || github.head_ref == 'feat/custom-resolution'
+    if: github.ref_name == 'diag/refit-eager-fixed-seed' || github.head_ref == 'diag/refit-eager-fixed-seed'
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -167,7 +167,7 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
         run: bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Verify Full HD framebuffer and input
         run: |
@@ -183,6 +183,9 @@ jobs:
           cfg = data.get('windowConfig') or {}
           assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == 1920, cfg
           assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == 1080, cfg
+          assert cfg.get('__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__') == 'SEK228275323', cfg
+          log = (p.parent / 'browser.log').read_text(encoding='utf-8', errors='ignore')
+          assert 'seedString=SEK228275323' in log, 'runtime did not consume fixed seed'
           canvases = ((data.get('state') or {}).get('canvases') or [])
           assert canvases, 'no canvas telemetry'
           canvas = canvases[0]
