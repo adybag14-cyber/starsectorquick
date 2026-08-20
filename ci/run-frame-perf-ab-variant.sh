@@ -28,6 +28,11 @@ if ! (
   node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
   grep -q 'FRAME_TAIL_TELEMETRY_BENCH_V1' build/final/wasm-modules/lwjgl.js
   grep -q 'frameP95Ms: Number(perfAfter.frameP95Ms' ci/campaign-render-test.js
+  if [[ "$NAME" == "no-glflush" ]]; then
+    for f in data/config/settings.json resources/settings.json starsector/starsector/data/config/settings.json starsector/starsector/settings.json; do
+      grep -q '"useGLFlush":false' "$f"
+    done
+  fi
 ); then
   ACTUAL_REF=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf '%s' "$REF")
   printf '%s	%s	%s	%s
