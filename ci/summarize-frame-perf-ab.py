@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'texture-bind', 'baseline-b']
+ORDER = ['baseline-a', 'color-attrib', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = '6655af491973aadc42de5d03071bfb5540094836'
+CANDIDATE_SHA = '2152ba16ef7f42c45aaad316067536d889ab585c'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -35,8 +35,10 @@ def parse(name):
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
             interleaved_saved=gp.get('immediateInterleavedUploadsSavedDelta'),
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
-            texture_calls=gp.get('textureBindCallsDelta'), texture_changes=gp.get('textureBindChangesDelta'),
-            texture_skipped=gp.get('textureBindSkippedDelta'), texture_invalidations=gp.get('textureBindInvalidationsDelta'),
+            color_array_changes=gp.get('colorAttribArrayChangesDelta'),
+            color_array_saved=gp.get('colorAttribArrayCallsSavedDelta'),
+            color_uploads=gp.get('colorAttribConstantUploadsDelta'),
+            color_uploads_saved=gp.get('colorAttribConstantUploadsSavedDelta'),
         )
         shortcuts = [float(x['listenerReadyMs']) for x in (data.get('shortcutResults') or []) if x.get('listenerReadyMs') is not None]
         if shortcuts: row['shortcut_avg_ms'] = round(statistics.fmean(shortcuts), 2)
@@ -59,7 +61,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['texture-bind'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['color-attrib'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -73,23 +75,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Production vs texture-bind cache same-runner A/B', '',
+        '# Production vs color-attribute cache same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | bind calls | skipped | changes | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | array changes | array saved | color uploads | color saved | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('texture_calls','-')} | {r.get('texture_skipped','-')} | {r.get('texture_changes','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('color_array_changes','-')} | {r.get('color_array_saved','-')} | {r.get('color_uploads','-')} | {r.get('color_uploads_saved','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted texture-bind delta:']
+    lines += ['', 'Drift-adjusted color-attribute delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('texture-bind', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('color-attrib', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -99,11 +101,12 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    calls = int(c.get('texture_calls') or 0)
-    skipped = int(c.get('texture_skipped') or 0)
-    changes = int(c.get('texture_changes') or 0)
-    if calls < 100 or skipped <= 0 or changes <= 0 or skipped + changes != calls:
-        raise SystemExit(f'texture-bind cache evidence invalid: {c}')
+    array_changes = int(c.get('color_array_changes') or 0)
+    array_saved = int(c.get('color_array_saved') or 0)
+    color_uploads = int(c.get('color_uploads') or 0)
+    color_saved = int(c.get('color_uploads_saved') or 0)
+    if array_changes <= 0 or array_saved < 100 or color_uploads <= 0 or color_saved < 100:
+        raise SystemExit(f'color-attribute cache evidence invalid: {c}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
