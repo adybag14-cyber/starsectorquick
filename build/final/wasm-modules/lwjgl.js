@@ -266,6 +266,7 @@ glCtx.useProgram(program);
 var vertexBuffer = glCtx.createBuffer();
 var colorBuffer = glCtx.createBuffer();
 var texCoordBuffer = glCtx.createBuffer();
+// WEBGL_IMMEDIATE_PERSISTENT_SAFE_V2
 // Dedicated persistent buffer for interleaved immediate-mode vertices. Keeping
 // this separate from the client-array buffers means either path can upload data
 // without invalidating the other's capacity or attribute source.
@@ -487,9 +488,7 @@ var presentationStats = {
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
-	immediateInterleavedBufferGrowths: 0,
-	immediateInterleavedSubDataCalls: 0,
-	immediateInterleavedSubDataViewAvoided: 0
+	immediateInterleavedBufferGrowths: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2353,12 +2352,11 @@ function uploadImmediateInterleaved(vertexCount)
 	var stride = 9 * 4;
 	ensureImmediateInterleavedBufferCapacity(floatCount);
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, immediateInterleavedBuffer);
-	// WebGL2 accepts a typed array plus source element offset/length. This avoids
-	// allocating a new subarray view for every glEnd while uploading exactly the
-	// same floatCount elements.
-	glCtx.bufferSubData(glCtx.ARRAY_BUFFER, 0, immediateModeData.interleavedBuf, 0, floatCount);
-	presentationStats.immediateInterleavedSubDataCalls++;
-	presentationStats.immediateInterleavedSubDataViewAvoided++;
+	// Use the universally-supported three-argument form. Chrome/WebGL2 accepted the
+	// five-argument overload syntactically but produced buffer-overflow errors in the
+	// real game. The subarray is a zero-copy view; GPU storage remains persistent.
+	var uploadView = immediateModeData.interleavedBuf.subarray(0, floatCount);
+	glCtx.bufferSubData(glCtx.ARRAY_BUFFER, 0, uploadView);
 	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
 	glCtx.enableVertexAttribArray(vertexPosition);
 	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);

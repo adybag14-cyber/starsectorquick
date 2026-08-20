@@ -10,8 +10,8 @@ function extract(source,name){
 function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-interleaved.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
-for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedSubDataViewAvoided','immediateInterleavedBufferFloatCapacity']) expect(src.includes(marker),`missing ${marker}`);
-expect(!extract(src,'uploadImmediateInterleaved').includes('.subarray('),'persistent upload reintroduced per-draw subarray');
+for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','WEBGL_IMMEDIATE_PERSISTENT_SAFE_V2','immediateInterleavedBufferFloatCapacity']) expect(src.includes(marker),`missing ${marker}`);
+expect(extract(src,'uploadImmediateInterleaved').includes('.subarray('),'safe persistent upload must use a bounded zero-copy subarray view');
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','ensureImmediateInterleavedBufferCapacity','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
 const code=names.map(n=>extract(src,n)).join('\n');
 function make(enabled){
@@ -19,13 +19,13 @@ function make(enabled){
   const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,DYNAMIC_DRAW:0x88E8,FLOAT:0x1406,NO_ERROR:0,
     bindBuffer:(...a)=>calls.push(['bindBuffer',...a]),
     bufferData:(t,d,u)=>calls.push(['bufferData',t,d,u]),
-    bufferSubData:(t,dst,src,off,len)=>calls.push(['bufferSubData',t,dst,Array.from(src.slice(off,off+len)),off,len]),
+    bufferSubData:(t,dst,src)=>calls.push(['bufferSubData',t,dst,Array.from(src)]),
     vertexAttribPointer:(...a)=>calls.push(['pointer',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]),
     disableVertexAttribArray:(...a)=>calls.push(['disable',...a]), vertexAttrib2f:(...a)=>calls.push(['attrib2f',...a]), getError:()=>0};
   const c=vm.createContext({
     glCtx, immediateInterleavedEnabled:enabled, curList:null, pushInList(){throw new Error('unexpected list');},
     immediateModeData:{mode:0,vertexBuf:new Float32Array(32),vertexPos:0,colorBuf:new Float32Array(32),colorPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0],texCoordBuf:new Float32Array(32),texCoordPos:0,interleavedBuf:new Float32Array(96),interleavedPos:0},
-    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediateInterleavedBufferGrowths:0,immediateInterleavedSubDataCalls:0,immediateInterleavedSubDataViewAvoided:0},
+    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediateInterleavedBufferGrowths:0},
     immediateInterleavedBuffer:{id:'immediate'}, immediateInterleavedBufferFloatCapacity:0,
     vertexBuffer:{id:'v'}, colorBuffer:{id:'c'}, texCoordBuffer:{id:'t'}, vertexPosition:3,colorLocation:4,texCoord:5,
     strictWebGLValidation:false,clientArrayWarnings:new Set(),warnOnce(){},
@@ -43,7 +43,7 @@ expect(allocs.length===1,`growth allocations=${allocs.length}`); expect(typeof a
 expect(allocs[0][3]===c.glCtx?.DYNAMIC_DRAW || allocs[0][3]===0x88E8,'dynamic usage missing'); expect(subs.length===1,`subdata calls=${subs.length}`);
 const data=subs[0][3], expected=[1,2,3,.1,.2,.3,.4,.25,.5,4,5,6,.1,.2,.3,.4,.75,1]; expect(data.length===expected.length,`float length ${data.length}`); expected.forEach((v,i)=>expect(Math.abs(data[i]-v)<1e-6,`float ${i}: ${data[i]} != ${v}`));
 const ptr=x.calls.filter(a=>a[0]==='pointer'); expect(ptr.length===3,'pointer count'); expect(ptr[0][2]===3&&ptr[0][5]===36&&ptr[0][6]===0,'vertex layout'); expect(ptr[1][2]===4&&ptr[1][5]===36&&ptr[1][6]===12,'color layout'); expect(ptr[2][2]===2&&ptr[2][5]===36&&ptr[2][6]===28,'tex layout');
-expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===2,'enabled draw'); expect(c.presentationStats.immediateInterleavedBufferGrowths===1,'growth stat'); expect(c.presentationStats.immediateInterleavedSubDataCalls===1&&c.presentationStats.immediateInterleavedSubDataViewAvoided===1,'subdata stats');
+expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===2,'enabled draw'); expect(c.presentationStats.immediateInterleavedBufferGrowths===1,'growth stat');
 // A smaller second draw must reuse capacity: no second bufferData allocation.
 c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,9,8,7,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 allocs=x.calls.filter(a=>a[0]==='bufferData'); subs=x.calls.filter(a=>a[0]==='bufferSubData'); expect(allocs.length===1,'capacity was not reused'); expect(subs.length===2,'second subdata missing'); const last=subs[1][3]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
