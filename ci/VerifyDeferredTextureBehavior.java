@@ -60,10 +60,26 @@ public final class VerifyDeferredTextureBehavior {
         BrowserDeferredTextureQueue.ensureLoaded("portrait");
         require(oOoO.LOADS.size() == 2, "second lookup must not reload");
 
+        java.lang.String weaponMiss = "graphics/weapons/flechette_heavy_hardpoint_recoil.png";
+        int loadsBeforeWeaponMiss = oOoO.LOADS.size();
+        require(!oOoO.REGISTRY.containsKey(weaponMiss), "weapon miss must start absent from registry");
+        BrowserDeferredTextureQueue.ensureLoaded(weaponMiss);
+        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1
+                && oOoO.LOADS.get(loadsBeforeWeaponMiss).equals(weaponMiss + "=" + weaponMiss),
+                "concrete weapon registry miss must load exact path once: " + oOoO.LOADS);
+        require(oOoO.REGISTRY.containsKey(weaponMiss), "direct miss must populate registry");
+        require(BrowserDeferredTextureQueue.getDirectMissLoadCount() == 1L, "direct miss load counter");
+        require(BrowserDeferredTextureQueue.getDirectMissLoadFailedCount() == 0L, "direct miss failure counter");
+        BrowserDeferredTextureQueue.ensureLoaded(weaponMiss);
+        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1, "resolved weapon miss must not reload");
+        BrowserDeferredTextureQueue.ensureLoaded("weapon-symbolic-id");
+        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1, "non-path key must not infer a file load");
+
+        int loadsBeforeDuplicate = oOoO.LOADS.size();
         BrowserDeferredTextureQueue.loadOrDefer("dup", "graphics/illustrations/first.jpg");
         BrowserDeferredTextureQueue.loadOrDefer("dup", "graphics/illustrations/second.jpg");
-        require(oOoO.LOADS.get(2).equals("dup=graphics/illustrations/first.jpg"), "duplicate must materialize first source first: " + oOoO.LOADS);
-        require(oOoO.LOADS.get(3).equals("dup=graphics/illustrations/second.jpg"), "duplicate second source ordering: " + oOoO.LOADS);
+        require(oOoO.LOADS.get(loadsBeforeDuplicate).equals("dup=graphics/illustrations/first.jpg"), "duplicate must materialize first source first: " + oOoO.LOADS);
+        require(oOoO.LOADS.get(loadsBeforeDuplicate + 1).equals("dup=graphics/illustrations/second.jpg"), "duplicate second source ordering: " + oOoO.LOADS);
         require(BrowserDeferredTextureQueue.getPendingCount() == 0, "different-path duplicate must not remain deferred");
 
         int predecodeBeforeWarm = L.PREDECODE.size();
