@@ -197,3 +197,90 @@ jobs:
           name: campaign-runtime-resolution-fullhd
           path: test_output/resolution-fullhd
           if-no-files-found: warn
+
+  resolution_seed_differential:
+    name: Resolution/seed Refit differential
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/resolution-seed-refit'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Known-good 1024 seed at 1920x1080
+        id: known1080
+        continue-on-error: true
+        env:
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_DEEP_GAMEPLAY: 'false'
+          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
+          STARSECTOR_SAVE_LOAD_SMOKE: 'false'
+          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228910843"}'
+        run: bash ci/run-campaign-experiment.sh 'resolution-knownseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Previously-crashing 1080 seed at 1024x768
+        id: crash1024
+        continue-on-error: true
+        env:
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_DEEP_GAMEPLAY: 'false'
+          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
+          STARSECTOR_SAVE_LOAD_SMOKE: 'false'
+          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1024,"__STARSECTOR_RENDER_HEIGHT__":768,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
+        run: bash ci/run-campaign-experiment.sh 'resolution-crashseed-1024' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Classify resolution vs seed behavior
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          cases = [
+              ('known-seed@1080', Path('test_output/resolution-knownseed-1080'), 1920, 1080, 'SEK228910843'),
+              ('crash-seed@1024', Path('test_output/resolution-crashseed-1024'), 1024, 768, 'SEK228275323'),
+          ]
+          results = {}
+          for name, root, width, height, seed in cases:
+              p = root / 'result.json'
+              assert p.exists(), f'missing {p}'
+              data = json.loads(p.read_text(encoding='utf-8'))
+              cfg = data.get('windowConfig') or {}
+              assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == width, (name, cfg)
+              assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == height, (name, cfg)
+              assert cfg.get('__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__') == seed, (name, cfg)
+              canvases = ((data.get('state') or {}).get('canvases') or [])
+              assert canvases and int(canvases[0].get('width', 0)) == width and int(canvases[0].get('height', 0)) == height, (name, canvases)
+              log = (root / 'browser.log').read_text(encoding='utf-8', errors='ignore')
+              assert f'seedString={seed}' in log, f'{name}: runtime did not consume seed {seed}'
+              results[name] = {'ok': data.get('ok') is True, 'fatal': bool(data.get('fatalSeenAt')), 'runtimeErrors': len(data.get('runtimeErrorSignals') or []), 'graphicsErrors': len(data.get('graphicsErrors') or []), 'canvas': canvases[0]}
+          print(json.dumps(results, indent=2))
+          known_ok = results['known-seed@1080']['ok']; crash_ok = results['crash-seed@1024']['ok']
+          if known_ok and not crash_ok: print('CLASSIFICATION: seed/fleet-specific failure strongly indicated; 1080 itself passes the known-good seed.')
+          elif not known_ok and crash_ok: print('CLASSIFICATION: resolution-specific failure strongly indicated; the crashing seed is healthy at 1024.')
+          elif known_ok and crash_ok: print('CLASSIFICATION: both missing cells pass; prior Refit crash was not deterministic.')
+          else: print('CLASSIFICATION: both missing cells fail; run a full 2x2 repeat before attribution.')
+          PY
+      - name: Upload resolution differential evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolution-seed-refit-differential
+          path: |
+            test_output/resolution-knownseed-1080
+            test_output/resolution-crashseed-1024
+          if-no-files-found: warn

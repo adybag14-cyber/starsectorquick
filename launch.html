@@ -1247,6 +1247,9 @@
                 const autoCampaignVariant = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_START_VARIANT__ || 'lasher_Standard'
                 ).toString().trim();
+                const autoCampaignSeedString = (
+                    window.__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__ || ''
+                ).toString().trim();
                 const autoCampaignSectorSize = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__ || 'small'
                 ).toString().trim().toLowerCase() || 'small';
@@ -1522,6 +1525,10 @@
                     javaProperties.push(`starsector.autoCampaignMode=${autoCampaignMode}`);
                     javaProperties.push(`-Dstarsector.autoCampaignStartVariant=${autoCampaignVariant}`);
                     javaProperties.push(`starsector.autoCampaignStartVariant=${autoCampaignVariant}`);
+                    if (autoCampaignSeedString) {
+                        javaProperties.push(`-Dstarsector.autoCampaignSeedString=${autoCampaignSeedString}`);
+                        javaProperties.push(`starsector.autoCampaignSeedString=${autoCampaignSeedString}`);
+                    }
                     javaProperties.push(`-Dstarsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
                     javaProperties.push(`starsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
                     javaProperties.push(`-Dstarsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
