@@ -43,10 +43,8 @@ const setEnabled = extractFunction(source, 'setVertexAttribArrayEnabledCached');
 const setPointer = extractFunction(source, 'setVertexAttribPointerCached');
 const calls = [];
 const presentationStats = {
-  vertexAttribPointerUpdates: 0,
-  vertexAttribPointerUpdatesSaved: 0,
-  vertexAttribEnableChanges: 0,
-  vertexAttribEnableChangesSaved: 0,
+  vertexAttribPointerCacheHitObserved: false,
+  vertexAttribEnableCacheHitObserved: false,
 };
 const context = vm.createContext({
   glCtx: {
@@ -66,11 +64,11 @@ const vertexBuffer = { name: 'vertex' };
 context.setVertexAttribArrayEnabledCached(1, true);
 context.setVertexAttribArrayEnabledCached(1, true);
 expect(calls.filter(c => c[0] === 'enable').length === 1, 'repeated enable should be elided');
-expect(presentationStats.vertexAttribEnableChangesSaved === 1, 'enable saving telemetry missing');
+expect(presentationStats.vertexAttribEnableCacheHitObserved === true, 'enable cache-hit proof missing');
 context.setVertexAttribPointerCached(1, vertexBuffer, 3, 5126, false, 12, 0);
 context.setVertexAttribPointerCached(1, vertexBuffer, 3, 5126, false, 12, 0);
 expect(calls.filter(c => c[0] === 'pointer').length === 1, 'identical pointer should be elided');
-expect(presentationStats.vertexAttribPointerUpdatesSaved === 1, 'pointer saving telemetry missing');
+expect(presentationStats.vertexAttribPointerCacheHitObserved === true, 'pointer cache-hit proof missing');
 context.setVertexAttribPointerCached(1, vertexBuffer, 2, 5126, false, 8, 0);
 expect(calls.filter(c => c[0] === 'pointer').length === 2, 'layout change must update pointer');
 context.setVertexAttribArrayEnabledCached(1, false);
@@ -81,4 +79,4 @@ context.setVertexAttribArrayEnabledCached(1, false);
 context.setVertexAttribPointerCached(1, vertexBuffer, 2, 5126, false, 8, 0);
 expect(calls.filter(c => c[0] === 'disable').length === 2, 'disabled cache must preserve enable/disable call behavior');
 expect(calls.filter(c => c[0] === 'pointer').length === 3, 'disabled cache must preserve pointer call behavior');
-console.log(`verify-lwjgl-vertex-attrib-cache: OK pointerSaved=${presentationStats.vertexAttribPointerUpdatesSaved} enableSaved=${presentationStats.vertexAttribEnableChangesSaved}`);
+console.log(`verify-lwjgl-vertex-attrib-cache: OK pointerHit=${presentationStats.vertexAttribPointerCacheHitObserved} enableHit=${presentationStats.vertexAttribEnableCacheHitObserved}`);

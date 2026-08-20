@@ -24,7 +24,7 @@ function make(enabled){
   const c=vm.createContext({
     glCtx, immediateInterleavedEnabled:enabled, curList:null, pushInList(){throw new Error('unexpected list');},
     immediateModeData:{mode:0,vertexBuf:new Float32Array(32),vertexPos:0,colorBuf:new Float32Array(32),colorPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0],texCoordBuf:new Float32Array(32),texCoordPos:0,interleavedBuf:new Float32Array(96),interleavedPos:0},
-    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,vertexAttribPointerUpdates:0,vertexAttribPointerUpdatesSaved:0,vertexAttribEnableChanges:0,vertexAttribEnableChangesSaved:0,vertexBufferUploads:0,vertexUploadBytes:0},
+    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,vertexAttribPointerCacheHitObserved:false,vertexAttribEnableCacheHitObserved:false},
     vertexAttribStateCacheEnabled:true, vertexAttribEnabledState:Object.create(null), vertexAttribPointerState:Object.create(null),
     vertexBuffer:{id:'v'}, colorBuffer:{id:'c'}, texCoordBuffer:{id:'t'}, vertexPosition:3,colorLocation:4,texCoord:5,
     strictWebGLValidation:false,clientArrayWarnings:new Set(),warnOnce(){},
@@ -55,8 +55,8 @@ c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_ng
 uploads=x.calls.filter(a=>a[0]==='bufferData'); const last=uploads[uploads.length-1][2]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
 if(attribCachePresent){
   const ptrAfterSecond=x.calls.filter(a=>a[0]==='pointer'); expect(ptrAfterSecond.length===3,`cached pointer count after two draws ${ptrAfterSecond.length}`);
-  expect(c.presentationStats.vertexAttribPointerUpdatesSaved===3,'interleaved pointer cache did not save second draw');
-  expect(c.presentationStats.vertexAttribEnableChangesSaved===3,'interleaved enable cache did not save second draw');
+  expect(c.presentationStats.vertexAttribPointerCacheHitObserved===true,'interleaved pointer cache hit was not observed');
+  expect(c.presentationStats.vertexAttribEnableCacheHitObserved===true,'interleaved enable cache hit was not observed');
 }
 // Disabled mode must retain the exact three independent attribute uploads.
 x=make(false); x.c.Java_org_lwjgl_opengl_GL11_nglBegin(null,7,0); x.c.immediateModeData.currentColor=[.2,.4,.6,.8]; x.c.Java_org_lwjgl_opengl_GL11_nglTexCoord2f(null,.3,.7,0); x.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,2,4,6,0); x.c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
