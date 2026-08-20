@@ -28,6 +28,11 @@ if ! (
   node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
   grep -q 'FRAME_TAIL_TELEMETRY_BENCH_V1' build/final/wasm-modules/lwjgl.js
   grep -q 'frameP95Ms: Number(perfAfter.frameP95Ms' ci/campaign-render-test.js
+  if [[ "$NAME" == "direct-input" ]]; then
+    grep -q 'BROWSER_DIRECT_INPUT_NO_POLL_V1' bridge_src/org/lwjgl/opengl/Display.java
+    grep -q 'function Java_org_lwjgl_input_Keyboard_nPoll() {}' build/final/wasm-modules/lwjgl.js
+    grep -q 'function Java_org_lwjgl_input_Mouse_nPoll() {}' build/final/wasm-modules/lwjgl.js
+  fi
 ); then
   ACTUAL_REF=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf '%s' "$REF")
   printf '%s	%s	%s	%s
