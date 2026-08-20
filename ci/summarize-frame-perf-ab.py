@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path('test_output/frame-perf-ab')
 ORDER=['baseline-a','matrix-generation','baseline-b']
 BASELINE_SHA='a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA='9fb608847140b38d4f6472c4876757de22b1ec3d'
+CANDIDATE_SHA='4ca9e001b3b82e0a44dc7df1f5bba681a59383f2'
 SEED='SEK968276040'; WORLD=(218,917,59,21)
 def statuses():
  out={}; p=ROOT/'status.tsv'

@@ -163,7 +163,7 @@ jobs:
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
             refs/heads/perf/matrix-generation-lean-current:refs/remotes/origin/perf/matrix-generation-lean-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/matrix-generation-lean-current)" = "9fb608847140b38d4f6472c4876757de22b1ec3d"
+          test "$(git rev-parse origin/perf/matrix-generation-lean-current)" = "4ca9e001b3b82e0a44dc7df1f5bba681a59383f2"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
