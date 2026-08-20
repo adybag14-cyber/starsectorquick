@@ -232,6 +232,7 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          STARSECTOR_WEAPON_CTOR_DIAGNOSTICS: 'true'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
         run: bash ci/run-campaign-experiment.sh 'resolution-crashseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Verify fixed-seed weapon-constructor diagnostic
@@ -250,6 +251,7 @@ jobs:
           assert canvases and int(canvases[0].get('width', 0)) == 1920 and int(canvases[0].get('height', 0)) == 1080, canvases
           log = (root / 'browser.log').read_text(encoding='utf-8', errors='ignore')
           assert 'seedString=SEK228275323' in log, 'runtime did not consume fixed seed'
+          assert 'WeaponCtorEntryDiag: A.J.<init>' in log, 'weapon constructor entry probe did not fire'
           assert 'WeaponCtorNullDiag:' in log, 'weapon constructor null probe did not fire'
           assert data.get('fatalSeenAt'), 'expected fixed-seed 1080 crash did not reproduce'
           print('WEAPON_CTOR_NULL_DIAG_CAPTURED')
