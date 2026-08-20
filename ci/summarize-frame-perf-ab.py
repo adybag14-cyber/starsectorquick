@@ -107,7 +107,7 @@ def main():
     enable_changes = int(c.get('attrib_enable_changes') or 0)
     enable_saved = int(c.get('attrib_enable_saved') or 0)
     uploads = int(c.get('vertex_buffer_uploads') or 0)
-    if ptr_updates <= 0 or ptr_saved < 100 or enable_changes <= 0 or enable_saved < 100 or uploads <= 0:
+    if ptr_updates < 0 or ptr_saved < 1000 or enable_changes <= 0 or enable_saved < 1000 or uploads <= 0:
         raise SystemExit(f'vertex-attrib cache evidence invalid: {c}')
     return 0
 
