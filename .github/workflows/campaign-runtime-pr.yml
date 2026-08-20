@@ -233,6 +233,8 @@ jobs:
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228910843"}'
         run: bash ci/run-campaign-experiment.sh 'resolution-knownseed-1080' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Reset runtime patch state before second seed
+        run: git reset --hard HEAD
       - name: Previously-crashing 1080 seed at 1024x768
         id: crash1024
         continue-on-error: true
