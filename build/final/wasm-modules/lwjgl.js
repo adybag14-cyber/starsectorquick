@@ -2335,7 +2335,7 @@ function uploadImmediateInterleaved(vertexCount)
 	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STREAM_DRAW);
 	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
 	glCtx.enableVertexAttribArray(vertexPosition);
 	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
