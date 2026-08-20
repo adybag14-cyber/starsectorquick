@@ -39,44 +39,30 @@ function expect(condition, message) {
 const path = process.argv[2];
 if (!path) throw new Error('usage: node ci/verify-lwjgl-vertex-attrib-cache.js <lwjgl.js>');
 const source = fs.readFileSync(path, 'utf8');
-const setEnabled = extractFunction(source, 'setVertexAttribArrayEnabledCached');
+expect(source.includes('LWJGL_VERTEX_ATTRIB_POINTER_CACHE_V1'), 'missing pointer-cache marker');
+expect(!source.includes('setVertexAttribArrayEnabledCached'), 'pointer-only candidate must not cache enable state');
 const setPointer = extractFunction(source, 'setVertexAttribPointerCached');
 const calls = [];
-const presentationStats = {
-  vertexAttribPointerCacheHitObserved: false,
-  vertexAttribEnableCacheHitObserved: false,
-};
+const presentationStats = { vertexAttribPointerCacheHitObserved: false };
 const context = vm.createContext({
   glCtx: {
-    enableVertexAttribArray(loc) { calls.push(['enable', loc]); },
-    disableVertexAttribArray(loc) { calls.push(['disable', loc]); },
     vertexAttribPointer(loc, size, type, normalized, stride, offset) {
       calls.push(['pointer', loc, size, type, normalized, stride, offset]);
     },
   },
-  vertexAttribStateCacheEnabled: true,
-  vertexAttribEnabledState: Object.create(null),
+  vertexAttribPointerCacheEnabled: true,
   vertexAttribPointerState: Object.create(null),
   presentationStats,
 });
-vm.runInContext(`${setEnabled}\n${setPointer}`, context);
+vm.runInContext(setPointer, context);
 const vertexBuffer = { name: 'vertex' };
-context.setVertexAttribArrayEnabledCached(1, true);
-context.setVertexAttribArrayEnabledCached(1, true);
-expect(calls.filter(c => c[0] === 'enable').length === 1, 'repeated enable should be elided');
-expect(presentationStats.vertexAttribEnableCacheHitObserved === true, 'enable cache-hit proof missing');
 context.setVertexAttribPointerCached(1, vertexBuffer, 3, 5126, false, 12, 0);
 context.setVertexAttribPointerCached(1, vertexBuffer, 3, 5126, false, 12, 0);
-expect(calls.filter(c => c[0] === 'pointer').length === 1, 'identical pointer should be elided');
+expect(calls.length === 1, 'identical pointer should be elided');
 expect(presentationStats.vertexAttribPointerCacheHitObserved === true, 'pointer cache-hit proof missing');
 context.setVertexAttribPointerCached(1, vertexBuffer, 2, 5126, false, 8, 0);
-expect(calls.filter(c => c[0] === 'pointer').length === 2, 'layout change must update pointer');
-context.setVertexAttribArrayEnabledCached(1, false);
-context.setVertexAttribArrayEnabledCached(1, false);
-expect(calls.filter(c => c[0] === 'disable').length === 1, 'repeated disable should be elided');
-context.vertexAttribStateCacheEnabled = false;
-context.setVertexAttribArrayEnabledCached(1, false);
+expect(calls.length === 2, 'layout change must update pointer');
+context.vertexAttribPointerCacheEnabled = false;
 context.setVertexAttribPointerCached(1, vertexBuffer, 2, 5126, false, 8, 0);
-expect(calls.filter(c => c[0] === 'disable').length === 2, 'disabled cache must preserve enable/disable call behavior');
-expect(calls.filter(c => c[0] === 'pointer').length === 3, 'disabled cache must preserve pointer call behavior');
-console.log(`verify-lwjgl-vertex-attrib-cache: OK pointerHit=${presentationStats.vertexAttribPointerCacheHitObserved} enableHit=${presentationStats.vertexAttribEnableCacheHitObserved}`);
+expect(calls.length === 3, 'disabled cache must preserve pointer call behavior');
+console.log(`verify-lwjgl-vertex-attrib-cache: OK pointerOnly=true pointerHit=${presentationStats.vertexAttribPointerCacheHitObserved}`);

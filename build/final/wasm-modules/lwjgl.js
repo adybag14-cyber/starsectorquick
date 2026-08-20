@@ -482,8 +482,7 @@ var presentationStats = {
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
-	vertexAttribPointerCacheHitObserved: false,
-	vertexAttribEnableCacheHitObserved: false
+	vertexAttribPointerCacheHitObserved: false
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -536,31 +535,16 @@ function ensureFramebufferSize()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
 }
-// LWJGL_VERTEX_ATTRIB_STATE_CACHE_V1
-// LWJGL_VERTEX_ATTRIB_STATE_CACHE_LEAN_V2
+// LWJGL_VERTEX_ATTRIB_POINTER_CACHE_V1
 // vertexAttribPointer captures the ARRAY_BUFFER binding. These three legacy
-// attributes always reuse stable WebGLBuffer objects, so unchanged pointer and
-// enable state does not need to be resent for every draw.
-var vertexAttribStateCacheEnabled = typeof window === "undefined" || window.__LWJGL_VERTEX_ATTRIB_STATE_CACHE__ !== false;
-var vertexAttribEnabledState = Object.create(null);
+// attributes reuse stable WebGLBuffer objects, so unchanged pointer state does
+// not need to be resent for every draw. Enable/disable state remains direct.
+var vertexAttribPointerCacheEnabled = typeof window === "undefined" || window.__LWJGL_VERTEX_ATTRIB_POINTER_CACHE__ !== false;
 var vertexAttribPointerState = Object.create(null);
-function setVertexAttribArrayEnabledCached(attributeLocation, enabled)
-{
-	var previous = vertexAttribEnabledState[attributeLocation];
-	if(vertexAttribStateCacheEnabled && previous === enabled)
-	{
-		if(!presentationStats.vertexAttribEnableCacheHitObserved)
-			presentationStats.vertexAttribEnableCacheHitObserved = true;
-		return;
-	}
-	if(enabled) glCtx.enableVertexAttribArray(attributeLocation);
-	else glCtx.disableVertexAttribArray(attributeLocation);
-	vertexAttribEnabledState[attributeLocation] = enabled;
-}
 function setVertexAttribPointerCached(attributeLocation, buffer, size, type, normalized, stride, offset)
 {
 	var previous = vertexAttribPointerState[attributeLocation];
-	if(vertexAttribStateCacheEnabled && previous && previous.buffer === buffer &&
+	if(vertexAttribPointerCacheEnabled && previous && previous.buffer === buffer &&
 		previous.size === size && previous.type === type && previous.normalized === normalized &&
 		previous.stride === stride && previous.offset === offset)
 	{
@@ -709,12 +693,12 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 			return false;
 		}
 	}
-	setVertexAttribArrayEnabledCached(attributeLocation, true);
+	glCtx.enableVertexAttribArray(attributeLocation);
 	return true;
 }
 function applyCurrentColorAttrib()
 {
-	setVertexAttribArrayEnabledCached(colorLocation, false);
+	glCtx.disableVertexAttribArray(colorLocation);
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -749,7 +733,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		}
 		else
 		{
-			setVertexAttribArrayEnabledCached(attributeLocation, false);
+			glCtx.disableVertexAttribArray(attributeLocation);
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -2377,11 +2361,11 @@ function uploadImmediateInterleaved(vertexCount)
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
 	setVertexAttribPointerCached(vertexPosition, vertexBuffer, 3, glCtx.FLOAT, false, stride, 0);
-	setVertexAttribArrayEnabledCached(vertexPosition, true);
+	glCtx.enableVertexAttribArray(vertexPosition);
 	setVertexAttribPointerCached(colorLocation, vertexBuffer, 4, glCtx.FLOAT, false, stride, 3 * 4);
-	setVertexAttribArrayEnabledCached(colorLocation, true);
+	glCtx.enableVertexAttribArray(colorLocation);
 	setVertexAttribPointerCached(texCoord, vertexBuffer, 2, glCtx.FLOAT, false, stride, 7 * 4);
-	setVertexAttribArrayEnabledCached(texCoord, true);
+	glCtx.enableVertexAttribArray(texCoord);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2412,7 +2396,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
 		else
 		{
-			setVertexAttribArrayEnabledCached(texCoord, false);
+			glCtx.disableVertexAttribArray(texCoord);
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}
