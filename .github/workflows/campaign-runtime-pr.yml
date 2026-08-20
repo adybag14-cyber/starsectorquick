@@ -200,7 +200,7 @@ jobs:
 
   resolution_seed_differential:
     name: Resolution/seed Refit differential
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/resolution-seed-refit'
+    if: (github.event_name == 'pull_request' && github.head_ref == 'diag/resolution-seed-refit') || (github.event_name == 'workflow_dispatch' && github.ref_name == 'diag/resolution-seed-refit')
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 50
