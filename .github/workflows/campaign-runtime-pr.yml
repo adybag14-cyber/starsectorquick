@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: mouse snapshot frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/mouse-snapshot-frame-tail-ab'
+    name: mouse int-pair snapshot frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/mouse-int-pair-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/mouse-snapshot-production:refs/remotes/origin/perf/mouse-snapshot-production
+            refs/heads/perf/mouse-poll-int-pair-current:refs/remotes/origin/perf/mouse-poll-int-pair-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/mouse-snapshot-production)" = "0ad69a40b9ca1d7ae6936dcd3deb4a169e6d17ff"
+          test "$(git rev-parse origin/perf/mouse-poll-int-pair-current)" = "62ed1bde14177672586a1ab94bb0ebe91d960dac"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -185,8 +185,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Mouse snapshot candidate
-        run: bash ci/run-frame-perf-ab-variant.sh mouse-snapshot origin/perf/mouse-snapshot-production
+      - name: Mouse int-pair snapshot candidate
+        run: bash ci/run-frame-perf-ab-variant.sh mouse-int-pair origin/perf/mouse-poll-int-pair-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mouse-snapshot-frame-tail-ab
+          name: mouse-int-pair-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
