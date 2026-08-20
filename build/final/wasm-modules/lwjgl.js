@@ -337,9 +337,7 @@ function setCoreEnableState(cap, enabled)
 {
 	enabled = !!enabled;
 	var tracked = hasCoreEnableState(cap);
-	var same = tracked && coreEnableState[cap] === enabled;
 	if(tracked) coreEnableState[cap] = enabled;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
 	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
 	noteCoreStateCall(true);
 }
@@ -360,30 +358,22 @@ function setCompatEnableState(cap, enabled)
 }
 function setCoreBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha)
 {
-	var same = coreColorState.blendSrcRgb === srcRgb && coreColorState.blendDstRgb === dstRgb &&
-		coreColorState.blendSrcAlpha === srcAlpha && coreColorState.blendDstAlpha === dstAlpha;
 	coreColorState.blendSrcRgb = srcRgb; coreColorState.blendDstRgb = dstRgb;
 	coreColorState.blendSrcAlpha = srcAlpha; coreColorState.blendDstAlpha = dstAlpha;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
 	glCtx.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
 	noteCoreStateCall(true);
 }
 function setCoreBlendFunc(src, dst)
 {
-	var same = coreColorState.blendSrcRgb === src && coreColorState.blendDstRgb === dst &&
-		coreColorState.blendSrcAlpha === src && coreColorState.blendDstAlpha === dst;
 	coreColorState.blendSrcRgb = coreColorState.blendSrcAlpha = src;
 	coreColorState.blendDstRgb = coreColorState.blendDstAlpha = dst;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
 	glCtx.blendFunc(src, dst);
 	noteCoreStateCall(true);
 }
 function setCoreColorMask(r, g, b, a)
 {
 	var v = coreColorState.colorMask;
-	var same = v[0] === !!r && v[1] === !!g && v[2] === !!b && v[3] === !!a;
 	v[0]=!!r; v[1]=!!g; v[2]=!!b; v[3]=!!a;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
 	glCtx.colorMask(r, g, b, a);
 	noteCoreStateCall(true);
 }
@@ -391,28 +381,23 @@ function setCoreClearColor(r, g, b, a)
 {
 	var v = coreColorState.clearColor;
 	var nr=Number(r), ng=Number(g), nb=Number(b), na=Number(a);
-	var same = v[0] === nr && v[1] === ng && v[2] === nb && v[3] === na;
 	v[0]=nr; v[1]=ng; v[2]=nb; v[3]=na;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
 	glCtx.clearColor(r, g, b, a);
 	noteCoreStateCall(true);
 }
 function setCoreDepthMask(enabled)
 {
-	enabled=!!enabled; var same=coreDepthState.writeMask===enabled; coreDepthState.writeMask=enabled;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	enabled=!!enabled; coreDepthState.writeMask=enabled;
 	glCtx.depthMask(enabled); noteCoreStateCall(true);
 }
 function setCoreDepthFunc(func)
 {
-	var same=coreDepthState.func===func; coreDepthState.func=func;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	coreDepthState.func=func;
 	glCtx.depthFunc(func); noteCoreStateCall(true);
 }
 function setCoreClearDepth(value)
 {
-	value=Number(value); var same=coreDepthState.clearValue===value; coreDepthState.clearValue=value;
-	if(coreRenderStateCacheEnabled && same) { noteCoreStateCall(false); return; }
+	value=Number(value); coreDepthState.clearValue=value;
 	glCtx.clearDepth(value); noteCoreStateCall(true);
 }
 function snapshotAttribState(mask)

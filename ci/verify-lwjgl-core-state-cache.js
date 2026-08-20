@@ -85,7 +85,7 @@ function runScenario(cacheEnabled){
   const x=makeContext(cacheEnabled), c=x.context, gl=x.context.glCtx;
   // Prime uniforms; repeating exact values should be cached only in fast mode.
   c.syncAlphaTestUniforms(); c.syncAlphaTestUniforms(); c.setTexture2DEnabled(false); c.setTexture2DEnabled(false);
-  // Repeated state changes deliberately exercise duplicate elimination.
+  // Repeated state changes prove query-only mode preserves every state-setting call.
   c.setCoreEnableState(gl.BLEND,true); c.setCoreEnableState(gl.BLEND,true);
   c.setCoreEnableState(gl.DEPTH_TEST,true); c.setCoreEnableState(gl.DEPTH_TEST,true);
   c.setCoreBlendFunc(770,771); c.setCoreBlendFunc(770,771);
@@ -114,8 +114,9 @@ expect(JSON.stringify(legacy.final)===JSON.stringify(fast.final),`final GL state
 expect(legacy.snapshotQueries===14,`legacy common snapshot should issue 14 queries, got ${legacy.snapshotQueries}`);
 expect(fast.snapshotQueries===0,`cache common snapshot should issue zero queries, got ${fast.snapshotQueries}`);
 expect(fast.presentationStats.coreStateSnapshotQueriesAvoided===14,`expected 14 avoided queries, got ${fast.presentationStats.coreStateSnapshotQueriesAvoided}`);
-expect(fast.calls.length<legacy.calls.length,`cache did not reduce GL state calls: fast=${fast.calls.length} legacy=${legacy.calls.length}`);
-expect(fast.presentationStats.coreStateSkipped>0,'cache did not record skipped state calls');
+expect(fast.calls.length===legacy.calls.length,`query-only cache changed GL state call count: fast=${fast.calls.length} legacy=${legacy.calls.length}`);
+expect(fast.presentationStats.coreStateSkipped===0,`query-only cache skipped state calls: ${fast.presentationStats.coreStateSkipped}`);
+expect(fast.presentationStats.coreStateCalls===fast.presentationStats.coreStateChanges,`query-only cache calls/changes mismatch calls=${fast.presentationStats.coreStateCalls} changes=${fast.presentationStats.coreStateChanges}`);
 expect(fast.uniformCalls.length===legacy.uniformCalls.length,`non-uniform split changed uniform upload count fast=${fast.uniformCalls.length} legacy=${legacy.uniformCalls.length}`);
 expect(fast.presentationStats.alphaUniformUploadsSaved===0,'non-uniform split must not cache alpha uniforms');
 expect(fast.presentationStats.textureMaskUniformUploadsSaved===0,'non-uniform split must not cache texture-mask uniforms');
@@ -125,4 +126,4 @@ rc.setCoreEnableState(rg.BLEND,true); rc.setCoreEnableState(rg.BLEND,true);
 expect(raw.calls.filter(c=>c[0]==='enable').length===2,'kill switch skipped duplicate glEnable');
 const rq=raw.queryCalls.length; rc.snapshotAttribState(0x6100);
 expect(raw.queryCalls.length-rq===14,'kill switch did not preserve 14 raw snapshot queries');
-console.log(`verify-lwjgl-core-state-cache: OK nonUniform fastCalls=${fast.calls.length} legacyCalls=${legacy.calls.length} skipped=${fast.presentationStats.coreStateSkipped} avoidedQueries=${fast.presentationStats.coreStateSnapshotQueriesAvoided} uniformCalls=${fast.uniformCalls.length}`);
+console.log(`verify-lwjgl-core-state-cache: OK queryOnly fastCalls=${fast.calls.length} legacyCalls=${legacy.calls.length} skipped=${fast.presentationStats.coreStateSkipped} avoidedQueries=${fast.presentationStats.coreStateSnapshotQueriesAvoided} uniformCalls=${fast.uniformCalls.length}`);
