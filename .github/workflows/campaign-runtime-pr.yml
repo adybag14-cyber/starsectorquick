@@ -134,3 +134,66 @@ jobs:
             test_output/pages-overlays/pr-check/web-runtime-profile.json
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
           if-no-files-found: warn
+
+
+  resolution_fullhd:
+    name: Full HD 1920x1080 campaign smoke
+    if: github.ref_name == 'feat/custom-resolution' || github.head_ref == 'feat/custom-resolution'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Run real 1920x1080 campaign
+        env:
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_DEEP_GAMEPLAY: 'false'
+          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
+          STARSECTOR_SAVE_LOAD_SMOKE: 'false'
+          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+        run: bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Verify Full HD framebuffer and input
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('test_output/resolution-fullhd/result.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          assert data.get('ok') is True, data
+          assert data.get('inputResponsive') is True, data.get('inputAfter')
+          assert not data.get('graphicsErrors'), data.get('graphicsErrors')
+          assert not data.get('runtimeErrorSignals'), data.get('runtimeErrorSignals')
+          cfg = data.get('windowConfig') or {}
+          assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == 1920, cfg
+          assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == 1080, cfg
+          canvases = ((data.get('state') or {}).get('canvases') or [])
+          assert canvases, 'no canvas telemetry'
+          canvas = canvases[0]
+          assert int(canvas.get('width', 0)) == 1920, canvas
+          assert int(canvas.get('height', 0)) == 1080, canvas
+          print('Full HD runtime verified:', canvas)
+          PY
+      - name: Upload Full HD evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-runtime-resolution-fullhd
+          path: test_output/resolution-fullhd
+          if-no-files-found: warn
