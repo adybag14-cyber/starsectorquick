@@ -116,12 +116,13 @@ expect(fast.snapshotQueries===0,`cache common snapshot should issue zero queries
 expect(fast.presentationStats.coreStateSnapshotQueriesAvoided===14,`expected 14 avoided queries, got ${fast.presentationStats.coreStateSnapshotQueriesAvoided}`);
 expect(fast.calls.length<legacy.calls.length,`cache did not reduce GL state calls: fast=${fast.calls.length} legacy=${legacy.calls.length}`);
 expect(fast.presentationStats.coreStateSkipped>0,'cache did not record skipped state calls');
-expect(fast.presentationStats.alphaUniformUploadsSaved>0,'alpha uniform cache did not save uploads');
-expect(fast.presentationStats.textureMaskUniformUploadsSaved>0,'texture-mask uniform cache did not save uploads');
+expect(fast.uniformCalls.length===legacy.uniformCalls.length,`non-uniform split changed uniform upload count fast=${fast.uniformCalls.length} legacy=${legacy.uniformCalls.length}`);
+expect(fast.presentationStats.alphaUniformUploadsSaved===0,'non-uniform split must not cache alpha uniforms');
+expect(fast.presentationStats.textureMaskUniformUploadsSaved===0,'non-uniform split must not cache texture-mask uniforms');
 // Kill switch must preserve repeated raw state calls and raw snapshot queries.
 const raw=makeContext(false), rc=raw.context, rg=raw.context.glCtx;
 rc.setCoreEnableState(rg.BLEND,true); rc.setCoreEnableState(rg.BLEND,true);
 expect(raw.calls.filter(c=>c[0]==='enable').length===2,'kill switch skipped duplicate glEnable');
 const rq=raw.queryCalls.length; rc.snapshotAttribState(0x6100);
 expect(raw.queryCalls.length-rq===14,'kill switch did not preserve 14 raw snapshot queries');
-console.log(`verify-lwjgl-core-state-cache: OK fastCalls=${fast.calls.length} legacyCalls=${legacy.calls.length} skipped=${fast.presentationStats.coreStateSkipped} avoidedQueries=${fast.presentationStats.coreStateSnapshotQueriesAvoided} alphaSaved=${fast.presentationStats.alphaUniformUploadsSaved} textureSaved=${fast.presentationStats.textureMaskUniformUploadsSaved}`);
+console.log(`verify-lwjgl-core-state-cache: OK nonUniform fastCalls=${fast.calls.length} legacyCalls=${legacy.calls.length} skipped=${fast.presentationStats.coreStateSkipped} avoidedQueries=${fast.presentationStats.coreStateSnapshotQueriesAvoided} uniformCalls=${fast.uniformCalls.length}`);

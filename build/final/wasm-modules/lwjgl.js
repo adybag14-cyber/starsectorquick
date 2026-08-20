@@ -305,8 +305,6 @@ var coreColorState = {
 	colorMask: [true, true, true, true], clearColor: [0, 0, 0, 0]
 };
 var coreDepthState = { writeMask: true, func: glCtx.LESS, clearValue: 1 };
-var alphaUniformState = { enabled: null, func: null, ref: null };
-var uploadedTexture2DEnabled = null;
 function hasCoreEnableState(cap)
 {
 	return Object.prototype.hasOwnProperty.call(coreEnableState, cap);
@@ -319,41 +317,14 @@ function noteCoreStateCall(changed)
 }
 function syncAlphaTestUniforms()
 {
-	var enabled = alphaTestState.enabled ? 1 : 0;
-	if(!coreRenderStateCacheEnabled || alphaUniformState.enabled !== enabled)
-	{
-		glCtx.uniform1f(alphaTestEnabledLocation, enabled);
-		alphaUniformState.enabled = enabled;
-		presentationStats.alphaUniformUploads++;
-	}
-	else presentationStats.alphaUniformUploadsSaved++;
-	if(!coreRenderStateCacheEnabled || alphaUniformState.func !== alphaTestState.func)
-	{
-		glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
-		alphaUniformState.func = alphaTestState.func;
-		presentationStats.alphaUniformUploads++;
-	}
-	else presentationStats.alphaUniformUploadsSaved++;
-	if(!coreRenderStateCacheEnabled || alphaUniformState.ref !== alphaTestState.ref)
-	{
-		glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
-		alphaUniformState.ref = alphaTestState.ref;
-		presentationStats.alphaUniformUploads++;
-	}
-	else presentationStats.alphaUniformUploadsSaved++;
+	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
+	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
 }
 function setTexture2DEnabled(enabled)
 {
-	enabled = !!enabled;
-	texture2DEnabled = enabled;
-	if(coreRenderStateCacheEnabled && uploadedTexture2DEnabled === enabled)
-	{
-		presentationStats.textureMaskUniformUploadsSaved++;
-		return;
-	}
-	glCtx.uniform1f(texMaskLocation, enabled ? 1 : 0);
-	uploadedTexture2DEnabled = enabled;
-	presentationStats.textureMaskUniformUploads++;
+	texture2DEnabled = !!enabled;
+	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
 }
 function getCompatEnableState(cap)
 {
@@ -615,11 +586,7 @@ var presentationStats = {
 	coreStateCalls: 0,
 	coreStateChanges: 0,
 	coreStateSkipped: 0,
-	coreStateSnapshotQueriesAvoided: 0,
-	alphaUniformUploads: 0,
-	alphaUniformUploadsSaved: 0,
-	textureMaskUniformUploads: 0,
-	textureMaskUniformUploadsSaved: 0
+	coreStateSnapshotQueriesAvoided: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
