@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'core-state', 'baseline-b']
+ORDER = ['baseline-a', 'core-no-uniform', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = 'df9c439e44e6d3d4072220d29edfbe0f2e8f9624'
+CANDIDATE_SHA = '269950e397ab35d47480dbc0e0bddcde52a9ebb0'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -37,8 +37,6 @@ def parse(name):
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
-            alpha_uploads=gp.get('alphaUniformUploadsDelta'), alpha_saved=gp.get('alphaUniformUploadsSavedDelta'),
-            texture_mask_uploads=gp.get('textureMaskUniformUploadsDelta'), texture_mask_saved=gp.get('textureMaskUniformUploadsSavedDelta'),
         )
         shortcuts = [float(x['listenerReadyMs']) for x in (data.get('shortcutResults') or []) if x.get('listenerReadyMs') is not None]
         if shortcuts: row['shortcut_avg_ms'] = round(statistics.fmean(shortcuts), 2)
@@ -61,7 +59,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['core-state'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['core-no-uniform'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -75,23 +73,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Production vs core render-state cache same-runner A/B', '',
+        '# Production vs core state no-uniform same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | state calls | skipped | changes | queries avoided | alpha saved | texmask saved | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | state calls | skipped | changes | queries avoided | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('core_calls','-')} | {r.get('core_skipped','-')} | {r.get('core_changes','-')} | {r.get('core_queries_avoided','-')} | {r.get('alpha_saved','-')} | {r.get('texture_mask_saved','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('core_calls','-')} | {r.get('core_skipped','-')} | {r.get('core_changes','-')} | {r.get('core_queries_avoided','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted core-state delta:']
+    lines += ['', 'Drift-adjusted core-no-uniform delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('core-state', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('core-no-uniform', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -105,12 +103,8 @@ def main():
     skipped = int(c.get('core_skipped') or 0)
     changes = int(c.get('core_changes') or 0)
     avoided = int(c.get('core_queries_avoided') or 0)
-    alpha_saved = int(c.get('alpha_saved') or 0)
-    texmask_saved = int(c.get('texture_mask_saved') or 0)
-    if calls < 100 or skipped <= 0 or changes <= 0 or skipped + changes != calls:
-        raise SystemExit(f'core-state cache call evidence invalid: {c}')
-    if avoided <= 0 or alpha_saved <= 0 or texmask_saved <= 0:
-        raise SystemExit(f'core-state cache savings evidence invalid: {c}')
+    if calls < 100 or skipped <= 0 or changes <= 0 or skipped + changes != calls or avoided < 100:
+        raise SystemExit(f'core-no-uniform cache activation evidence invalid: {c}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
