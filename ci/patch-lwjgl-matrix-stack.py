@@ -28,6 +28,19 @@ def main() -> None:
         return
 
     old_helpers = """var curMatrixStack = modelViewMatrixStack;
+// WEBGL_MATRIX_GENERATION_CACHE_V2
+// Fixed-function model/projection matrices are persistent WebGL uniforms.
+// Track mutations with integer generations so the common draw path needs only
+// two integer comparisons and performs no bookkeeping when both are unchanged.
+var modelViewMatrixGeneration = 1;
+var projMatrixGeneration = 1;
+var uploadedModelViewMatrixGeneration = 0;
+var uploadedProjMatrixGeneration = 0;
+function markCurrentDrawMatrixDirty()
+{
+\tif(curMatrixStack === modelViewMatrixStack) modelViewMatrixGeneration++;
+\telse if(curMatrixStack === projMatrixStack) projMatrixGeneration++;
+}
 function getCurMatrixTop()
 {
 \treturn curMatrixStack[curMatrixStack.length - 1];
@@ -35,9 +48,23 @@ function getCurMatrixTop()
 function setCurMatrixTop(m)
 {
 \tcurMatrixStack[curMatrixStack.length - 1] = m;
+\tmarkCurrentDrawMatrixDirty();
 }
 """
     new_helpers = f"""var curMatrixStack = modelViewMatrixStack;
+// WEBGL_MATRIX_GENERATION_CACHE_V2
+// Fixed-function model/projection matrices are persistent WebGL uniforms.
+// Track mutations with integer generations so the common draw path needs only
+// two integer comparisons and performs no bookkeeping when both are unchanged.
+var modelViewMatrixGeneration = 1;
+var projMatrixGeneration = 1;
+var uploadedModelViewMatrixGeneration = 0;
+var uploadedProjMatrixGeneration = 0;
+function markCurrentDrawMatrixDirty()
+{{
+\tif(curMatrixStack === modelViewMatrixStack) modelViewMatrixGeneration++;
+\telse if(curMatrixStack === projMatrixStack) projMatrixGeneration++;
+}}
 // {MARKER}: OpenGL matrix stacks always retain their base identity matrix.
 var matrixStackWarnings = new Set();
 function ensureCurMatrixStack()
@@ -64,6 +91,7 @@ function setCurMatrixTop(m)
 {{
 \tvar stack = ensureCurMatrixStack();
 \tstack[stack.length - 1] = m;
+\tmarkCurrentDrawMatrixDirty();
 }}
 """
     text = replace_once(text, old_helpers, new_helpers, "matrix helper block")
@@ -80,6 +108,7 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 \tif(curList)
 \t\treturn pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
 \tcurMatrixStack.pop();
+\tmarkCurrentDrawMatrixDirty();
 }
 """
     new_push_pop = """function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
@@ -105,11 +134,12 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 \t\treturn;
 \t}
 \tstack.pop();
+\tmarkCurrentDrawMatrixDirty();
 }
 """
     text = replace_once(text, old_push_pop, new_push_pop, "push/pop block")
 
-    LWJGL.write_text(text, encoding="utf-8")
+    LWJGL.write_bytes(text.encode("utf-8"))
     print("Applied LWJGL matrix-stack underflow guard")
 
 

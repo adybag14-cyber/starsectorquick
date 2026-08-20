@@ -481,7 +481,8 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	matrixUniformUploads: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -502,13 +503,46 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// WEBGL_MATRIX_GENERATION_CACHE_V2
+// Fixed-function model/projection matrices are persistent WebGL uniforms.
+// Track mutations with integer generations so the common draw path needs only
+// two integer comparisons and performs no bookkeeping when both are unchanged.
+var modelViewMatrixGeneration = 1;
+var projMatrixGeneration = 1;
+var uploadedModelViewMatrixGeneration = 0;
+var uploadedProjMatrixGeneration = 0;
+function markCurrentDrawMatrixDirty()
+{
+	if(curMatrixStack === modelViewMatrixStack) modelViewMatrixGeneration++;
+	else if(curMatrixStack === projMatrixStack) projMatrixGeneration++;
+}
+// LWJGL_MATRIX_STACK_GUARD_V1: OpenGL matrix stacks always retain their base identity matrix.
+var matrixStackWarnings = new Set();
+function ensureCurMatrixStack()
+{
+	if(!Array.isArray(curMatrixStack))
+		throw new Error("LWJGL current matrix stack is invalid");
+	if(curMatrixStack.length === 0)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-empty-recovery",
+			"LWJGL recovered an empty matrix stack with an identity matrix."
+		);
+		curMatrixStack.push(glMatrix.mat4.create());
+	}
+	return curMatrixStack;
+}
 function getCurMatrixTop()
 {
-	return curMatrixStack[curMatrixStack.length - 1];
+	var stack = ensureCurMatrixStack();
+	return stack[stack.length - 1];
 }
 function setCurMatrixTop(m)
 {
-	curMatrixStack[curMatrixStack.length - 1] = m;
+	var stack = ensureCurMatrixStack();
+	stack[stack.length - 1] = m;
+	markCurrentDrawMatrixDirty();
 }
 
 function ensureFramebufferSize()
@@ -795,9 +829,18 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
-	// TODO: Conditional
-	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	if(uploadedModelViewMatrixGeneration !== modelViewMatrixGeneration)
+	{
+		glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+		uploadedModelViewMatrixGeneration = modelViewMatrixGeneration;
+		presentationStats.matrixUniformUploads++;
+	}
+	if(uploadedProjMatrixGeneration !== projMatrixGeneration)
+	{
+		glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+		uploadedProjMatrixGeneration = projMatrixGeneration;
+		presentationStats.matrixUniformUploads++;
+	}
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -1626,6 +1669,7 @@ function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLoadIdentity);
 	glMatrix.mat4.identity(getCurMatrixTop());
+	markCurrentDrawMatrixDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, nearVal, farVal, funcPtr)
@@ -1972,14 +2016,26 @@ function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-	curMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));
+	var stack = ensureCurMatrixStack();
+	stack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-	curMatrixStack.pop();
+	var stack = ensureCurMatrixStack();
+	if(stack.length <= 1)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-underflow",
+			"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow."
+		);
+		return;
+	}
+	stack.pop();
+	markCurrentDrawMatrixDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
