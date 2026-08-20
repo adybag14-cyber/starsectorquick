@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: texture-bind cache frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/texture-bind-frame-tail-ab'
+    name: core render-state cache frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/core-state-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/texture-bind-cache-current:refs/remotes/origin/perf/texture-bind-cache-current
+            refs/heads/perf/core-render-state-cache-current:refs/remotes/origin/perf/core-render-state-cache-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/texture-bind-cache-current)" = "6655af491973aadc42de5d03071bfb5540094836"
+          test "$(git rev-parse origin/perf/core-render-state-cache-current)" = "df9c439e44e6d3d4072220d29edfbe0f2e8f9624"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -185,8 +185,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Texture-bind cache candidate
-        run: bash ci/run-frame-perf-ab-variant.sh texture-bind origin/perf/texture-bind-cache-current
+      - name: Core render-state cache candidate
+        run: bash ci/run-frame-perf-ab-variant.sh core-state origin/perf/core-render-state-cache-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: texture-bind-frame-tail-ab
+          name: core-state-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
