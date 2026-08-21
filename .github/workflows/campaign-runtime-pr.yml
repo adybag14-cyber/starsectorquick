@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate pointer-dirty frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-pointer-dirty-frame-tail-ab'
+    name: immediate attrib-dirty frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-attrib-dirty-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/immediate-pointer-dirty-current:refs/remotes/origin/perf/immediate-pointer-dirty-current
+            refs/heads/perf/immediate-attrib-dirty-current:refs/remotes/origin/perf/immediate-attrib-dirty-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/immediate-pointer-dirty-current)" = "aa9587e461fb3bbe7b0f6be5fc566b5c54192da9"
+          test "$(git rev-parse origin/perf/immediate-attrib-dirty-current)" = "2d5dee578d8e4be7265a5f96d22921405e5f0a2b"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -185,8 +185,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Immediate pointer-dirty candidate
-        run: bash ci/run-frame-perf-ab-variant.sh pointer-dirty origin/perf/immediate-pointer-dirty-current
+      - name: Immediate attrib-dirty candidate
+        run: bash ci/run-frame-perf-ab-variant.sh attrib-dirty origin/perf/immediate-attrib-dirty-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-pointer-dirty-frame-tail-ab
+          name: immediate-attrib-dirty-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
