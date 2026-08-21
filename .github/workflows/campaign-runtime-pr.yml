@@ -138,7 +138,7 @@ jobs:
 
   frame-perf-same-runner:
     name: interleaved pointer-only cache 240-frame A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/interleaved-pointer-finalist-long'
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-pointer-dirty-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/interleaved-pointer-cache-current:refs/remotes/origin/perf/interleaved-pointer-cache-current
+            refs/heads/perf/immediate-pointer-dirty-current:refs/remotes/origin/perf/immediate-pointer-dirty-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/interleaved-pointer-cache-current)" = "9bc861da346dca5a71f4da45d043e8db74e6e385"
+          test "$(git rev-parse origin/perf/immediate-pointer-dirty-current)" = "43e945cdf3adb6eddd032a3c8c78f685b65513df"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -186,7 +186,7 @@ jobs:
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
       - name: Interleaved pointer-only cache candidate
-        run: bash ci/run-frame-perf-ab-variant.sh pointer-attrib origin/perf/interleaved-pointer-cache-current
+        run: bash ci/run-frame-perf-ab-variant.sh pointer-dirty origin/perf/immediate-pointer-dirty-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: interleaved-pointer-finalist-long
+          name: immediate-pointer-dirty-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
