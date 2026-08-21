@@ -452,6 +452,42 @@ var immediateProfileTextureBarrierGeneration = 0;
 var immediateProfileRenderStateBarrierGeneration = 0;
 var immediateProfileClientBarrierGeneration = 0;
 var immediateProfileOtherBarrierGeneration = 0;
+var immediateProfileHardBarrierGeneration = 0;
+var immediateProfileBlendEnabled = false;
+var immediateProfileCullEnabled = false;
+var immediateProfileDepthEnabled = false;
+var immediateProfileScissorEnabled = false;
+var immediateProfileStencilEnabled = false;
+var immediateProfileBlendSrc = 1, immediateProfileBlendDst = 0;
+var immediateProfileDepthFunc = 0x0201, immediateProfileDepthMask = true;
+var immediateProfileCullFace = 0x0405;
+var immediateProfileScissorX = 0, immediateProfileScissorY = 0, immediateProfileScissorW = -1, immediateProfileScissorH = -1;
+var immediateProfileStencilFunc = 0x0207, immediateProfileStencilRef = 0, immediateProfileStencilMask = 0xffffffff;
+var immediateProfileStencilSFail = 0x1e00, immediateProfileStencilDPFail = 0x1e00, immediateProfileStencilDPPass = 0x1e00;
+var immediateProfileColorMaskR = true, immediateProfileColorMaskG = true, immediateProfileColorMaskB = true, immediateProfileColorMaskA = true;
+var immediateProfileViewportX = 0, immediateProfileViewportY = 0, immediateProfileViewportW = -1, immediateProfileViewportH = -1;
+function immediateProfileSetEnabled(cap, enabled)
+{
+	if(cap == glCtx.BLEND) immediateProfileBlendEnabled = enabled;
+	else if(cap == glCtx.CULL_FACE) immediateProfileCullEnabled = enabled;
+	else if(cap == glCtx.DEPTH_TEST) immediateProfileDepthEnabled = enabled;
+	else if(cap == glCtx.SCISSOR_TEST) immediateProfileScissorEnabled = enabled;
+	else if(cap == glCtx.STENCIL_TEST) immediateProfileStencilEnabled = enabled;
+}
+function immediateProfileRenderSignature()
+{
+	return [
+		immediateProfileBlendEnabled, immediateProfileBlendSrc, immediateProfileBlendDst,
+		immediateProfileCullEnabled, immediateProfileCullFace,
+		immediateProfileDepthEnabled, immediateProfileDepthFunc, immediateProfileDepthMask,
+		immediateProfileScissorEnabled, immediateProfileScissorX, immediateProfileScissorY, immediateProfileScissorW, immediateProfileScissorH,
+		immediateProfileStencilEnabled, immediateProfileStencilFunc, immediateProfileStencilRef, immediateProfileStencilMask,
+		immediateProfileStencilSFail, immediateProfileStencilDPFail, immediateProfileStencilDPPass,
+		immediateProfileColorMaskR, immediateProfileColorMaskG, immediateProfileColorMaskB, immediateProfileColorMaskA,
+		immediateProfileViewportX, immediateProfileViewportY, immediateProfileViewportW, immediateProfileViewportH,
+		alphaTestState.enabled, alphaTestState.func, alphaTestState.ref
+	].join('|');
+}
 var lastImmediateEndBarrierGeneration = -1;
 var lastImmediateEndReadOnlyQueryGeneration = -1;
 var lastImmediateEndMatrixBarrierGeneration = -1;
@@ -459,10 +495,12 @@ var lastImmediateEndTextureBarrierGeneration = -1;
 var lastImmediateEndRenderStateBarrierGeneration = -1;
 var lastImmediateEndClientBarrierGeneration = -1;
 var lastImmediateEndOtherBarrierGeneration = -1;
+var lastImmediateEndHardBarrierGeneration = -1;
 var lastQuadStripModelView = null;
 var lastQuadStripProjection = null;
 var lastQuadStripTextureId = -1;
 var lastQuadStripTextureEnabled = false;
+var lastQuadStripRenderSignature = null;
 function immediateProfileMatrixEqual(a, b)
 {
 	if(a == null || b == null || a.length != b.length) return false;
@@ -529,7 +567,10 @@ var presentationStats = {
 	immediateQuadStripSameModelViewAdjacentEnds: 0,
 	immediateQuadStripSameProjectionAdjacentEnds: 0,
 	immediateQuadStripSameTextureAdjacentEnds: 0,
-	immediateQuadStripSameMatrixTextureAdjacentEnds: 0
+	immediateQuadStripSameMatrixTextureAdjacentEnds: 0,
+	immediateQuadStripNoHardBarrierAdjacentEnds: 0,
+	immediateQuadStripSameRenderStateAdjacentEnds: 0,
+	immediateQuadStripBatchSafeAdjacentEnds: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -1590,6 +1631,7 @@ function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	checkNoList(curList);
 	glCtx.clear(a);
@@ -1722,6 +1764,7 @@ function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPt
 	immediateProfileOtherBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglViewport);
+	immediateProfileViewportX=x; immediateProfileViewportY=y; immediateProfileViewportW=width; immediateProfileViewportH=height;
 	glCtx.viewport(x, y, width, height);
 }
 
@@ -1731,6 +1774,7 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
+	immediateProfileSetEnabled(a, false);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.disable(a);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
@@ -1752,6 +1796,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
+	immediateProfileSetEnabled(a, true);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
 		glCtx.enable(a);
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
@@ -1771,6 +1816,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	var v = lib.getJNIDataView();
@@ -1799,6 +1845,7 @@ function Java_org_lwjgl_opengl_GL11_nglBindTexture(lib, target, id, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglTexParameteri(lib, target, pname, param, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	if(pname == 0x8191/*GL_GENERATE_MIPMAP*/)
@@ -1814,6 +1861,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexParameteri(lib, target, pname, param, 
 function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFormat, width, height, border, format, type, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
@@ -1895,6 +1943,7 @@ function Java_org_lwjgl_opengl_GL11_nglVertexPointer(lib, size, type, stride, me
 function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileClientBarrierGeneration++;
 	var v = lib.getJNIDataView();
 	if(curList)
@@ -1970,6 +2019,7 @@ function Java_org_lwjgl_opengl_GL11_nglAlphaFunc(lib, func, ref, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGenLists(lib, range, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	checkNoList(curList);
 	var ret = cmdLists.length;
@@ -1990,6 +2040,7 @@ function Java_org_lwjgl_opengl_GL11_nglListBase(lib, base, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglNewList(lib, list, mode, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	checkNoList(curList);
 	assert(mode == 0x1300/*GL_COMPILE*/);
@@ -2001,6 +2052,7 @@ function Java_org_lwjgl_opengl_GL11_nglNewList(lib, list, mode, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglEndList(lib, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	curList = null;
 }
@@ -2047,6 +2099,7 @@ function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
+	immediateProfileDepthFunc = a;
 	glCtx.depthFunc(a);
 }
 
@@ -2056,6 +2109,7 @@ function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglCullFace);
+	immediateProfileCullFace = mode;
 	glCtx.cullFace(mode);
 }
 
@@ -2069,6 +2123,7 @@ function Java_org_lwjgl_opengl_GL11_nglIsEnabled(lib, cap, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglPushAttrib(lib, mask, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushAttrib);
 	attribStateStack.push(snapshotAttribState(mask));
@@ -2076,6 +2131,7 @@ function Java_org_lwjgl_opengl_GL11_nglPushAttrib(lib, mask, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglPopAttrib(lib, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopAttrib);
 	if(attribStateStack.length == 0)
@@ -2134,6 +2190,7 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
+	immediateProfileDepthMask = !!a;
 	glCtx.depthMask(a);
 }
 
@@ -2143,6 +2200,7 @@ function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
+	immediateProfileBlendSrc = sfactor; immediateProfileBlendDst = dfactor;
 	glCtx.blendFunc(sfactor, dfactor);
 }
 
@@ -2152,12 +2210,14 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
+	immediateProfileColorMaskR=!!r; immediateProfileColorMaskG=!!g; immediateProfileColorMaskB=!!b; immediateProfileColorMaskA=!!a;
 	glCtx.colorMask(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
@@ -2169,6 +2229,7 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xoffset, yoffset, x, y, width, height, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	glCtx.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
@@ -2190,6 +2251,7 @@ function Java_org_lwjgl_opengl_GL11_nglScalef(lib, x, y, z, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	checkNoList(curList);
 	var v = lib.getJNIDataView();
@@ -2212,6 +2274,7 @@ function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglFlush()
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	checkNoList(curList);
 	glCtx.flush();
@@ -2220,6 +2283,7 @@ function Java_org_lwjgl_opengl_GL11_nglFlush()
 function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset, yoffset, width, height, format, type, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileTextureBarrierGeneration++;
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
@@ -2315,6 +2379,7 @@ function Java_org_lwjgl_opengl_GL11_nglColorMaterial()
 function Java_org_lwjgl_opengl_GL11_nglCallList(lib, listId, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileHardBarrierGeneration++;
 	immediateProfileOtherBarrierGeneration++;
 	checkNoList(curList);
 	callList(listId);
@@ -2374,6 +2439,7 @@ function Java_org_lwjgl_opengl_GL11_nglScissor(lib, x, y, width, height, funcPtr
 	immediateProfileBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScissor);
+	immediateProfileScissorX=x; immediateProfileScissorY=y; immediateProfileScissorW=Math.max(0,width); immediateProfileScissorH=Math.max(0,height);
 	glCtx.scissor(x, y, Math.max(0, width), Math.max(0, height));
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr)
@@ -2381,6 +2447,7 @@ function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr
 	immediateProfileBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilFunc);
+	immediateProfileStencilFunc=func; immediateProfileStencilRef=ref; immediateProfileStencilMask=mask>>>0;
 	glCtx.stencilFunc(func, ref, mask >>> 0);
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, funcPtr)
@@ -2388,6 +2455,7 @@ function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, fun
 	immediateProfileBarrierGeneration++;
 	immediateProfileRenderStateBarrierGeneration++;
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilOp);
+	immediateProfileStencilSFail=sfail; immediateProfileStencilDPFail=dpfail; immediateProfileStencilDPPass=dppass;
 	glCtx.stencilOp(sfail, dpfail, dppass);
 }
 
@@ -2556,7 +2624,14 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		if(sameMv) presentationStats.immediateQuadStripSameModelViewAdjacentEnds++;
 		if(sameProj) presentationStats.immediateQuadStripSameProjectionAdjacentEnds++;
 		if(sameTexture) presentationStats.immediateQuadStripSameTextureAdjacentEnds++;
-		if(sameMv && sameProj && sameTexture) presentationStats.immediateQuadStripSameMatrixTextureAdjacentEnds++;
+		var sameMatrixTexture = sameMv && sameProj && sameTexture;
+		if(sameMatrixTexture) presentationStats.immediateQuadStripSameMatrixTextureAdjacentEnds++;
+		var noHardBarrier = immediateProfileHardBarrierGeneration === lastImmediateEndHardBarrierGeneration;
+		var renderSignature = immediateProfileRenderSignature();
+		var sameRenderState = renderSignature === lastQuadStripRenderSignature;
+		if(noHardBarrier) presentationStats.immediateQuadStripNoHardBarrierAdjacentEnds++;
+		if(sameRenderState) presentationStats.immediateQuadStripSameRenderStateAdjacentEnds++;
+		if(noHardBarrier && sameMatrixTexture && sameRenderState) presentationStats.immediateQuadStripBatchSafeAdjacentEnds++;
 	}
 	lastImmediateEndBarrierGeneration = immediateProfileBarrierGeneration;
 	lastImmediateEndReadOnlyQueryGeneration = immediateProfileReadOnlyQueryGeneration;
@@ -2565,6 +2640,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	lastImmediateEndRenderStateBarrierGeneration = immediateProfileRenderStateBarrierGeneration;
 	lastImmediateEndClientBarrierGeneration = immediateProfileClientBarrierGeneration;
 	lastImmediateEndOtherBarrierGeneration = immediateProfileOtherBarrierGeneration;
+	lastImmediateEndHardBarrierGeneration = immediateProfileHardBarrierGeneration;
 	lastImmediateEndMode = immediateModeData.mode;
 	if(immediateModeData.mode == 8/*QUAD_STRIP*/)
 	{
@@ -2572,6 +2648,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		lastQuadStripProjection = new Float32Array(projMatrixStack[projMatrixStack.length - 1]);
 		lastQuadStripTextureId = boundTexture2DId;
 		lastQuadStripTextureEnabled = texture2DEnabled;
+		lastQuadStripRenderSignature = immediateProfileRenderSignature();
 	}
 	if(immediateModeData.mode == 0/*POINTS*/)
 	{
