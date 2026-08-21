@@ -107,7 +107,21 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 \tstack.pop();
 }
 """
-    text = replace_once(text, old_push_pop, new_push_pop, "push/pop block")
+    # Diagnostic branches may prepend a conservative immediate-batching barrier
+    # counter to Push/Pop. Preserve that instrumentation through this guard instead
+    # of making the exact source anchor fail.
+    barrier_line = "\timmediateProfileBarrierGeneration++;\n"
+    old_push_pop_profile = old_push_pop.replace("{\n\tif(curList)", "{\n" + barrier_line + "\tif(curList)")
+    new_push_pop_profile = new_push_pop.replace("{\n\tif(curList)", "{\n" + barrier_line + "\tif(curList)")
+    if text.count(old_push_pop) == 1:
+        text = text.replace(old_push_pop, new_push_pop, 1)
+    elif text.count(old_push_pop_profile) == 1:
+        text = text.replace(old_push_pop_profile, new_push_pop_profile, 1)
+    else:
+        raise RuntimeError(
+            "push/pop block: expected exactly one stock or profiled match, "
+            f"found stock={text.count(old_push_pop)} profiled={text.count(old_push_pop_profile)}"
+        )
 
     LWJGL.write_text(text, encoding="utf-8")
     print("Applied LWJGL matrix-stack underflow guard")
