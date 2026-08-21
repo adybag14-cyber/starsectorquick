@@ -482,7 +482,7 @@ var presentationStats = {
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
-	immediatePointerLayoutRefreshes: 0
+	immediateAttribLayoutRefreshes: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -622,11 +622,11 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 	}
 	return out;
 }
-// LWJGL_IMMEDIATE_POINTER_DIRTY_V1
-// Immediate-mode interleaving always uses one fixed 3/4/2-float layout.
-// Legacy client uploads are the only other pointer writers, so they mark that
-// fixed layout dirty instead of forcing three vertexAttribPointer calls per draw.
-var immediatePointerLayoutDirty = true;
+// LWJGL_IMMEDIATE_ATTRIB_DIRTY_V1
+// Immediate-mode interleaving always uses one fixed pointer + enable layout.
+// Legacy client-array mutations mark it dirty so stable immediate draws avoid
+// all six repeated vertexAttribPointer/enableVertexAttribArray calls.
+var immediateAttribLayoutDirty = true;
 function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
 {
 	var originalType = type;
@@ -665,7 +665,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
-	immediatePointerLayoutDirty = true;
+	immediateAttribLayoutDirty = true;
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -677,11 +677,13 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		}
 	}
 	glCtx.enableVertexAttribArray(attributeLocation);
+	immediateAttribLayoutDirty = true;
 	return true;
 }
 function applyCurrentColorAttrib()
 {
 	glCtx.disableVertexAttribArray(colorLocation);
+	immediateAttribLayoutDirty = true;
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -717,6 +719,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		else
 		{
 			glCtx.disableVertexAttribArray(attributeLocation);
+			immediateAttribLayoutDirty = true;
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -2343,17 +2346,17 @@ function uploadImmediateInterleaved(vertexCount)
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
-	if(immediatePointerLayoutDirty)
+	if(immediateAttribLayoutDirty)
 	{
 		glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
 		glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
 		glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
-		immediatePointerLayoutDirty = false;
-		presentationStats.immediatePointerLayoutRefreshes++;
+		glCtx.enableVertexAttribArray(vertexPosition);
+		glCtx.enableVertexAttribArray(colorLocation);
+		glCtx.enableVertexAttribArray(texCoord);
+		immediateAttribLayoutDirty = false;
+		presentationStats.immediateAttribLayoutRefreshes++;
 	}
-	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.enableVertexAttribArray(texCoord);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2385,6 +2388,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		else
 		{
 			glCtx.disableVertexAttribArray(texCoord);
+			immediateAttribLayoutDirty = true;
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}
