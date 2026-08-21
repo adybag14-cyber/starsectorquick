@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate STREAM_DRAW frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-stream-frame-tail-ab'
+    name: compact color setter frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/compact-color-setter-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,10 +161,10 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/immediate-stream-draw-current:refs/remotes/origin/perf/immediate-stream-draw-current
+            refs/heads/perf/immediate-compact-color-setter-current:refs/remotes/origin/perf/immediate-compact-color-setter-current
           test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/immediate-stream-draw-current)" = "35c5c6df2ca207a911b40295ff83573ace31bf83"
-          git show origin/perf/immediate-stream-draw-current:build/final/wasm-modules/lwjgl.js | grep -F "glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STREAM_DRAW);" >/dev/null
+          test "$(git rev-parse origin/perf/immediate-compact-color-setter-current)" = "7d18b678a2eab5b9e87511925c4eb6d38095de23"
+          test "$(git show origin/perf/immediate-compact-color-setter-current:build/final/wasm-modules/lwjgl.js | grep -Fc WEBGL_IMMEDIATE_COMPACT_COLOR_SETTER_V2)" -eq 1
           git show origin/fix/pages-live-settings-check:build/final/wasm-modules/lwjgl.js | grep -F "glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);" >/dev/null
       - name: Restore official release cache
         uses: actions/cache@v4
@@ -187,8 +187,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Immediate STREAM_DRAW candidate
-        run: bash ci/run-frame-perf-ab-variant.sh immediate-stream origin/perf/immediate-stream-draw-current
+      - name: Setter-driven compact-color candidate
+        run: bash ci/run-frame-perf-ab-variant.sh compact-color-setter origin/perf/immediate-compact-color-setter-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
       - name: Summarize drift-adjusted frame metrics
@@ -198,6 +198,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-stream-frame-tail-ab
+          name: compact-color-setter-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
