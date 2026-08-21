@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: ARRAY_BUFFER bind-cache frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/array-buffer-bind-frame-tail-ab'
+    name: ARRAY_BUFFER bind-cache 240-frame A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/array-buffer-bind-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -198,6 +198,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: array-buffer-bind-frame-tail-ab
+          name: array-buffer-bind-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
