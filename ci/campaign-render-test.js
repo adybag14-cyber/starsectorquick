@@ -463,6 +463,14 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   flushLogs();
   const game = page.locator('#game-container');
   const gameCanvas = page.locator('#lwjglCanvas');
+  const configuredPreScreenshotFrames = Number(process.env.STARSECTOR_PRE_SCREENSHOT_FRAMES || 0);
+  const preScreenshotFrames = Number.isFinite(configuredPreScreenshotFrames)
+    ? Math.max(0, Math.floor(configuredPreScreenshotFrames))
+    : 0;
+  const configuredPreScreenshotTimeoutMs = Number(process.env.STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS || 60000);
+  const preScreenshotTimeoutMs = Number.isFinite(configuredPreScreenshotTimeoutMs)
+    ? Math.max(5000, configuredPreScreenshotTimeoutMs)
+    : 60000;
   const configuredScreenshotTimeoutMs = Number(process.env.STARSECTOR_SCREENSHOT_TIMEOUT_MS || 12000);
   const screenshotTimeoutMs = Number.isFinite(configuredScreenshotTimeoutMs)
     ? Math.max(12000, configuredScreenshotTimeoutMs)
@@ -487,6 +495,18 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       return null;
     }
   };
+
+  if (expectedState === 'campaign' && preScreenshotFrames > 0) {
+    const readiness = await waitForPresentationFrames(page, preScreenshotFrames, {
+      timeoutMs: preScreenshotTimeoutMs,
+      pollMs: 100,
+    }).catch(error => ({ advanced: false, frames: 0, elapsedMs: 0, error: String(error && (error.message || error) || error) }));
+    logs.push(`[pre-screenshot-frames] requested=${preScreenshotFrames} advanced=${readiness.advanced} frames=${readiness.frames} elapsedMs=${readiness.elapsedMs}${readiness.error ? ` error=${readiness.error}` : ''}`);
+    flushLogs();
+    if (!readiness.advanced) {
+      errors.push(`pre-screenshot presentation readiness failed: ${JSON.stringify(readiness)}`);
+    }
+  }
 
   const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
   const firstFrameCapturedAt = first ? Date.now() : null;
