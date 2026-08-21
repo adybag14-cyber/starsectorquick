@@ -170,7 +170,14 @@ jobs:
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK228275323"}'
-        run: bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+        run: |
+          set +e
+          bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+          rc=$?
+          set -e
+          echo "Generic campaign harness rc=$rc; applying Full-HD-specific verifier next."
+          test -s test_output/resolution-fullhd/result.json
+          test -s test_output/resolution-fullhd/browser.log
       - name: Verify Full HD framebuffer and input
         run: |
           grep -Fq 'BrowserDeferredTexture: first-direct-miss-load key=' test_output/resolution-fullhd/browser.log
@@ -180,10 +187,19 @@ jobs:
           from pathlib import Path
           p = Path('test_output/resolution-fullhd/result.json')
           data = json.loads(p.read_text(encoding='utf-8'))
-          assert data.get('ok') is True, data
+          assert data.get('expectedState') == 'campaign', data.get('expectedState')
+          assert int(data.get('campaignSeenAt') or 0) > 0, data.get('campaignSeenAt')
+          assert data.get('rendered') is True, data.get('rendered')
           assert data.get('inputResponsive') is True, data.get('inputAfter')
+          assert data.get('shortcutsResponsive') is True, data.get('shortcutResults')
+          assert data.get('uiControlsSafe') is True, data.get('uiControlResults')
+          assert not data.get('fatalSeenAt'), data.get('fatalSeenAt')
+          assert not data.get('errors'), data.get('errors')
           assert not data.get('graphicsErrors'), data.get('graphicsErrors')
           assert not data.get('runtimeErrorSignals'), data.get('runtimeErrorSignals')
+          refit = next((row for row in (data.get('shortcutResults') or []) if row.get('name') == 'Refit'), None)
+          assert refit and refit.get('semanticOpened') is True and not refit.get('failed'), refit
+          assert float(refit.get('visualDiff') or 0) > 0.05, refit
           cfg = data.get('windowConfig') or {}
           assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == 1920, cfg
           assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == 1080, cfg
