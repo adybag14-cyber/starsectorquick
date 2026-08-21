@@ -465,6 +465,8 @@ var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJG
 // is already captured per vertex. Defer the generic color attribute until a
 // client-array draw actually needs it instead of issuing two WebGL calls here.
 var immediateBeginActive = false;
+// LWJGL_IMMEDIATE_COUNTER_TRIM_V1: interleaved mode owns its vertex count via
+// interleavedPos; legacy position/color/texcoord counters remain fallback-only.
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
@@ -487,7 +489,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateCounterTrimActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2307,9 +2310,6 @@ function appendImmediateVertex(x, y, z, texS, texT)
 		out[pos + 6] = immediateModeData.currentColor[3];
 		out[pos + 7] = texS; out[pos + 8] = texT;
 		immediateModeData.interleavedPos = pos + 9;
-		immediateModeData.vertexPos += 3;
-		immediateModeData.colorPos += 4;
-		immediateModeData.texCoordPos += 2;
 		immediateModeData.currentTexCoord[0] = texS;
 		immediateModeData.currentTexCoord[1] = texT;
 		return;
@@ -2344,9 +2344,18 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
-	var texPos = immediateModeData.texCoordPos;
-	var texS = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[0] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0);
-	var texT = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[1] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0);
+	var texS, texT;
+	if(immediateInterleavedEnabled)
+	{
+		texS = immediateModeData.currentTexCoord[0];
+		texT = immediateModeData.currentTexCoord[1];
+	}
+	else
+	{
+		var texPos = immediateModeData.texCoordPos;
+		texS = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0;
+		texT = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0;
+	}
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
@@ -2385,7 +2394,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
-	var vertexCount = immediateModeData.vertexPos / 3;
+	var vertexCount = immediateInterleavedEnabled ? (immediateModeData.interleavedPos / 9) : (immediateModeData.vertexPos / 3);
 	if(immediateInterleavedEnabled)
 	{
 		uploadImmediateInterleaved(vertexCount);

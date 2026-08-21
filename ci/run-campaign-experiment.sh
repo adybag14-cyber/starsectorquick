@@ -80,6 +80,7 @@ node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-interleaved.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-pointer-dirty.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-color-attrib-defer.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-immediate-counter-trim.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
 # The browser quick-start keeps the stock 45s fallback available via override,
