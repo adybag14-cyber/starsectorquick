@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'color-attrib-defer', 'baseline-b']
+ORDER = ['baseline-a', 'quad-strip-stitch', 'baseline-b']
 BASELINE_SHA = '457d36910eea99e83518f936db17b1d2a8420617'
-CANDIDATE_SHA = '6e7a40e29be35d88b4d0d290b96db231f960198f'
+CANDIDATE_SHA = 'b262337cb4e0c8a3280c66ce129a0257a594462d'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -35,7 +35,12 @@ def parse(name):
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
             interleaved_saved=gp.get('immediateInterleavedUploadsSavedDelta'),
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
-            color_deferred=bool(gp.get('immediateColorAttribDeferredObserved')),
+            quad_strip_deferred=gp.get('immediateQuadStripDeferredRunDelta'),
+            quad_strip_batched_runs=gp.get('immediateQuadStripBatchedRunDelta'),
+            quad_strip_batched_strips=gp.get('immediateQuadStripBatchedStripDelta'),
+            quad_strip_saved=gp.get('immediateQuadStripDrawCallsSavedDelta'),
+            quad_strip_bridges=gp.get('immediateQuadStripBridgeVertexDelta'),
+            quad_strip_uploads_saved=gp.get('immediateQuadStripUploadsSavedDelta'),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
         )
@@ -60,7 +65,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['color-attrib-defer'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['quad-strip-stitch'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -74,23 +79,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Pointer-dirty production vs immediate color-attrib defer same-runner A/B', '',
+        '# Production vs immediate quad-strip stitch same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | color deferred | draws | uploads | bytes | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | quad saved | batch runs | batched strips | uploads saved | draws | uploads | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('color_deferred',False)} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('quad_strip_saved','-')} | {r.get('quad_strip_batched_runs','-')} | {r.get('quad_strip_batched_strips','-')} | {r.get('quad_strip_uploads_saved','-')} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted color-attrib-defer delta:']
+    lines += ['', 'Drift-adjusted quad-strip-stitch delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
-    lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
+    lines.append(f"- quad-strip traffic: deferred={c.get('quad_strip_deferred')} batchedRuns={c.get('quad_strip_batched_runs')} batchedStrips={c.get('quad_strip_batched_strips')} drawSaved={c.get('quad_strip_saved')} bridges={c.get('quad_strip_bridges')} uploadsSaved={c.get('quad_strip_uploads_saved')} draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('color-attrib-defer', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('quad-strip-stitch', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -101,11 +106,20 @@ def main():
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
     if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000:
-        raise SystemExit(f'color-attrib-defer traffic evidence invalid: {c}')
-    if c.get('color_deferred') is not True:
-        raise SystemExit(f'color-attrib-defer candidate did not activate: {c}')
-    if a.get('color_deferred') or b.get('color_deferred'):
-        raise SystemExit(f'production baseline unexpectedly reports color defer activation: A={a} B={b}')
+        raise SystemExit(f'quad-strip traffic evidence invalid: {c}')
+    deferred = int(c.get('quad_strip_deferred') or 0)
+    runs = int(c.get('quad_strip_batched_runs') or 0)
+    strips = int(c.get('quad_strip_batched_strips') or 0)
+    saved = int(c.get('quad_strip_saved') or 0)
+    bridges = int(c.get('quad_strip_bridges') or 0)
+    uploads_saved = int(c.get('quad_strip_uploads_saved') or 0)
+    if deferred <= 0 or runs <= 0 or strips <= runs or saved <= 0 or uploads_saved <= 0:
+        raise SystemExit(f'quad-strip candidate did not activate or save work: {c}')
+    if saved != strips - runs or bridges != saved * 2 or uploads_saved != saved:
+        raise SystemExit(f'quad-strip telemetry accounting mismatch: {c}')
+    for baseline in (a, b):
+        if any(int(baseline.get(k) or 0) != 0 for k in ('quad_strip_deferred','quad_strip_batched_runs','quad_strip_batched_strips','quad_strip_saved','quad_strip_bridges','quad_strip_uploads_saved')):
+            raise SystemExit(f'production baseline unexpectedly reports quad-strip batching: {baseline}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())

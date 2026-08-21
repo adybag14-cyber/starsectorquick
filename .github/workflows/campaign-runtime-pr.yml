@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate color attrib defer frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-color-attrib-defer-frame-tail-ab'
+    name: immediate quad-strip stitch frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/quad-strip-stitch-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,13 +161,13 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
-            refs/heads/perf/pointer-dirty-compact-color-v2:refs/remotes/origin/perf/pointer-dirty-compact-color-v2
+            refs/heads/perf/quad-strip-stitch-current:refs/remotes/origin/perf/quad-strip-stitch-current
           test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "457d36910eea99e83518f936db17b1d2a8420617"
-          test "$(git rev-parse origin/perf/pointer-dirty-compact-color-v2)" = "6e7a40e29be35d88b4d0d290b96db231f960198f"
-          git show origin/perf/pointer-dirty-compact-color-v2:build/final/wasm-modules/lwjgl.js > /tmp/color-defer-candidate.js
-          test "$(grep -Fc LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1 /tmp/color-defer-candidate.js)" -eq 1
-          git show origin/feature/starsector-webgl-integration:build/final/wasm-modules/lwjgl.js > /tmp/color-defer-baseline.js
-          test "$(grep -Fc LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1 /tmp/color-defer-baseline.js || true)" -eq 0
+          test "$(git rev-parse origin/perf/quad-strip-stitch-current)" = "b262337cb4e0c8a3280c66ce129a0257a594462d"
+          git show origin/perf/quad-strip-stitch-current:build/final/wasm-modules/lwjgl.js > /tmp/quad-strip-candidate.js
+          test "$(grep -Fc WEBGL_IMMEDIATE_QUAD_STRIP_STITCH_V1 /tmp/quad-strip-candidate.js)" -eq 1
+          git show origin/feature/starsector-webgl-integration:build/final/wasm-modules/lwjgl.js > /tmp/quad-strip-baseline.js
+          test "$(grep -Fc WEBGL_IMMEDIATE_QUAD_STRIP_STITCH_V1 /tmp/quad-strip-baseline.js || true)" -eq 0
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -189,8 +189,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
-      - name: Immediate color attrib defer candidate
-        run: bash ci/run-frame-perf-ab-variant.sh color-attrib-defer origin/perf/pointer-dirty-compact-color-v2
+      - name: Immediate quad-strip stitch candidate
+        run: bash ci/run-frame-perf-ab-variant.sh quad-strip-stitch origin/perf/quad-strip-stitch-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
       - name: Summarize drift-adjusted frame metrics
@@ -200,6 +200,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-color-attrib-defer-frame-tail-ab
+          name: immediate-quad-strip-stitch-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
