@@ -461,10 +461,6 @@ var immediateModeData =
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
-// LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
-// is already captured per vertex. Defer the generic color attribute until a
-// client-array draw actually needs it instead of issuing two WebGL calls here.
-var immediateBeginActive = false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
@@ -487,7 +483,7 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	lazyCurrentColorObserved: false
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -684,6 +680,10 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	glCtx.enableVertexAttribArray(attributeLocation);
 	return true;
 }
+// LWJGL_LAZY_CURRENT_COLOR_ATTRIB_V1
+// glColor changes the logical OpenGL current color. Immediate rendering captures
+// that color per vertex; client-array draws with no color array materialize the
+// generic WebGL attribute here, exactly when it is actually consumed.
 function applyCurrentColorAttrib()
 {
 	glCtx.disableVertexAttribArray(colorLocation);
@@ -1863,11 +1863,7 @@ function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = a;
-	if(immediateBeginActive && immediateInterleavedEnabled)
-	{
-		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
-	}
-	else applyCurrentColorAttrib();
+	if(!presentationStats.lazyCurrentColorObserved) presentationStats.lazyCurrentColorObserved = true;
 }
 
 // LWJGL_ALPHA_TEST_COMPAT_V1
@@ -1925,11 +1921,7 @@ function Java_org_lwjgl_opengl_GL11_nglColor3f(lib, r, g, b, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = 1;
-	if(immediateBeginActive && immediateInterleavedEnabled)
-	{
-		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
-	}
-	else applyCurrentColorAttrib();
+	if(!presentationStats.lazyCurrentColorObserved) presentationStats.lazyCurrentColorObserved = true;
 	if(verboseLog)
 		console.log("glColor3f");
 }
@@ -2270,7 +2262,6 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	immediateModeData.colorPos = 0;
 	immediateModeData.texCoordPos = 0;
 	immediateModeData.interleavedPos = 0;
-	immediateBeginActive = true;
 	// Preserve the existing bridge begin-local texcoord semantics: a vertex
 	// without an explicit texcoord in a new begin/end block starts at (0, 0).
 	immediateModeData.currentTexCoord[0] = 0;
@@ -2384,7 +2375,6 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
-	immediateBeginActive = false;
 	var vertexCount = immediateModeData.vertexPos / 3;
 	if(immediateInterleavedEnabled)
 	{
