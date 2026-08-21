@@ -461,6 +461,10 @@ var immediateModeData =
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
+// is already captured per vertex. Defer the generic color attribute until a
+// client-array draw actually needs it instead of issuing two WebGL calls here.
+var immediateBeginActive = false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
@@ -481,7 +485,9 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	immediatePointerLayoutRefreshes: 0,
+	immediateColorAttribDeferredObserved: false
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -640,6 +646,11 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 	}
 	return out;
 }
+// LWJGL_IMMEDIATE_POINTER_DIRTY_V1
+// Immediate-mode interleaving always uses one fixed 3/4/2-float layout.
+// Legacy client uploads are the only other pointer writers, so they mark that
+// fixed layout dirty instead of forcing three vertexAttribPointer calls per draw.
+var immediatePointerLayoutDirty = true;
 function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
 {
 	var originalType = type;
@@ -678,6 +689,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
+	immediatePointerLayoutDirty = true;
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -1878,7 +1890,11 @@ function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = a;
-	applyCurrentColorAttrib();
+	if(immediateBeginActive && immediateInterleavedEnabled)
+	{
+		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
+	}
+	else applyCurrentColorAttrib();
 }
 
 // LWJGL_ALPHA_TEST_COMPAT_V1
@@ -1936,7 +1952,11 @@ function Java_org_lwjgl_opengl_GL11_nglColor3f(lib, r, g, b, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = 1;
-	applyCurrentColorAttrib();
+	if(immediateBeginActive && immediateInterleavedEnabled)
+	{
+		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
+	}
+	else applyCurrentColorAttrib();
 	if(verboseLog)
 		console.log("glColor3f");
 }
@@ -2288,6 +2308,7 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	immediateModeData.colorPos = 0;
 	immediateModeData.texCoordPos = 0;
 	immediateModeData.interleavedPos = 0;
+	immediateBeginActive = true;
 	// Preserve the existing bridge begin-local texcoord semantics: a vertex
 	// without an explicit texcoord in a new begin/end block starts at (0, 0).
 	immediateModeData.currentTexCoord[0] = 0;
@@ -2374,11 +2395,16 @@ function uploadImmediateInterleaved(vertexCount)
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
-	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+	if(immediatePointerLayoutDirty)
+	{
+		glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+		glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
+		glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
+		immediatePointerLayoutDirty = false;
+		presentationStats.immediatePointerLayoutRefreshes++;
+	}
 	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
 	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
 	glCtx.enableVertexAttribArray(texCoord);
 	if(strictWebGLValidation)
 	{
@@ -2396,6 +2422,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
+	immediateBeginActive = false;
 	var vertexCount = immediateModeData.vertexPos / 3;
 	if(immediateInterleavedEnabled)
 	{

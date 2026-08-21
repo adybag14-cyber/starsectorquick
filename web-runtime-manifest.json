@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "full-stock-campaign",
-    "sourceSha": "a4c20a8e4b5abb5ccb2e470ad5479b3387750155",
-    "workflowRunId": "32308296304",
-    "generatedAt": "2026-08-19T22:22:02.869250+00:00",
+    "sourceSha": "0eedc59892cb839fc747e1a31eac295198896297",
+    "workflowRunId": "32531704179",
+    "generatedAt": "2026-08-21T22:11:16.803483+00:00",
     "overlayFiles": 878,
     "dataPack": {
       "version": 1,
@@ -31,8 +31,8 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 95864,
-      "sha256": "758125bc254ec55b3be63c5526b660d5549e140fa07c3447658006b11e034a75"
+      "bytes": 97152,
+      "sha256": "aaecf5a0002782aad45c7892ca1f7b2b68d77e7cbe12028b7a27c93efd9dde75"
     },
     {
       "path": "data/campaign/econ/algebbar.json",
@@ -612,12 +612,12 @@
     {
       "path": "jars/bridge.jar",
       "bytes": 93475,
-      "sha256": "52ef9de00c263b8c0615860e4e53b4126039d78b6910b41476b876d3cdaff010"
+      "sha256": "6f592ff6d72eca24dd777e6afa6af4e65a42ff2cee223fe4c5c2412b1f3a32ed"
     },
     {
       "path": "jars/fixer_patch.jar",
       "bytes": 253768,
-      "sha256": "7a1e955c90397f2e7af7c6b688d2eed8035d6c1560f3c9ec506bb84005ac45e4"
+      "sha256": "3bc5dfabb577d1ae23c628ec58351a1b009d0f1eee131531f4bd7891500d8bba"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -642,7 +642,7 @@
     {
       "path": "jars/starfarer_obf.jar",
       "bytes": 6029585,
-      "sha256": "34944195815778768a8458211a9140094e167dcb3632c4e250e5c7e53fb985cc"
+      "sha256": "f681bfc240008a45ea0a1e08c99558469e1c4c2c399c4293c14bf279403e16bb"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
