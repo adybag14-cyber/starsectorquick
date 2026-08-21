@@ -443,6 +443,8 @@ var texCoordData =
 	pointer: 0,
 	buf: null
 };
+// LWJGL_IMMEDIATE_MODE_DETAIL_PROFILE_V1
+var lastImmediateEndMode = -1;
 var immediateModeData =
 {
 	mode: 0,
@@ -481,7 +483,17 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	immediatePointEnds: 0,
+	immediatePointVertices: 0,
+	immediateSinglePointEnds: 0,
+	immediateQuadStripEnds: 0,
+	immediateQuadStripVertices: 0,
+	immediatePolygonEnds: 0,
+	immediatePolygonVertices: 0,
+	immediateUnknownModeEnds: 0,
+	immediateUnknownModeVertices: 0,
+	immediateSameModeConsecutiveEnds: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2359,6 +2371,29 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
+	if(lastImmediateEndMode === immediateModeData.mode) presentationStats.immediateSameModeConsecutiveEnds++;
+	lastImmediateEndMode = immediateModeData.mode;
+	if(immediateModeData.mode == 0/*POINTS*/)
+	{
+		presentationStats.immediatePointEnds++;
+		presentationStats.immediatePointVertices += vertexCount;
+		if(vertexCount == 1) presentationStats.immediateSinglePointEnds++;
+	}
+	else if(immediateModeData.mode == 8/*QUAD_STRIP*/)
+	{
+		presentationStats.immediateQuadStripEnds++;
+		presentationStats.immediateQuadStripVertices += vertexCount;
+	}
+	else if(immediateModeData.mode == 9/*POLYGON*/)
+	{
+		presentationStats.immediatePolygonEnds++;
+		presentationStats.immediatePolygonVertices += vertexCount;
+	}
+	else if(immediateModeData.mode < 0 || immediateModeData.mode > 9)
+	{
+		presentationStats.immediateUnknownModeEnds++;
+		presentationStats.immediateUnknownModeVertices += vertexCount;
+	}
 	if(immediateInterleavedEnabled)
 	{
 		uploadImmediateInterleaved(vertexCount);
