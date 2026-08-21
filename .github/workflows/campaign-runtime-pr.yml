@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate attrib-dirty frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-attrib-dirty-frame-tail-ab'
+    name: immediate attrib-enable-dirty frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-attrib-enable-dirty-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -160,10 +160,10 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin \
-            refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/immediate-attrib-dirty-current:refs/remotes/origin/perf/immediate-attrib-dirty-current
-          test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/immediate-attrib-dirty-current)" = "2d5dee578d8e4be7265a5f96d22921405e5f0a2b"
+            refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
+            refs/heads/perf/immediate-attrib-enable-dirty-current:refs/remotes/origin/perf/immediate-attrib-enable-dirty-current
+          test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "457d36910eea99e83518f936db17b1d2a8420617"
+          test "$(git rev-parse origin/perf/immediate-attrib-enable-dirty-current)" = "d2b21caa8e35066a3d9cdf6c88d975d5bd43fe25"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -184,11 +184,11 @@ jobs:
           unzip -tq "$archive"
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Immediate attrib-dirty candidate
-        run: bash ci/run-frame-perf-ab-variant.sh attrib-dirty origin/perf/immediate-attrib-dirty-current
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
+      - name: Immediate attrib-enable-dirty candidate
+        run: bash ci/run-frame-perf-ab-variant.sh attrib-enable-dirty origin/perf/immediate-attrib-enable-dirty-current
       - name: Production baseline B
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
       - name: Summarize drift-adjusted frame metrics
         if: always()
         run: python3 ci/summarize-frame-perf-ab.py
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-attrib-dirty-frame-tail-ab
+          name: immediate-attrib-enable-dirty-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
