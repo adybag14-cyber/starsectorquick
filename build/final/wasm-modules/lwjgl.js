@@ -289,8 +289,190 @@ var alphaTestWarnings = new Set();
 var texture2DEnabled = false;
 var attribStateStack = [];
 var attribStateWarnings = new Set();
+// WEBGL_IMMEDIATE_QUAD_STRIP_STITCH_V1: defer one immediate GL_QUAD_STRIP
+// submission and stitch the next state-equivalent strip with degenerate bridge
+// vertices. The draw-call profile showed that most adjacent strip pairs churn
+// matrix/texture/render state but return to the exact same effective state
+// before the next strip. While a strip is pending, physical render-state writes
+// are deferred; logical state continues to advance. A hard/observable operation
+// flushes the strip first, preserving desktop OpenGL ordering.
+var immediateQuadStripBatchEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_QUAD_STRIP_BATCH__ !== false;
+var immediateQuadStripRenderState = {
+	blendEnabled: false,
+	cullEnabled: false,
+	depthEnabled: false,
+	scissorEnabled: false,
+	stencilEnabled: false,
+	blendSrc: 1,
+	blendDst: 0,
+	depthFunc: 0x0201/*GL_LESS*/,
+	depthMask: true,
+	cullFace: 0x0405/*GL_BACK*/,
+	scissorX: 0,
+	scissorY: 0,
+	scissorW: -1,
+	scissorH: -1,
+	stencilFunc: 0x0207/*GL_ALWAYS*/,
+	stencilRef: 0,
+	stencilMask: 0xffffffff,
+	stencilSFail: 0x1e00/*GL_KEEP*/,
+	stencilDPFail: 0x1e00/*GL_KEEP*/,
+	stencilDPPass: 0x1e00/*GL_KEEP*/,
+	colorMaskR: true,
+	colorMaskG: true,
+	colorMaskB: true,
+	colorMaskA: true,
+	viewportX: 0,
+	viewportY: 0,
+	viewportW: -1,
+	viewportH: -1
+};
+var immediateQuadStripBatch = {
+	active: false,
+	data: new Float32Array(256),
+	floatPos: 0,
+	vertexCount: 0,
+	stripCount: 0,
+	modelView: null,
+	projection: null,
+	textureId: 0,
+	textureEnabled: false,
+	renderState: null
+};
+var immediateQuadStripDeferredState = Object.create(null);
+function immediateQuadStripSetEnabledShadow(cap, enabled)
+{
+	enabled = !!enabled;
+	if(cap == glCtx.BLEND) immediateQuadStripRenderState.blendEnabled = enabled;
+	else if(cap == glCtx.CULL_FACE) immediateQuadStripRenderState.cullEnabled = enabled;
+	else if(cap == glCtx.DEPTH_TEST) immediateQuadStripRenderState.depthEnabled = enabled;
+	else if(cap == glCtx.SCISSOR_TEST) immediateQuadStripRenderState.scissorEnabled = enabled;
+	else if(cap == glCtx.STENCIL_TEST) immediateQuadStripRenderState.stencilEnabled = enabled;
+}
+function immediateQuadStripGetEnabledShadow(cap)
+{
+	if(cap == glCtx.BLEND) return immediateQuadStripRenderState.blendEnabled;
+	if(cap == glCtx.CULL_FACE) return immediateQuadStripRenderState.cullEnabled;
+	if(cap == glCtx.DEPTH_TEST) return immediateQuadStripRenderState.depthEnabled;
+	if(cap == glCtx.SCISSOR_TEST) return immediateQuadStripRenderState.scissorEnabled;
+	if(cap == glCtx.STENCIL_TEST) return immediateQuadStripRenderState.stencilEnabled;
+	return null;
+}
+function captureImmediateQuadStripRenderState()
+{
+	var s = immediateQuadStripRenderState;
+	return {
+		blendEnabled:s.blendEnabled, blendSrc:s.blendSrc, blendDst:s.blendDst,
+		cullEnabled:s.cullEnabled, cullFace:s.cullFace,
+		depthEnabled:s.depthEnabled, depthFunc:s.depthFunc, depthMask:s.depthMask,
+		scissorEnabled:s.scissorEnabled, scissorX:s.scissorX, scissorY:s.scissorY, scissorW:s.scissorW, scissorH:s.scissorH,
+		stencilEnabled:s.stencilEnabled, stencilFunc:s.stencilFunc, stencilRef:s.stencilRef, stencilMask:s.stencilMask,
+		stencilSFail:s.stencilSFail, stencilDPFail:s.stencilDPFail, stencilDPPass:s.stencilDPPass,
+		colorMaskR:s.colorMaskR, colorMaskG:s.colorMaskG, colorMaskB:s.colorMaskB, colorMaskA:s.colorMaskA,
+		viewportX:s.viewportX, viewportY:s.viewportY, viewportW:s.viewportW, viewportH:s.viewportH,
+		alphaEnabled:alphaTestState.enabled, alphaFunc:alphaTestState.func, alphaRef:alphaTestState.ref
+	};
+}
+function immediateQuadStripRenderStateMatchesPending()
+{
+	var a = immediateQuadStripBatch.renderState;
+	var s = immediateQuadStripRenderState;
+	return a != null &&
+		s.blendEnabled === a.blendEnabled && s.blendSrc === a.blendSrc && s.blendDst === a.blendDst &&
+		s.cullEnabled === a.cullEnabled && s.cullFace === a.cullFace &&
+		s.depthEnabled === a.depthEnabled && s.depthFunc === a.depthFunc && s.depthMask === a.depthMask &&
+		s.scissorEnabled === a.scissorEnabled && s.scissorX === a.scissorX && s.scissorY === a.scissorY && s.scissorW === a.scissorW && s.scissorH === a.scissorH &&
+		s.stencilEnabled === a.stencilEnabled && s.stencilFunc === a.stencilFunc && s.stencilRef === a.stencilRef && s.stencilMask === a.stencilMask &&
+		s.stencilSFail === a.stencilSFail && s.stencilDPFail === a.stencilDPFail && s.stencilDPPass === a.stencilDPPass &&
+		s.colorMaskR === a.colorMaskR && s.colorMaskG === a.colorMaskG && s.colorMaskB === a.colorMaskB && s.colorMaskA === a.colorMaskA &&
+		s.viewportX === a.viewportX && s.viewportY === a.viewportY && s.viewportW === a.viewportW && s.viewportH === a.viewportH &&
+		alphaTestState.enabled === a.alphaEnabled && alphaTestState.func === a.alphaFunc && alphaTestState.ref === a.alphaRef;
+}
+function immediateQuadStripMatrixEqual(a, b)
+{
+	if(a == null || b == null || a.length != b.length) return false;
+	for(var i=0;i<a.length;i++) if(a[i] !== b[i]) return false;
+	return true;
+}
+function deferImmediateQuadStripState(name)
+{
+	if(!immediateQuadStripBatch.active) return false;
+	immediateQuadStripDeferredState[name] = true;
+	return true;
+}
+function deferImmediateQuadStripEnableState(cap)
+{
+	if(!immediateQuadStripBatch.active) return false;
+	var caps = immediateQuadStripDeferredState.enableCaps;
+	if(caps == null) caps = immediateQuadStripDeferredState.enableCaps = Object.create(null);
+	caps[cap] = true;
+	return true;
+}
+function applyImmediateQuadStripDeferredState()
+{
+	var d = immediateQuadStripDeferredState;
+	var rs = immediateQuadStripRenderState;
+	if(d.enableCaps)
+	{
+		for(const key of Object.keys(d.enableCaps))
+		{
+			var cap = Number(key);
+			var enabled = immediateQuadStripGetEnabledShadow(cap);
+			if(enabled != null) enabled ? glCtx.enable(cap) : glCtx.disable(cap);
+		}
+	}
+	if(d.alphaTest)
+	{
+		glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
+		glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+		glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	}
+	if(d.textureEnable) glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
+	if(d.textureBind) glCtx.bindTexture(glCtx.TEXTURE_2D, textureObjects[boundTexture2DId]);
+	if(d.viewport) glCtx.viewport(rs.viewportX, rs.viewportY, rs.viewportW, rs.viewportH);
+	if(d.depthFunc) glCtx.depthFunc(rs.depthFunc);
+	if(d.cullFace) glCtx.cullFace(rs.cullFace);
+	if(d.depthMask) glCtx.depthMask(rs.depthMask);
+	if(d.blendFunc) glCtx.blendFunc(rs.blendSrc, rs.blendDst);
+	if(d.colorMask) glCtx.colorMask(rs.colorMaskR, rs.colorMaskG, rs.colorMaskB, rs.colorMaskA);
+	if(d.scissor) glCtx.scissor(rs.scissorX, rs.scissorY, rs.scissorW, rs.scissorH);
+	if(d.stencilFunc) glCtx.stencilFunc(rs.stencilFunc, rs.stencilRef, rs.stencilMask);
+	if(d.stencilOp) glCtx.stencilOp(rs.stencilSFail, rs.stencilDPFail, rs.stencilDPPass);
+	immediateQuadStripDeferredState = Object.create(null);
+}
+function refreshImmediateQuadStripRenderShadow()
+{
+	var rs = immediateQuadStripRenderState;
+	try
+	{
+		rs.blendEnabled = glCtx.isEnabled(glCtx.BLEND);
+		rs.cullEnabled = glCtx.isEnabled(glCtx.CULL_FACE);
+		rs.depthEnabled = glCtx.isEnabled(glCtx.DEPTH_TEST);
+		rs.scissorEnabled = glCtx.isEnabled(glCtx.SCISSOR_TEST);
+		rs.stencilEnabled = glCtx.isEnabled(glCtx.STENCIL_TEST);
+		rs.blendSrc = glCtx.getParameter(glCtx.BLEND_SRC_RGB);
+		rs.blendDst = glCtx.getParameter(glCtx.BLEND_DST_RGB);
+		rs.depthFunc = glCtx.getParameter(glCtx.DEPTH_FUNC);
+		rs.depthMask = glCtx.getParameter(glCtx.DEPTH_WRITEMASK);
+		rs.cullFace = glCtx.getParameter(glCtx.CULL_FACE_MODE);
+		var scissor = glCtx.getParameter(glCtx.SCISSOR_BOX);
+		rs.scissorX = scissor[0]; rs.scissorY = scissor[1]; rs.scissorW = scissor[2]; rs.scissorH = scissor[3];
+		rs.stencilFunc = glCtx.getParameter(glCtx.STENCIL_FUNC);
+		rs.stencilRef = glCtx.getParameter(glCtx.STENCIL_REF);
+		rs.stencilMask = glCtx.getParameter(glCtx.STENCIL_VALUE_MASK);
+		rs.stencilSFail = glCtx.getParameter(glCtx.STENCIL_FAIL);
+		rs.stencilDPFail = glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_FAIL);
+		rs.stencilDPPass = glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS);
+		var colorMask = glCtx.getParameter(glCtx.COLOR_WRITEMASK);
+		rs.colorMaskR = colorMask[0]; rs.colorMaskG = colorMask[1]; rs.colorMaskB = colorMask[2]; rs.colorMaskA = colorMask[3];
+		var viewport = glCtx.getParameter(glCtx.VIEWPORT);
+		rs.viewportX = viewport[0]; rs.viewportY = viewport[1]; rs.viewportW = viewport[2]; rs.viewportH = viewport[3];
+	}
+	catch(_) {}
+}
 function syncAlphaTestUniforms()
 {
+	if(deferImmediateQuadStripState("alphaTest")) return;
 	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
 	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
 	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
@@ -298,12 +480,15 @@ function syncAlphaTestUniforms()
 function setTexture2DEnabled(enabled)
 {
 	texture2DEnabled = !!enabled;
+	if(deferImmediateQuadStripState("textureEnable")) return;
 	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
 }
 function getCompatEnableState(cap)
 {
 	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
 	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
+	var shadow = immediateQuadStripGetEnabledShadow(cap);
+	if(shadow != null) return shadow;
 	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
 }
 function setCompatEnableState(cap, enabled)
@@ -319,6 +504,8 @@ function setCompatEnableState(cap, enabled)
 		setTexture2DEnabled(enabled);
 		return;
 	}
+	immediateQuadStripSetEnabledShadow(cap, enabled);
+	if(deferImmediateQuadStripEnableState(cap)) return;
 	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
 }
 function snapshotAttribState(mask)
@@ -406,6 +593,7 @@ function restoreAttribState(state)
 		alphaTestState.ref = state.alpha.ref;
 		syncAlphaTestUniforms();
 	}
+	refreshImmediateQuadStripRenderShadow();
 }
 var vertexData =
 {
@@ -482,7 +670,13 @@ var presentationStats = {
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
-	immediatePointerLayoutRefreshes: 0
+	immediatePointerLayoutRefreshes: 0,
+	immediateQuadStripDeferredRuns: 0,
+	immediateQuadStripBatchedRuns: 0,
+	immediateQuadStripBatchedStrips: 0,
+	immediateQuadStripDrawCallsSaved: 0,
+	immediateQuadStripBridgeVertices: 0,
+	immediateQuadStripUploadsSaved: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -748,6 +942,81 @@ function ensureImmediateArrayCapacity(buf, neededLength)
 	var nextBuf = new Float32Array(nextLength);
 	nextBuf.set(buf);
 	return nextBuf;
+}
+function ensureImmediateQuadStripBatchCapacity(neededLength)
+{
+	immediateQuadStripBatch.data = ensureImmediateArrayCapacity(immediateQuadStripBatch.data, neededLength);
+}
+function immediateQuadStripStateMatchesPending()
+{
+	if(!immediateQuadStripBatch.active) return false;
+	return immediateQuadStripMatrixEqual(modelViewMatrixStack[modelViewMatrixStack.length - 1], immediateQuadStripBatch.modelView) &&
+		immediateQuadStripMatrixEqual(projMatrixStack[projMatrixStack.length - 1], immediateQuadStripBatch.projection) &&
+		boundTexture2DId === immediateQuadStripBatch.textureId &&
+		texture2DEnabled === immediateQuadStripBatch.textureEnabled &&
+		immediateQuadStripRenderStateMatchesPending();
+}
+function beginImmediateQuadStripBatch(vertexCount)
+{
+	var floatCount = vertexCount * 9;
+	ensureImmediateQuadStripBatchCapacity(floatCount);
+	immediateQuadStripBatch.data.set(immediateModeData.interleavedBuf.subarray(0, floatCount), 0);
+	immediateQuadStripBatch.floatPos = floatCount;
+	immediateQuadStripBatch.vertexCount = vertexCount;
+	immediateQuadStripBatch.stripCount = 1;
+	immediateQuadStripBatch.modelView = new Float32Array(modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+	immediateQuadStripBatch.projection = new Float32Array(projMatrixStack[projMatrixStack.length - 1]);
+	immediateQuadStripBatch.textureId = boundTexture2DId;
+	immediateQuadStripBatch.textureEnabled = texture2DEnabled;
+	immediateQuadStripBatch.renderState = captureImmediateQuadStripRenderState();
+	immediateQuadStripBatch.active = true;
+}
+function appendImmediateQuadStripBatch(vertexCount)
+{
+	var floatCount = vertexCount * 9;
+	var oldPos = immediateQuadStripBatch.floatPos;
+	ensureImmediateQuadStripBatchCapacity(oldPos + 18 + floatCount);
+	var out = immediateQuadStripBatch.data;
+	var src = immediateModeData.interleavedBuf;
+	var lastVertex = oldPos - 9;
+	// QUAD_STRIP vertex counts are even. Duplicating the previous last vertex
+	// and the next first vertex inserts only degenerate connector triangles and
+	// advances strip parity by two, so the next strip keeps its original winding.
+	for(var i=0;i<9;i++) out[oldPos + i] = out[lastVertex + i];
+	for(var i=0;i<9;i++) out[oldPos + 9 + i] = src[i];
+	out.set(src.subarray(0, floatCount), oldPos + 18);
+	immediateQuadStripBatch.floatPos = oldPos + 18 + floatCount;
+	immediateQuadStripBatch.vertexCount += vertexCount + 2;
+	immediateQuadStripBatch.stripCount++;
+}
+function flushImmediateQuadStripBatch()
+{
+	if(!immediateQuadStripBatch.active) return;
+	var stripCount = immediateQuadStripBatch.stripCount;
+	var vertexCount = immediateQuadStripBatch.vertexCount;
+	uploadImmediateInterleavedData(immediateQuadStripBatch.data.subarray(0, immediateQuadStripBatch.floatPos), vertexCount, stripCount);
+	glCtx.uniformMatrix4fv(mvLocation, false, immediateQuadStripBatch.modelView);
+	glCtx.uniformMatrix4fv(projLocation, false, immediateQuadStripBatch.projection);
+	presentationStats.legacyDrawCalls += stripCount;
+	glCtx.drawArrays(glCtx.TRIANGLE_STRIP, 0, vertexCount);
+	presentationStats.webglDrawCalls++;
+	presentationStats.immediateQuadStripDeferredRuns++;
+	if(stripCount > 1)
+	{
+		presentationStats.immediateQuadStripBatchedRuns++;
+		presentationStats.immediateQuadStripBatchedStrips += stripCount;
+		presentationStats.immediateQuadStripDrawCallsSaved += stripCount - 1;
+		presentationStats.immediateQuadStripBridgeVertices += (stripCount - 1) * 2;
+		presentationStats.immediateQuadStripUploadsSaved += stripCount - 1;
+	}
+	immediateQuadStripBatch.active = false;
+	immediateQuadStripBatch.floatPos = 0;
+	immediateQuadStripBatch.vertexCount = 0;
+	immediateQuadStripBatch.stripCount = 0;
+	immediateQuadStripBatch.modelView = null;
+	immediateQuadStripBatch.projection = null;
+	immediateQuadStripBatch.renderState = null;
+	applyImmediateQuadStripDeferredState();
 }
 function checkNoList(list)
 {
@@ -1465,6 +1734,7 @@ function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	var v = lib.getJNIDataView();
 	var buf = new Int32Array(v.buffer, Number(memPtr), 4);
 	if(id == /*GL_VIEWPORT*/0xba2)
@@ -1539,11 +1809,13 @@ function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	glCtx.clear(a);
 }
 
 function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 {
+	flushImmediateQuadStripBatch();
 	if(verboseLog)
 		console.warn("SwapBuffer");
 	ensureFramebufferSize();
@@ -1659,6 +1931,11 @@ function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPt
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglViewport);
+	immediateQuadStripRenderState.viewportX = x;
+	immediateQuadStripRenderState.viewportY = y;
+	immediateQuadStripRenderState.viewportW = width;
+	immediateQuadStripRenderState.viewportH = height;
+	if(deferImmediateQuadStripState("viewport")) return;
 	glCtx.viewport(x, y, width, height);
 }
 
@@ -1667,7 +1944,10 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.disable(a);
+	{
+		immediateQuadStripSetEnabledShadow(a, false);
+		if(!deferImmediateQuadStripEnableState(a)) glCtx.disable(a);
+	}
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = false;
@@ -1686,7 +1966,10 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
-		glCtx.enable(a);
+	{
+		immediateQuadStripSetEnabledShadow(a, true);
+		if(!deferImmediateQuadStripEnableState(a)) glCtx.enable(a);
+	}
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = true;
@@ -1704,6 +1987,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	var v = lib.getJNIDataView();
 	var buf = new Int32Array(v.buffer, Number(memPtr), n);
 	for(var i=0;i<n;i++)
@@ -1721,6 +2005,7 @@ function Java_org_lwjgl_opengl_GL11_nglBindTexture(lib, target, id, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBindTexture);
 	assert(target == glCtx.TEXTURE_2D);
 	boundTexture2DId = id;
+	if(deferImmediateQuadStripState("textureBind")) return;
 	glCtx.bindTexture(target, textureObjects[id]);
 }
 
@@ -1728,6 +2013,7 @@ function Java_org_lwjgl_opengl_GL11_nglBindTexture(lib, target, id, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglTexParameteri(lib, target, pname, param, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	if(pname == 0x8191/*GL_GENERATE_MIPMAP*/)
 	{
 		textureGenerateMipmap[boundTexture2DId] = !!param;
@@ -1741,6 +2027,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexParameteri(lib, target, pname, param, 
 function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFormat, width, height, border, format, type, memPtr, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, internalFormat, format, type);
@@ -1817,6 +2104,7 @@ function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcP
 		// Capture client state at this point in time
 		return pushDrawArraysInList(curList, v, mode, first, count);
 	}
+	flushImmediateQuadStripBatch();
 	// Upload vertex data
 	uploadData(v, vertexData, vertexBuffer, vertexPosition, count);
 	// Upload color data
@@ -1881,6 +2169,7 @@ function Java_org_lwjgl_opengl_GL11_nglAlphaFunc(lib, func, ref, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGenLists(lib, range, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	var ret = cmdLists.length;
 	for(var i=0;i<range;i++)
 		cmdLists.push([]);
@@ -1897,6 +2186,7 @@ function Java_org_lwjgl_opengl_GL11_nglListBase(lib, base, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglNewList(lib, list, mode, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	assert(mode == 0x1300/*GL_COMPILE*/);
 	curList = cmdLists[list];
 	// Wipe out the current contents of the list if any
@@ -1944,6 +2234,8 @@ function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
+	immediateQuadStripRenderState.depthFunc = a;
+	if(deferImmediateQuadStripState("depthFunc")) return;
 	glCtx.depthFunc(a);
 }
 
@@ -1951,6 +2243,8 @@ function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglCullFace);
+	immediateQuadStripRenderState.cullFace = mode;
+	if(deferImmediateQuadStripState("cullFace")) return;
 	glCtx.cullFace(mode);
 }
 
@@ -1962,11 +2256,13 @@ function Java_org_lwjgl_opengl_GL11_nglIsEnabled(lib, cap, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglPushAttrib(lib, mask, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushAttrib);
+	flushImmediateQuadStripBatch();
 	attribStateStack.push(snapshotAttribState(mask));
 }
 function Java_org_lwjgl_opengl_GL11_nglPopAttrib(lib, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopAttrib);
+	flushImmediateQuadStripBatch();
 	if(attribStateStack.length == 0)
 	{
 		warnOnce(attribStateWarnings, 'underflow', 'LWJGL glPopAttrib ignored empty attribute stack.');
@@ -2013,6 +2309,8 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
+	immediateQuadStripRenderState.depthMask = !!a;
+	if(deferImmediateQuadStripState("depthMask")) return;
 	glCtx.depthMask(a);
 }
 
@@ -2020,6 +2318,9 @@ function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
+	immediateQuadStripRenderState.blendSrc = sfactor;
+	immediateQuadStripRenderState.blendDst = dfactor;
+	if(deferImmediateQuadStripState("blendFunc")) return;
 	glCtx.blendFunc(sfactor, dfactor);
 }
 
@@ -2027,12 +2328,18 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
+	immediateQuadStripRenderState.colorMaskR = !!r;
+	immediateQuadStripRenderState.colorMaskG = !!g;
+	immediateQuadStripRenderState.colorMaskB = !!b;
+	immediateQuadStripRenderState.colorMaskA = !!a;
+	if(deferImmediateQuadStripState("colorMask")) return;
 	glCtx.colorMask(r, g, b, a);
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	assert(target == glCtx.TEXTURE_2D);
 	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
@@ -2042,6 +2349,7 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xoffset, yoffset, x, y, width, height, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	glCtx.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
@@ -2059,6 +2367,7 @@ function Java_org_lwjgl_opengl_GL11_nglScalef(lib, x, y, z, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	var v = lib.getJNIDataView();
 	var buf;
 	if(type == glCtx.UNSIGNED_BYTE)
@@ -2079,12 +2388,14 @@ function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglFlush()
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	glCtx.flush();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset, yoffset, width, height, format, type, memPtr, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, format, format, type);
@@ -2166,6 +2477,7 @@ function Java_org_lwjgl_opengl_GL11_nglColorMaterial()
 function Java_org_lwjgl_opengl_GL11_nglCallList(lib, listId, funcPtr)
 {
 	checkNoList(curList);
+	flushImmediateQuadStripBatch();
 	callList(listId);
 }
 
@@ -2215,16 +2527,29 @@ function Java_org_lwjgl_opengl_GL13_nglClientActiveTexture()
 function Java_org_lwjgl_opengl_GL11_nglScissor(lib, x, y, width, height, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScissor);
+	immediateQuadStripRenderState.scissorX = x;
+	immediateQuadStripRenderState.scissorY = y;
+	immediateQuadStripRenderState.scissorW = Math.max(0, width);
+	immediateQuadStripRenderState.scissorH = Math.max(0, height);
+	if(deferImmediateQuadStripState("scissor")) return;
 	glCtx.scissor(x, y, Math.max(0, width), Math.max(0, height));
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilFunc);
+	immediateQuadStripRenderState.stencilFunc = func;
+	immediateQuadStripRenderState.stencilRef = ref;
+	immediateQuadStripRenderState.stencilMask = mask >>> 0;
+	if(deferImmediateQuadStripState("stencilFunc")) return;
 	glCtx.stencilFunc(func, ref, mask >>> 0);
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilOp);
+	immediateQuadStripRenderState.stencilSFail = sfail;
+	immediateQuadStripRenderState.stencilDPFail = dpfail;
+	immediateQuadStripRenderState.stencilDPPass = dppass;
+	if(deferImmediateQuadStripState("stencilOp")) return;
 	glCtx.stencilOp(sfail, dpfail, dppass);
 }
 
@@ -2252,6 +2577,9 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
+	if((mode != 8/*QUAD_STRIP*/ || !immediateInterleavedEnabled || !immediateQuadStripBatchEnabled) &&
+		typeof flushImmediateQuadStripBatch === "function")
+		flushImmediateQuadStripBatch();
 	immediateModeData.mode = mode;
 	immediateModeData.vertexPos = 0;
 	immediateModeData.colorPos = 0;
@@ -2336,13 +2664,12 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
-function uploadImmediateInterleaved(vertexCount)
+function uploadImmediateInterleavedData(data, vertexCount, logicalDraws)
 {
 	var floatCount = vertexCount * 9;
-	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, data.subarray(0, floatCount), glCtx.STATIC_DRAW);
 	if(immediatePointerLayoutDirty)
 	{
 		glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
@@ -2361,16 +2688,37 @@ function uploadImmediateInterleaved(vertexCount)
 			warnOnce(clientArrayWarnings, "immediate-interleaved-attrib-error-" + attribErr,
 				"LWJGL interleaved immediate vertexAttribPointer error=" + attribErr);
 	}
-	presentationStats.immediateInterleavedDraws++;
+	presentationStats.immediateInterleavedDraws += logicalDraws;
 	presentationStats.immediateInterleavedUploads++;
-	presentationStats.immediateInterleavedUploadsSaved += 2;
+	presentationStats.immediateInterleavedUploadsSaved += logicalDraws * 2;
 	presentationStats.immediateInterleavedBytes += floatCount * 4;
+}
+function uploadImmediateInterleaved(vertexCount)
+{
+	var floatCount = vertexCount * 9;
+	uploadImmediateInterleavedData(immediateModeData.interleavedBuf.subarray(0, floatCount), vertexCount, 1);
 }
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
+	var batchableQuadStrip = immediateQuadStripBatchEnabled && immediateInterleavedEnabled &&
+		immediateModeData.mode == 8/*QUAD_STRIP*/ && vertexCount >= 4 && (vertexCount % 2) == 0;
+	if(batchableQuadStrip)
+	{
+		if(!immediateQuadStripBatch.active)
+			beginImmediateQuadStripBatch(vertexCount);
+		else if(immediateQuadStripStateMatchesPending())
+			appendImmediateQuadStripBatch(vertexCount);
+		else
+		{
+			flushImmediateQuadStripBatch();
+			beginImmediateQuadStripBatch(vertexCount);
+		}
+		return;
+	}
+	flushImmediateQuadStripBatch();
 	if(immediateInterleavedEnabled)
 	{
 		uploadImmediateInterleaved(vertexCount);

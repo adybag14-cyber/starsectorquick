@@ -12,7 +12,7 @@ const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjg
 const src=fs.readFileSync(path,'utf8');
 for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
-const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
+const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleavedData','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
 const code=names.map(n=>extract(src,n)).join('\n');
 function make(enabled){
   const calls=[]; const legacy=[]; const draws=[];
@@ -21,7 +21,7 @@ function make(enabled){
     vertexAttribPointer:(...a)=>calls.push(['pointer',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]),
     disableVertexAttribArray:(...a)=>calls.push(['disable',...a]), vertexAttrib2f:(...a)=>calls.push(['attrib2f',...a]), getError:()=>0};
   const c=vm.createContext({
-    glCtx, immediateInterleavedEnabled:enabled, curList:null, pushInList(){throw new Error('unexpected list');},
+    glCtx, immediateInterleavedEnabled:enabled, immediateQuadStripBatchEnabled:false, flushImmediateQuadStripBatch(){}, curList:null, pushInList(){throw new Error('unexpected list');},
     immediateModeData:{mode:0,vertexBuf:new Float32Array(32),vertexPos:0,colorBuf:new Float32Array(32),colorPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0],texCoordBuf:new Float32Array(32),texCoordPos:0,interleavedBuf:new Float32Array(96),interleavedPos:0},
     presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediatePointerLayoutRefreshes:0},
     immediatePointerLayoutDirty:true,
