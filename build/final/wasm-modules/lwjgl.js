@@ -455,12 +455,20 @@ var immediateModeData =
 	texCoordBuf: new Float32Array(32),
 	texCoordPos: 0,
 	interleavedBuf: new Float32Array(96),
-	interleavedPos: 0
+	interleavedPos: 0,
+	compactColorBuf: new Float32Array(64),
+	compactColorPos: 0,
+	compactBatchColor: [1, 1, 1, 1],
+	compactColorVaried: false,
+	compactVertexCount: 0,
+	immediateBeginActive: false
 };
 // WEBGL_IMMEDIATE_INTERLEAVED_V1: immediate mode already captures exactly
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// WEBGL_IMMEDIATE_COMPACT_COLOR_SETTER_V2: detect color variation only in glColor*, never per vertex.
+var immediateCompactColorSetterEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_COMPACT_COLOR_SETTER__ !== false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
@@ -481,7 +489,9 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	immediateCompactColorHitObserved: false,
+	immediateCompactColorFallbackObserved: false
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -1843,10 +1853,32 @@ function Java_org_lwjgl_opengl_GL11_nglDisableClientState(lib, v, funcPtr)
 	}
 }
 
+function markImmediateCompactColorChange(r, g, b, a)
+{
+	if(!immediateInterleavedEnabled || !immediateCompactColorSetterEnabled || !immediateModeData.immediateBeginActive ||
+		immediateModeData.compactColorVaried || immediateModeData.compactVertexCount <= 0) return;
+	var batch = immediateModeData.compactBatchColor;
+	if(batch[0] === r && batch[1] === g && batch[2] === b && batch[3] === a) return;
+	immediateModeData.compactColorVaried = true;
+	var prior = immediateModeData.compactVertexCount;
+	immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, prior * 9);
+	var src = immediateModeData.compactColorBuf, dst = immediateModeData.interleavedBuf;
+	for(var i = 0;i < prior;i++)
+	{
+		var sp = i * 5, dp = i * 9;
+		dst[dp] = src[sp]; dst[dp + 1] = src[sp + 1]; dst[dp + 2] = src[sp + 2];
+		dst[dp + 3] = batch[0]; dst[dp + 4] = batch[1]; dst[dp + 5] = batch[2]; dst[dp + 6] = batch[3];
+		dst[dp + 7] = src[sp + 3]; dst[dp + 8] = src[sp + 4];
+	}
+	immediateModeData.interleavedPos = prior * 9;
+	if(!presentationStats.immediateCompactColorFallbackObserved) presentationStats.immediateCompactColorFallbackObserved = true;
+}
+
 function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor4f);
+	markImmediateCompactColorChange(r, g, b, a);
 	immediateModeData.currentColor[0] = r;
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
@@ -1905,6 +1937,7 @@ function Java_org_lwjgl_opengl_GL11_nglColor3f(lib, r, g, b, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor3f);
+	markImmediateCompactColorChange(r, g, b, 1);
 	immediateModeData.currentColor[0] = r;
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
@@ -2250,6 +2283,10 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	immediateModeData.colorPos = 0;
 	immediateModeData.texCoordPos = 0;
 	immediateModeData.interleavedPos = 0;
+	immediateModeData.compactColorPos = 0;
+	immediateModeData.compactColorVaried = false;
+	immediateModeData.compactVertexCount = 0;
+	immediateModeData.immediateBeginActive = true;
 	// Preserve the existing bridge begin-local texcoord semantics: a vertex
 	// without an explicit texcoord in a new begin/end block starts at (0, 0).
 	immediateModeData.currentTexCoord[0] = 0;
@@ -2276,16 +2313,30 @@ function appendImmediateVertex(x, y, z, texS, texT)
 {
 	if(immediateInterleavedEnabled)
 	{
-		var pos = immediateModeData.interleavedPos;
-		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
-		var out = immediateModeData.interleavedBuf;
-		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
-		out[pos + 3] = immediateModeData.currentColor[0];
-		out[pos + 4] = immediateModeData.currentColor[1];
-		out[pos + 5] = immediateModeData.currentColor[2];
-		out[pos + 6] = immediateModeData.currentColor[3];
-		out[pos + 7] = texS; out[pos + 8] = texT;
-		immediateModeData.interleavedPos = pos + 9;
+		if(immediateCompactColorSetterEnabled && !immediateModeData.compactColorVaried)
+		{
+			if(immediateModeData.compactVertexCount === 0)
+			{
+				var batch = immediateModeData.compactBatchColor, color = immediateModeData.currentColor;
+				batch[0] = color[0]; batch[1] = color[1]; batch[2] = color[2]; batch[3] = color[3];
+			}
+			var pos = immediateModeData.compactColorPos;
+			immediateModeData.compactColorBuf = ensureImmediateArrayCapacity(immediateModeData.compactColorBuf, pos + 5);
+			var out = immediateModeData.compactColorBuf;
+			out[pos] = x; out[pos + 1] = y; out[pos + 2] = z; out[pos + 3] = texS; out[pos + 4] = texT;
+			immediateModeData.compactColorPos = pos + 5;
+		}
+		else
+		{
+			var pos = immediateModeData.interleavedPos;
+			immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
+			var out = immediateModeData.interleavedBuf, color = immediateModeData.currentColor;
+			out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
+			out[pos + 3] = color[0]; out[pos + 4] = color[1]; out[pos + 5] = color[2]; out[pos + 6] = color[3];
+			out[pos + 7] = texS; out[pos + 8] = texT;
+			immediateModeData.interleavedPos = pos + 9;
+		}
+		immediateModeData.compactVertexCount++;
 		immediateModeData.vertexPos += 3;
 		immediateModeData.colorPos += 4;
 		immediateModeData.texCoordPos += 2;
@@ -2354,14 +2405,43 @@ function uploadImmediateInterleaved(vertexCount)
 	presentationStats.immediateInterleavedUploadsSaved += 2;
 	presentationStats.immediateInterleavedBytes += floatCount * 4;
 }
+function uploadImmediateCompactColor(vertexCount)
+{
+	var floatCount = vertexCount * 5;
+	var data = immediateModeData.compactColorBuf.subarray(0, floatCount);
+	var stride = 5 * 4;
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+	glCtx.enableVertexAttribArray(vertexPosition);
+	glCtx.disableVertexAttribArray(colorLocation);
+	var color = immediateModeData.compactBatchColor;
+	glCtx.vertexAttrib4f(colorLocation, color[0], color[1], color[2], color[3]);
+	glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 3 * 4);
+	glCtx.enableVertexAttribArray(texCoord);
+	if(strictWebGLValidation)
+	{
+		var attribErr = glCtx.getError();
+		if(attribErr != glCtx.NO_ERROR)
+			warnOnce(clientArrayWarnings, "immediate-compact-color-attrib-error-" + attribErr,
+				"LWJGL compact-color immediate vertexAttribPointer error=" + attribErr);
+	}
+	presentationStats.immediateInterleavedDraws++;
+	presentationStats.immediateInterleavedUploads++;
+	presentationStats.immediateInterleavedUploadsSaved += 2;
+	presentationStats.immediateInterleavedBytes += floatCount * 4;
+	if(!presentationStats.immediateCompactColorHitObserved) presentationStats.immediateCompactColorHitObserved = true;
+}
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
+	immediateModeData.immediateBeginActive = false;
 	if(immediateInterleavedEnabled)
 	{
-		uploadImmediateInterleaved(vertexCount);
+		if(immediateCompactColorSetterEnabled && !immediateModeData.compactColorVaried && vertexCount > 0) uploadImmediateCompactColor(vertexCount);
+		else uploadImmediateInterleaved(vertexCount);
 	}
 	else
 	{

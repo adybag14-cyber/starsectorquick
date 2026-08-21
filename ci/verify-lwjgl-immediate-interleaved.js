@@ -20,9 +20,9 @@ function make(enabled){
     vertexAttribPointer:(...a)=>calls.push(['pointer',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]),
     disableVertexAttribArray:(...a)=>calls.push(['disable',...a]), vertexAttrib2f:(...a)=>calls.push(['attrib2f',...a]), getError:()=>0};
   const c=vm.createContext({
-    glCtx, immediateInterleavedEnabled:enabled, curList:null, pushInList(){throw new Error('unexpected list');},
+    glCtx, immediateInterleavedEnabled:enabled, immediateCompactColorSetterEnabled:false, curList:null, pushInList(){throw new Error('unexpected list');},
     immediateModeData:{mode:0,vertexBuf:new Float32Array(32),vertexPos:0,colorBuf:new Float32Array(32),colorPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0],texCoordBuf:new Float32Array(32),texCoordPos:0,interleavedBuf:new Float32Array(96),interleavedPos:0},
-    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0},
+    presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediateCompactColorHitObserved:false,immediateCompactColorFallbackObserved:false},
     vertexBuffer:{id:'v'}, colorBuffer:{id:'c'}, texCoordBuffer:{id:'t'}, vertexPosition:3,colorLocation:4,texCoord:5,
     strictWebGLValidation:false,clientArrayWarnings:new Set(),warnOnce(){},
     uploadDataImpl:(buf,buffer,attr,size,type,stride)=>legacy.push({data:Array.from(buf),buffer,attr,size,type,stride}),
