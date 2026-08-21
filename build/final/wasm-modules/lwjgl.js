@@ -446,7 +446,9 @@ var texCoordData =
 // LWJGL_IMMEDIATE_MODE_DETAIL_PROFILE_V1
 var lastImmediateEndMode = -1;
 var immediateProfileBarrierGeneration = 0;
+var immediateProfileReadOnlyQueryGeneration = 0;
 var lastImmediateEndBarrierGeneration = -1;
+var lastImmediateEndReadOnlyQueryGeneration = -1;
 var immediateModeData =
 {
 	mode: 0,
@@ -496,7 +498,9 @@ var presentationStats = {
 	immediateUnknownModeEnds: 0,
 	immediateUnknownModeVertices: 0,
 	immediateSameModeConsecutiveEnds: 0,
-	immediateQuadStripNoBarrierAdjacentEnds: 0
+	immediateQuadStripNoBarrierAdjacentEnds: 0,
+	immediateQuadStripReadOnlyQueryAdjacentEnds: 0,
+	immediateQuadStripMutationBarrierAdjacentEnds: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -1457,6 +1461,7 @@ function Java_org_lwjgl_opengl_GLContext_ngetFunctionAddress(lib, stringPtr)
 function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileReadOnlyQueryGeneration++;
 	checkNoList(curList);
 	// Special case GL_EXTENSION for now
 	if(id == 0x1F03)
@@ -1474,6 +1479,7 @@ function Java_org_lwjgl_opengl_GL11_nglGetString(lib, id, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglGetIntegerv(lib, id, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileReadOnlyQueryGeneration++;
 	checkNoList(curList);
 	var v = lib.getJNIDataView();
 	var buf = new Int32Array(v.buffer, Number(memPtr), 4);
@@ -1998,6 +2004,7 @@ function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglIsEnabled(lib, cap, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileReadOnlyQueryGeneration++;
 	return getCompatEnableState(cap);
 }
 function Java_org_lwjgl_opengl_GL11_nglPushAttrib(lib, mask, funcPtr)
@@ -2164,6 +2171,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 function Java_org_lwjgl_opengl_GL11_nglGetFloatv(lib, a, memPtr, funcPtr)
 {
 	immediateProfileBarrierGeneration++;
+	immediateProfileReadOnlyQueryGeneration++;
 	checkNoList(curList);
 	var v = lib.getJNIDataView();
 	var buf = new Float32Array(v.buffer, Number(memPtr), 16);
@@ -2439,10 +2447,16 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	var vertexCount = immediateModeData.vertexPos / 3;
 	if(lastImmediateEndMode === immediateModeData.mode) presentationStats.immediateSameModeConsecutiveEnds++;
-	if(immediateModeData.mode == 8/*QUAD_STRIP*/ && lastImmediateEndMode == 8/*QUAD_STRIP*/ &&
-		lastImmediateEndBarrierGeneration == immediateProfileBarrierGeneration)
-		presentationStats.immediateQuadStripNoBarrierAdjacentEnds++;
+	if(immediateModeData.mode == 8/*QUAD_STRIP*/ && lastImmediateEndMode == 8/*QUAD_STRIP*/)
+	{
+		var barrierDelta = immediateProfileBarrierGeneration - lastImmediateEndBarrierGeneration;
+		var readOnlyQueryDelta = immediateProfileReadOnlyQueryGeneration - lastImmediateEndReadOnlyQueryGeneration;
+		if(barrierDelta == 0) presentationStats.immediateQuadStripNoBarrierAdjacentEnds++;
+		else if(barrierDelta == readOnlyQueryDelta && readOnlyQueryDelta > 0) presentationStats.immediateQuadStripReadOnlyQueryAdjacentEnds++;
+		else presentationStats.immediateQuadStripMutationBarrierAdjacentEnds++;
+	}
 	lastImmediateEndBarrierGeneration = immediateProfileBarrierGeneration;
+	lastImmediateEndReadOnlyQueryGeneration = immediateProfileReadOnlyQueryGeneration;
 	lastImmediateEndMode = immediateModeData.mode;
 	if(immediateModeData.mode == 0/*POINTS*/)
 	{
