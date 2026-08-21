@@ -163,7 +163,7 @@ jobs:
             refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
             refs/heads/perf/pointer-dirty-lazy-current-color:refs/remotes/origin/perf/pointer-dirty-lazy-current-color
           test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "0eedc59892cb839fc747e1a31eac295198896297"
-          test "$(git rev-parse origin/perf/pointer-dirty-lazy-current-color)" = "95f49c00623ab4e7f7d9d3e1d8efe6254a52e096"
+          test "$(git rev-parse origin/perf/pointer-dirty-lazy-current-color)" = "a27c3588bb4b7e05f223408b978ed7d05be8818d"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:

@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path('test_output/frame-perf-ab')
 ORDER = ['baseline-a', 'lazy-current-color', 'baseline-b']
 BASELINE_SHA = '0eedc59892cb839fc747e1a31eac295198896297'
-CANDIDATE_SHA = '95f49c00623ab4e7f7d9d3e1d8efe6254a52e096'
+CANDIDATE_SHA = 'a27c3588bb4b7e05f223408b978ed7d05be8818d'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
