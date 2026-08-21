@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'immediate-stream', 'baseline-b']
+ORDER = ['baseline-a', 'array-buffer-bind', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = '35c5c6df2ca207a911b40295ff83573ace31bf83'
+CANDIDATE_SHA = '7e343d591b267427ef372de9cd48a000b71ec396'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -35,6 +35,7 @@ def parse(name):
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
             interleaved_saved=gp.get('immediateInterleavedUploadsSavedDelta'),
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
+            array_buffer_bind_hit=bool(gp.get('arrayBufferBindCacheHitObserved')),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
         )
@@ -59,7 +60,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['immediate-stream'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['array-buffer-bind'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -73,23 +74,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Production vs immediate STREAM_DRAW same-runner A/B', '',
+        '# Production vs ARRAY_BUFFER bind-cache same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | bind hit | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {r.get('array_buffer_bind_hit','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted immediate-stream delta:']
+    lines += ['', 'Drift-adjusted array-buffer-bind delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('immediate-stream', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('array-buffer-bind', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -100,7 +101,11 @@ def main():
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
     if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000:
-        raise SystemExit(f'immediate-stream activation evidence invalid: {c}')
+        raise SystemExit(f'array-buffer bind-cache traffic evidence invalid: {c}')
+    if c.get('array_buffer_bind_hit') is not True:
+        raise SystemExit(f'array-buffer bind-cache did not activate: {c}')
+    if a.get('array_buffer_bind_hit') or b.get('array_buffer_bind_hit'):
+        raise SystemExit(f'production baseline unexpectedly reports bind-cache activation: A={a} B={b}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
