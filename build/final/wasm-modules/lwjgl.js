@@ -481,7 +481,8 @@ var presentationStats = {
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
-	immediateInterleavedBytes: 0
+	immediateInterleavedBytes: 0,
+	immediatePointerLayoutRefreshes: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -621,6 +622,11 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 	}
 	return out;
 }
+// LWJGL_IMMEDIATE_POINTER_DIRTY_V1
+// Immediate-mode interleaving always uses one fixed 3/4/2-float layout.
+// Legacy client uploads are the only other pointer writers, so they mark that
+// fixed layout dirty instead of forcing three vertexAttribPointer calls per draw.
+var immediatePointerLayoutDirty = true;
 function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
 {
 	var originalType = type;
@@ -659,6 +665,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	glCtx.vertexAttribPointer(attributeLocation, size, uploadType, normalized, uploadStride, 0);
+	immediatePointerLayoutDirty = true;
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2336,11 +2343,16 @@ function uploadImmediateInterleaved(vertexCount)
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
-	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+	if(immediatePointerLayoutDirty)
+	{
+		glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+		glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
+		glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
+		immediatePointerLayoutDirty = false;
+		presentationStats.immediatePointerLayoutRefreshes++;
+	}
 	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
 	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
 	glCtx.enableVertexAttribArray(texCoord);
 	if(strictWebGLValidation)
 	{
