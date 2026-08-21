@@ -459,6 +459,16 @@ var lastImmediateEndTextureBarrierGeneration = -1;
 var lastImmediateEndRenderStateBarrierGeneration = -1;
 var lastImmediateEndClientBarrierGeneration = -1;
 var lastImmediateEndOtherBarrierGeneration = -1;
+var lastQuadStripModelView = null;
+var lastQuadStripProjection = null;
+var lastQuadStripTextureId = -1;
+var lastQuadStripTextureEnabled = false;
+function immediateProfileMatrixEqual(a, b)
+{
+	if(a == null || b == null || a.length != b.length) return false;
+	for(var i=0;i<a.length;i++) if(a[i] !== b[i]) return false;
+	return true;
+}
 var immediateModeData =
 {
 	mode: 0,
@@ -515,7 +525,11 @@ var presentationStats = {
 	immediateQuadStripTextureBarrierAdjacentEnds: 0,
 	immediateQuadStripRenderStateBarrierAdjacentEnds: 0,
 	immediateQuadStripClientBarrierAdjacentEnds: 0,
-	immediateQuadStripOtherBarrierAdjacentEnds: 0
+	immediateQuadStripOtherBarrierAdjacentEnds: 0,
+	immediateQuadStripSameModelViewAdjacentEnds: 0,
+	immediateQuadStripSameProjectionAdjacentEnds: 0,
+	immediateQuadStripSameTextureAdjacentEnds: 0,
+	immediateQuadStripSameMatrixTextureAdjacentEnds: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2534,6 +2548,15 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		if(immediateProfileRenderStateBarrierGeneration != lastImmediateEndRenderStateBarrierGeneration) presentationStats.immediateQuadStripRenderStateBarrierAdjacentEnds++;
 		if(immediateProfileClientBarrierGeneration != lastImmediateEndClientBarrierGeneration) presentationStats.immediateQuadStripClientBarrierAdjacentEnds++;
 		if(immediateProfileOtherBarrierGeneration != lastImmediateEndOtherBarrierGeneration) presentationStats.immediateQuadStripOtherBarrierAdjacentEnds++;
+		var currentMv = modelViewMatrixStack[modelViewMatrixStack.length - 1];
+		var currentProj = projMatrixStack[projMatrixStack.length - 1];
+		var sameMv = immediateProfileMatrixEqual(currentMv, lastQuadStripModelView);
+		var sameProj = immediateProfileMatrixEqual(currentProj, lastQuadStripProjection);
+		var sameTexture = boundTexture2DId === lastQuadStripTextureId && texture2DEnabled === lastQuadStripTextureEnabled;
+		if(sameMv) presentationStats.immediateQuadStripSameModelViewAdjacentEnds++;
+		if(sameProj) presentationStats.immediateQuadStripSameProjectionAdjacentEnds++;
+		if(sameTexture) presentationStats.immediateQuadStripSameTextureAdjacentEnds++;
+		if(sameMv && sameProj && sameTexture) presentationStats.immediateQuadStripSameMatrixTextureAdjacentEnds++;
 	}
 	lastImmediateEndBarrierGeneration = immediateProfileBarrierGeneration;
 	lastImmediateEndReadOnlyQueryGeneration = immediateProfileReadOnlyQueryGeneration;
@@ -2543,6 +2566,13 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	lastImmediateEndClientBarrierGeneration = immediateProfileClientBarrierGeneration;
 	lastImmediateEndOtherBarrierGeneration = immediateProfileOtherBarrierGeneration;
 	lastImmediateEndMode = immediateModeData.mode;
+	if(immediateModeData.mode == 8/*QUAD_STRIP*/)
+	{
+		lastQuadStripModelView = new Float32Array(modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+		lastQuadStripProjection = new Float32Array(projMatrixStack[projMatrixStack.length - 1]);
+		lastQuadStripTextureId = boundTexture2DId;
+		lastQuadStripTextureEnabled = texture2DEnabled;
+	}
 	if(immediateModeData.mode == 0/*POINTS*/)
 	{
 		presentationStats.immediatePointEnds++;
