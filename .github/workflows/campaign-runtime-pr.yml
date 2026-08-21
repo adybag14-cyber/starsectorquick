@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: pointer-dirty + matrix in-place frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/pointer-dirty-matrix-inplace-frame-tail-ab'
+    name: pointer-dirty + matrix in-place 240-frame A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/pointer-dirty-matrix-inplace-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pointer-dirty-matrix-inplace-frame-tail-ab
+          name: pointer-dirty-matrix-inplace-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
