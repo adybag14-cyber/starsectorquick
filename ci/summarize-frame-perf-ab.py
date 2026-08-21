@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path('test_output/frame-perf-ab')
 ORDER = ['baseline-a', 'pointer-dirty', 'baseline-b']
 BASELINE_SHA = 'a4c20a8e4b5abb5ccb2e470ad5479b3387750155'
-CANDIDATE_SHA = 'aa9587e461fb3bbe7b0f6be5fc566b5c54192da9'
+CANDIDATE_SHA = '43e945cdf3adb6eddd032a3c8c78f685b65513df'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -40,6 +40,7 @@ def parse(name):
             attrib_enable_changes=gp.get('vertexAttribEnableChangeDelta'),
             attrib_enable_saved=gp.get('vertexAttribEnableSavedDelta'),
             pointer_refreshes=gp.get('immediatePointerLayoutRefreshDelta'),
+            pointer_refresh_count=gp.get('immediatePointerLayoutRefreshCount'),
             vertex_buffer_uploads=gp.get('vertexBufferUploadDelta'), vertex_upload_bytes=gp.get('vertexUploadBytesDelta'),
         )
         shortcuts = [float(x['listenerReadyMs']) for x in (data.get('shortcutResults') or []) if x.get('listenerReadyMs') is not None]
@@ -79,12 +80,12 @@ def main():
     lines = [
         '# Production vs immediate pointer-dirty same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | pointer refreshes | draws | world |',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | pointer refresh delta/count | draws | world |',
         '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('pointer_refreshes','-')} | {r.get('interleaved_draws','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {f"{r.get('pointer_refreshes','-')}/{r.get('pointer_refresh_count','-')}"} | {r.get('interleaved_draws','-')} | {world} |")
     d = c['drift_adjusted']
     lines += ['', 'Drift-adjusted pointer-dirty delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
@@ -104,12 +105,13 @@ def main():
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
     draws = int(c.get('interleaved_draws') or 0)
-    refreshes = int(c.get('pointer_refreshes') or 0)
+    refresh_delta = int(c.get('pointer_refreshes') or 0)
+    refresh_count = int(c.get('pointer_refresh_count') or 0)
     if draws < 1000 or int(c.get('interleaved_uploads') or 0) < 1000:
         raise SystemExit(f'pointer-dirty traffic evidence invalid: {c}')
-    if refreshes <= 0 or refreshes >= max(2, draws // 10):
-        raise SystemExit(f'pointer-dirty refresh evidence invalid: refreshes={refreshes} draws={draws} row={c}')
-    if int(a.get('pointer_refreshes') or 0) != 0 or int(b.get('pointer_refreshes') or 0) != 0:
+    if refresh_count <= 0 or refresh_delta < 0 or refresh_delta >= max(2, draws // 10):
+        raise SystemExit(f'pointer-dirty refresh evidence invalid: delta={refresh_delta} count={refresh_count} draws={draws} row={c}')
+    if int(a.get('pointer_refresh_count') or 0) != 0 or int(b.get('pointer_refresh_count') or 0) != 0:
         raise SystemExit(f'production baseline unexpectedly reports pointer refreshes: A={a} B={b}')
     return 0
 
