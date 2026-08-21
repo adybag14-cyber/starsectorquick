@@ -482,7 +482,8 @@ var presentationStats = {
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
-	vertexAttribPointerCacheHitObserved: false
+	vertexAttribPointerCacheHitObserved: false,
+	arrayBufferBindCacheHitObserved: false
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -510,6 +511,24 @@ function getCurMatrixTop()
 function setCurMatrixTop(m)
 {
 	curMatrixStack[curMatrixStack.length - 1] = m;
+}
+
+// LWJGL_ARRAY_BUFFER_BIND_CACHE_V1
+// The bridge owns all ARRAY_BUFFER binding sites. Avoid resending an identical
+// WebGL binding while preserving an exact opt-out path for differential tests.
+var arrayBufferBindCacheEnabled = typeof window === "undefined" || window.__LWJGL_ARRAY_BUFFER_BIND_CACHE__ !== false;
+var currentArrayBufferBinding = null;
+function bindArrayBufferCached(buffer)
+{
+	buffer = buffer || null;
+	if(arrayBufferBindCacheEnabled && currentArrayBufferBinding === buffer)
+	{
+		if(!presentationStats.arrayBufferBindCacheHitObserved)
+			presentationStats.arrayBufferBindCacheHitObserved = true;
+		return;
+	}
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
+	currentArrayBufferBinding = buffer;
 }
 
 function ensureFramebufferSize()
@@ -680,7 +699,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 		uploadStride = 0;
 		normalized = false;
 	}
-	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, buffer);
+	bindArrayBufferCached(buffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, uploadBuf, glCtx.STATIC_DRAW);
 	setVertexAttribPointerCached(attributeLocation, buffer, size, uploadType, normalized, uploadStride, 0);
 	if(strictWebGLValidation)
@@ -2358,7 +2377,7 @@ function uploadImmediateInterleaved(vertexCount)
 	var floatCount = vertexCount * 9;
 	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
 	var stride = 9 * 4;
-	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
+	bindArrayBufferCached(vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
 	setVertexAttribPointerCached(vertexPosition, vertexBuffer, 3, glCtx.FLOAT, false, stride, 0);
 	glCtx.enableVertexAttribArray(vertexPosition);
