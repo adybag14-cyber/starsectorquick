@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: lean matrix in-place frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/matrix-inplace-lean-frame-tail-ab'
+    name: pointer-dirty + matrix in-place frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/pointer-dirty-matrix-inplace-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -160,10 +160,10 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin \
-            refs/heads/fix/pages-live-settings-check:refs/remotes/origin/fix/pages-live-settings-check \
-            refs/heads/perf/matrix-inplace-lean-current:refs/remotes/origin/perf/matrix-inplace-lean-current
-          test "$(git rev-parse origin/fix/pages-live-settings-check)" = "a4c20a8e4b5abb5ccb2e470ad5479b3387750155"
-          test "$(git rev-parse origin/perf/matrix-inplace-lean-current)" = "325b9886d2022051ffcebd90835785de682e0760"
+            refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
+            refs/heads/perf/pointer-dirty-matrix-inplace-current:refs/remotes/origin/perf/pointer-dirty-matrix-inplace-current
+          test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "457d36910eea99e83518f936db17b1d2a8420617"
+          test "$(git rev-parse origin/perf/pointer-dirty-matrix-inplace-current)" = "888c0995b7e14c65f99701ef78aba4fa977684ac"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -184,11 +184,11 @@ jobs:
           unzip -tq "$archive"
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/fix/pages-live-settings-check
-      - name: Lean matrix in-place candidate
-        run: bash ci/run-frame-perf-ab-variant.sh matrix-inplace origin/perf/matrix-inplace-lean-current
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
+      - name: Pointer-dirty + matrix in-place candidate
+        run: bash ci/run-frame-perf-ab-variant.sh pointer-matrix origin/perf/pointer-dirty-matrix-inplace-current
       - name: Production baseline B
-        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/fix/pages-live-settings-check
+        run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
       - name: Summarize drift-adjusted frame metrics
         if: always()
         run: python3 ci/summarize-frame-perf-ab.py
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: matrix-inplace-lean-frame-tail-ab
+          name: pointer-dirty-matrix-inplace-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
