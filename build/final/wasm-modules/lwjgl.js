@@ -2329,13 +2329,15 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
+// WEBGL_IMMEDIATE_BUFFERDATA_OFFSET_V1
 function uploadImmediateInterleaved(vertexCount)
 {
 	var floatCount = vertexCount * 9;
-	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
-	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	// WebGL2 accepts source element offset/length for bufferData. Upload the same
+	// prefix without allocating a fresh Float32Array subarray view per glEnd.
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, immediateModeData.interleavedBuf, glCtx.STATIC_DRAW, 0, floatCount);
 	glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
 	glCtx.enableVertexAttribArray(vertexPosition);
 	glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);

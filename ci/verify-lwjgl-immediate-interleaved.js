@@ -11,12 +11,14 @@ function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-interleaved.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
 for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved']) expect(src.includes(marker),`missing ${marker}`);
+const offsetUploadPresent=src.includes('WEBGL_IMMEDIATE_BUFFERDATA_OFFSET_V1');
+if(offsetUploadPresent){ const uploadSrc=extract(src,'uploadImmediateInterleaved'); expect(!uploadSrc.includes('.subarray('),'offset upload reintroduced per-draw subarray'); expect(uploadSrc.includes('glCtx.bufferData(glCtx.ARRAY_BUFFER, immediateModeData.interleavedBuf, glCtx.STATIC_DRAW, 0, floatCount);'),'offset bufferData call missing'); }
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
 const code=names.map(n=>extract(src,n)).join('\n');
 function make(enabled){
   const calls=[]; const legacy=[]; const draws=[];
   const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,NO_ERROR:0,
-    bindBuffer:(...a)=>calls.push(['bindBuffer',...a]), bufferData:(t,d,u)=>calls.push(['bufferData',t,Array.from(d),u]),
+    bindBuffer:(...a)=>calls.push(['bindBuffer',...a]), bufferData:(t,d,u,off,len)=>{ const view=(off!==undefined&&len!==undefined)?d.slice(off,off+len):d; calls.push(['bufferData',t,Array.from(view),u,off,len]); },
     vertexAttribPointer:(...a)=>calls.push(['pointer',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]),
     disableVertexAttribArray:(...a)=>calls.push(['disable',...a]), vertexAttrib2f:(...a)=>calls.push(['attrib2f',...a]), getError:()=>0};
   const c=vm.createContext({
@@ -38,6 +40,7 @@ c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,1,2,3,0);
 c.Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord(null,4,5,6,0.75,1,0);
 c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 let uploads=x.calls.filter(a=>a[0]==='bufferData'); expect(uploads.length===1,`enabled uploads=${uploads.length}`);
+if(offsetUploadPresent) expect(uploads[0][4]===0&&uploads[0][5]===18,`offset upload range ${uploads[0][4]}/${uploads[0][5]}`);
 const data=uploads[0][2], expected=[1,2,3,.1,.2,.3,.4,.25,.5,4,5,6,.1,.2,.3,.4,.75,1];
 expect(data.length===expected.length,`float length ${data.length}`); expected.forEach((v,i)=>expect(Math.abs(data[i]-v)<1e-6,`float ${i}: ${data[i]} != ${v}`));
 const ptr=x.calls.filter(a=>a[0]==='pointer'); expect(ptr.length===3,`pointer count ${ptr.length}`);
