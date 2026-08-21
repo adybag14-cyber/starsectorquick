@@ -487,7 +487,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateAttribEnableRefreshes: 0
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -632,6 +633,10 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 // Legacy client uploads are the only other pointer writers, so they mark that
 // fixed layout dirty instead of forcing three vertexAttribPointer calls per draw.
 var immediatePointerLayoutDirty = true;
+// LWJGL_IMMEDIATE_ATTRIB_ENABLE_DIRTY_V1
+// Color-defer keeps the color array enabled through ordinary immediate-mode
+// setters. Only real fallback/client-array disables dirty the fixed trio.
+var immediateAttribEnableDirty = true;
 function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
 {
 	var originalType = type;
@@ -687,6 +692,7 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 function applyCurrentColorAttrib()
 {
 	glCtx.disableVertexAttribArray(colorLocation);
+	immediateAttribEnableDirty = true;
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -722,6 +728,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		else
 		{
 			glCtx.disableVertexAttribArray(attributeLocation);
+			immediateAttribEnableDirty = true;
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -2365,9 +2372,14 @@ function uploadImmediateInterleaved(vertexCount)
 		immediatePointerLayoutDirty = false;
 		presentationStats.immediatePointerLayoutRefreshes++;
 	}
-	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.enableVertexAttribArray(texCoord);
+	if(immediateAttribEnableDirty)
+	{
+		glCtx.enableVertexAttribArray(vertexPosition);
+		glCtx.enableVertexAttribArray(colorLocation);
+		glCtx.enableVertexAttribArray(texCoord);
+		immediateAttribEnableDirty = false;
+		presentationStats.immediateAttribEnableRefreshes++;
+	}
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2400,6 +2412,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		else
 		{
 			glCtx.disableVertexAttribArray(texCoord);
+			immediateAttribEnableDirty = true;
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}
