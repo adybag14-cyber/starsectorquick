@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: interleaved pointer-only cache frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/interleaved-pointer-frame-tail-ab'
+    name: interleaved pointer-only cache 240-frame A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/interleaved-pointer-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: interleaved-pointer-frame-tail-ab
+          name: interleaved-pointer-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
