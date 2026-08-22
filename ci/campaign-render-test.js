@@ -115,12 +115,17 @@ function pixelDiffRatio(beforeBuffer, afterBuffer, region) {
   return total > 0 ? changed / total : 0;
 }
 
-function panelVisualThreshold(tab) {
+function panelVisualThreshold(tab, renderWidth = 1024, renderHeight = 768) {
   // Command/OUTPOSTS is intentionally sparse on a fresh campaign and changes
-  // less of the screen than Character/Fleet/Refit/Cargo/Map/Intel. Keep a
-  // meaningful visual gate, but key it to the actual screen rather than forcing
-  // every tab through one 8% pixel-difference threshold.
-  return tab === 'OUTPOSTS' ? 0.04 : 0.08;
+  // less of the screen than Character/Fleet/Refit/Cargo/Map/Intel. At higher
+  // internal resolutions the fixed logical UI occupies a smaller fraction of
+  // the framebuffer, so scale the changed-pixel threshold by framebuffer area.
+  // Keep a 2% floor so noise or tiny animations cannot satisfy the visual gate.
+  const base = tab === 'OUTPOSTS' ? 0.04 : 0.08;
+  const width = Math.max(1, Number(renderWidth) || 1024);
+  const height = Math.max(1, Number(renderHeight) || 768);
+  const areaScale = Math.min(1, (1024 * 768) / (width * height));
+  return Math.max(0.02, base * areaScale);
 }
 
 async function waitForVisualTransition(canvas, baseline, options = {}) {
@@ -633,7 +638,7 @@ ${fallback}`);
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
               timeoutMs: 9000,
               pollMs: 800,
-              threshold: panelVisualThreshold(expectedTab),
+              threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
               region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
             });
             panelFrame = panelTransition.frame;
@@ -757,7 +762,7 @@ ${fallback}`);
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
               timeoutMs: 8000,
               pollMs: 800,
-              threshold: panelVisualThreshold(expectedTab),
+              threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
               region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
             });
             shortcutFrame = visual.frame;
@@ -779,7 +784,7 @@ ${fallback}`);
           const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
             timeoutMs: 8000,
             pollMs: 800,
-            threshold: panelVisualThreshold(expectedTab),
+            threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
             region: { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 },
           });
           shortcutFrame = visual.frame;

@@ -5,13 +5,27 @@
     <title>Starsector Web - Campaign Launcher</title>
     <script src='https://cjrtnc.leaningtech.com/4.3/loader.js'></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        #game-container { margin: 20px auto; width: 1024px; height: 768px; border: 2px solid #00d9ff; position: relative; background: #111; }
+        #game-container { margin: 20px auto; width: 1024px; height: 768px; border: 2px solid #00d9ff; position: relative; background: #111; max-width: calc(100vw - 44px); }
         #log { background: #111; padding: 15px; height: 250px; overflow-y: auto; text-align: left; font-family: monospace; font-size: 12px; border-left: 4px solid #00ff88; margin-top: 20px; }
+        .launcher-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 20px 0 12px; }
         .btn { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: #00d9ff; color: #000; text-transform: uppercase; transition: 0.3s; }
         .btn:hover { background: #00b8e6; transform: translateY(-2px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.secondary { background: #222; color: #00d9ff; border: 1px solid #00d9ff; }
+        .btn.secondary:hover { background: #0d2b31; }
+        .btn.small { padding: 9px 16px; font-size: 13px; border-radius: 6px; }
+        .settings-panel { width: min(760px, calc(100vw - 48px)); margin: 0 auto 14px; padding: 16px; border: 1px solid #245864; border-radius: 10px; background: #0b1114; text-align: left; box-sizing: border-box; }
+        .settings-panel[hidden] { display: none; }
+        .settings-title { margin: 0 0 12px; font-size: 17px; color: #00d9ff; }
+        .settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .settings-row label { min-width: 130px; color: #bbb; font-size: 14px; }
+        .settings-row select, .settings-row input { background: #050809; color: #fff; border: 1px solid #3c5960; border-radius: 5px; padding: 8px 10px; font: inherit; }
+        .settings-row input { width: 90px; }
+        .resolution-note { color: #aaa; font-size: 12px; line-height: 1.45; margin-top: 8px; }
+        .resolution-note strong { color: #fff; }
+        @media (max-width: 700px) { .container { padding: 12px; } .settings-row label { width: 100%; } }
     </style>
 </head>
 <body>
@@ -19,9 +33,33 @@
         <h1>Starsector Web</h1>
         <p>Running Starsector via CheerpJ 4.3 and WebAssembly on GitHub Pages</p>
 
-        <div style="margin: 20px 0;">
+        <div class="launcher-actions">
             <button id='startBtn' class="btn">LAUNCH STARSECTOR</button>
+            <button id='settingsBtn' class="btn secondary" type="button" aria-expanded="false" aria-controls="launcher-settings">SETTINGS</button>
         </div>
+        <section id="launcher-settings" class="settings-panel" hidden>
+            <h2 class="settings-title">Display Settings</h2>
+            <div class="settings-row">
+                <label for="resolutionPreset">Render resolution</label>
+                <select id="resolutionPreset">
+                    <option value="1024x768">1024 × 768 (Fastest)</option>
+                    <option value="1280x720">1280 × 720</option>
+                    <option value="1600x900">1600 × 900</option>
+                    <option value="1920x1080">1920 × 1080 (Full HD)</option>
+                    <option value="2560x1440">2560 × 1440</option>
+                    <option value="3840x2160">3840 × 2160 (4K)</option>
+                    <option value="custom">Custom…</option>
+                </select>
+            </div>
+            <div class="settings-row" id="customResolutionRow" hidden>
+                <label for="resolutionWidth">Custom size</label>
+                <input id="resolutionWidth" type="number" min="640" max="3840" step="1" inputmode="numeric" aria-label="Render width">
+                <span>×</span>
+                <input id="resolutionHeight" type="number" min="360" max="2160" step="1" inputmode="numeric" aria-label="Render height">
+                <button id="applyResolutionBtn" class="btn small" type="button">APPLY</button>
+            </div>
+            <div id="resolutionStatus" class="resolution-note"></div>
+        </section>
         <div id='runtime-status' style="margin: 10px 0; color: #888; font-family: monospace;">STATE: waiting</div>
 
         <div id='game-container'></div>
@@ -578,14 +616,129 @@
             console.error = wrap(console.error.bind(console));
         }
 
+        const RENDER_RESOLUTION_STORAGE_KEY = 'starsectorquick.renderResolution.v1';
+        const RENDER_RESOLUTION_DEFAULT = { width: 1024, height: 768 };
+        const RENDER_RESOLUTION_LIMITS = { minWidth: 640, minHeight: 360, maxWidth: 3840, maxHeight: 2160 };
+        const RENDER_RESOLUTION_PRESETS = new Set(['1024x768','1280x720','1600x900','1920x1080','2560x1440','3840x2160']);
+
+        function normalizeRenderResolution(width, height) {
+            const w = Math.round(Number(width));
+            const h = Math.round(Number(height));
+            const validW = Number.isFinite(w) ? w : RENDER_RESOLUTION_DEFAULT.width;
+            const validH = Number.isFinite(h) ? h : RENDER_RESOLUTION_DEFAULT.height;
+            return {
+                width: Math.min(RENDER_RESOLUTION_LIMITS.maxWidth, Math.max(RENDER_RESOLUTION_LIMITS.minWidth, validW)),
+                height: Math.min(RENDER_RESOLUTION_LIMITS.maxHeight, Math.max(RENDER_RESOLUTION_LIMITS.minHeight, validH)),
+            };
+        }
+
+        function resolutionKey(width, height) { return `${width}x${height}`; }
+
+        function readStoredRenderResolution() {
+            try {
+                const raw = localStorage.getItem(RENDER_RESOLUTION_STORAGE_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                return normalizeRenderResolution(parsed.width, parsed.height);
+            } catch (_) { return null; }
+        }
+
+        function getInitialRenderResolution() {
+            const query = new URLSearchParams(location.search);
+            const queryRes = String(query.get('resolution') || query.get('res') || '').trim().toLowerCase();
+            const match = /^(\d{3,4})x(\d{3,4})$/.exec(queryRes);
+            if (match) return normalizeRenderResolution(match[1], match[2]);
+            const explicitW = Number(window.__STARSECTOR_RENDER_WIDTH__);
+            const explicitH = Number(window.__STARSECTOR_RENDER_HEIGHT__);
+            if (Number.isFinite(explicitW) && explicitW > 0 && Number.isFinite(explicitH) && explicitH > 0) {
+                return normalizeRenderResolution(explicitW, explicitH);
+            }
+            return readStoredRenderResolution() || { ...RENDER_RESOLUTION_DEFAULT };
+        }
+
+        function computeDisplayFit(renderWidth, renderHeight) {
+            if (window.__STARSECTOR_DISABLE_CANVAS_FIT__ === true) return { width: renderWidth, height: renderHeight, scale: 1 };
+            const availableWidth = Math.max(320, Math.min(renderWidth, document.documentElement.clientWidth - 44));
+            const scale = Math.min(1, availableWidth / renderWidth);
+            return { width: Math.max(1, Math.round(renderWidth * scale)), height: Math.max(1, Math.round(renderHeight * scale)), scale };
+        }
+
+        function updateResolutionStatus(width, height) {
+            const status = document.getElementById('resolutionStatus');
+            if (!status) return;
+            const pixels = width * height;
+            const relative = pixels / (1024 * 768);
+            const note = relative > 2 ? 'Higher resolutions increase GPU/CPU upload work and may lower FPS.' : 'Lower resolutions generally provide the best FPS and latency.';
+            status.innerHTML = `<strong>${width} × ${height}</strong> internal render (${relative.toFixed(2)}× 1024×768 pixel load). ${note}`;
+        }
+
+        function applyRenderResolution(width, height, persist = true) {
+            if (window.__STARSECTOR_STARTING__) return false;
+            const value = normalizeRenderResolution(width, height);
+            window.__STARSECTOR_RENDER_WIDTH__ = value.width;
+            window.__STARSECTOR_RENDER_HEIGHT__ = value.height;
+            if (persist) {
+                try { localStorage.setItem(RENDER_RESOLUTION_STORAGE_KEY, JSON.stringify(value)); } catch (_) {}
+            }
+            const preset = document.getElementById('resolutionPreset');
+            const key = resolutionKey(value.width, value.height);
+            if (preset) preset.value = RENDER_RESOLUTION_PRESETS.has(key) ? key : 'custom';
+            const widthInput = document.getElementById('resolutionWidth');
+            const heightInput = document.getElementById('resolutionHeight');
+            if (widthInput) widthInput.value = String(value.width);
+            if (heightInput) heightInput.value = String(value.height);
+            const customRow = document.getElementById('customResolutionRow');
+            if (customRow) customRow.hidden = preset ? preset.value !== 'custom' : true;
+            updateResolutionStatus(value.width, value.height);
+            const gameContainer = document.getElementById('game-container');
+            const canvas = gameContainer?.querySelector('canvas');
+            if (canvas instanceof HTMLCanvasElement) ensureLwjglCanvas(gameContainer, value.width, value.height);
+            else if (gameContainer) {
+                const fit = computeDisplayFit(value.width, value.height);
+                gameContainer.style.width = `${fit.width}px`;
+                gameContainer.style.height = `${fit.height}px`;
+            }
+            return true;
+        }
+
+        function initializeResolutionSettings() {
+            const initial = getInitialRenderResolution();
+            applyRenderResolution(initial.width, initial.height, false);
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsPanel = document.getElementById('launcher-settings');
+            const preset = document.getElementById('resolutionPreset');
+            const applyBtn = document.getElementById('applyResolutionBtn');
+            settingsBtn?.addEventListener('click', () => {
+                const nextHidden = !settingsPanel.hidden;
+                settingsPanel.hidden = nextHidden;
+                settingsBtn.setAttribute('aria-expanded', String(!nextHidden));
+            });
+            preset?.addEventListener('change', () => {
+                const customRow = document.getElementById('customResolutionRow');
+                if (preset.value === 'custom') { customRow.hidden = false; return; }
+                customRow.hidden = true;
+                const [w,h] = preset.value.split('x').map(Number);
+                applyRenderResolution(w,h,true);
+            });
+            applyBtn?.addEventListener('click', () => {
+                const w = document.getElementById('resolutionWidth')?.value;
+                const h = document.getElementById('resolutionHeight')?.value;
+                applyRenderResolution(w,h,true);
+            });
+        }
+
         function ensureLwjglCanvas(gameContainer = document.getElementById('game-container'), renderWidth = 1024, renderHeight = 768) {
             if (!gameContainer) {
                 throw new Error('Missing #game-container');
             }
             gameContainer.style.position = 'relative';
             gameContainer.style.overflow = 'hidden';
-            gameContainer.style.width = `${renderWidth}px`;
-            gameContainer.style.height = `${renderHeight}px`;
+            const fit = computeDisplayFit(renderWidth, renderHeight);
+            gameContainer.style.width = `${fit.width}px`;
+            gameContainer.style.height = `${fit.height}px`;
+            gameContainer.dataset.renderWidth = String(renderWidth);
+            gameContainer.dataset.renderHeight = String(renderHeight);
+            gameContainer.dataset.renderScale = fit.scale.toFixed(6);
 
             let lwjglCanvas = gameContainer.querySelector('#lwjglCanvas');
             if (!(lwjglCanvas instanceof HTMLCanvasElement)) {
@@ -604,8 +757,8 @@
             lwjglCanvas.style.position = 'absolute';
             lwjglCanvas.style.left = '0';
             lwjglCanvas.style.top = '0';
-            lwjglCanvas.style.width = `${renderWidth}px`;
-            lwjglCanvas.style.height = `${renderHeight}px`;
+            lwjglCanvas.style.width = `${fit.width}px`;
+            lwjglCanvas.style.height = `${fit.height}px`;
             lwjglCanvas.style.display = 'block';
             lwjglCanvas.style.zIndex = '2';
             lwjglCanvas.style.pointerEvents = 'auto';
@@ -622,9 +775,12 @@
             window.__STARSECTOR_STARTING__ = true;
             beginBootTiming();
             const btn = document.getElementById('startBtn');
-            const renderWidth = Math.max(1, Number(window.__STARSECTOR_RENDER_WIDTH__ || 1024) || 1024);
-            const renderHeight = Math.max(1, Number(window.__STARSECTOR_RENDER_HEIGHT__ || 768) || 768);
+            const selectedResolution = normalizeRenderResolution(window.__STARSECTOR_RENDER_WIDTH__ || 1024, window.__STARSECTOR_RENDER_HEIGHT__ || 768);
+            const renderWidth = selectedResolution.width;
+            const renderHeight = selectedResolution.height;
+            const settingsBtn = document.getElementById('settingsBtn');
             btn.disabled = true;
+            if (settingsBtn) settingsBtn.disabled = true;
             btn.textContent = 'INITIALIZING...';
             updateRuntimeState('initializing', 'CheerpJ bootstrap');
 
@@ -1682,21 +1838,32 @@
                 updateRuntimeState('main-returned', 'Fixer returned');
                 btn.textContent = 'RELAUNCH STARSECTOR';
                 btn.disabled = false;
+                if (settingsBtn) settingsBtn.disabled = false;
 
             } catch (e) {
                 reportRuntimeFailure(e);
                 console.error(e);
             } finally {
                 window.__STARSECTOR_STARTING__ = false;
+                if (settingsBtn && document.body.dataset.runtimeState !== 'running') settingsBtn.disabled = false;
             }
         }
+
+        initializeResolutionSettings();
+        window.addEventListener('resize', () => {
+            const gameContainer = document.getElementById('game-container');
+            const canvas = gameContainer?.querySelector('canvas');
+            if (canvas instanceof HTMLCanvasElement) {
+                ensureLwjglCanvas(gameContainer, canvas.width || window.__STARSECTOR_RENDER_WIDTH__ || 1024, canvas.height || window.__STARSECTOR_RENDER_HEIGHT__ || 768);
+            }
+        }, { passive: true });
 
         document.getElementById('startBtn').addEventListener('click', () => {
             void startGame();
         });
 
         const launchParams = new URLSearchParams(window.location.search);
-        const shouldAutostart = launchParams.get('manual') !== '1' && launchParams.get('autostart') !== '0';
+        const shouldAutostart = launchParams.get('manual') !== '1' && launchParams.get('autostart') === '1';
         if (shouldAutostart) {
             setTimeout(() => {
                 log('Autostarting campaign launcher.', '#888');
