@@ -2,10 +2,10 @@
 from pathlib import Path
 p=Path("ci/campaign-render-test.js")
 s=p.read_text(encoding="utf-8")
-marker="immediateImplicitTexCoordStoreTrimActive: Boolean(perfAfter.immediateImplicitTexCoordStoreTrimActive),"
+marker="immediateInterleavedCapacityFastPathActive: Boolean(perfAfter.immediateInterleavedCapacityFastPathActive),"
 if marker not in s:
     anchor="      immediateColorAttribDeferredObserved: Boolean(perfAfter.immediateColorAttribDeferredObserved),\n"
     assert anchor in s
     s=s.replace(anchor,anchor+"      "+marker+"\n",1)
 p.write_text(s,encoding="utf-8",newline="\n")
-print("Applied implicit texcoord store-trim result telemetry")
+print("Applied interleaved capacity fast-path result telemetry")
