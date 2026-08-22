@@ -916,6 +916,9 @@ glCtx.framebufferRenderbuffer(glCtx.FRAMEBUFFER, glCtx.DEPTH_STENCIL_ATTACHMENT,
 ensureFramebufferSize();
 // Synthesize a focus event; LWJGL's Linux backend expects X11 focus state.
 var eventQueue = [{type:"focus", time: performance.now()}];
+// LWJGL_INPUT_QUERY_TELEMETRY_OPTIN_V1: polling getters are on the hot input path.
+// Keep their diagnostic counters off in production; event/delivery counters stay live.
+var inputQueryTelemetryEnabled = typeof window !== "undefined" && window.__LWJGL_INPUT_QUERY_TELEMETRY__ === true;
 var inputStats = {
 	domEvents: 0,
 	deliveredEvents: 0,
@@ -957,6 +960,7 @@ inputStats.mousePositionQueries = 0;
 inputStats.keyboardQueueHighWater = 0;
 inputStats.mouseQueueHighWater = 0;
 inputStats.keyboardGlobalCaptures = 0;
+inputStats.inputQueryTelemetryActive = inputQueryTelemetryEnabled;
 
 function inputEventNanos()
 {
@@ -1215,9 +1219,9 @@ function Java_org_lwjgl_input_Keyboard_nReset()
 function Java_org_lwjgl_input_Keyboard_nPoll() {}
 function Java_org_lwjgl_input_Keyboard_nIsKeyDown(lib, key)
 {
-	inputStats.keyboardStateQueries++;
+	if(inputQueryTelemetryEnabled) inputStats.keyboardStateQueries++;
 	var down = key >= 0 && key < keyboardInputState.down.length && keyboardInputState.down[key] !== 0;
-	if(down) inputStats.keyboardPressedQueries++;
+	if(down && inputQueryTelemetryEnabled) inputStats.keyboardPressedQueries++;
 	return down;
 }
 function Java_org_lwjgl_input_Keyboard_nNext()
@@ -1245,9 +1249,9 @@ function Java_org_lwjgl_input_Mouse_nReset()
 function Java_org_lwjgl_input_Mouse_nPoll() {}
 function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
 {
-	inputStats.mouseButtonQueries++;
+	if(inputQueryTelemetryEnabled) inputStats.mouseButtonQueries++;
 	var down = button >= 0 && button < mouseInputState.buttons.length && mouseInputState.buttons[button] !== 0;
-	if(down) inputStats.mousePressedQueries++;
+	if(down && inputQueryTelemetryEnabled) inputStats.mousePressedQueries++;
 	return down;
 }
 function Java_org_lwjgl_input_Mouse_nNext()
@@ -1264,8 +1268,8 @@ function Java_org_lwjgl_input_Mouse_nGetEventX() { return mouseInputState.curren
 function Java_org_lwjgl_input_Mouse_nGetEventY() { return mouseInputState.current ? mouseInputState.current.y : mouseInputState.y; }
 function Java_org_lwjgl_input_Mouse_nGetEventDWheel() { return mouseInputState.current ? mouseInputState.current.wheel : 0; }
 function Java_org_lwjgl_input_Mouse_nGetEventNanoseconds() { return mouseInputState.current ? mouseInputState.current.nanos : inputEventNanos(); }
-function Java_org_lwjgl_input_Mouse_nGetX() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.x); }
-function Java_org_lwjgl_input_Mouse_nGetY() { inputStats.mousePositionQueries++; return Math.round(mouseInputState.y); }
+function Java_org_lwjgl_input_Mouse_nGetX() { if(inputQueryTelemetryEnabled) inputStats.mousePositionQueries++; return Math.round(mouseInputState.x); }
+function Java_org_lwjgl_input_Mouse_nGetY() { if(inputQueryTelemetryEnabled) inputStats.mousePositionQueries++; return Math.round(mouseInputState.y); }
 function Java_org_lwjgl_input_Mouse_nGetDX() { var value=Math.round(mouseInputState.dx); mouseInputState.dx=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDY() { var value=Math.round(mouseInputState.dy); mouseInputState.dy=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDWheel() { var value=Math.round(mouseInputState.wheel); mouseInputState.wheel=0; return value; }
