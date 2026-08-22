@@ -461,6 +461,7 @@ var immediateModeData =
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// LWJGL_IMMEDIATE_CAPACITY_FASTPATH_V1: avoid a helper call and same-buffer property write on every hot-path vertex once the reusable buffer is large enough.
 // LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
 // is already captured per vertex. Defer the generic color attribute until a
 // client-array draw actually needs it instead of issuing two WebGL calls here.
@@ -487,7 +488,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateInterleavedCapacityFastPathActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2298,8 +2300,12 @@ function appendImmediateVertex(x, y, z, texS, texT)
 	if(immediateInterleavedEnabled)
 	{
 		var pos = immediateModeData.interleavedPos;
-		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
 		var out = immediateModeData.interleavedBuf;
+		if(pos + 9 > out.length)
+		{
+			out = ensureImmediateArrayCapacity(out, pos + 9);
+			immediateModeData.interleavedBuf = out;
+		}
 		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
 		out[pos + 3] = immediateModeData.currentColor[0];
 		out[pos + 4] = immediateModeData.currentColor[1];

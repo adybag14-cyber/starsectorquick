@@ -10,7 +10,7 @@ function extract(source,name){
 function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-interleaved.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
-for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved']) expect(src.includes(marker),`missing ${marker}`);
+for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_IMMEDIATE_CAPACITY_FASTPATH_V1','immediateInterleavedCapacityFastPathActive']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
 const code=names.map(n=>extract(src,n)).join('\n');
@@ -49,6 +49,15 @@ expect(ptr[2][2]===2&&ptr[2][5]===36&&ptr[2][6]===28,'tex layout');
 expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===2,'enabled draw count');
 expect(c.presentationStats.immediateInterleavedDraws===1&&c.presentationStats.immediateInterleavedUploads===1,'enabled stats');
 expect(c.presentationStats.immediateInterleavedUploadsSaved===2,'saved upload stats'); expect(c.presentationStats.immediateInterleavedBytes===72,'byte stats');
+// Sufficient capacity must keep the exact same typed-array identity.
+const stableBuf=c.immediateModeData.interleavedBuf;
+c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,1,1,0,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
+expect(c.immediateModeData.interleavedBuf===stableBuf,'capacity fast path replaced a sufficient buffer');
+// Growth still has to allocate, preserve data, and upload the full second vertex.
+let g=make(true); g.c.immediateModeData.interleavedBuf=new Float32Array(9);
+g.c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); g.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,1,2,3,0); g.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,4,5,6,0); g.c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
+expect(g.c.immediateModeData.interleavedBuf.length>=18,'capacity growth did not occur');
+const growUpload=g.calls.filter(a=>a[0]==='bufferData')[0][2]; expect(growUpload.length===18,'grown upload length');
 // Existing bridge semantics reset current texcoord at each begin/end block.
 c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,9,8,7,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 uploads=x.calls.filter(a=>a[0]==='bufferData'); const last=uploads[uploads.length-1][2]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
