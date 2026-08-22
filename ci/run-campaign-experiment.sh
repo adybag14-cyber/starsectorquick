@@ -888,6 +888,7 @@ npm ci
 # external Microsoft package feeds have intermittently returned 403 and should not
 # make a browser-runtime diagnostic fail before Playwright launches.
 npx playwright install chromium
+node ci/verify-launch-resolution-ui.js
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
   node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
 echo $! > /tmp/starsector-http.pid

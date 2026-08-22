@@ -16,6 +16,9 @@ public final class BrowserDeferredTextureQueue {
     private static final ConcurrentHashMap<java.lang.String, java.lang.String> DEFERRED = new ConcurrentHashMap<java.lang.String, java.lang.String>();
     private static final AtomicLong DEFERRED_COUNT = new AtomicLong();
     private static final AtomicLong LAZY_LOAD_COUNT = new AtomicLong();
+    private static final AtomicLong DIRECT_MISS_LOAD_COUNT = new AtomicLong();
+    private static final AtomicLong DIRECT_MISS_LOAD_FAILED = new AtomicLong();
+    private static final ConcurrentHashMap<java.lang.String, java.lang.Boolean> DIRECT_MISS_ATTEMPTED = new ConcurrentHashMap<java.lang.String, java.lang.Boolean>();
     private static final java.lang.String GAMEPLAY_PREWARM_PROPERTY = "starsector.browserGameplayPrewarm";
     private static final java.lang.String GAMEPLAY_PREWARM_DELAY_PROPERTY = "starsector.browserGameplayPrewarmDelayMs";
     private static final java.lang.String GAMEPLAY_PREWARM_PAUSE_PROPERTY = "starsector.browserGameplayPrewarmPauseMs";
@@ -121,23 +124,59 @@ public final class BrowserDeferredTextureQueue {
 
     /** Called before oOoO.new(key) checks the registry. */
     public static void ensureLoaded(java.lang.String key) {
-        if (!ENABLED || key == null || DEFERRED.get(key) == null) return;
+        if (!ENABLED || key == null) return;
+        // The registry is authoritative. Avoid any extra work for textures that
+        // have already been materialized by stock/eager loading or an earlier miss.
+        if (oOoO.o00000().containsKey(key)) return;
         synchronized (BrowserDeferredTextureQueue.class) {
+            if (oOoO.o00000().containsKey(key)) return;
             java.lang.String path = DEFERRED.get(key);
+            boolean directMiss = false;
+            if (path == null && isConcreteDeferredPathKey(key)
+                    && DIRECT_MISS_ATTEMPTED.putIfAbsent(key, java.lang.Boolean.TRUE) == null) {
+                // Some ship/weapon Sprites reach the registry by concrete path before
+                // ResourceLoader has produced a DEFERRED entry. Load that exact stock
+                // path once on the render-thread miss so Sprite(Texture) callers never
+                // receive null and lose the only recoverable texture identity.
+                path = key;
+                directMiss = true;
+            }
             if (path == null) return;
             try {
                 oOoO.o00000(key, path);
-                // Keep the map entry visible until registration has completed so
-                // a racing lookup cannot take the fast-miss path too early.
-                DEFERRED.remove(key, path);
-                long count = LAZY_LOAD_COUNT.incrementAndGet();
-                if (count == 1L) {
-                    System.out.println("BrowserDeferredTexture: first-lazy-load key=" + key + " path=" + path);
+                if (directMiss) {
+                    long count = DIRECT_MISS_LOAD_COUNT.incrementAndGet();
+                    if (count == 1L) {
+                        System.out.println("BrowserDeferredTexture: first-direct-miss-load key=" + key);
+                    }
+                } else {
+                    // Keep the map entry visible until registration has completed so
+                    // a racing lookup cannot take the fast-miss path too early.
+                    DEFERRED.remove(key, path);
+                    long count = LAZY_LOAD_COUNT.incrementAndGet();
+                    if (count == 1L) {
+                        System.out.println("BrowserDeferredTexture: first-lazy-load key=" + key + " path=" + path);
+                    }
                 }
             } catch (IOException error) {
+                if (directMiss) {
+                    long failed = DIRECT_MISS_LOAD_FAILED.incrementAndGet();
+                    if (failed <= 8L) {
+                        System.out.println("BrowserDeferredTexture: direct-miss-load-failed key=" + key
+                                + " error=" + error.getClass().getName()
+                                + (error.getMessage() == null ? "" : ": " + error.getMessage()));
+                    }
+                    return;
+                }
                 throw new RuntimeException("deferred texture load failed key=" + key + " path=" + path, error);
             }
         }
+    }
+
+    private static boolean isConcreteDeferredPathKey(java.lang.String key) {
+        java.lang.String value = normalize(key);
+        if (!value.startsWith("graphics/") || !shouldDeferPath(value)) return false;
+        return value.endsWith(".png") || value.endsWith(".jpg") || value.endsWith(".jpeg");
     }
 
     /**
@@ -337,6 +376,8 @@ public final class BrowserDeferredTextureQueue {
 
     public static long getDeferredCount() { return DEFERRED_COUNT.get(); }
     public static long getLazyLoadCount() { return LAZY_LOAD_COUNT.get(); }
+    public static long getDirectMissLoadCount() { return DIRECT_MISS_LOAD_COUNT.get(); }
+    public static long getDirectMissLoadFailedCount() { return DIRECT_MISS_LOAD_FAILED.get(); }
     public static int getPendingCount() { return DEFERRED.size(); }
     public static long getEarlyPredecodeQueuedCount() { return EARLY_PREDECODE_QUEUED.get(); }
     public static long getEarlyPredecodeStockSkipCount() { return EARLY_PREDECODE_STOCK_SKIPS.get(); }

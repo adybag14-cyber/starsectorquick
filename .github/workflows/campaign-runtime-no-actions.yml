@@ -44,6 +44,11 @@ jobs:
         env:
           EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
+          # Hot WebGL canvases can keep Playwright screenshot capture busy for
+          # more than the 12s default even when gameplay/input are healthy.
+          # Keep the strict visual gate, but give both locator and viewport
+          # fallback captures enough time to complete under CI load.
+          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
         run: |
           set +e
 
