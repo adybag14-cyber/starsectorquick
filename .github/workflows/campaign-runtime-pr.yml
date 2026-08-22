@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/lazy-current-color-production-frame-tail-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/lazy-current-color-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: lazy current color frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/lazy-current-color-production-frame-tail-ab'
+    name: lazy current color 240-frame A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/lazy-current-color-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lazy-current-color-frame-tail-ab
+          name: lazy-current-color-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
