@@ -1125,6 +1125,7 @@ ${fallback}`);
       immediatePointerLayoutRefreshCount: Number(perfAfter.immediatePointerLayoutRefreshes || 0),
       immediateColorAttribDeferredObserved: Boolean(perfAfter.immediateColorAttribDeferredObserved),
       immediateStaticDispatchActive: Boolean(perfAfter.immediateStaticDispatchActive),
+      immediateStaticColorDispatchActive: Boolean(perfAfter.immediateStaticColorDispatchActive),
     };
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
     logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} pointerRefreshes=${gameplayPerformance.immediatePointerLayoutRefreshDelta}/${gameplayPerformance.immediatePointerLayoutRefreshCount} colorDeferred=${gameplayPerformance.immediateColorAttribDeferredObserved} responsive=${gameplayPerformance.responsive}`);

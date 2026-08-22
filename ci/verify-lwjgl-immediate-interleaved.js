@@ -12,7 +12,7 @@ const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjg
 const src=fs.readFileSync(path,'utf8');
 for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1','detailedDrawTelemetryActive','LWJGL_IMMEDIATE_STATIC_DISPATCH_V1']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
-const names=['ensureImmediateArrayCapacity','appendImmediateVertex','appendImmediateVertexLegacy','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd','Java_org_lwjgl_opengl_GL11_nglEndLegacy'];
+const names=['ensureImmediateArrayCapacity','Java_org_lwjgl_opengl_GL11_nglColor4fLegacy','Java_org_lwjgl_opengl_GL11_nglColor3fLegacy','appendImmediateVertex','appendImmediateVertexLegacy','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd','Java_org_lwjgl_opengl_GL11_nglEndLegacy'];
 const dispatchBegin='// LWJGL_IMMEDIATE_STATIC_DISPATCH_BEGIN';
 const dispatchEnd='// LWJGL_IMMEDIATE_STATIC_DISPATCH_END';
 const db=src.indexOf(dispatchBegin), de=src.indexOf(dispatchEnd);

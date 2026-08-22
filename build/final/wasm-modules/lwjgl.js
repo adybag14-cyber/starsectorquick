@@ -491,7 +491,8 @@ var presentationStats = {
 	immediatePointerLayoutRefreshes: 0,
 	immediateColorAttribDeferredObserved: false,
 	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled,
-	immediateStaticDispatchActive: immediateInterleavedEnabled
+	immediateStaticDispatchActive: immediateInterleavedEnabled,
+	immediateStaticColorDispatchActive: immediateInterleavedEnabled
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -1870,11 +1871,21 @@ function Java_org_lwjgl_opengl_GL11_nglColor4f(lib, r, g, b, a, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = a;
-	if(immediateBeginActive && immediateInterleavedEnabled)
+	if(immediateBeginActive)
 	{
 		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
 	}
 	else applyCurrentColorAttrib();
+}
+function Java_org_lwjgl_opengl_GL11_nglColor4fLegacy(lib, r, g, b, a, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor4f);
+	immediateModeData.currentColor[0] = r;
+	immediateModeData.currentColor[1] = g;
+	immediateModeData.currentColor[2] = b;
+	immediateModeData.currentColor[3] = a;
+	applyCurrentColorAttrib();
 }
 
 // LWJGL_ALPHA_TEST_COMPAT_V1
@@ -1932,11 +1943,23 @@ function Java_org_lwjgl_opengl_GL11_nglColor3f(lib, r, g, b, funcPtr)
 	immediateModeData.currentColor[1] = g;
 	immediateModeData.currentColor[2] = b;
 	immediateModeData.currentColor[3] = 1;
-	if(immediateBeginActive && immediateInterleavedEnabled)
+	if(immediateBeginActive)
 	{
 		if(!presentationStats.immediateColorAttribDeferredObserved) presentationStats.immediateColorAttribDeferredObserved = true;
 	}
 	else applyCurrentColorAttrib();
+	if(verboseLog)
+		console.log("glColor3f");
+}
+function Java_org_lwjgl_opengl_GL11_nglColor3fLegacy(lib, r, g, b, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColor3f);
+	immediateModeData.currentColor[0] = r;
+	immediateModeData.currentColor[1] = g;
+	immediateModeData.currentColor[2] = b;
+	immediateModeData.currentColor[3] = 1;
+	applyCurrentColorAttrib();
 	if(verboseLog)
 		console.log("glColor3f");
 }
@@ -2432,10 +2455,12 @@ function Java_org_lwjgl_opengl_GL11_nglEndLegacy(lib, funcPtr)
 }
 // LWJGL_IMMEDIATE_STATIC_DISPATCH_V1: the interleaved feature flag is fixed at module load.
 // Install the legacy functions once when opted out so production vertex/texcoord/end calls
-// execute branch-free instead of checking immediateInterleavedEnabled on every call.
+// execute branch-free instead of checking immediateInterleavedEnabled on every color/vertex/texcoord/end call.
 // LWJGL_IMMEDIATE_STATIC_DISPATCH_BEGIN
 if(!immediateInterleavedEnabled)
 {
+	Java_org_lwjgl_opengl_GL11_nglColor4f = Java_org_lwjgl_opengl_GL11_nglColor4fLegacy;
+	Java_org_lwjgl_opengl_GL11_nglColor3f = Java_org_lwjgl_opengl_GL11_nglColor3fLegacy;
 	Java_org_lwjgl_opengl_GL11_nglTexCoord2f = Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy;
 	appendImmediateVertex = appendImmediateVertexLegacy;
 	Java_org_lwjgl_opengl_GL11_nglVertex3f = Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy;
