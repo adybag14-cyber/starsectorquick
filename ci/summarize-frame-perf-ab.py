@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'capacity-fast', 'baseline-b']
+ORDER = ['baseline-a', 'secondary-counter-trim', 'baseline-b']
 BASELINE_SHA = '60e21b1fef5985f69e0de1fd39290df696a67033'
-CANDIDATE_SHA = 'e95aba0118a157854433d4b914d723229210ad14'
+CANDIDATE_SHA = 'af4bcd6f816e1e391ddebaa7186ad78e01944b8c'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -35,7 +35,7 @@ def parse(name):
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
             interleaved_saved=gp.get('immediateInterleavedUploadsSavedDelta'),
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
-            capacity_fast_active=bool(gp.get('immediateInterleavedCapacityFastPathActive')),
+            secondary_counter_trim_active=bool(gp.get('immediateSecondaryCounterTrimActive')),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
         )
@@ -60,7 +60,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['capacity-fast'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['secondary-counter-trim'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -74,7 +74,7 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Current production vs immediate interleaved capacity fast-path same-runner A/B', '',
+        '# Current production vs immediate secondary-counter trim same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
         '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | world |',
         '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
@@ -83,14 +83,14 @@ def main():
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
         lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted immediate capacity fast-path delta:']
+    lines += ['', 'Drift-adjusted immediate secondary-counter trim delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('capacity-fast', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('secondary-counter-trim', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -100,10 +100,10 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000 or c.get('capacity_fast_active') is not True:
-        raise SystemExit(f'capacity fast-path activation evidence invalid: {c}')
-    if a.get('capacity_fast_active') or b.get('capacity_fast_active'):
-        raise SystemExit(f'capacity fast-path leaked into baseline: a={a} b={b}')
+    if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000 or c.get('secondary_counter_trim_active') is not True:
+        raise SystemExit(f'secondary-counter trim activation evidence invalid: {c}')
+    if a.get('secondary_counter_trim_active') or b.get('secondary_counter_trim_active'):
+        raise SystemExit(f'secondary-counter trim leaked into baseline: a={a} b={b}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())

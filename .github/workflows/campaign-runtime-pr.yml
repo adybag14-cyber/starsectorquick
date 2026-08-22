@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-capacity-fast-frame-tail-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-secondary-counter-trim-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -218,8 +218,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: immediate capacity fast-path frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-capacity-fast-frame-tail-ab'
+    name: immediate secondary-counter trim frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-secondary-counter-trim-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -242,11 +242,11 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
-            refs/heads/perf/immediate-interleaved-capacity-fast-current:refs/remotes/origin/perf/immediate-interleaved-capacity-fast-current
+            refs/heads/perf/immediate-secondary-counter-trim-current:refs/remotes/origin/perf/immediate-secondary-counter-trim-current
           test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "60e21b1fef5985f69e0de1fd39290df696a67033"
-          test "$(git rev-parse origin/perf/immediate-interleaved-capacity-fast-current)" = "e95aba0118a157854433d4b914d723229210ad14"
-          test "$(git show origin/perf/immediate-interleaved-capacity-fast-current:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_IMMEDIATE_CAPACITY_FASTPATH_V1)" -eq 1
-          test "$(git show origin/feature/starsector-webgl-integration:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_IMMEDIATE_CAPACITY_FASTPATH_V1)" -eq 0
+          test "$(git rev-parse origin/perf/immediate-secondary-counter-trim-current)" = "af4bcd6f816e1e391ddebaa7186ad78e01944b8c"
+          test "$(git show origin/perf/immediate-secondary-counter-trim-current:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_IMMEDIATE_SECONDARY_COUNTER_TRIM_V1)" -eq 1
+          test "$(git show origin/feature/starsector-webgl-integration:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_IMMEDIATE_SECONDARY_COUNTER_TRIM_V1)" -eq 0
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -268,8 +268,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
-      - name: Immediate capacity fast-path candidate
-        run: bash ci/run-frame-perf-ab-variant.sh capacity-fast origin/perf/immediate-interleaved-capacity-fast-current
+      - name: Immediate secondary-counter trim candidate
+        run: bash ci/run-frame-perf-ab-variant.sh secondary-counter-trim origin/perf/immediate-secondary-counter-trim-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
       - name: Summarize drift-adjusted frame metrics
@@ -279,6 +279,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-capacity-fast-frame-tail-ab
+          name: immediate-secondary-counter-trim-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error
