@@ -19,14 +19,14 @@ mkdir -p "$WORKTREE/.ci-cache"
 cp "$ARCHIVE" "$WORKTREE/.ci-cache/starsector_linux-0.98a-RC8.zip"
 cp "$ROOT/ci/patch-frame-perf-fixed-seed.py" "$WORKTREE/ci/patch-frame-perf-fixed-seed.py"
 cp "$ROOT/ci/patch-frame-tail-telemetry.py" "$WORKTREE/ci/patch-frame-tail-telemetry.py"
-cp "$ROOT/ci/patch-capacity-fast-telemetry.py" "$WORKTREE/ci/patch-capacity-fast-telemetry.py"
+cp "$ROOT/ci/patch-input-query-telemetry.py" "$WORKTREE/ci/patch-input-query-telemetry.py"
 cp "$ROOT/ci/verify-lwjgl-frame-timing.js" "$WORKTREE/ci/verify-lwjgl-frame-timing.js"
 if ! (
   set -euo pipefail
   cd "$WORKTREE"
   python3 ci/patch-frame-perf-fixed-seed.py
   python3 ci/patch-frame-tail-telemetry.py
-  python3 ci/patch-capacity-fast-telemetry.py
+  python3 ci/patch-input-query-telemetry.py
   node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
   grep -q 'FRAME_TAIL_TELEMETRY_BENCH_V1' build/final/wasm-modules/lwjgl.js
   grep -q 'frameP95Ms: Number(perfAfter.frameP95Ms' ci/campaign-render-test.js

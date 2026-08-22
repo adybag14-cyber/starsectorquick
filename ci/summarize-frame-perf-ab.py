@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'capacity-fast', 'baseline-b']
+ORDER = ['baseline-a', 'input-query-off', 'baseline-b']
 BASELINE_SHA = '60e21b1fef5985f69e0de1fd39290df696a67033'
-CANDIDATE_SHA = 'e95aba0118a157854433d4b914d723229210ad14'
+CANDIDATE_SHA = 'ab9455cc500d9e7580a4a072b748862b2f47d42d'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -35,7 +35,9 @@ def parse(name):
             interleaved_uploads=gp.get('immediateInterleavedUploadDelta'),
             interleaved_saved=gp.get('immediateInterleavedUploadsSavedDelta'),
             interleaved_bytes=gp.get('immediateInterleavedBytesDelta'),
-            capacity_fast_active=bool(gp.get('immediateInterleavedCapacityFastPathActive')),
+            input_query_present=bool(gp.get('inputQueryTelemetryPresent')), input_query_active=bool(gp.get('inputQueryTelemetryActive')),
+            input_keyboard_queries=int(gp.get('inputKeyboardStateQueries') or 0), input_keyboard_pressed=int(gp.get('inputKeyboardPressedQueries') or 0),
+            input_mouse_button_queries=int(gp.get('inputMouseButtonQueries') or 0), input_mouse_pressed=int(gp.get('inputMousePressedQueries') or 0), input_mouse_position_queries=int(gp.get('inputMousePositionQueries') or 0),
             core_calls=gp.get('coreStateCallsDelta'), core_changes=gp.get('coreStateChangesDelta'),
             core_skipped=gp.get('coreStateSkippedDelta'), core_queries_avoided=gp.get('coreStateSnapshotQueriesAvoidedDelta'),
         )
@@ -60,7 +62,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['capacity-fast'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['input-query-off'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -74,23 +76,24 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Current production vs immediate interleaved capacity fast-path same-runner A/B', '',
+        '# Current production vs input query telemetry opt-out same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | draws | uploads | bytes | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | input queries | draws | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('interleaved_draws','-')} | {r.get('interleaved_uploads','-')} | {r.get('interleaved_bytes','-')} | {world} |")
+        q = sum(int(r.get(k) or 0) for k in ('input_keyboard_queries','input_keyboard_pressed','input_mouse_button_queries','input_mouse_pressed','input_mouse_position_queries'))
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {q} | {r.get('interleaved_draws','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted immediate capacity fast-path delta:']
+    lines += ['', 'Drift-adjusted input query telemetry opt-out delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
-    lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
+    lines.append(f"- input query counters: keyboard={c.get('input_keyboard_queries')}/{c.get('input_keyboard_pressed')} mouse={c.get('input_mouse_button_queries')}/{c.get('input_mouse_pressed')}/{c.get('input_mouse_position_queries')} present={c.get('input_query_present')} active={c.get('input_query_active')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('capacity-fast', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('input-query-off', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -100,10 +103,11 @@ def main():
             raise SystemExit(f'world/seed mismatch: {name}: {r}')
         if r.get('ref') != expected_ref:
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
-    if int(c.get('interleaved_draws') or 0) < 1000 or int(c.get('interleaved_uploads') or 0) < 1000 or c.get('capacity_fast_active') is not True:
-        raise SystemExit(f'capacity fast-path activation evidence invalid: {c}')
-    if a.get('capacity_fast_active') or b.get('capacity_fast_active'):
-        raise SystemExit(f'capacity fast-path leaked into baseline: a={a} b={b}')
+    def query_total(r): return sum(int(r.get(k) or 0) for k in ('input_keyboard_queries','input_keyboard_pressed','input_mouse_button_queries','input_mouse_pressed','input_mouse_position_queries'))
+    if int(c.get('interleaved_draws') or 0) < 1000 or c.get('input_query_present') is not True or c.get('input_query_active') is not False or query_total(c) != 0:
+        raise SystemExit(f'input query telemetry opt-out activation invalid: total={query_total(c)} row={c}')
+    if a.get('input_query_present') or b.get('input_query_present') or query_total(a) < 1000 or query_total(b) < 1000:
+        raise SystemExit(f'baseline input query evidence invalid: A={query_total(a)} B={query_total(b)} a={a} b={b}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
