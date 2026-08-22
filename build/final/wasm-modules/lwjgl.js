@@ -461,6 +461,7 @@ var immediateModeData =
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// LWJGL_IMMEDIATE_IMPLICIT_TEXCOORD_STORE_TRIM_V1: implicit glVertex3f reuses current texcoords, so only explicit fused texcoord vertices need to update that state.
 // LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
 // is already captured per vertex. Defer the generic color attribute until a
 // client-array draw actually needs it instead of issuing two WebGL calls here.
@@ -487,7 +488,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateImplicitTexCoordStoreTrimActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2310,8 +2312,6 @@ function appendImmediateVertex(x, y, z, texS, texT)
 		immediateModeData.vertexPos += 3;
 		immediateModeData.colorPos += 4;
 		immediateModeData.texCoordPos += 2;
-		immediateModeData.currentTexCoord[0] = texS;
-		immediateModeData.currentTexCoord[1] = texT;
 		return;
 	}
 	var curPos = immediateModeData.vertexPos;
@@ -2337,6 +2337,10 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord(lib, x, y, z, texS, texT
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord);
+	// Explicit fused texcoords become current state exactly once here. Plain
+	// glVertex3f then reuses them without writing the same two values back.
+	immediateModeData.currentTexCoord[0] = texS;
+	immediateModeData.currentTexCoord[1] = texT;
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 

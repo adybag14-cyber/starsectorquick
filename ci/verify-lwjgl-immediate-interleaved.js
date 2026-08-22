@@ -38,17 +38,20 @@ c.immediateModeData.currentColor=[0.1,0.2,0.3,0.4];
 c.Java_org_lwjgl_opengl_GL11_nglTexCoord2f(null,0.25,0.5,0);
 c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,1,2,3,0);
 c.Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord(null,4,5,6,0.75,1,0);
+// A fused explicit texcoord vertex updates current state; the following plain
+// vertex must reuse it without requiring another glTexCoord call.
+c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,7,8,9,0);
 c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 let uploads=x.calls.filter(a=>a[0]==='bufferData'); expect(uploads.length===1,`enabled uploads=${uploads.length}`);
-const data=uploads[0][2], expected=[1,2,3,.1,.2,.3,.4,.25,.5,4,5,6,.1,.2,.3,.4,.75,1];
+const data=uploads[0][2], expected=[1,2,3,.1,.2,.3,.4,.25,.5,4,5,6,.1,.2,.3,.4,.75,1,7,8,9,.1,.2,.3,.4,.75,1];
 expect(data.length===expected.length,`float length ${data.length}`); expected.forEach((v,i)=>expect(Math.abs(data[i]-v)<1e-6,`float ${i}: ${data[i]} != ${v}`));
 const ptr=x.calls.filter(a=>a[0]==='pointer'); expect(ptr.length===3,`pointer count ${ptr.length}`);
 expect(ptr[0][2]===3&&ptr[0][5]===36&&ptr[0][6]===0,'vertex layout');
 expect(ptr[1][2]===4&&ptr[1][5]===36&&ptr[1][6]===12,'color layout');
 expect(ptr[2][2]===2&&ptr[2][5]===36&&ptr[2][6]===28,'tex layout');
-expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===2,'enabled draw count');
+expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===3,'enabled draw count');
 expect(c.presentationStats.immediateInterleavedDraws===1&&c.presentationStats.immediateInterleavedUploads===1,'enabled stats');
-expect(c.presentationStats.immediateInterleavedUploadsSaved===2,'saved upload stats'); expect(c.presentationStats.immediateInterleavedBytes===72,'byte stats');
+expect(c.presentationStats.immediateInterleavedUploadsSaved===2,'saved upload stats'); expect(c.presentationStats.immediateInterleavedBytes===108,'byte stats');
 // Existing bridge semantics reset current texcoord at each begin/end block.
 c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,9,8,7,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 uploads=x.calls.filter(a=>a[0]==='bufferData'); const last=uploads[uploads.length-1][2]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
