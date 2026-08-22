@@ -268,15 +268,18 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/icons/intel/")
                 || value.startsWith("graphics/ui/buttons/")
                 || isDeferredFleetTabStockAsset(value)) return 0;
-        if (value.startsWith("graphics/ships/")
-                || value.startsWith("graphics/weapons/")
-                || value.startsWith("graphics/icons/hullsys/")) return 1;
+        if (value.startsWith("graphics/icons/hullsys/")
+                || value.startsWith("graphics/icons/tactical/")) return 1;
         if (value.startsWith("graphics/factions/")
                 || value.startsWith("graphics/planets/")
                 || value.startsWith("graphics/stations/")
                 || value.startsWith("graphics/icons/markets/")
                 || value.startsWith("graphics/icons/industry/")
-                || value.startsWith("graphics/icons/reports/")) return 2;
+                || value.startsWith("graphics/icons/reports/")
+                || value.startsWith("graphics/damage/")
+                || value.startsWith("graphics/debris/")
+                || value.startsWith("graphics/missiles/")
+                || value.startsWith("graphics/asteroids/")) return 2;
         return -1;
     }
 
@@ -310,6 +313,9 @@ public final class BrowserDeferredTextureQueue {
 
     public static boolean shouldDeferPath(java.lang.String path) {
         if (path == null) return false;
+        // COMBAT_TEXTURE_CORRECTNESS_V1: ship and weapon sprites are intentionally
+        // eager. They are used by combat/refit through several registry identities,
+        // and a one-frame null texture is not recoverable by every Sprite caller.
         java.lang.String value = path.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
         while (value.startsWith("/")) value = value.substring(1);
         return value.startsWith("graphics/illustrations/")
@@ -328,8 +334,6 @@ public final class BrowserDeferredTextureQueue {
                 || value.startsWith("graphics/planets/")
                 || value.startsWith("graphics/stations/")
                 || value.startsWith("graphics/warroom/")
-                || value.startsWith("graphics/weapons/")
-                || value.startsWith("graphics/ships/")
                 || value.startsWith("graphics/ui/buttons/")
                 || isDeferredFleetTabStockAsset(value)
                 || value.startsWith("graphics/damage/")

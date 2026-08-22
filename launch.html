@@ -1340,8 +1340,11 @@
                     : 0;
                 // Background bulk predecode is opt-in only. In software-rendered browser
                 // environments a 1000+ image warmup can starve live Campaign/UI work.
+                // Decode remaining deferred UI/combat art after first-playable by
+                // default. This moves ImageIO work out of the first real battle; users
+                // can still opt out explicitly with __STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ = false.
                 const browserGameplayPrewarm =
-                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ === true;
+                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ !== false;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;

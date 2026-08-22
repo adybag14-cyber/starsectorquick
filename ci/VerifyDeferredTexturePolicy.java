@@ -24,7 +24,7 @@ public final class VerifyDeferredTexturePolicy {
         expect("graphics/planets/terran.jpg", true);
         expect("graphics/stations/station_mining00.png", true);
         expect("graphics/warroom/escort.png", true);
-        expect("graphics/weapons/energy/beamfringe.png", true);
+        expect("graphics/weapons/energy/beamfringe.png", false);
         expect("graphics/damage/damage1.png", true);
         expect("graphics/icons/tactical/assault.png", true);
         expect("graphics/debris/debris1.png", true);
@@ -33,7 +33,7 @@ public final class VerifyDeferredTexturePolicy {
         expect("data/missions/forlornhope/icon.jpg", true);
         expect("graphics/ui/bgs/panel01_top_left.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
-        expect("graphics/ships/hound/hound_base.png", true);
+        expect("graphics/ships/hound/hound_base.png", false);
         expect("graphics/ui/icons/damagetype_kinetic.png", false);
         expect("graphics/ui/icons/fleettab/LR_doodad_bg.png", true);
         expect("graphics/ui/icons/fleettab/buy.png", true);
@@ -87,7 +87,7 @@ public final class VerifyDeferredTexturePolicy {
         expect("graphics/icons/campaign/burn.png", false);
         expect("graphics/icons/abilities/emergency_burn.png", false);
         expect("graphics/hud/player_status_bg2.png", false);
-        expect("graphics/ships/lasher/lasher_base.png", true);
+        expect("graphics/ships/lasher/lasher_base.png", false);
         expect("graphics/fonts/orbitron20aa.fnt", false);
         System.out.println("VerifyDeferredTexturePolicy: OK");
     }

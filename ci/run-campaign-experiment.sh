@@ -899,6 +899,26 @@ for _ in {1..30}; do
 done
 curl -fsS -H 'Range: bytes=0-0' http://127.0.0.1:8000/launch.html >/dev/null
 
+if [[ "${STARSECTOR_COMBAT_SMOKE:-false}" == "true" ]]; then
+  STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
+  STARSECTOR_TEST_TIMEOUT_MS=${STARSECTOR_TEST_TIMEOUT_MS:-360000} \
+  STARSECTOR_WINDOW_CONFIG="$WINDOW_CONFIG" \
+  STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
+    node ci/combat-render-test.js
+  grep -q 'Fixer: boot mode combat -> calling CombatMain.main directly' "$OUT/browser.log"
+  python3 - "$OUT/result.json" <<'PYCOMBAT'
+import json, sys
+p=sys.argv[1]
+d=json.load(open(p,encoding='utf-8'))
+assert d.get('ok') is True, d
+assert d.get('combatMainSeen') is True, d
+assert d.get('escapeInput',{}).get('delivered',0) >= 1, d.get('escapeInput')
+assert d.get('escapeInput',{}).get('global',0) >= 2, d.get('escapeInput')
+print('Combat smoke verified fps=', d.get('fps'), 'escape=', d.get('escapeInput'))
+PYCOMBAT
+  exit 0
+fi
+
 # The stock ResourceLoaderState can legitimately take several minutes under
 # headless CheerpJ while Java source/rules and restored graphics are decoded.
 # Do not terminate the run before the campaign bootstrap has had a chance to run.

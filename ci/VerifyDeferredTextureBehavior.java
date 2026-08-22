@@ -60,20 +60,20 @@ public final class VerifyDeferredTextureBehavior {
         BrowserDeferredTextureQueue.ensureLoaded("portrait");
         require(oOoO.LOADS.size() == 2, "second lookup must not reload");
 
-        java.lang.String weaponMiss = "graphics/weapons/flechette_heavy_hardpoint_recoil.png";
-        int loadsBeforeWeaponMiss = oOoO.LOADS.size();
-        require(!oOoO.REGISTRY.containsKey(weaponMiss), "weapon miss must start absent from registry");
-        BrowserDeferredTextureQueue.ensureLoaded(weaponMiss);
-        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1
-                && oOoO.LOADS.get(loadsBeforeWeaponMiss).equals(weaponMiss + "=" + weaponMiss),
-                "concrete weapon registry miss must load exact path once: " + oOoO.LOADS);
-        require(oOoO.REGISTRY.containsKey(weaponMiss), "direct miss must populate registry");
+        java.lang.String deferredMiss = "graphics/damage/damage1.png";
+        int loadsBeforeDeferredMiss = oOoO.LOADS.size();
+        require(!oOoO.REGISTRY.containsKey(deferredMiss), "deferred miss must start absent from registry");
+        BrowserDeferredTextureQueue.ensureLoaded(deferredMiss);
+        require(oOoO.LOADS.size() == loadsBeforeDeferredMiss + 1
+                && oOoO.LOADS.get(loadsBeforeDeferredMiss).equals(deferredMiss + "=" + deferredMiss),
+                "concrete deferred registry miss must load exact path once: " + oOoO.LOADS);
+        require(oOoO.REGISTRY.containsKey(deferredMiss), "direct miss must populate registry");
         require(BrowserDeferredTextureQueue.getDirectMissLoadCount() == 1L, "direct miss load counter");
         require(BrowserDeferredTextureQueue.getDirectMissLoadFailedCount() == 0L, "direct miss failure counter");
-        BrowserDeferredTextureQueue.ensureLoaded(weaponMiss);
-        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1, "resolved weapon miss must not reload");
-        BrowserDeferredTextureQueue.ensureLoaded("weapon-symbolic-id");
-        require(oOoO.LOADS.size() == loadsBeforeWeaponMiss + 1, "non-path key must not infer a file load");
+        BrowserDeferredTextureQueue.ensureLoaded(deferredMiss);
+        require(oOoO.LOADS.size() == loadsBeforeDeferredMiss + 1, "resolved deferred miss must not reload");
+        BrowserDeferredTextureQueue.ensureLoaded("deferred-symbolic-id");
+        require(oOoO.LOADS.size() == loadsBeforeDeferredMiss + 1, "non-path key must not infer a file load");
 
         int loadsBeforeDuplicate = oOoO.LOADS.size();
         BrowserDeferredTextureQueue.loadOrDefer("dup", "graphics/illustrations/first.jpg");
@@ -83,25 +83,31 @@ public final class VerifyDeferredTextureBehavior {
         require(BrowserDeferredTextureQueue.getPendingCount() == 0, "different-path duplicate must not remain deferred");
 
         int predecodeBeforeWarm = L.PREDECODE.size();
-        BrowserDeferredTextureQueue.loadOrDefer("skill", "graphics/icons/skills/elite_combat.png");
+        int eagerBefore = oOoO.LOADS.size();
         BrowserDeferredTextureQueue.loadOrDefer("ship", "graphics/ships/lasher/lasher_base.png");
+        BrowserDeferredTextureQueue.loadOrDefer("weapon", "graphics/weapons/energy/beamfringe.png");
+        require(oOoO.LOADS.size() == eagerBefore + 2, "ship/weapon textures must be eager for combat correctness: " + oOoO.LOADS);
+        BrowserDeferredTextureQueue.loadOrDefer("skill", "graphics/icons/skills/elite_combat.png");
+        BrowserDeferredTextureQueue.loadOrDefer("tactical", "graphics/icons/tactical/assault.png");
         BrowserDeferredTextureQueue.loadOrDefer("planet", "graphics/planets/terran.jpg");
-        BrowserDeferredTextureQueue.loadOrDefer("combat", "graphics/damage/damage1.png");
+        BrowserDeferredTextureQueue.loadOrDefer("combat", "graphics/damage/damage2.png");
         BrowserDeferredTextureQueue.startGameplayPrewarm();
         long deadline = System.currentTimeMillis() + 2000L;
         while (!BrowserDeferredTextureQueue.isGameplayPrewarmDone() && System.currentTimeMillis() < deadline) {
             Thread.sleep(5L);
         }
         require(BrowserDeferredTextureQueue.isGameplayPrewarmDone(), "gameplay prewarm did not complete");
-        require(BrowserDeferredTextureQueue.getGameplayPredecodeCount() == 3L,
-                "expected UI/refit/world predecode count=3 actual=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
+        require(BrowserDeferredTextureQueue.getGameplayPredecodeCount() == 4L,
+                "expected UI/combat/world predecode count=4 actual=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());
         require(BrowserDeferredTextureQueue.getGameplayPredecodeFailedCount() == 0L, "unexpected predecode failures");
         require(BrowserDeferredTextureQueue.getGameplayPrewarmPendingCount() == 0, "prewarm queues should drain");
-        require(L.PREDECODE.size() == predecodeBeforeWarm + 3, "unexpected background predecode list=" + L.PREDECODE);
+        require(L.PREDECODE.size() == predecodeBeforeWarm + 4, "unexpected background predecode list=" + L.PREDECODE);
         require(L.PREDECODE.contains("graphics/icons/skills/elite_combat.png"), "skill missing from prewarm");
-        require(L.PREDECODE.contains("graphics/ships/lasher/lasher_base.png"), "ship missing from prewarm");
+        require(L.PREDECODE.contains("graphics/icons/tactical/assault.png"), "tactical icon missing from prewarm");
         require(L.PREDECODE.contains("graphics/planets/terran.jpg"), "planet missing from prewarm");
-        require(!L.PREDECODE.contains("graphics/damage/damage1.png"), "combat-only texture should not be background predecoded");
+        require(L.PREDECODE.contains("graphics/damage/damage2.png"), "combat effect missing from prewarm");
+        require(!L.PREDECODE.contains("graphics/ships/lasher/lasher_base.png"), "eager ship must not enter deferred prewarm");
+        require(!L.PREDECODE.contains("graphics/weapons/energy/beamfringe.png"), "eager weapon must not enter deferred prewarm");
 
         System.out.println("VerifyDeferredTextureBehavior: OK loads=" + oOoO.LOADS
                 + " predecoded=" + BrowserDeferredTextureQueue.getGameplayPredecodeCount());

@@ -136,6 +136,47 @@ jobs:
           if-no-files-found: warn
 
 
+  combat_smoke:
+    name: Combat render + Escape stability
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Boot real CombatMain and press Escape
+        env:
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_COMBAT_SMOKE: 'true'
+          STARSECTOR_COMBAT_SETTLE_MS: '5000'
+          STARSECTOR_COMBAT_ESCAPE_SETTLE_MS: '5000'
+          STARSECTOR_TEST_TIMEOUT_MS: '360000'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+        run: bash ci/run-campaign-experiment.sh 'combat-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+      - name: Upload combat evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combat-fullhd-evidence
+          path: test_output/combat-fullhd
+          if-no-files-found: error
+
+
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
     if: github.ref_name == 'feat/custom-resolution' || github.head_ref == 'feat/custom-resolution'
