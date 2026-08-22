@@ -9,6 +9,7 @@ function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-pointer-dirty.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
 expect(src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1'),'missing dirty marker');
+expect(src.includes('LWJGL_IMMEDIATE_UPLOAD_VIEW_CACHE_V1'),'missing upload-view cache marker');
 for(const needle of ['var immediatePointerLayoutDirty = true;','immediatePointerLayoutDirty = true;','immediatePointerLayoutDirty = false;','immediatePointerLayoutRefreshes++']) expect(src.includes(needle),`missing ${needle}`);
 const names=['clientArrayComponentBytes','normalizeLegacyClientArrayLayout','clientArrayEffectiveStride','isWebGLClientArrayType','isIntegerClientArrayType','convertDesktopClientArrayToFloat','uploadDataImpl','uploadImmediateInterleaved'];
 const code=names.map(n=>extract(src,n)).join('\n');
@@ -16,7 +17,7 @@ const calls=[];
 const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,BYTE:0x1400,UNSIGNED_BYTE:0x1401,SHORT:0x1402,UNSIGNED_SHORT:0x1403,NO_ERROR:0,
  bindBuffer:(...a)=>calls.push(['bind',...a]), bufferData:(...a)=>calls.push(['data',...a]), vertexAttribPointer:(...a)=>calls.push(['ptr',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]), getError:()=>0};
 const c=vm.createContext({glCtx,DataView,Float32Array,Math,Number,Set,console,clientArrayWarnings:new Set(),warnOnce(){},strictWebGLValidation:false,
- immediateModeData:{interleavedBuf:new Float32Array(96)},vertexBuffer:{id:'v'},vertexPosition:3,colorLocation:4,texCoord:5,
+ immediateModeData:{interleavedBuf:new Float32Array(96),interleavedUploadViews:[],interleavedUploadViewsBuffer:null},vertexBuffer:{id:'v'},vertexPosition:3,colorLocation:4,texCoord:5,
  presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediatePointerLayoutRefreshes:0},immediatePointerLayoutDirty:true});
 vm.runInContext(code,c);
 // First immediate upload installs the fixed layout.
@@ -28,6 +29,7 @@ expect(c.immediatePointerLayoutDirty===false,'fixed layout should be clean');
 c.uploadImmediateInterleaved(2);
 expect(calls.filter(x=>x[0]==='ptr').length===3,'clean immediate upload repeated pointer calls');
 expect(c.presentationStats.immediatePointerLayoutRefreshes===1,'clean upload refreshed layout');
+const uploadCalls=calls.filter(x=>x[0]==='data'); expect(uploadCalls.length>=2&&uploadCalls[0][2]===uploadCalls[1][2],'same-size upload did not reuse cached subarray view');
 // A legacy client-array pointer write dirties the fixed immediate layout.
 const legacy=new Float32Array([0,1,2,3,4,5]);
 expect(c.uploadDataImpl(legacy,{id:'legacy'},3,3,glCtx.FLOAT,0,2)===true,'legacy upload failed');
@@ -38,4 +40,5 @@ c.uploadImmediateInterleaved(2);
 expect(calls.filter(x=>x[0]==='ptr').length===7,'dirty immediate layout did not restore three pointers');
 expect(c.presentationStats.immediatePointerLayoutRefreshes===2,'dirty refresh telemetry');
 expect(c.immediatePointerLayoutDirty===false,'restored immediate layout should be clean');
+const oldView=c.immediateModeData.interleavedUploadViews[18]; c.immediateModeData.interleavedBuf=new Float32Array(192); c.uploadImmediateInterleaved(2); expect(c.immediateModeData.interleavedUploadViews[18]!==oldView,'backing-buffer growth did not invalidate upload view cache');
 console.log(`verify-lwjgl-immediate-pointer-dirty: OK refreshes=${c.presentationStats.immediatePointerLayoutRefreshes} pointerCalls=${calls.filter(x=>x[0]==='ptr').length}`);

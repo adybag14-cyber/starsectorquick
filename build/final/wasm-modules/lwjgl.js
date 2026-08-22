@@ -455,12 +455,15 @@ var immediateModeData =
 	texCoordBuf: new Float32Array(32),
 	texCoordPos: 0,
 	interleavedBuf: new Float32Array(96),
-	interleavedPos: 0
+	interleavedPos: 0,
+	interleavedUploadViews: [],
+	interleavedUploadViewsBuffer: null
 };
 // WEBGL_IMMEDIATE_INTERLEAVED_V1: immediate mode already captures exactly
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// LWJGL_IMMEDIATE_UPLOAD_VIEW_CACHE_V1: reuse Float32Array views for recurring immediate vertex counts instead of allocating a new subarray object on every glEnd. Cache is invalidated when the backing buffer grows.
 // LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
 // is already captured per vertex. Defer the generic color attribute until a
 // client-array draw actually needs it instead of issuing two WebGL calls here.
@@ -487,7 +490,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateUploadViewCacheActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2353,7 +2357,20 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 function uploadImmediateInterleaved(vertexCount)
 {
 	var floatCount = vertexCount * 9;
-	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
+	var source = immediateModeData.interleavedBuf;
+	var views = immediateModeData.interleavedUploadViews;
+	if(immediateModeData.interleavedUploadViewsBuffer !== source)
+	{
+		views = [];
+		immediateModeData.interleavedUploadViews = views;
+		immediateModeData.interleavedUploadViewsBuffer = source;
+	}
+	var data = views[floatCount];
+	if(data === undefined)
+	{
+		data = source.subarray(0, floatCount);
+		views[floatCount] = data;
+	}
 	var stride = 9 * 4;
 	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
 	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
