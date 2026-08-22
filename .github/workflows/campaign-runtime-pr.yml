@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-texcoord-store-trim-frame-tail-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/immediate-texcoord-store-trim-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -218,8 +218,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: implicit texcoord store trim frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-texcoord-store-trim-frame-tail-ab'
+    name: implicit texcoord store trim 240-frame A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/immediate-texcoord-store-trim-finalist-long'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -279,6 +279,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: immediate-texcoord-store-trim-frame-tail-ab
+          name: immediate-texcoord-store-trim-finalist-long
           path: test_output/frame-perf-ab
           if-no-files-found: error
