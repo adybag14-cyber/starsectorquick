@@ -1124,6 +1124,7 @@ ${fallback}`);
       immediatePointerLayoutRefreshDelta: Number(perfAfter.immediatePointerLayoutRefreshes || 0) - Number(perfBefore.immediatePointerLayoutRefreshes || 0),
       immediatePointerLayoutRefreshCount: Number(perfAfter.immediatePointerLayoutRefreshes || 0),
       immediateColorAttribDeferredObserved: Boolean(perfAfter.immediateColorAttribDeferredObserved),
+      detailedDrawTelemetryStaticDispatchActive: Boolean(perfAfter.detailedDrawTelemetryStaticDispatchActive),
       immediateStaticDispatchActive: Boolean(perfAfter.immediateStaticDispatchActive),
     };
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;

@@ -491,6 +491,7 @@ var presentationStats = {
 	immediatePointerLayoutRefreshes: 0,
 	immediateColorAttribDeferredObserved: false,
 	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled,
+	detailedDrawTelemetryStaticDispatchActive: true,
 	immediateStaticDispatchActive: immediateInterleavedEnabled
 };
 var recentSwapTimes = [];
@@ -869,6 +870,59 @@ function drawArraysImpl(mode, first, count)
 		warnOnce(unsupportedDrawModes, mode, "Unsupported glDrawArrays mode=" + mode + " first=" + first + " count=" + count);
 	}
 }
+// LWJGL_DETAILED_DRAW_TELEMETRY_STATIC_DISPATCH_V1: production gameplay keeps
+// high-frequency draw diagnostics disabled. Select a telemetry-free clone once
+// at module load so the renderer pays no per-draw telemetry branch cost.
+function drawArraysImplProduction(mode, first, count)
+{
+	// TODO: Conditional
+	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	// Client-array upload/capture currently assumes first==0. Preserve that
+	// established contract rather than pretending a non-zero base vertex is safe.
+	assert(first == 0);
+	if(mode == 7/*QUADS*/ && (count % 4) == 0)
+	{
+		var quadCount = count / 4;
+		if(quadCount <= 1)
+		{
+			// A single quad already costs one WebGL draw; avoid index-buffer work.
+			glCtx.drawArrays(glCtx.TRIANGLE_FAN, 0, count);
+		}
+		else
+		{
+			ensureQuadIndexCapacity(count);
+			glCtx.bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER, quadIndexBuffer);
+			glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);
+		}
+	}
+	else if(mode == 8/*QUAD_STRIP*/)
+	{
+		glCtx.drawArrays(glCtx.TRIANGLE_STRIP, first, count);
+	}
+	else if(mode == 9/*POLYGON*/)
+	{
+		glCtx.drawArrays(glCtx.TRIANGLE_FAN, first, count);
+	}
+	else if(
+		mode == glCtx.POINTS ||
+		mode == glCtx.LINES ||
+		mode == glCtx.LINE_LOOP ||
+		mode == glCtx.LINE_STRIP ||
+		mode == glCtx.TRIANGLES ||
+		mode == glCtx.TRIANGLE_STRIP ||
+		mode == glCtx.TRIANGLE_FAN
+	)
+	{
+		glCtx.drawArrays(mode, first, count);
+	}
+	else
+	{
+		warnOnce(unsupportedDrawModes, mode, "Unsupported glDrawArrays mode=" + mode + " first=" + first + " count=" + count);
+	}
+}
+if(!detailedDrawTelemetryEnabled) drawArraysImpl = drawArraysImplProduction;
+
 function pushDrawArraysInList(list, v, mode, first, count)
 {
 	var args = [mode, first, count, captureData(v, vertexData, count), captureData(v, colorData, count), captureData(v, texCoordData, count)];
@@ -2401,6 +2455,36 @@ function uploadImmediateInterleaved(vertexCount)
 		presentationStats.immediateInterleavedBytes += floatCount * 4;
 	}
 }
+// Keep immediate upload diagnostics on the opt-in implementation only; browser
+// production uses the telemetry-free clone selected once here.
+function uploadImmediateInterleavedProduction(vertexCount)
+{
+	var floatCount = vertexCount * 9;
+	var data = immediateModeData.interleavedBuf.subarray(0, floatCount);
+	var stride = 9 * 4;
+	glCtx.bindBuffer(glCtx.ARRAY_BUFFER, vertexBuffer);
+	glCtx.bufferData(glCtx.ARRAY_BUFFER, data, glCtx.STATIC_DRAW);
+	if(immediatePointerLayoutDirty)
+	{
+		glCtx.vertexAttribPointer(vertexPosition, 3, glCtx.FLOAT, false, stride, 0);
+		glCtx.vertexAttribPointer(colorLocation, 4, glCtx.FLOAT, false, stride, 3 * 4);
+		glCtx.vertexAttribPointer(texCoord, 2, glCtx.FLOAT, false, stride, 7 * 4);
+		immediatePointerLayoutDirty = false;
+		presentationStats.immediatePointerLayoutRefreshes++;
+	}
+	glCtx.enableVertexAttribArray(vertexPosition);
+	glCtx.enableVertexAttribArray(colorLocation);
+	glCtx.enableVertexAttribArray(texCoord);
+	if(strictWebGLValidation)
+	{
+		var attribErr = glCtx.getError();
+		if(attribErr != glCtx.NO_ERROR)
+			warnOnce(clientArrayWarnings, "immediate-interleaved-attrib-error-" + attribErr,
+				"LWJGL interleaved immediate vertexAttribPointer error=" + attribErr);
+	}
+}
+if(!detailedDrawTelemetryEnabled) uploadImmediateInterleaved = uploadImmediateInterleavedProduction;
+
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
 	if(curList)
