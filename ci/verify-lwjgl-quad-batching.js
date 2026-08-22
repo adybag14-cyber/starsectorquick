@@ -66,6 +66,7 @@ const glCtx = {
 };
 
 const context = vm.createContext({
+  detailedDrawTelemetryEnabled: true,
   glCtx,
   quadIndexBuffer: { kind: 'quad-index-buffer' },
   quadIndexVertexCapacity: 0,

@@ -468,6 +468,8 @@ var immediateBeginActive = false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
+// LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1: high-frequency draw/upload counters are diagnostics only. Browser gameplay defaults them off; Node/static verifiers opt in.
+var detailedDrawTelemetryEnabled = typeof window === "undefined" || window.__LWJGL_DETAILED_DRAW_TELEMETRY__ === true;
 var frameCount = 0;
 var presentationStats = {
 	swapCount: 0,
@@ -487,7 +489,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -813,7 +816,7 @@ function drawArraysImpl(mode, first, count)
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
-	presentationStats.legacyDrawCalls++;
+	if(detailedDrawTelemetryEnabled) presentationStats.legacyDrawCalls++;
 	if(mode == 7/*QUADS*/ && (count % 4) == 0)
 	{
 		var quadCount = count / 4;
@@ -821,28 +824,31 @@ function drawArraysImpl(mode, first, count)
 		{
 			// A single quad already costs one WebGL draw; avoid index-buffer work.
 			glCtx.drawArrays(glCtx.TRIANGLE_FAN, 0, count);
-			presentationStats.webglDrawCalls++;
+			if(detailedDrawTelemetryEnabled) presentationStats.webglDrawCalls++;
 		}
 		else
 		{
 			ensureQuadIndexCapacity(count);
 			glCtx.bindBuffer(glCtx.ELEMENT_ARRAY_BUFFER, quadIndexBuffer);
 			glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);
-			presentationStats.webglDrawCalls++;
-			presentationStats.quadBatches++;
-			presentationStats.quadQuads += quadCount;
-			presentationStats.quadDrawCallsSaved += quadCount - 1;
+			if(detailedDrawTelemetryEnabled) presentationStats.webglDrawCalls++;
+			if(detailedDrawTelemetryEnabled)
+			{
+				presentationStats.quadBatches++;
+				presentationStats.quadQuads += quadCount;
+				presentationStats.quadDrawCallsSaved += quadCount - 1;
+			}
 		}
 	}
 	else if(mode == 8/*QUAD_STRIP*/)
 	{
 		glCtx.drawArrays(glCtx.TRIANGLE_STRIP, first, count);
-		presentationStats.webglDrawCalls++;
+		if(detailedDrawTelemetryEnabled) presentationStats.webglDrawCalls++;
 	}
 	else if(mode == 9/*POLYGON*/)
 	{
 		glCtx.drawArrays(glCtx.TRIANGLE_FAN, first, count);
-		presentationStats.webglDrawCalls++;
+		if(detailedDrawTelemetryEnabled) presentationStats.webglDrawCalls++;
 	}
 	else if(
 		mode == glCtx.POINTS ||
@@ -855,7 +861,7 @@ function drawArraysImpl(mode, first, count)
 	)
 	{
 		glCtx.drawArrays(mode, first, count);
-		presentationStats.webglDrawCalls++;
+		if(detailedDrawTelemetryEnabled) presentationStats.webglDrawCalls++;
 	}
 	else
 	{
@@ -2375,10 +2381,13 @@ function uploadImmediateInterleaved(vertexCount)
 			warnOnce(clientArrayWarnings, "immediate-interleaved-attrib-error-" + attribErr,
 				"LWJGL interleaved immediate vertexAttribPointer error=" + attribErr);
 	}
-	presentationStats.immediateInterleavedDraws++;
-	presentationStats.immediateInterleavedUploads++;
-	presentationStats.immediateInterleavedUploadsSaved += 2;
-	presentationStats.immediateInterleavedBytes += floatCount * 4;
+	if(detailedDrawTelemetryEnabled)
+	{
+		presentationStats.immediateInterleavedDraws++;
+		presentationStats.immediateInterleavedUploads++;
+		presentationStats.immediateInterleavedUploadsSaved += 2;
+		presentationStats.immediateInterleavedBytes += floatCount * 4;
+	}
 }
 function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 {
