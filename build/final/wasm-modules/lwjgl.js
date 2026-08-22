@@ -489,6 +489,7 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
+	immediateStableAttribEnableActive: true,
 	immediateColorAttribDeferredObserved: false,
 	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled
 };
@@ -635,6 +636,10 @@ function convertDesktopClientArrayToFloat(buf, size, type, stride, count, normal
 // Legacy client uploads are the only other pointer writers, so they mark that
 // fixed layout dirty instead of forcing three vertexAttribPointer calls per draw.
 var immediatePointerLayoutDirty = true;
+// LWJGL_IMMEDIATE_STABLE_ATTRIB_ENABLE_V1: generic current-color updates disable only
+// the color array. Position and texcoord enables stay valid until a real legacy
+// disable, so refresh those two together only when dirtied and always restore color.
+var immediateStableAttribEnableDirty = true;
 function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, count)
 {
 	var originalType = type;
@@ -725,6 +730,8 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		else
 		{
 			glCtx.disableVertexAttribArray(attributeLocation);
+			if(attributeLocation == vertexPosition || attributeLocation == texCoord)
+				immediateStableAttribEnableDirty = true;
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -2371,9 +2378,13 @@ function uploadImmediateInterleaved(vertexCount)
 		immediatePointerLayoutDirty = false;
 		presentationStats.immediatePointerLayoutRefreshes++;
 	}
-	glCtx.enableVertexAttribArray(vertexPosition);
+	if(immediateStableAttribEnableDirty)
+	{
+		glCtx.enableVertexAttribArray(vertexPosition);
+		glCtx.enableVertexAttribArray(texCoord);
+		immediateStableAttribEnableDirty = false;
+	}
 	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.enableVertexAttribArray(texCoord);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2409,6 +2420,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		else
 		{
 			glCtx.disableVertexAttribArray(texCoord);
+			immediateStableAttribEnableDirty = true;
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}

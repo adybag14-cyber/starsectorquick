@@ -18,7 +18,7 @@ const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,BYTE:0x1400,UNS
 const c=vm.createContext({glCtx,DataView,Float32Array,Math,Number,Set,console,clientArrayWarnings:new Set(),warnOnce(){},strictWebGLValidation:false,
  detailedDrawTelemetryEnabled:true,
  immediateModeData:{interleavedBuf:new Float32Array(96)},vertexBuffer:{id:'v'},vertexPosition:3,colorLocation:4,texCoord:5,
- presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediatePointerLayoutRefreshes:0},immediatePointerLayoutDirty:true});
+ presentationStats:{immediateInterleavedDraws:0,immediateInterleavedUploads:0,immediateInterleavedUploadsSaved:0,immediateInterleavedBytes:0,immediatePointerLayoutRefreshes:0},immediatePointerLayoutDirty:true, immediateStableAttribEnableDirty:true});
 vm.runInContext(code,c);
 // First immediate upload installs the fixed layout.
 c.uploadImmediateInterleaved(2);
