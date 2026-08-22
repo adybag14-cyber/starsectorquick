@@ -243,8 +243,8 @@ jobs:
           git fetch origin \
             refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
             refs/heads/perf/input-query-telemetry-optin-current:refs/remotes/origin/perf/input-query-telemetry-optin-current
-          test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "60e21b1fef5985f69e0de1fd39290df696a67033"
-          test "$(git rev-parse origin/perf/input-query-telemetry-optin-current)" = "ef5c0792935570c64073cbe24eb6d616d640478e"
+          test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "bb67299ca71fe57fb10c083cb6ef3c4d460dfcdf"
+          test "$(git rev-parse origin/perf/input-query-telemetry-optin-current)" = "a5bdcf9f1f85b0afd7306dac85122fc03fb58ad1"
           test "$(git show origin/perf/input-query-telemetry-optin-current:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_INPUT_QUERY_TELEMETRY_OPTIN_V1)" -eq 1
           test "$(git show origin/feature/starsector-webgl-integration:build/final/wasm-modules/lwjgl.js | grep -Fc LWJGL_INPUT_QUERY_TELEMETRY_OPTIN_V1)" -eq 0
       - name: Restore official release cache
