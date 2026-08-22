@@ -22,7 +22,7 @@ concurrency:
 jobs:
   prepare:
     name: prepare runtime diagnostics
-    if: github.event_name != 'pull_request' || github.head_ref != 'diag/lazy-current-color-production-frame-tail-ab'
+    if: github.event_name != 'pull_request' || github.head_ref != 'diag/lazy-color-enable-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -137,8 +137,8 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: lazy current color frame-tail A/B
-    if: github.event_name == 'pull_request' && github.head_ref == 'diag/lazy-current-color-production-frame-tail-ab'
+    name: lazy color plus attrib-enable dirty frame-tail A/B
+    if: github.event_name == 'pull_request' && github.head_ref == 'diag/lazy-color-enable-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     steps:
@@ -161,9 +161,9 @@ jobs:
           set -euo pipefail
           git fetch origin \
             refs/heads/feature/starsector-webgl-integration:refs/remotes/origin/feature/starsector-webgl-integration \
-            refs/heads/perf/pointer-dirty-lazy-current-color:refs/remotes/origin/perf/pointer-dirty-lazy-current-color
+            refs/heads/perf/lazy-current-color-attrib-enable-dirty-current:refs/remotes/origin/perf/lazy-current-color-attrib-enable-dirty-current
           test "$(git rev-parse origin/feature/starsector-webgl-integration)" = "0eedc59892cb839fc747e1a31eac295198896297"
-          test "$(git rev-parse origin/perf/pointer-dirty-lazy-current-color)" = "a27c3588bb4b7e05f223408b978ed7d05be8818d"
+          test "$(git rev-parse origin/perf/lazy-current-color-attrib-enable-dirty-current)" = "7d9765932ee4d5bfcba9cac6ceebacbde27f6ea3"
       - name: Restore official release cache
         uses: actions/cache@v4
         with:
@@ -185,8 +185,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: Production baseline A
         run: bash ci/run-frame-perf-ab-variant.sh baseline-a origin/feature/starsector-webgl-integration
-      - name: Lazy current-color candidate
-        run: bash ci/run-frame-perf-ab-variant.sh lazy-current-color origin/perf/pointer-dirty-lazy-current-color
+      - name: Lazy color plus attrib-enable dirty candidate
+        run: bash ci/run-frame-perf-ab-variant.sh lazy-color-enable origin/perf/lazy-current-color-attrib-enable-dirty-current
       - name: Production baseline B
         run: bash ci/run-frame-perf-ab-variant.sh baseline-b origin/feature/starsector-webgl-integration
       - name: Summarize drift-adjusted frame metrics
@@ -196,6 +196,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lazy-current-color-frame-tail-ab
+          name: lazy-color-enable-frame-tail-ab
           path: test_output/frame-perf-ab
           if-no-files-found: error

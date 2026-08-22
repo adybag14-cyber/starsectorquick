@@ -3,9 +3,9 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['baseline-a', 'lazy-current-color', 'baseline-b']
+ORDER = ['baseline-a', 'lazy-color-enable', 'baseline-b']
 BASELINE_SHA = '0eedc59892cb839fc747e1a31eac295198896297'
-CANDIDATE_SHA = 'a27c3588bb4b7e05f223408b978ed7d05be8818d'
+CANDIDATE_SHA = '7d9765932ee4d5bfcba9cac6ceebacbde27f6ea3'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
 
@@ -64,7 +64,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['baseline-a'], by['lazy-current-color'], by['baseline-b']
+    a, c, b = by['baseline-a'], by['lazy-color-enable'], by['baseline-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -78,23 +78,23 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Color-defer production vs lazy current-color same-runner A/B', '',
+        '# Production vs lazy current-color + attrib-enable dirty same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
-        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | lazy active | draws | world |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+        '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | lazy active | attrib refreshes | draws | world |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ]
     for r in rows:
         world = '-' if not r.get('world') else '/'.join(str(x) for x in r['world'])
-        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('lazy_current_color',False)} | {r.get('interleaved_draws','-')} | {world} |")
+        lines.append(f"| {r['name']} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('lazy_current_color',False)} | {r.get('attrib_refreshes','-')} | {r.get('interleaved_draws','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted lazy current-color delta:']
+    lines += ['', 'Drift-adjusted lazy color + attrib-enable dirty delta:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
     lines.append(f"- upload traffic: draws={c.get('interleaved_draws')} uploads={c.get('interleaved_uploads')} saved={c.get('interleaved_saved')} bytes={c.get('interleaved_bytes')}")
     (ROOT / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print('\n'.join(lines))
-    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('lazy-current-color', CANDIDATE_SHA)]:
+    for name, expected_ref in [('baseline-a', BASELINE_SHA), ('baseline-b', BASELINE_SHA), ('lazy-color-enable', CANDIDATE_SHA)]:
         r = by[name]
         if r.get('rc') != 0 or r.get('verify_rc') != 0 or r.get('ok') is not True:
             raise SystemExit(f'candidate invalid: {name}: {r}')
@@ -106,11 +106,16 @@ def main():
             raise SystemExit(f'ref mismatch: {name}: {r.get("ref")} != {expected_ref}')
     draws = int(c.get('interleaved_draws') or 0)
     if draws < 1000 or int(c.get('interleaved_uploads') or 0) < 1000:
-        raise SystemExit(f'lazy-current-color traffic evidence invalid: {c}')
+        raise SystemExit(f'lazy-color-enable traffic evidence invalid: {c}')
     if c.get('lazy_current_color') is not True:
-        raise SystemExit(f'lazy-current-color candidate did not activate: {c}')
+        raise SystemExit(f'lazy-color-enable candidate did not activate lazy color: {c}')
     if a.get('lazy_current_color') or b.get('lazy_current_color'):
         raise SystemExit(f'production baseline unexpectedly reports lazy current color: A={a} B={b}')
+    refreshes = int(c.get('attrib_refreshes') or 0)
+    if refreshes <= 0 or refreshes >= draws:
+        raise SystemExit(f'lazy-color-enable refresh evidence invalid: refreshes={refreshes} draws={draws} row={c}')
+    if int(a.get('attrib_refreshes') or 0) != 0 or int(b.get('attrib_refreshes') or 0) != 0:
+        raise SystemExit(f'production baseline unexpectedly reports attrib refreshes: A={a} B={b}')
     return 0
 
 if __name__ == '__main__': raise SystemExit(main())
