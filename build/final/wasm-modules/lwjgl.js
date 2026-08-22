@@ -461,6 +461,7 @@ var immediateModeData =
 // position(3)+color(4)+texcoord(2) per vertex. Keep those nine floats together
 // so glEnd performs one WebGL upload instead of three independent uploads.
 var immediateInterleavedEnabled = typeof window === "undefined" || window.__LWJGL_IMMEDIATE_INTERLEAVED__ !== false;
+// LWJGL_IMMEDIATE_SECONDARY_COUNTER_TRIM_V1: in interleaved mode vertexPos remains the authoritative draw count; colorPos/texCoordPos are legacy-fallback-only and need no per-vertex writes.
 // LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1: glColor inside interleaved glBegin/glEnd
 // is already captured per vertex. Defer the generic color attribute until a
 // client-array draw actually needs it instead of issuing two WebGL calls here.
@@ -487,7 +488,8 @@ var presentationStats = {
 	immediateInterleavedUploadsSaved: 0,
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
-	immediateColorAttribDeferredObserved: false
+	immediateColorAttribDeferredObserved: false,
+	immediateSecondaryCounterTrimActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2308,8 +2310,6 @@ function appendImmediateVertex(x, y, z, texS, texT)
 		out[pos + 7] = texS; out[pos + 8] = texT;
 		immediateModeData.interleavedPos = pos + 9;
 		immediateModeData.vertexPos += 3;
-		immediateModeData.colorPos += 4;
-		immediateModeData.texCoordPos += 2;
 		immediateModeData.currentTexCoord[0] = texS;
 		immediateModeData.currentTexCoord[1] = texT;
 		return;

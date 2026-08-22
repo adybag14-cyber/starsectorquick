@@ -10,7 +10,7 @@ function extract(source,name){
 function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-interleaved.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
-for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved']) expect(src.includes(marker),`missing ${marker}`);
+for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_IMMEDIATE_SECONDARY_COUNTER_TRIM_V1','immediateSecondaryCounterTrimActive']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
 const code=names.map(n=>extract(src,n)).join('\n');
@@ -49,6 +49,7 @@ expect(ptr[2][2]===2&&ptr[2][5]===36&&ptr[2][6]===28,'tex layout');
 expect(x.legacy.length===0,'enabled path used legacy uploader'); expect(x.draws.length===1&&x.draws[0].count===2,'enabled draw count');
 expect(c.presentationStats.immediateInterleavedDraws===1&&c.presentationStats.immediateInterleavedUploads===1,'enabled stats');
 expect(c.presentationStats.immediateInterleavedUploadsSaved===2,'saved upload stats'); expect(c.presentationStats.immediateInterleavedBytes===72,'byte stats');
+expect(c.immediateModeData.vertexPos===6,'interleaved vertexPos remains authoritative'); expect(c.immediateModeData.colorPos===0&&c.immediateModeData.texCoordPos===0,'interleaved legacy secondary counters must stay untouched');
 // Existing bridge semantics reset current texcoord at each begin/end block.
 c.Java_org_lwjgl_opengl_GL11_nglBegin(null,4,0); c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,9,8,7,0); c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 uploads=x.calls.filter(a=>a[0]==='bufferData'); const last=uploads[uploads.length-1][2]; expect(last[7]===0&&last[8]===0,'begin-local texcoord reset');
@@ -60,4 +61,5 @@ if(pointerDirtyPresent){
 x=make(false); x.c.Java_org_lwjgl_opengl_GL11_nglBegin(null,7,0); x.c.immediateModeData.currentColor=[.2,.4,.6,.8]; x.c.Java_org_lwjgl_opengl_GL11_nglTexCoord2f(null,.3,.7,0); x.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,2,4,6,0); x.c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 expect(x.legacy.length===3,`fallback uploads=${x.legacy.length}`); expect(x.calls.filter(a=>a[0]==='bufferData').length===0,'fallback direct interleaved upload');
 expect(x.legacy[0].size===3&&x.legacy[1].size===4&&x.legacy[2].size===2,'fallback attribute sizes'); expect(x.draws.length===1&&x.draws[0].count===1,'fallback draw');
+expect(x.c.immediateModeData.vertexPos===3&&x.c.immediateModeData.colorPos===4&&x.c.immediateModeData.texCoordPos===4,'fallback counters changed');
 console.log('verify-lwjgl-immediate-interleaved: OK enabledUploads=1 fallbackUploads=3 stride=36 offsets=0/12/28');
