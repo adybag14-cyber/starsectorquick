@@ -201,6 +201,7 @@ public class Fixer {
     private static boolean directNewGameOrbitalEntityCtorProbeDisabledLogged = false;
     private static final Object AUTO_COMBAT_MISSION_WATCHER_LOCK = new Object();
     private static Thread autoCombatMissionWatcherThread;
+    private static String lastCombatShipSpriteIssue = null;
     private static final Object AUTO_CAMPAIGN_WATCHER_LOCK = new Object();
     private static Thread autoCampaignWatcherThread;
     private static long autoCampaignWatcherSerial = 0L;
@@ -416,8 +417,16 @@ public class Fixer {
                             + " class=" + describeRuntimeClass(current));
                 }
                 if (isCombatStateForProbe(stateId, current)) {
-                    System.out.println("BrowserCombatProbe: combat-state-ready");
-                    return;
+                    String spriteIssue = describeCombatShipSpriteIssue(current);
+                    if (spriteIssue == null) {
+                        System.out.println("BrowserCombatProbe: combat-state-ready");
+                        System.out.println("BrowserCombatProbe: ship-sprites-ready");
+                        return;
+                    }
+                    if (!spriteIssue.equals(lastCombatShipSpriteIssue)) {
+                        lastCombatShipSpriteIssue = spriteIssue;
+                        System.out.println("BrowserCombatProbe: ship-sprites-pending " + spriteIssue);
+                    }
                 }
                 if (ctx != null && isTitleState(stateId, current)) {
                     Object missionWidget = readFieldRecursive(current, "missionWidget");
@@ -496,6 +505,53 @@ public class Fixer {
     private static boolean isCombatStateForProbe(String stateId, Object state) {
         if (COMBAT_STATE_ID.equals(stateId)) return true;
         return state != null && state.getClass().getName().endsWith(".CombatState");
+    }
+
+    private static String describeCombatShipSpriteIssue(Object combatState) {
+        try {
+            Object engine = readFieldRecursive(combatState, "engine");
+            if (engine == null) engine = invokeNoArgIfPresent(combatState, "getEngine");
+            if (engine == null) return "engine-null";
+            Object shipsObj = invokeNoArgIfPresent(engine, "getShips");
+            if (!(shipsObj instanceof Collection)) return "ships-unavailable";
+            Collection ships = (Collection) shipsObj;
+            if (ships.isEmpty()) return "ships-empty-awaiting-deployment";
+            int checked = 0;
+            int renderable = 0;
+            for (Object ship : ships) {
+                if (ship == null) continue;
+                checked++;
+                Object sprite = invokeNoArgIfPresent(ship, "getSprite");
+                if (sprite == null) return "ship-sprite-null index=" + checked
+                        + " ship=" + describeRuntimeClass(ship);
+                Object texture = invokeNoArgIfPresent(sprite, "getTexture");
+                if (texture == null) return "ship-texture-null index=" + checked
+                        + " ship=" + describeRuntimeClass(ship);
+                int imageWidth = intValueOrZero(invokeNoArgIfPresent(sprite, "getImageWidth"));
+                int imageHeight = intValueOrZero(invokeNoArgIfPresent(sprite, "getImageHeight"));
+                if (imageWidth <= 0 || imageHeight <= 0) {
+                    return "ship-sprite-size-invalid index=" + checked + " size="
+                            + imageWidth + "x" + imageHeight;
+                }
+                renderable++;
+            }
+            Object playerShip = invokeNoArgIfPresent(engine, "getPlayerShip");
+            if (playerShip != null) {
+                Object playerSprite = invokeNoArgIfPresent(playerShip, "getSprite");
+                Object playerTexture = playerSprite == null ? null : invokeNoArgIfPresent(playerSprite, "getTexture");
+                if (playerSprite == null || playerTexture == null) return "player-ship-sprite-texture-null";
+            }
+            if (renderable <= 0) return "no-renderable-ships";
+            System.out.println("BrowserCombatProbe: ship-sprite-count=" + renderable
+                    + " playerShip=" + describeRuntimeClass(playerShip));
+            return null;
+        } catch (Throwable t) {
+            return "probe-exception=" + describeThrowableChain(t);
+        }
+    }
+
+    private static int intValueOrZero(Object value) {
+        return value instanceof Number ? ((Number) value).intValue() : 0;
     }
 
     private static List firstListFieldValue(Object target) {

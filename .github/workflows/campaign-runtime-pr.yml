@@ -165,7 +165,7 @@ jobs:
           STARSECTOR_COMBAT_SMOKE: 'true'
           STARSECTOR_COMBAT_SETTLE_MS: '5000'
           STARSECTOR_COMBAT_ESCAPE_SETTLE_MS: '5000'
-          STARSECTOR_TEST_TIMEOUT_MS: '360000'
+          STARSECTOR_TEST_TIMEOUT_MS: '900000'
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
         run: bash ci/run-campaign-experiment.sh 'combat-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Upload combat evidence
