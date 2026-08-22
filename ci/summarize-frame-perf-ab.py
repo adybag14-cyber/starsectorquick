@@ -62,7 +62,7 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# Current production vs stable immediate attrib-enable same-runner A/B', '',
+        '# Current production vs stable immediate attrib-enable 240-frame same-runner A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
         '| variant | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | swaps | stable attrib | world |',
         '|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|',
