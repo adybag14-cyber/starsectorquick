@@ -12,8 +12,15 @@ const path=process.argv[2]; if(!path) throw new Error('usage: node ci/verify-lwj
 const src=fs.readFileSync(path,'utf8');
 expect(src.includes('LWJGL_INPUT_QUERY_TELEMETRY_OPTIN_V1'),'marker missing');
 expect(src.includes('__LWJGL_INPUT_QUERY_TELEMETRY__'),'runtime opt-in missing');
+const begin='// LWJGL_INPUT_QUERY_TELEMETRY_OVERRIDES_BEGIN';
+const end='// LWJGL_INPUT_QUERY_TELEMETRY_OVERRIDES_END';
+const bi=src.indexOf(begin), ei=src.indexOf(end);
+expect(bi>=0&&ei>bi,'override block markers missing');
+const overrideCode=src.slice(bi+begin.length,ei);
 const names=['Java_org_lwjgl_input_Keyboard_nIsKeyDown','Java_org_lwjgl_input_Mouse_nIsButtonDown','Java_org_lwjgl_input_Mouse_nGetX','Java_org_lwjgl_input_Mouse_nGetY'];
-const code=names.map(n=>extract(src,n)).join('\n');
+const baseFunctions=names.map(n=>extract(src,n));
+for(const fn of baseFunctions) expect(!fn.includes('inputStats.'),`production query function still touches telemetry: ${fn.split('\n')[0]}`);
+const code=baseFunctions.join('\n')+'\n'+overrideCode;
 function make(enabled){
   const c=vm.createContext({
     inputQueryTelemetryEnabled:enabled,
@@ -37,4 +44,4 @@ c.Java_org_lwjgl_input_Mouse_nIsButtonDown(null,0); c.Java_org_lwjgl_input_Mouse
 c.Java_org_lwjgl_input_Mouse_nGetX(); c.Java_org_lwjgl_input_Mouse_nGetY();
 expect(c.inputStats.keyboardStateQueries===2&&c.inputStats.keyboardPressedQueries===1,'keyboard telemetry opt-in failed');
 expect(c.inputStats.mouseButtonQueries===2&&c.inputStats.mousePressedQueries===1&&c.inputStats.mousePositionQueries===2,'mouse telemetry opt-in failed');
-console.log('verify-lwjgl-input-query-telemetry: OK off=zero on=2/1/2/1/2');
+console.log('verify-lwjgl-input-query-telemetry: OK production=branchless optin=2/1/2/1/2');

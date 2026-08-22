@@ -1219,9 +1219,7 @@ function Java_org_lwjgl_input_Keyboard_nReset()
 function Java_org_lwjgl_input_Keyboard_nPoll() {}
 function Java_org_lwjgl_input_Keyboard_nIsKeyDown(lib, key)
 {
-	if(inputQueryTelemetryEnabled) inputStats.keyboardStateQueries++;
 	var down = key >= 0 && key < keyboardInputState.down.length && keyboardInputState.down[key] !== 0;
-	if(down && inputQueryTelemetryEnabled) inputStats.keyboardPressedQueries++;
 	return down;
 }
 function Java_org_lwjgl_input_Keyboard_nNext()
@@ -1249,9 +1247,7 @@ function Java_org_lwjgl_input_Mouse_nReset()
 function Java_org_lwjgl_input_Mouse_nPoll() {}
 function Java_org_lwjgl_input_Mouse_nIsButtonDown(lib, button)
 {
-	if(inputQueryTelemetryEnabled) inputStats.mouseButtonQueries++;
 	var down = button >= 0 && button < mouseInputState.buttons.length && mouseInputState.buttons[button] !== 0;
-	if(down && inputQueryTelemetryEnabled) inputStats.mousePressedQueries++;
 	return down;
 }
 function Java_org_lwjgl_input_Mouse_nNext()
@@ -1268,11 +1264,38 @@ function Java_org_lwjgl_input_Mouse_nGetEventX() { return mouseInputState.curren
 function Java_org_lwjgl_input_Mouse_nGetEventY() { return mouseInputState.current ? mouseInputState.current.y : mouseInputState.y; }
 function Java_org_lwjgl_input_Mouse_nGetEventDWheel() { return mouseInputState.current ? mouseInputState.current.wheel : 0; }
 function Java_org_lwjgl_input_Mouse_nGetEventNanoseconds() { return mouseInputState.current ? mouseInputState.current.nanos : inputEventNanos(); }
-function Java_org_lwjgl_input_Mouse_nGetX() { if(inputQueryTelemetryEnabled) inputStats.mousePositionQueries++; return Math.round(mouseInputState.x); }
-function Java_org_lwjgl_input_Mouse_nGetY() { if(inputQueryTelemetryEnabled) inputStats.mousePositionQueries++; return Math.round(mouseInputState.y); }
+function Java_org_lwjgl_input_Mouse_nGetX() { return Math.round(mouseInputState.x); }
+function Java_org_lwjgl_input_Mouse_nGetY() { return Math.round(mouseInputState.y); }
 function Java_org_lwjgl_input_Mouse_nGetDX() { var value=Math.round(mouseInputState.dx); mouseInputState.dx=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDY() { var value=Math.round(mouseInputState.dy); mouseInputState.dy=0; return value; }
 function Java_org_lwjgl_input_Mouse_nGetDWheel() { var value=Math.round(mouseInputState.wheel); mouseInputState.wheel=0; return value; }
+// LWJGL_INPUT_QUERY_TELEMETRY_OVERRIDES_BEGIN
+// Install diagnostic wrappers only when explicitly requested so production polling
+// executes the original branch-free bridge functions.
+if(inputQueryTelemetryEnabled)
+{
+	var rawKeyboardIsKeyDown = Java_org_lwjgl_input_Keyboard_nIsKeyDown;
+	Java_org_lwjgl_input_Keyboard_nIsKeyDown = function(lib, key)
+	{
+		inputStats.keyboardStateQueries++;
+		var down = rawKeyboardIsKeyDown(lib, key);
+		if(down) inputStats.keyboardPressedQueries++;
+		return down;
+	};
+	var rawMouseIsButtonDown = Java_org_lwjgl_input_Mouse_nIsButtonDown;
+	Java_org_lwjgl_input_Mouse_nIsButtonDown = function(lib, button)
+	{
+		inputStats.mouseButtonQueries++;
+		var down = rawMouseIsButtonDown(lib, button);
+		if(down) inputStats.mousePressedQueries++;
+		return down;
+	};
+	var rawMouseGetX = Java_org_lwjgl_input_Mouse_nGetX;
+	Java_org_lwjgl_input_Mouse_nGetX = function() { inputStats.mousePositionQueries++; return rawMouseGetX(); };
+	var rawMouseGetY = Java_org_lwjgl_input_Mouse_nGetY;
+	Java_org_lwjgl_input_Mouse_nGetY = function() { inputStats.mousePositionQueries++; return rawMouseGetY(); };
+}
+// LWJGL_INPUT_QUERY_TELEMETRY_OVERRIDES_END
 function Java_org_lwjgl_input_Mouse_nSetGrabbed(lib, grabbed)
 {
 	mouseInputState.grabbed = !!grabbed;
