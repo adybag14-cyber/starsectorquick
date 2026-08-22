@@ -68,6 +68,7 @@ public class Fixer {
     private static final String FORCE_SCREEN_SCALE_PROPERTY = "starsector.forceScreenScale";
     private static final String DISABLE_LAUNCHER_WARNINGS_PROPERTY = "starsector.disableLauncherWarnings";
     private static final String AUTO_CAMPAIGN_PROPERTY = "starsector.autoCampaign";
+    private static final String AUTO_COMBAT_MISSION_PROPERTY = "starsector.autoCombatMission";
     private static final String AUTO_CAMPAIGN_MODE_PROPERTY = "starsector.autoCampaignMode";
     private static final String AUTO_CAMPAIGN_START_VARIANT_PROPERTY =
             "starsector.autoCampaignStartVariant";
@@ -151,6 +152,7 @@ public class Fixer {
     private static final String CAMPAIGN_SESSION_KEY = "campaign state in session";
     private static final String TITLE_STATE_ID = "Title Screen State";
     private static final String CAMPAIGN_STATE_ID = "Campaign State";
+    private static final String COMBAT_STATE_ID = "Combat State";
     private static final String CONTROLS_VERSION_FALLBACK = "6.3";
     private static final String LOG4J_CONFIG_PROPERTY = "starsector.log4jConfig";
     private static final String LOG4J_FORCE_BASIC_PROPERTY = "starsector.forceBasicLog4j";
@@ -197,6 +199,8 @@ public class Fixer {
     private static long autoCampaignFallbackMarketLogAt = 0L;
     private static String autoCampaignFallbackMarketSignature = null;
     private static boolean directNewGameOrbitalEntityCtorProbeDisabledLogged = false;
+    private static final Object AUTO_COMBAT_MISSION_WATCHER_LOCK = new Object();
+    private static Thread autoCombatMissionWatcherThread;
     private static final Object AUTO_CAMPAIGN_WATCHER_LOCK = new Object();
     private static Thread autoCampaignWatcherThread;
     private static long autoCampaignWatcherSerial = 0L;
@@ -309,6 +313,7 @@ public class Fixer {
         String bootMode = System.getProperty(BOOT_MODE_PROPERTY, "launcher");
         maybeDisableShipHullSpreadsheetPostPass();
         maybeStartAutoCampaignWatcher();
+        maybeStartAutoCombatMissionWatcher();
         ensureStarfarerSettingsLoaded();
         ensureStarfarerSettingsDefaultsPresent();
         ensureGlobalSettingsApiReady();
@@ -369,6 +374,146 @@ public class Fixer {
         updateBootProgressMarker("launcher-ui-enter");
         startBootWatchdog("launcher-ui", 45000L);
         com.fs.starfarer.StarfarerLauncher.main(args == null ? new String[0] : args);
+    }
+
+    /**
+     * CI/browser-only mission driver used to exercise a real CombatState instead
+     * of mistaking CombatMain's ResourceLoaderState for a battle. It waits for
+     * the real title state, builds the first stock mission preview from the same
+     * mission specs used by the title screen, then asks AppDriver to transition
+     * normally. Nothing runs unless starsector.autoCombatMission=true.
+     */
+    private static void maybeStartAutoCombatMissionWatcher() {
+        if (!Boolean.parseBoolean(System.getProperty(AUTO_COMBAT_MISSION_PROPERTY, "false"))) {
+            return;
+        }
+        synchronized (AUTO_COMBAT_MISSION_WATCHER_LOCK) {
+            if (autoCombatMissionWatcherThread != null && autoCombatMissionWatcherThread.isAlive()) {
+                return;
+            }
+            autoCombatMissionWatcherThread = new Thread(new Runnable() {
+                @Override public void run() { runAutoCombatMissionWatcher(); }
+            }, "starsector-browser-auto-combat-mission");
+            autoCombatMissionWatcherThread.setDaemon(true);
+            autoCombatMissionWatcherThread.start();
+        }
+        System.out.println("BrowserCombatProbe: watcher-started");
+    }
+
+    private static void runAutoCombatMissionWatcher() {
+        final long deadline = System.currentTimeMillis() + 420000L;
+        String lastState = "";
+        int previewFailures = 0;
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                DriverContext ctx = resolveDriverContext();
+                Object current = readCurrentStateFromDriver(ctx);
+                if (current == null && ctx != null) current = ctx.currentState;
+                String stateId = runtimeStateId(current);
+                if (stateId.length() > 0 && !stateId.equals(lastState)) {
+                    lastState = stateId;
+                    System.out.println("BrowserCombatProbe: state=" + stateId
+                            + " class=" + describeRuntimeClass(current));
+                }
+                if (isCombatStateForProbe(stateId, current)) {
+                    System.out.println("BrowserCombatProbe: combat-state-ready");
+                    return;
+                }
+                if (ctx != null && isTitleState(stateId, current)) {
+                    Object missionWidget = readFieldRecursive(current, "missionWidget");
+                    Object missionList = invokeNoArgIfPresent(missionWidget, "getMissionList");
+                    List missionItems = firstListFieldValue(missionList);
+                    if (missionItems != null && !missionItems.isEmpty()) {
+                        for (Object item : missionItems) {
+                            Object spec = invokeNoArgIfPresent(item, "getSpec");
+                            if (spec == null) continue;
+                            Object idObj = invokeNoArgIfPresent(spec, "class");
+                            String missionId = idObj == null ? "" : String.valueOf(idObj).trim();
+                            if (missionId.length() == 0) continue;
+                            try {
+                                Class<?> previewClass = Class.forName(
+                                        "com.fs.starfarer.title.Object.OO0O", true, ctx.loader);
+                                Constructor<?> ctor = previewClass.getConstructor(spec.getClass());
+                                Object preview = ctor.newInstance(spec);
+                                Method accepted = findMethodRecursive(
+                                        current.getClass(), "missionAccepted", previewClass);
+                                if (accepted == null) {
+                                    throw new IllegalStateException("TitleScreenState.missionAccepted unavailable");
+                                }
+                                accepted.setAccessible(true);
+                                accepted.invoke(current, preview);
+                                Method go = findMethodRecursive(ctx.driverClass, "goToState", String.class);
+                                if (go == null) {
+                                    go = findMethodRecursive(current.getClass(), "goToState", String.class);
+                                    if (go == null) throw new IllegalStateException("goToState unavailable");
+                                    go.setAccessible(true);
+                                    go.invoke(current, COMBAT_STATE_ID);
+                                } else {
+                                    go.setAccessible(true);
+                                    go.invoke(ctx.driver, COMBAT_STATE_ID);
+                                }
+                                System.out.println("BrowserCombatProbe: mission-selected id=" + missionId);
+                                System.out.println("BrowserCombatProbe: transition-requested state=" + COMBAT_STATE_ID);
+                                break;
+                            } catch (Throwable missionError) {
+                                previewFailures++;
+                                if (previewFailures <= 6) {
+                                    System.out.println("BrowserCombatProbe: mission-preview-failed id="
+                                            + missionId + " error=" + describeThrowableChain(missionError));
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable error) {
+                if (previewFailures <= 6) {
+                    System.out.println("BrowserCombatProbe: watcher-iteration-error "
+                            + describeThrowableChain(error));
+                }
+            }
+            try { Thread.sleep(250L); } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        System.out.println("BrowserCombatProbe: timeout lastState=" + lastState
+                + " previewFailures=" + previewFailures);
+    }
+
+    private static String runtimeStateId(Object state) {
+        if (state == null) return "";
+        try {
+            Method getId = findMethodRecursive(state.getClass(), "getID");
+            if (getId != null) {
+                getId.setAccessible(true);
+                Object value = getId.invoke(state);
+                if (value != null) return String.valueOf(value);
+            }
+        } catch (Throwable ignored) {}
+        return state.getClass().getName();
+    }
+
+    private static boolean isCombatStateForProbe(String stateId, Object state) {
+        if (COMBAT_STATE_ID.equals(stateId)) return true;
+        return state != null && state.getClass().getName().endsWith(".CombatState");
+    }
+
+    private static List firstListFieldValue(Object target) {
+        if (target == null) return null;
+        Class<?> type = target.getClass();
+        while (type != null) {
+            Field[] fields = type.getDeclaredFields();
+            for (Field field : fields) {
+                try {
+                    if (!List.class.isAssignableFrom(field.getType())) continue;
+                    field.setAccessible(true);
+                    Object value = field.get(target);
+                    if (value instanceof List && !((List) value).isEmpty()) return (List) value;
+                } catch (Throwable ignored) {}
+            }
+            type = type.getSuperclass();
+        }
+        return null;
     }
 
     private static void ensureStarfarerSettingsLoaded() {

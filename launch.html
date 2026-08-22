@@ -1240,6 +1240,7 @@
                 // Keep this opt-in; forcing it can drop hull specs needed by campaign preflight.
                 const disableShipHullPostPass = window.__DISABLE_SHIP_HULL_POST_PASS__ === true;
                 const bootMode = (window.__STARSECTOR_BOOT__ || 'launcher').toString().trim().toLowerCase();
+                const autoCombatMission = window.__STARSECTOR_AUTO_COMBAT_MISSION__ === true;
                 const autoCampaign = window.__STARSECTOR_AUTO_CAMPAIGN__ !== false;
                 const autoCampaignMode = (
                     window.__STARSECTOR_AUTO_CAMPAIGN_MODE__ || 'new_direct'
@@ -1340,11 +1341,12 @@
                     : 0;
                 // Background bulk predecode is opt-in only. In software-rendered browser
                 // environments a 1000+ image warmup can starve live Campaign/UI work.
-                // Decode remaining deferred UI/combat art after first-playable by
-                // default. This moves ImageIO work out of the first real battle; users
-                // can still opt out explicitly with __STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ = false.
+                // Full deferred-art predecode is intentionally opt-in. Running the
+                // 900+ asset queue while the player is already interactive can starve
+                // CheerpJ's input/game loop. Combat-critical ship/weapon art is eager
+                // instead, so correctness does not depend on this background sweep.
                 const browserGameplayPrewarm =
-                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ !== false;
+                    browserDeferredTextures && window.__STARSECTOR_BROWSER_GAMEPLAY_PREWARM__ === true;
                 // contentRoot is /app/starsectorquick/starsector/starsector/ on Pages and
                 // /app/starsector/starsector/ locally; FileInputStream reads from that mounted tree.
                 const browserSpecCachePath = `${contentRoot}data/browser-spec-cache-v1.json`;
@@ -1435,6 +1437,8 @@
                     `-Dcom.fs.starfarer.settings.linux=true`,
                     `-Dstarsector.boot=${bootMode}`,
                     `starsector.boot=${bootMode}`,
+                    `-Dstarsector.autoCombatMission=${autoCombatMission}`,
+                    `starsector.autoCombatMission=${autoCombatMission}`,
                     `-Dstarsector.directLaunch=${directLaunch}`,
                     `starsector.directLaunch=${directLaunch}`,
                     `-DstartRes=${renderWidth}x${renderHeight}`,
