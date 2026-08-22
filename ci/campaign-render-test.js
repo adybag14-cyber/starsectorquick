@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
 const { campaignCenterSubjectGate, isCampaignFramePlayable } = require('./campaign-visual-gate');
+const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -469,6 +470,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     : 12000;
   const screenshotActionTimeoutMs = Math.max(10000, screenshotTimeoutMs - 2000);
   const safeScreenshot = async (path, label) => {
+    let primaryError = null;
     try {
       await withTimeout(
         gameCanvas.waitFor({ state: 'visible', timeout: screenshotActionTimeoutMs }),
@@ -481,8 +483,45 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         label,
       );
     } catch (error) {
-      screenshotErrors.push(String(error && (error.stack || error.message) || error));
-      logs.push(`[diagnostic] ${label} failed: ${error.message || error}`);
+      primaryError = error;
+      // A hot continuously-rendering canvas can occasionally make Playwright's
+      // Locator.screenshot actionability/stability wait hit its timeout even
+      // though the WebGL surface is present and rendering. Retry once through a
+      // clipped Page screenshot, which captures the same canvas pixels without
+      // requiring locator stability. Keep the gate strict if this fallback fails.
+      logs.push(`[diagnostic] ${label} locator capture failed; retrying clipped page capture: ${error.message || error}`);
+      flushLogs();
+    }
+
+    try {
+      await sleep(250);
+      // Browser-level viewport capture does not ask the hot Starsector renderer
+      // to run JavaScript or satisfy locator-stability checks. Recover the exact
+      // canvas pixels offline by finding #game-container's distinctive cyan CSS
+      // border in the PNG. This keeps the visual gate strict without depending
+      // on a saturated renderer main thread.
+      const viewportFrame = await withTimeout(
+        page.screenshot(),
+        screenshotTimeoutMs,
+        `${label} viewport fallback`,
+      );
+      const cropped = cropGameCanvasFromViewportScreenshot(
+        viewportFrame,
+        Number(windowConfig.__STARSECTOR_RENDER_WIDTH__ || 1024),
+        Number(windowConfig.__STARSECTOR_RENDER_HEIGHT__ || 768),
+      );
+      if (!cropped) throw new Error(`${label} viewport fallback could not locate game-container border`);
+      fs.writeFileSync(path, cropped.buffer);
+      logs.push(`[diagnostic] ${label} recovered from viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
+      flushLogs();
+      return cropped.buffer;
+    } catch (fallbackError) {
+      const primary = String(primaryError && (primaryError.stack || primaryError.message) || primaryError || 'unknown locator screenshot failure');
+      const fallback = String(fallbackError && (fallbackError.stack || fallbackError.message) || fallbackError);
+      screenshotErrors.push(`${primary}
+Fallback screenshot failed:
+${fallback}`);
+      logs.push(`[diagnostic] ${label} failed after viewport fallback: ${fallbackError.message || fallbackError}`);
       flushLogs();
       return null;
     }
