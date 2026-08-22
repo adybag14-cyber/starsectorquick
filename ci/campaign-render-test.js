@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
 const { campaignCenterSubjectGate, isCampaignFramePlayable } = require('./campaign-visual-gate');
+const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -494,50 +495,33 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
 
     try {
       await sleep(250);
-      const box = await withTimeout(
-        page.evaluate(() => {
-          const canvas = document.getElementById('lwjglCanvas');
-          if (!canvas || !canvas.isConnected) return null;
-          const rect = canvas.getBoundingClientRect();
-          return {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-          };
-        }),
-        5000,
-        `${label} fallback DOM bounds`,
-      );
-      if (!box || box.width <= 0 || box.height <= 0) {
-        throw new Error(`${label} fallback canvas has no visible DOM bounds`);
-      }
-      const viewport = page.viewportSize();
-      const x = Math.max(0, box.x);
-      const y = Math.max(0, box.y);
-      const right = viewport ? Math.min(viewport.width, box.x + box.width) : box.x + box.width;
-      const bottom = viewport ? Math.min(viewport.height, box.y + box.height) : box.y + box.height;
-      const clip = {
-        x,
-        y,
-        width: Math.max(1, right - x),
-        height: Math.max(1, bottom - y),
-      };
-      const fallback = await withTimeout(
-        page.screenshot({ path, clip }),
+      // Browser-level viewport capture does not ask the hot Starsector renderer
+      // to run JavaScript or satisfy locator-stability checks. Recover the exact
+      // canvas pixels offline by finding #game-container's distinctive cyan CSS
+      // border in the PNG. This keeps the visual gate strict without depending
+      // on a saturated renderer main thread.
+      const viewportFrame = await withTimeout(
+        page.screenshot(),
         screenshotTimeoutMs,
-        `${label} clipped page fallback`,
+        `${label} viewport fallback`,
       );
-      logs.push(`[diagnostic] ${label} recovered with clipped page capture`);
+      const cropped = cropGameCanvasFromViewportScreenshot(
+        viewportFrame,
+        Number(windowConfig.__STARSECTOR_RENDER_WIDTH__ || 1024),
+        Number(windowConfig.__STARSECTOR_RENDER_HEIGHT__ || 768),
+      );
+      if (!cropped) throw new Error(`${label} viewport fallback could not locate game-container border`);
+      fs.writeFileSync(path, cropped.buffer);
+      logs.push(`[diagnostic] ${label} recovered from viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
       flushLogs();
-      return fallback;
+      return cropped.buffer;
     } catch (fallbackError) {
       const primary = String(primaryError && (primaryError.stack || primaryError.message) || primaryError || 'unknown locator screenshot failure');
       const fallback = String(fallbackError && (fallbackError.stack || fallbackError.message) || fallbackError);
       screenshotErrors.push(`${primary}
 Fallback screenshot failed:
 ${fallback}`);
-      logs.push(`[diagnostic] ${label} failed after clipped fallback: ${fallbackError.message || fallbackError}`);
+      logs.push(`[diagnostic] ${label} failed after viewport fallback: ${fallbackError.message || fallbackError}`);
       flushLogs();
       return null;
     }
