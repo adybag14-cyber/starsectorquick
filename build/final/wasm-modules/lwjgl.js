@@ -490,7 +490,8 @@ var presentationStats = {
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
 	immediateColorAttribDeferredObserved: false,
-	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled
+	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled,
+	immediateStaticDispatchActive: immediateInterleavedEnabled
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -2289,7 +2290,13 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTexCoord2f);
 	immediateModeData.currentTexCoord[0] = x;
 	immediateModeData.currentTexCoord[1] = y;
-	if(immediateInterleavedEnabled) return;
+}
+function Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy(lib, x, y, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTexCoord2f);
+	immediateModeData.currentTexCoord[0] = x;
+	immediateModeData.currentTexCoord[1] = y;
 	var curPos = immediateModeData.texCoordPos;
 	immediateModeData.texCoordBuf =
 		ensureImmediateArrayCapacity(immediateModeData.texCoordBuf, curPos + 2);
@@ -2301,25 +2308,24 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 // LWJGL_IMMEDIATE_VERTEX_BATCH_V1
 function appendImmediateVertex(x, y, z, texS, texT)
 {
-	if(immediateInterleavedEnabled)
-	{
-		var pos = immediateModeData.interleavedPos;
-		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
-		var out = immediateModeData.interleavedBuf;
-		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
-		out[pos + 3] = immediateModeData.currentColor[0];
-		out[pos + 4] = immediateModeData.currentColor[1];
-		out[pos + 5] = immediateModeData.currentColor[2];
-		out[pos + 6] = immediateModeData.currentColor[3];
-		out[pos + 7] = texS; out[pos + 8] = texT;
-		immediateModeData.interleavedPos = pos + 9;
-		immediateModeData.vertexPos += 3;
-		immediateModeData.colorPos += 4;
-		immediateModeData.texCoordPos += 2;
-		immediateModeData.currentTexCoord[0] = texS;
-		immediateModeData.currentTexCoord[1] = texT;
-		return;
-	}
+	var pos = immediateModeData.interleavedPos;
+	immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
+	var out = immediateModeData.interleavedBuf;
+	out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
+	out[pos + 3] = immediateModeData.currentColor[0];
+	out[pos + 4] = immediateModeData.currentColor[1];
+	out[pos + 5] = immediateModeData.currentColor[2];
+	out[pos + 6] = immediateModeData.currentColor[3];
+	out[pos + 7] = texS; out[pos + 8] = texT;
+	immediateModeData.interleavedPos = pos + 9;
+	immediateModeData.vertexPos += 3;
+	immediateModeData.colorPos += 4;
+	immediateModeData.texCoordPos += 2;
+	immediateModeData.currentTexCoord[0] = texS;
+	immediateModeData.currentTexCoord[1] = texT;
+}
+function appendImmediateVertexLegacy(x, y, z, texS, texT)
+{
 	var curPos = immediateModeData.vertexPos;
 	immediateModeData.vertexBuf = ensureImmediateArrayCapacity(immediateModeData.vertexBuf, curPos + 3);
 	immediateModeData.vertexBuf[curPos] = x;
@@ -2350,9 +2356,15 @@ function Java_org_lwjgl_opengl_GL11_nglVertex3f(lib, x, y, z, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
+	appendImmediateVertex(x, y, z, immediateModeData.currentTexCoord[0], immediateModeData.currentTexCoord[1]);
+}
+function Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy(lib, x, y, z, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglVertex3f);
 	var texPos = immediateModeData.texCoordPos;
-	var texS = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[0] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0);
-	var texT = immediateInterleavedEnabled ? immediateModeData.currentTexCoord[1] : (texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0);
+	var texS = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 2] : 0;
+	var texT = texPos >= 2 ? immediateModeData.texCoordBuf[texPos - 1] : 0;
 	appendImmediateVertex(x, y, z, texS, texT);
 }
 
@@ -2395,26 +2407,41 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
 	var vertexCount = immediateModeData.vertexPos / 3;
-	if(immediateInterleavedEnabled)
-	{
-		uploadImmediateInterleaved(vertexCount);
-	}
+	uploadImmediateInterleaved(vertexCount);
+	// NOTE: We count vertices
+	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
+}
+function Java_org_lwjgl_opengl_GL11_nglEndLegacy(lib, funcPtr)
+{
+	if(curList)
+		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
+	immediateBeginActive = false;
+	var vertexCount = immediateModeData.vertexPos / 3;
+	// Exact legacy fallback: three independent position/color/texcoord uploads.
+	uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
+	uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
+	if(immediateModeData.texCoordPos >= vertexCount * 2)
+		uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
 	else
 	{
-		// Exact legacy fallback: three independent position/color/texcoord uploads.
-		uploadDataImpl(immediateModeData.vertexBuf.subarray(0, immediateModeData.vertexPos), vertexBuffer, vertexPosition, 3, glCtx.FLOAT, 3 * 4);
-		uploadDataImpl(immediateModeData.colorBuf.subarray(0, vertexCount * 4), colorBuffer, colorLocation, 4, glCtx.FLOAT, 4 * 4);
-		if(immediateModeData.texCoordPos >= vertexCount * 2)
-			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
-		else
-		{
-			glCtx.disableVertexAttribArray(texCoord);
-			glCtx.vertexAttrib2f(texCoord, 0, 0);
-		}
+		glCtx.disableVertexAttribArray(texCoord);
+		glCtx.vertexAttrib2f(texCoord, 0, 0);
 	}
 	// NOTE: We count vertices
 	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
 }
+// LWJGL_IMMEDIATE_STATIC_DISPATCH_V1: the interleaved feature flag is fixed at module load.
+// Install the legacy functions once when opted out so production vertex/texcoord/end calls
+// execute branch-free instead of checking immediateInterleavedEnabled on every call.
+// LWJGL_IMMEDIATE_STATIC_DISPATCH_BEGIN
+if(!immediateInterleavedEnabled)
+{
+	Java_org_lwjgl_opengl_GL11_nglTexCoord2f = Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy;
+	appendImmediateVertex = appendImmediateVertexLegacy;
+	Java_org_lwjgl_opengl_GL11_nglVertex3f = Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy;
+	Java_org_lwjgl_opengl_GL11_nglEnd = Java_org_lwjgl_opengl_GL11_nglEndLegacy;
+}
+// LWJGL_IMMEDIATE_STATIC_DISPATCH_END
 
 // These stubs make sure audio creation fails sooner rather than later
 function Java_org_lwjgl_openal_AL_nCreate()

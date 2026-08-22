@@ -10,10 +10,17 @@ function extract(source,name){
 function expect(v,m){if(!v)throw new Error(m);}
 const path=process.argv[2]; if(!path)throw new Error('usage: node ci/verify-lwjgl-immediate-interleaved.js <lwjgl.js>');
 const src=fs.readFileSync(path,'utf8');
-for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1','detailedDrawTelemetryActive']) expect(src.includes(marker),`missing ${marker}`);
+for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1','detailedDrawTelemetryActive','LWJGL_IMMEDIATE_STATIC_DISPATCH_V1']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
-const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
-const code=names.map(n=>extract(src,n)).join('\n');
+const names=['ensureImmediateArrayCapacity','appendImmediateVertex','appendImmediateVertexLegacy','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglTexCoord2fLegacy','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','Java_org_lwjgl_opengl_GL11_nglVertex3fLegacy','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd','Java_org_lwjgl_opengl_GL11_nglEndLegacy'];
+const dispatchBegin='// LWJGL_IMMEDIATE_STATIC_DISPATCH_BEGIN';
+const dispatchEnd='// LWJGL_IMMEDIATE_STATIC_DISPATCH_END';
+const db=src.indexOf(dispatchBegin), de=src.indexOf(dispatchEnd);
+expect(db>=0&&de>db,'static dispatch block missing');
+const dispatchCode=src.slice(db+dispatchBegin.length,de);
+for(const hot of ['appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3f','Java_org_lwjgl_opengl_GL11_nglEnd'])
+  expect(!extract(src,hot).includes('immediateInterleavedEnabled'),`${hot} still branches on static interleaved flag`);
+const code=names.map(n=>extract(src,n)).join('\n')+'\n'+dispatchCode;
 function make(enabled){
   const calls=[]; const legacy=[]; const draws=[];
   const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,NO_ERROR:0,
@@ -61,4 +68,4 @@ if(pointerDirtyPresent){
 x=make(false); x.c.Java_org_lwjgl_opengl_GL11_nglBegin(null,7,0); x.c.immediateModeData.currentColor=[.2,.4,.6,.8]; x.c.Java_org_lwjgl_opengl_GL11_nglTexCoord2f(null,.3,.7,0); x.c.Java_org_lwjgl_opengl_GL11_nglVertex3f(null,2,4,6,0); x.c.Java_org_lwjgl_opengl_GL11_nglEnd(null,0);
 expect(x.legacy.length===3,`fallback uploads=${x.legacy.length}`); expect(x.calls.filter(a=>a[0]==='bufferData').length===0,'fallback direct interleaved upload');
 expect(x.legacy[0].size===3&&x.legacy[1].size===4&&x.legacy[2].size===2,'fallback attribute sizes'); expect(x.draws.length===1&&x.draws[0].count===1,'fallback draw');
-console.log('verify-lwjgl-immediate-interleaved: OK enabledUploads=1 fallbackUploads=3 stride=36 offsets=0/12/28');
+console.log('verify-lwjgl-immediate-interleaved: OK staticDispatch=true enabledUploads=1 fallbackUploads=3 stride=36 offsets=0/12/28');
