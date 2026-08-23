@@ -73,8 +73,10 @@ const lib = { getJNIDataView: () => new DataView(bytes.buffer) };
 const context = vm.createContext({
   glCtx,
   boundTexture2DId: 1,
-  textureGenerateMipmap: [false, false, false],
-  textureStorageUploadFormat: [null, null, null],
+  textureGenerateMipmap: [false, false, false, false],
+  textureStorageUploadFormat: [null, null, null, null],
+  textureStorageWidth: [0, 0, 0, 0],
+  textureStorageHeight: [0, 0, 0, 0],
   compatDrawDiagnosticsEnabled: false,
   strictWebGLValidation: false,
   texImageWarnings: new Set(),
@@ -97,7 +99,7 @@ vm.runInContext(code, context);
 // base image to RGBA for WebGL2, and every later RGB sub-image must use that same
 // tracked storage format instead of sending an invalid three-component update.
 context.Java_org_lwjgl_opengl_GL11_nglTexImage2D(
-  lib, glCtx.TEXTURE_2D, 0, glCtx.RGBA, 1, 1, 0, glCtx.RGB, glCtx.UNSIGNED_BYTE, 1, 0,
+  lib, glCtx.TEXTURE_2D, 0, glCtx.RGBA, 2, 1, 0, glCtx.RGB, glCtx.UNSIGNED_BYTE, 1, 0,
 );
 expect(context.textureStorageUploadFormat[1] === glCtx.RGBA,
   `base storage format was not normalized to RGBA: ${context.textureStorageUploadFormat[1]}`);
@@ -126,7 +128,25 @@ expect(calls.filter(call => call[0] === 'image').length === imagesBeforePromotio
   'undefined level-zero storage was not promoted to texImage2D');
 expect(calls.filter(call => call[0] === 'sub').length === subsBeforePromotion,
   'undefined level-zero storage still issued texSubImage2D');
-expect(context.textureStorageUploadFormat[2] === glCtx.RGB,
+expect(context.textureStorageUploadFormat[2] === glCtx.RGBA,
   `promoted storage format was not tracked: ${context.textureStorageUploadFormat[2]}`);
+expect(context.textureStorageWidth[2] === 1 && context.textureStorageHeight[2] === 1,
+  `promoted storage dimensions were not tracked: ${context.textureStorageWidth[2]}x${context.textureStorageHeight[2]}`);
 
-console.log('verify-lwjgl-texture-subimage: OK RGB storage compatibility and undefined level-zero promotion');
+// A decoded image can also outgrow the deferred loader's placeholder storage.
+// Reallocate only a complete zero-offset refresh; this avoids WebGL's offset-
+// overflow error while leaving genuine partial updates strict.
+context.boundTexture2DId = 3;
+context.Java_org_lwjgl_opengl_GL11_nglTexImage2D(
+  lib, glCtx.TEXTURE_2D, 0, glCtx.RGBA, 1, 1, 0, glCtx.RGB, glCtx.UNSIGNED_BYTE, 1, 0,
+);
+const imagesBeforeGrowth = calls.filter(call => call[0] === 'image').length;
+context.Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(
+  lib, glCtx.TEXTURE_2D, 0, 0, 0, 2, 1, glCtx.RGB, glCtx.UNSIGNED_BYTE, 1, 0,
+);
+expect(calls.filter(call => call[0] === 'image').length === imagesBeforeGrowth + 1,
+  'oversized complete refresh did not grow placeholder storage');
+expect(context.textureStorageWidth[3] === 2 && context.textureStorageHeight[3] === 1,
+  `grown storage dimensions were not tracked: ${context.textureStorageWidth[3]}x${context.textureStorageHeight[3]}`);
+
+console.log('verify-lwjgl-texture-subimage: OK RGB compatibility plus deferred storage create/grow promotion');

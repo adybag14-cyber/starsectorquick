@@ -1283,6 +1283,8 @@ var textureGenerateMipmap = [false];
 // texture storage. Desktop GL accepts RGB updates for an RGBA texture, so keep
 // the normalized base upload format and expand those updates when necessary.
 var textureStorageUploadFormat = [null];
+var textureStorageWidth = [0];
+var textureStorageHeight = [0];
 var textureDebugInfo = [null];
 var boundTexture2DId = 0;
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
@@ -2117,6 +2119,8 @@ function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 		textureObjects[id] = glCtx.createTexture();
 		textureGenerateMipmap[id] = false;
 		textureStorageUploadFormat[id] = null;
+		textureStorageWidth[id] = 0;
+		textureStorageHeight[id] = 0;
 		if(compatDrawDiagnosticsEnabled)
 			textureDebugInfo[id] = { id, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 };
 	}
@@ -2153,7 +2157,11 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	var upload = normalizeTextureUpload(v, memPtr, width, height, internalFormat, format, type);
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
 	if(level == 0)
+	{
 		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
+	}
 	if(compatDrawDiagnosticsEnabled)
 	{
 		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
@@ -2464,7 +2472,11 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 	assert(target == glCtx.TEXTURE_2D);
 	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
 	if(level == 0)
+	{
 		textureStorageUploadFormat[boundTexture2DId] = internalFormat;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
+	}
 	if(compatDrawDiagnosticsEnabled)
 	{
 		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
@@ -2530,17 +2542,26 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
 	var trackedStorageFormat = textureStorageUploadFormat[boundTexture2DId];
-	var storageFormat = trackedStorageFormat || format;
+	var trackedWidth = textureStorageWidth[boundTexture2DId] || 0;
+	var trackedHeight = textureStorageHeight[boundTexture2DId] || 0;
+	// Starsector's loader normally requests RGBA storage even for RGB source
+	// pixels. A deferred handle has no base glTexImage2D call from which to retain
+	// that internal format, so preserve the same WebGL-compatible RGBA contract.
+	var storageFormat = trackedStorageFormat || (format == glCtx.RGB ? glCtx.RGBA : format);
 	var upload = normalizeTextureUpload(v, memPtr, width, height, storageFormat, format, type);
 	// LWJGL_TEX_SUBIMAGE_STORAGE_COMPAT_V1: the browser's deferred loader may
-	// retain a desktop texture handle before its WebGL storage has been created.
-	// A complete level-zero replacement is enough to establish that storage and
-	// is equivalent to the loader's intended full-texture refresh.
-	var promotedToFullImage = !trackedStorageFormat && level == 0 && xoffset == 0 && yoffset == 0;
+	// retain a desktop texture handle before its WebGL storage has been created,
+	// or its tiny placeholder can be smaller than the eventual decoded image. A
+	// zero-offset level-zero refresh carries every pixel needed to establish or
+	// grow that storage; partial updates retain strict texSubImage2D semantics.
+	var regionExceedsStorage = xoffset + width > trackedWidth || yoffset + height > trackedHeight;
+	var promotedToFullImage = level == 0 && xoffset == 0 && yoffset == 0 && (!trackedStorageFormat || regionExceedsStorage);
 	if(promotedToFullImage)
 	{
 		glCtx.texImage2D(target, level, upload.format, width, height, 0, upload.format, upload.type, upload.data);
 		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
 	}
 	else
 	{
@@ -2552,6 +2573,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 		info.subUploadCount++;
 		info.lastSubUpload = {
 			level, xoffset, yoffset, requestedFormat: format, promotedToFullImage,
+			trackedWidth, trackedHeight, regionExceedsStorage,
 			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
 		};
 	}
