@@ -104,7 +104,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Build and verify campaign-direct-main-thread-java17
         env:
-          EXPERIMENT_CONFIG: '{}'
+          EXPERIMENT_CONFIG: '{"__LWJGL_COMPAT_DRAW_DIAGNOSTICS__":true}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'

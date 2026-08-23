@@ -495,6 +495,9 @@ var immediateBeginActive = false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
+var compatDrawDiagnosticsEnabled = typeof window !== "undefined" && window.__LWJGL_COMPAT_DRAW_DIAGNOSTICS__ === true;
+var compatDrawDiagnostics = { enabled: compatDrawDiagnosticsEnabled, frames: [], currentLargeDraws: [], currentClears: [] };
+if(typeof window !== "undefined") window.__lwjglCompatDrawDiagnostics = compatDrawDiagnostics;
 // LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1: high-frequency draw/upload counters are diagnostics only. Browser gameplay defaults them off; Node/static verifiers opt in.
 var detailedDrawTelemetryEnabled = typeof window === "undefined" || window.__LWJGL_DETAILED_DRAW_TELEMETRY__ === true;
 var frameCount = 0;
@@ -664,6 +667,131 @@ function getCurMatrixTop()
 function setCurMatrixTop(m)
 {
 	curMatrixStack[curMatrixStack.length - 1] = m;
+}
+
+// LWJGL_COMPAT_LARGE_DRAW_DIAGNOSTICS_V1: opt-in capture for screen-covering
+// fixed-function draws. This is intentionally disabled in production and only
+// records a bounded summary instead of copying arbitrary game vertex buffers.
+function compatReadScalar(view, offset, type)
+{
+	if(type == glCtx.FLOAT) return view.getFloat32(offset, true);
+	if(type == glCtx.BYTE) return view.getInt8(offset);
+	if(type == glCtx.UNSIGNED_BYTE) return view.getUint8(offset);
+	if(type == glCtx.SHORT) return view.getInt16(offset, true);
+	if(type == glCtx.UNSIGNED_SHORT) return view.getUint16(offset, true);
+	if(type == 0x1404/*GL_INT*/) return view.getInt32(offset, true);
+	if(type == 0x1405/*GL_UNSIGNED_INT*/) return view.getUint32(offset, true);
+	if(type == 0x140A/*GL_DOUBLE*/) return view.getFloat64(offset, true);
+	return NaN;
+}
+function compatProjectedBounds(readPosition, count)
+{
+	if(count < 3 || count > 64) return null;
+	var mv = modelViewMatrixStack[modelViewMatrixStack.length - 1];
+	var proj = projMatrixStack[projMatrixStack.length - 1];
+	var objectPos = glMatrix.vec4.create();
+	var eyePos = glMatrix.vec4.create();
+	var clipPos = glMatrix.vec4.create();
+	var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	for(var i=0;i<count;i++)
+	{
+		var pos = readPosition(i);
+		if(!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return null;
+		objectPos[0] = pos[0]; objectPos[1] = pos[1]; objectPos[2] = Number.isFinite(pos[2]) ? pos[2] : 0; objectPos[3] = 1;
+		glMatrix.vec4.transformMat4(eyePos, objectPos, mv);
+		glMatrix.vec4.transformMat4(clipPos, eyePos, proj);
+		if(!Number.isFinite(clipPos[3]) || Math.abs(clipPos[3]) < 1e-8) return null;
+		var x = clipPos[0] / clipPos[3];
+		var y = clipPos[1] / clipPos[3];
+		minX = Math.min(minX, x); minY = Math.min(minY, y);
+		maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+	}
+	var clippedWidth = Math.max(0, Math.min(1, maxX) - Math.max(-1, minX));
+	var clippedHeight = Math.max(0, Math.min(1, maxY) - Math.max(-1, minY));
+	return { minX, minY, maxX, maxY, coverage: clippedWidth * clippedHeight / 4 };
+}
+function compatRecordLargeDraw(source, mode, count, bounds, extra)
+{
+	if(!bounds || bounds.coverage < 0.45) return;
+	var record = {
+		source, mode, count,
+		bounds,
+		texture2DEnabled,
+		boundTexture2DId,
+		boundTextureExists: boundTexture2DId > 0 && !!textureObjects[boundTexture2DId],
+		textureStorageUploadFormat: textureStorageUploadFormat[boundTexture2DId] || null,
+		currentColor: immediateModeData.currentColor.slice(),
+		blendEnabled: glCtx.isEnabled(glCtx.BLEND),
+		blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+		blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+		alphaTestEnabled: alphaTestState.enabled,
+		viewport: Array.from(glCtx.getParameter(glCtx.VIEWPORT)),
+		...extra
+	};
+	compatDrawDiagnostics.currentLargeDraws.push(record);
+	if(compatDrawDiagnostics.currentLargeDraws.length > 96) compatDrawDiagnostics.currentLargeDraws.shift();
+}
+function compatRecordImmediateDraw(mode, count)
+{
+	if(!compatDrawDiagnosticsEnabled) return;
+	var interleaved = immediateInterleavedEnabled;
+	var bounds = compatProjectedBounds(function(i) {
+		var base = interleaved ? i * 9 : i * 3;
+		var buf = interleaved ? immediateModeData.interleavedBuf : immediateModeData.vertexBuf;
+		return [buf[base], buf[base + 1], buf[base + 2]];
+	}, count);
+	var firstColor = count > 0 ? (interleaved
+		? Array.from(immediateModeData.interleavedBuf.subarray(3, 7))
+		: Array.from(immediateModeData.colorBuf.subarray(0, 4))) : [];
+	compatRecordLargeDraw('immediate', mode, count, bounds, {
+		colorArrayEnabled: true,
+		texCoordArrayEnabled: true,
+		firstColor
+	});
+}
+function compatRecordClientDraw(source, v, data, mode, count)
+{
+	if(!compatDrawDiagnosticsEnabled || !data.enabled || count < 3 || count > 64) return;
+	var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
+	var stride = clientArrayEffectiveStride(data.size, layout.type, layout.stride);
+	var componentBytes = clientArrayComponentBytes(layout.type);
+	var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
+	if(stride <= 0 || componentBytes <= 0 || byteLength <= 0) return;
+	var bytes = data.buf;
+	if(bytes == null)
+	{
+		if(!v || !data.pointer) return;
+		bytes = new Uint8Array(v.buffer, Number(data.pointer), byteLength);
+	}
+	var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	var bounds = compatProjectedBounds(function(i) {
+		var base = i * stride;
+		return [
+			compatReadScalar(view, base, layout.type),
+			data.size > 1 ? compatReadScalar(view, base + componentBytes, layout.type) : 0,
+			data.size > 2 ? compatReadScalar(view, base + componentBytes * 2, layout.type) : 0
+		];
+	}, count);
+	compatRecordLargeDraw(source, mode, count, bounds, {
+		colorArrayEnabled: colorData.enabled,
+		texCoordArrayEnabled: texCoordData.enabled,
+		vertexType: layout.type,
+		vertexSize: data.size,
+		vertexStride: stride
+	});
+}
+function compatFinishFrame()
+{
+	if(!compatDrawDiagnosticsEnabled) return;
+	compatDrawDiagnostics.frames.push({
+		swap: presentationStats.swapCount,
+		largeDraws: compatDrawDiagnostics.currentLargeDraws,
+		clears: compatDrawDiagnostics.currentClears,
+		endState: { texture2DEnabled, boundTexture2DId, currentColor: immediateModeData.currentColor.slice() }
+	});
+	if(compatDrawDiagnostics.frames.length > 6) compatDrawDiagnostics.frames.shift();
+	compatDrawDiagnostics.currentLargeDraws = [];
+	compatDrawDiagnostics.currentClears = [];
 }
 
 function ensureFramebufferSize()
@@ -1036,6 +1164,7 @@ function pushDrawArraysInList(list, v, mode, first, count)
 }
 function drawArraysInList(mode, first, count, capturedVertexData, capturedColorData, capturedTexCoordData)
 {
+	compatRecordClientDraw('display-list-client', null, capturedVertexData, mode, count);
 	// Upload vertex data
 	uploadData(null, capturedVertexData, vertexBuffer, vertexPosition, count);
 	// Upload color data
@@ -1715,6 +1844,15 @@ function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 {
 	checkNoList(curList);
+	if(compatDrawDiagnosticsEnabled)
+	{
+		compatDrawDiagnostics.currentClears.push({
+			mask: a,
+			color: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)),
+			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK))
+		});
+		if(compatDrawDiagnostics.currentClears.length > 32) compatDrawDiagnostics.currentClears.shift();
+	}
 	glCtx.clear(a);
 }
 
@@ -1767,6 +1905,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+	compatFinishFrame();
 	frameCount++;
 	if(frameLimit && frameCount >= frameLimit)
 	{
@@ -1989,6 +2128,7 @@ function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcP
 		// Capture client state at this point in time
 		return pushDrawArraysInList(curList, v, mode, first, count);
 	}
+	compatRecordClientDraw('client', v, vertexData, mode, count);
 	// Upload vertex data
 	uploadData(v, vertexData, vertexBuffer, vertexPosition, count);
 	// Upload color data
@@ -2559,6 +2699,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
 	var vertexCount = immediateModeData.vertexPos / 3;
+	compatRecordImmediateDraw(immediateModeData.mode, vertexCount);
 	if(immediateInterleavedEnabled)
 	{
 		uploadImmediateInterleaved(vertexCount);

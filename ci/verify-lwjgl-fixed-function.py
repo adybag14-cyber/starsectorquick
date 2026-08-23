@@ -50,6 +50,7 @@ def main() -> int:
     require(text, "WEBGL_QUAD_INDEX_BATCH_V2", "module")
     require(text, "LWJGL_RASTER_STATE_COMPAT_V1", "module")
     require(text, "LWJGL_POINT_SIZE_COMPAT_V1", "module")
+    require(text, "LWJGL_COMPAT_LARGE_DRAW_DIAGNOSTICS_V1", "module")
     require(text, "preserveDrawingBuffer: false", "production WebGL context")
     require(text, 'powerPreference: "high-performance"', "production WebGL context")
     require(text, "DEPTH24_STENCIL8", "stencil-capable framebuffer")

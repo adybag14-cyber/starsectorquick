@@ -1200,6 +1200,7 @@ ${fallback}`);
     button: document.getElementById('startBtn')?.textContent || '',
     nativeStats: window.__lwjglNativeStats || null,
     presentationStats: window.__lwjglPresentationStats || null,
+    compatDrawDiagnostics: window.__lwjglCompatDrawDiagnostics || null,
     inputStats: window.__lwjglInputStats || null,
     bootTiming: window.__STARSECTOR_BOOT_TIMING__ || null,
     webglState: (() => {
