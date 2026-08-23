@@ -90,6 +90,9 @@ const context = vm.createContext({
   modelViewMatrixStack: [modelMatrix],
   projMatrixStack: [projectionMatrix],
   textureMatrixStack: [textureMatrix],
+  modelViewMatrixUniformDirty: true,
+  projMatrixUniformDirty: true,
+  textureMatrixUniformDirty: true,
   unsupportedDrawModes: new Set(),
   warnOnce() {},
   assert(value) { if (!value) throw new Error('assertion failed'); },
@@ -122,6 +125,8 @@ expect(context.presentationStats.quadIndexBufferUploads === 1, 'first batch shou
 
 const uploadsAfterFirst = calls.filter(call => call[0] === 'bufferData').length;
 context.drawArraysImpl(7, 0, 12);
+expect(calls.filter(call => call[0] === 'uniformMatrix4fv').length === 3,
+  'unchanged matrices should not be uploaded again');
 expect(calls.filter(call => call[0] === 'drawElements').length === 2, 'three quads should add one indexed draw');
 expect(calls.filter(call => call[0] === 'bufferData').length === uploadsAfterFirst,
   'smaller follow-up batch should reuse geometric index capacity');
@@ -129,7 +134,13 @@ expect(context.presentationStats.quadDrawCallsSaved === 3,
   `expected cumulative three saved calls, got ${context.presentationStats.quadDrawCallsSaved}`);
 
 const indexedBeforeSingle = calls.filter(call => call[0] === 'drawElements').length;
+context.textureMatrixUniformDirty = true;
 context.drawArraysImpl(7, 0, 4);
+const uploadsAfterTextureChange = calls.filter(call => call[0] === 'uniformMatrix4fv');
+expect(uploadsAfterTextureChange.length === 4,
+  `one dirty matrix should add one uniform upload, got ${uploadsAfterTextureChange.length}`);
+expect(uploadsAfterTextureChange[3][1] === texMatrixLocation && uploadsAfterTextureChange[3][3] === textureMatrix,
+  'texture-only invalidation uploaded the wrong matrix');
 expect(calls.filter(call => call[0] === 'drawElements').length === indexedBeforeSingle,
   'single quad should not pay indexed-draw overhead');
 expect(calls.some(call => call[0] === 'drawArrays' && call[1] === glCtx.TRIANGLE_FAN && call[2] === 0 && call[3] === 4),

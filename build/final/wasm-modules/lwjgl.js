@@ -662,6 +662,22 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_MATRIX_UNIFORM_DIRTY_CACHE_V1: fixed-function callers commonly issue
+// thousands of draws while projection and texture matrices remain unchanged.
+// Avoid crossing the WebGL boundary for matrix uniforms until the matching
+// compatibility stack actually changes.
+var modelViewMatrixUniformDirty = true;
+var projMatrixUniformDirty = true;
+var textureMatrixUniformDirty = true;
+function markCurMatrixUniformDirty()
+{
+	if(curMatrixStack === modelViewMatrixStack)
+		modelViewMatrixUniformDirty = true;
+	else if(curMatrixStack === projMatrixStack)
+		projMatrixUniformDirty = true;
+	else if(curMatrixStack === textureMatrixStack)
+		textureMatrixUniformDirty = true;
+}
 function getCurMatrixTop()
 {
 	return curMatrixStack[curMatrixStack.length - 1];
@@ -669,6 +685,7 @@ function getCurMatrixTop()
 function setCurMatrixTop(m)
 {
 	curMatrixStack[curMatrixStack.length - 1] = m;
+	markCurMatrixUniformDirty();
 }
 
 // LWJGL_COMPAT_LARGE_DRAW_DIAGNOSTICS_V1: opt-in capture for screen-covering
@@ -1194,9 +1211,21 @@ function drawArraysImpl(mode, first, count)
 {
 	// LWJGL_TEXTURE_MATRIX_COMPAT_V1: fixed-function OpenGL transforms texture
 	// coordinates independently from model/view and projection coordinates.
-	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(texMatrixLocation, false, textureMatrixStack[textureMatrixStack.length - 1]);
+	if(modelViewMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+		modelViewMatrixUniformDirty = false;
+	}
+	if(projMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+		projMatrixUniformDirty = false;
+	}
+	if(textureMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(texMatrixLocation, false, textureMatrixStack[textureMatrixStack.length - 1]);
+		textureMatrixUniformDirty = false;
+	}
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -2039,6 +2068,7 @@ function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLoadIdentity);
 	glMatrix.mat4.identity(getCurMatrixTop());
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, nearVal, farVal, funcPtr)
@@ -2423,6 +2453,7 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
 	curMatrixStack.pop();
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
