@@ -15,6 +15,8 @@ const outputDir = process.env.STARSECTOR_TEST_OUTPUT_DIR || 'test_output/campaig
 const expectedState = String(process.env.STARSECTOR_EXPECT_STATE || 'campaign').toLowerCase();
 const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
 const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
+const measureGameplayPerformance = deepGameplay
+  || /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_MEASURE_GAMEPLAY_PERFORMANCE || 'false'));
 const saveLoadSmokeEnabled = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_SAVE_LOAD_SMOKE || 'false'));
 const saveLoadSmokeTimeoutMs = Math.max(60000, Number(process.env.STARSECTOR_SAVE_LOAD_TIMEOUT_MS || 360000));
 function readOptionalMetricLimit(name, fallback = null) {
@@ -1129,7 +1131,7 @@ ${fallback}`);
   );
 
   let gameplayPerformance = null;
-  if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
+  if (measureGameplayPerformance && expectedState === 'campaign' && !fatalSeenAt) {
     const perfBefore = await page.evaluate(() => {
       if (typeof window.__lwjglResetPresentationTimingWindow === 'function') {
         window.__lwjglResetPresentationTimingWindow();
@@ -1191,7 +1193,7 @@ ${fallback}`);
     gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.thresholdsMet;
     logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} samples=${gameplayPerformance.frameSampleCount} fps=${gameplayPerformance.recentFps.toFixed(2)}/${performanceThresholds.minRecentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.recentLongFrameCount} droppedEstimate=${gameplayPerformance.recentDroppedFrameEstimate} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} pointerRefreshes=${gameplayPerformance.immediatePointerLayoutRefreshDelta}/${gameplayPerformance.immediatePointerLayoutRefreshCount} colorDeferred=${gameplayPerformance.immediateColorAttribDeferredObserved} thresholdsMet=${gameplayPerformance.thresholdsMet} responsive=${gameplayPerformance.responsive}`);
   }
-  const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
+  const gameplayPerformanceSafe = !measureGameplayPerformance || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
@@ -1515,6 +1517,7 @@ ${fallback}`);
     shortcutsResponsive,
     shortcutResults,
     deepGameplay,
+    measureGameplayPerformance,
     abilityKeysSafe,
     abilityKeyResults,
     gameplayPerformanceSafe,

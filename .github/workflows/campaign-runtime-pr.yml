@@ -231,3 +231,124 @@ jobs:
           name: campaign-runtime-resolution-fullhd
           path: test_output/resolution-fullhd
           if-no-files-found: warn
+
+  resolution_sweep:
+    name: resolution sweep ${{ matrix.label }}
+    if: github.event_name == 'pull_request' && github.head_ref == 'perf/campaign-resolution-sweep'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 640x480
+            width: 640
+            height: 480
+          - label: 800x600
+            width: 800
+            height: 600
+          - label: 1024x768
+            width: 1024
+            height: 768
+          - label: 1920x1080
+            width: 1920
+            height: 1080
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Restore official release cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-cache/starsector_linux-0.98a-RC8.zip
+          key: starsector-linux-0.98a-RC8-${{ hashFiles('ci/restore-official-runtime-assets.py') }}
+          fail-on-cache-miss: true
+      - name: Measure matched ${{ matrix.label }} campaign pacing
+        env:
+          CHEERPJ_JAVA_VERSION: '17'
+          STARSECTOR_DEEP_GAMEPLAY: 'false'
+          STARSECTOR_MEASURE_GAMEPLAY_PERFORMANCE: 'true'
+          STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
+          STARSECTOR_SAVE_LOAD_SMOKE: 'false'
+          STARSECTOR_MIN_RECENT_FPS: '0.1'
+          STARSECTOR_MAX_FRAME_P95_MS: '5000'
+          STARSECTOR_MAX_FRAME_P99_MS: '5000'
+          STARSECTOR_MAX_JITTER_P95_MS: '5000'
+          STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
+          STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
+          STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":${{ matrix.width }},"__STARSECTOR_RENDER_HEIGHT__":${{ matrix.height }}}'
+        run: |
+          set +e
+          bash ci/run-campaign-experiment.sh 'resolution-sweep-${{ matrix.label }}' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+          rc=$?
+          set -e
+          echo "Generic campaign harness rc=$rc; validating timing evidence independently."
+          test -s 'test_output/resolution-sweep-${{ matrix.label }}/result.json'
+          test -s 'test_output/resolution-sweep-${{ matrix.label }}/browser.log'
+      - name: Verify ${{ matrix.label }} timing evidence
+        env:
+          SWEEP_LABEL: ${{ matrix.label }}
+          SWEEP_WIDTH: ${{ matrix.width }}
+          SWEEP_HEIGHT: ${{ matrix.height }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          label = os.environ['SWEEP_LABEL']
+          width = int(os.environ['SWEEP_WIDTH'])
+          height = int(os.environ['SWEEP_HEIGHT'])
+          path = Path(f'test_output/resolution-sweep-{label}/result.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          assert data.get('expectedState') == 'campaign', data.get('expectedState')
+          assert int(data.get('campaignSeenAt') or 0) > 0, data.get('campaignSeenAt')
+          assert data.get('rendered') is True, data.get('rendered')
+          assert data.get('measureGameplayPerformance') is True, data.get('measureGameplayPerformance')
+          assert not data.get('fatalSeenAt'), data.get('fatalSeenAt')
+          assert not data.get('errors'), data.get('errors')
+          assert not data.get('graphicsErrors'), data.get('graphicsErrors')
+          assert not data.get('runtimeErrorSignals'), data.get('runtimeErrorSignals')
+          cfg = data.get('windowConfig') or {}
+          assert int(cfg.get('__STARSECTOR_RENDER_WIDTH__', 0)) == width, cfg
+          assert int(cfg.get('__STARSECTOR_RENDER_HEIGHT__', 0)) == height, cfg
+          canvases = ((data.get('state') or {}).get('canvases') or [])
+          assert canvases, 'no canvas telemetry'
+          assert int(canvases[0].get('width', 0)) == width, canvases[0]
+          assert int(canvases[0].get('height', 0)) == height, canvases[0]
+          perf = data.get('gameplayPerformance') or {}
+          assert int(perf.get('swapDelta') or 0) >= 20, perf
+          assert int(perf.get('frameSampleCount') or 0) >= 20, perf
+          for key in ('recentFps', 'frameP50Ms', 'frameP95Ms', 'frameP99Ms'):
+              assert float(perf.get(key) or 0) > 0, (key, perf)
+          summary = {
+              'label': label,
+              'width': width,
+              'height': height,
+              'campaignSpaceBackgroundSafe': data.get('campaignSpaceBackgroundSafe'),
+              'inputResponsive': data.get('inputResponsive'),
+              'recentFps': perf.get('recentFps'),
+              'frameP50Ms': perf.get('frameP50Ms'),
+              'frameP95Ms': perf.get('frameP95Ms'),
+              'frameP99Ms': perf.get('frameP99Ms'),
+              'frameJitterP95Ms': perf.get('frameJitterP95Ms'),
+          }
+          print(json.dumps(summary, sort_keys=True))
+          PY
+      - name: Upload ${{ matrix.label }} sweep evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-resolution-sweep-${{ matrix.label }}
+          path: test_output/resolution-sweep-${{ matrix.label }}
+          if-no-files-found: warn
