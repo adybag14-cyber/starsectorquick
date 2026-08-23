@@ -433,7 +433,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       runtimeErrorSignals.push(text);
       if (!fatalSeenAt) fatalSeenAt = Date.now();
     }
-    if (/GL_INVALID_(?:ENUM|OPERATION).*glVertexAttribPointer|LWJGL vertexAttribPointer error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
+    if (/GL_INVALID_(?:ENUM|OPERATION).*(?:glVertexAttribPointer|glTexSubImage2D)|LWJGL (?:vertexAttribPointer|texSubImage2D) error=|Unsupported LWJGL client array type=|Failed to convert LWJGL client array|Unsupported LWJGL alpha-test func=|WebGL: too many errors/i.test(text)) {
       graphicsErrors.push(text);
     }
     const recoveryUsed =
@@ -1273,8 +1273,10 @@ ${fallback}`);
   const campaignCenterSubjectFirst = campaignCenterGate.first;
   const campaignCenterSubjectSecond = campaignCenterGate.second;
   const campaignCenterSubject = campaignCenterGate.overall;
+  // The first capture can still be the intentionally black campaign handoff.
+  // It must never mask a later white mature-campaign frame, which is the exact
+  // deployed regression this gate exists to catch.
   const campaignSpaceBackgroundSafe = expectedState !== 'campaign'
-    || hasSafeCampaignSpaceBackground(firstStats)
     || hasSafeCampaignSpaceBackground(secondStats);
   const browserTutorialVisual = expectedState === 'campaign'
     && !deepGameplay

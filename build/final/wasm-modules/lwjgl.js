@@ -908,10 +908,20 @@ function ensureImmediateArrayCapacity(buf, neededLength)
 	nextBuf.set(buf);
 	return nextBuf;
 }
+// LWJGL_DISPLAY_LIST_NONFATAL_V1: non-listable legacy calls execute
+// immediately, as in desktop GL. Normal vectors are irrelevant to the bridge's
+// unlit shader and must not terminate CheerpJ during campaign construction.
+var displayListCompatibilityWarnings = new Set();
 function checkNoList(list)
 {
 	if(list != null)
-		throw new Error("Unsupported command in list");
+	{
+		warnOnce(
+			displayListCompatibilityWarnings,
+			"immediate-command-during-list",
+			"LWJGL executed a non-recorded legacy OpenGL command immediately while compiling a display list."
+		);
+	}
 }
 function pushInList(list, args, callee)
 {
@@ -1045,6 +1055,10 @@ var cmdLists = [null];
 // The first null implicitly solves resetting on 0 id
 var textureObjects = [null];
 var textureGenerateMipmap = [false];
+// WebGL2 requires sub-image source formats to be compatible with the base
+// texture storage. Desktop GL accepts RGB updates for an RGBA texture, so keep
+// the normalized base upload format and expand those updates when necessary.
+var textureStorageUploadFormat = [null];
 var boundTexture2DId = 0;
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
@@ -1867,6 +1881,7 @@ function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 		buf[i] = id;
 		textureObjects[id] = glCtx.createTexture();
 		textureGenerateMipmap[id] = false;
+		textureStorageUploadFormat[id] = null;
 	}
 }
 
@@ -1900,6 +1915,8 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, internalFormat, format, type);
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
+	if(level == 0)
+		textureStorageUploadFormat[boundTexture2DId] = upload.format;
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 	if(strictWebGLValidation)
@@ -2198,6 +2215,8 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
 	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
+	if(level == 0)
+		textureStorageUploadFormat[boundTexture2DId] = internalFormat;
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 }
@@ -2250,7 +2269,8 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
-	var upload = normalizeTextureUpload(v, memPtr, width, height, format, format, type);
+	var storageFormat = textureStorageUploadFormat[boundTexture2DId] || format;
+	var upload = normalizeTextureUpload(v, memPtr, width, height, storageFormat, format, type);
 	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
