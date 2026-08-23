@@ -2,7 +2,11 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { chromium } = require('playwright');
 const { PNG } = require('pngjs');
-const { campaignCenterSubjectGate, isCampaignFramePlayable } = require('./campaign-visual-gate');
+const {
+  campaignCenterSubjectGate,
+  hasSafeCampaignSpaceBackground,
+  isCampaignFramePlayable,
+} = require('./campaign-visual-gate');
 const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
@@ -53,6 +57,9 @@ function pixelStats(buffer) {
   let colorful = 0;
   let centerBright = 0;
   let centerWarm = 0;
+  let nearWhite = 0;
+  let interiorNearWhite = 0;
+  let interiorPixels = 0;
   let sum = 0;
   let sumSq = 0;
   const quantizedColors = new Set();
@@ -75,6 +82,13 @@ function pixelStats(buffer) {
     if (y < 12) dark++;
     if (y >= 20 && y <= 220) midTone++;
     if (chroma > 20) colorful++;
+    const isNearWhite = r >= 245 && g >= 245 && b >= 245 && chroma <= 8;
+    if (isNearWhite) nearWhite++;
+    if (x >= png.width * 0.12 && x < png.width * 0.88
+      && yPos >= png.height * 0.08 && yPos < png.height * 0.72) {
+      interiorPixels++;
+      if (isNearWhite) interiorNearWhite++;
+    }
     if (Math.abs(x - centerX) <= centerRadius && Math.abs(yPos - centerY) <= centerRadius) {
       if (Math.max(r, g, b) > 80) centerBright++;
       if (r > 45 && r > g * 1.15 && r > b * 1.3) centerWarm++;
@@ -94,6 +108,8 @@ function pixelStats(buffer) {
     darkRatio: dark / pixels,
     midToneRatio: midTone / pixels,
     colorfulRatio: colorful / pixels,
+    nearWhiteRatio: nearWhite / pixels,
+    interiorNearWhiteRatio: interiorPixels > 0 ? interiorNearWhite / interiorPixels : 1,
     centerBrightPixels: centerBright,
     centerWarmPixels: centerWarm,
     quantizedColorCount: quantizedColors.size,
@@ -1257,6 +1273,9 @@ ${fallback}`);
   const campaignCenterSubjectFirst = campaignCenterGate.first;
   const campaignCenterSubjectSecond = campaignCenterGate.second;
   const campaignCenterSubject = campaignCenterGate.overall;
+  const campaignSpaceBackgroundSafe = expectedState !== 'campaign'
+    || hasSafeCampaignSpaceBackground(firstStats)
+    || hasSafeCampaignSpaceBackground(secondStats);
   const browserTutorialVisual = expectedState === 'campaign'
     && !deepGameplay
     && windowConfig.__STARSECTOR_BROWSER_TUTORIAL__ === true;
@@ -1445,7 +1464,7 @@ ${fallback}`);
     }
   }
 
-  const ok = reachedExpected && rendered && campaignVisualQuality && progressing
+  const ok = reachedExpected && rendered && campaignVisualQuality && campaignSpaceBackgroundSafe && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && abilityKeysSafe && gameplayPerformanceSafe
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
@@ -1481,6 +1500,7 @@ ${fallback}`);
     campaignCenterSubjectFirst,
     campaignCenterSubjectSecond,
     campaignCenterSubject,
+    campaignSpaceBackgroundSafe,
     browserTutorialVisual,
     tutorialVisualQuality,
     campaignVisualQuality,

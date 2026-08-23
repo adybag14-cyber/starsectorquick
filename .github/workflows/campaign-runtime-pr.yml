@@ -142,7 +142,6 @@ jobs:
 
   resolution_fullhd:
     name: Full HD 1920x1080 campaign smoke
-    if: github.ref_name == 'feat/custom-resolution' || github.head_ref == 'feat/custom-resolution'
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -192,6 +191,11 @@ jobs:
           assert data.get('expectedState') == 'campaign', data.get('expectedState')
           assert int(data.get('campaignSeenAt') or 0) > 0, data.get('campaignSeenAt')
           assert data.get('rendered') is True, data.get('rendered')
+          assert data.get('campaignSpaceBackgroundSafe') is True, {
+              'firstStats': data.get('firstStats'),
+              'secondStats': data.get('secondStats'),
+          }
+          assert data.get('campaignVisualQuality') is True, data.get('secondStats')
           assert data.get('inputResponsive') is True, data.get('inputAfter')
           assert data.get('shortcutsResponsive') is True, data.get('shortcutResults')
           assert data.get('uiControlsSafe') is True, data.get('uiControlResults')

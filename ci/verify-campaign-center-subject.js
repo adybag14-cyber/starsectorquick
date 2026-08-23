@@ -3,6 +3,7 @@
 const assert = require('assert');
 const {
   hasCampaignCenterSubject,
+  hasSafeCampaignSpaceBackground,
   isCampaignFramePlayable,
   campaignCenterSubjectGate,
 } = require('./campaign-visual-gate');
@@ -45,10 +46,22 @@ assert.deepStrictEqual(
 
 const playableStats = {
   centerBrightPixels: 160, centerWarmPixels: 12, nonBlackRatio: 0.2,
-  darkRatio: 0.7, midToneRatio: 0.1, quantizedColorCount: 500, variance: 900
+  darkRatio: 0.7, midToneRatio: 0.1, quantizedColorCount: 500, variance: 900,
+  nearWhiteRatio: 0.02, interiorNearWhiteRatio: 0.01
 };
 assert.strictEqual(isCampaignFramePlayable(playableStats), true, 'full playable frame should pass');
 assert.strictEqual(isCampaignFramePlayable({ ...playableStats, quantizedColorCount: 199 }), false, 'texture-poor frame must fail playable gate');
 assert.strictEqual(isCampaignFramePlayable({ ...playableStats, centerWarmPixels: 9, centerBrightPixels: 131 }), false, 'known broken ship signature must fail playable gate');
+assert.strictEqual(hasSafeCampaignSpaceBackground(playableStats), true, 'dark campaign space should pass');
+assert.strictEqual(
+  hasSafeCampaignSpaceBackground({ ...playableStats, nearWhiteRatio: 0.8041, interiorNearWhiteRatio: 0.9892 }),
+  false,
+  'the observed 1600x900 white Galatia field must fail',
+);
+assert.strictEqual(
+  isCampaignFramePlayable({ ...playableStats, nearWhiteRatio: 0.8041, interiorNearWhiteRatio: 0.9892 }),
+  false,
+  'a UI-rich white campaign frame must never count as playable',
+);
 
 console.log('CampaignCenterSubjectGate: OK center subject and first-playable-frame gates');

@@ -324,6 +324,13 @@ function setCompatEnableState(cap, enabled)
 function snapshotAttribState(mask)
 {
 	var state = { mask: mask };
+	if(mask & 0x0001/*GL_CURRENT_BIT*/)
+	{
+		state.current = {
+			color: immediateModeData.currentColor.slice(),
+			texCoord: immediateModeData.currentTexCoord.slice()
+		};
+	}
 	if(mask & 0x2000/*GL_ENABLE_BIT*/)
 	{
 		state.enable = {};
@@ -366,10 +373,25 @@ function snapshotAttribState(mask)
 			depthPass: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS), clearValue: glCtx.getParameter(glCtx.STENCIL_CLEAR_VALUE)
 		};
 	}
+	if(mask & 0x00040000/*GL_TEXTURE_BIT*/)
+	{
+		state.texture = { boundTexture2DId: boundTexture2DId };
+	}
 	return state;
 }
 function restoreAttribState(state)
 {
+	if(state.current)
+	{
+		immediateModeData.currentColor = state.current.color.slice();
+		immediateModeData.currentTexCoord = state.current.texCoord.slice();
+		applyCurrentColorAttrib();
+		if(!texCoordData.enabled)
+		{
+			glCtx.disableVertexAttribArray(texCoord);
+			glCtx.vertexAttrib2f(texCoord, immediateModeData.currentTexCoord[0], immediateModeData.currentTexCoord[1]);
+		}
+	}
 	if(state.enable)
 	{
 		for(const key of Object.keys(state.enable)) setCompatEnableState(Number(key), state.enable[key]);
@@ -397,6 +419,11 @@ function restoreAttribState(state)
 		glCtx.stencilMask(state.stencil.writeMask);
 		glCtx.stencilOp(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
 		glCtx.clearStencil(state.stencil.clearValue);
+	}
+	if(state.texture)
+	{
+		boundTexture2DId = state.texture.boundTexture2DId;
+		glCtx.bindTexture(glCtx.TEXTURE_2D, boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null);
 	}
 	// GL_COLOR_BUFFER_BIT owns the alpha comparison function/reference. The
 	// alpha-test enable itself is restored above through GL_ENABLE_BIT.
@@ -649,13 +676,18 @@ function ensureFramebufferSize()
 		return;
 	fbWidth = nextWidth;
 	fbHeight = nextHeight;
+	// Resizing the presentation FBO is bridge bookkeeping, not an application
+	// texture bind. Preserve the desktop GL binding that Starsector expects to
+	// survive the resize; otherwise the next fixed-function quad samples texture
+	// zero and the campaign background depends on unrelated draw order.
+	var restoreTexture2D = boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null;
 	glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.NEAREST);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.NEAREST);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 	glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
-	glCtx.bindTexture(glCtx.TEXTURE_2D, null);
+	glCtx.bindTexture(glCtx.TEXTURE_2D, restoreTexture2D);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
 	glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH24_STENCIL8, fbWidth, fbHeight);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, null);
