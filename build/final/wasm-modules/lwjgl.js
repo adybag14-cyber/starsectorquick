@@ -2529,15 +2529,29 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
-	var storageFormat = textureStorageUploadFormat[boundTexture2DId] || format;
+	var trackedStorageFormat = textureStorageUploadFormat[boundTexture2DId];
+	var storageFormat = trackedStorageFormat || format;
 	var upload = normalizeTextureUpload(v, memPtr, width, height, storageFormat, format, type);
-	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	// LWJGL_TEX_SUBIMAGE_STORAGE_COMPAT_V1: the browser's deferred loader may
+	// retain a desktop texture handle before its WebGL storage has been created.
+	// A complete level-zero replacement is enough to establish that storage and
+	// is equivalent to the loader's intended full-texture refresh.
+	var promotedToFullImage = !trackedStorageFormat && level == 0 && xoffset == 0 && yoffset == 0;
+	if(promotedToFullImage)
+	{
+		glCtx.texImage2D(target, level, upload.format, width, height, 0, upload.format, upload.type, upload.data);
+		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+	}
+	else
+	{
+		glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	}
 	if(compatDrawDiagnosticsEnabled)
 	{
 		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
 		info.subUploadCount++;
 		info.lastSubUpload = {
-			level, xoffset, yoffset, requestedFormat: format,
+			level, xoffset, yoffset, requestedFormat: format, promotedToFullImage,
 			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
 		};
 	}

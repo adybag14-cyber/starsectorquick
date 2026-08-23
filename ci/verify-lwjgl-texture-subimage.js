@@ -73,8 +73,8 @@ const lib = { getJNIDataView: () => new DataView(bytes.buffer) };
 const context = vm.createContext({
   glCtx,
   boundTexture2DId: 1,
-  textureGenerateMipmap: [false, false],
-  textureStorageUploadFormat: [null, null],
+  textureGenerateMipmap: [false, false, false],
+  textureStorageUploadFormat: [null, null, null],
   compatDrawDiagnosticsEnabled: false,
   strictWebGLValidation: false,
   texImageWarnings: new Set(),
@@ -113,4 +113,20 @@ expect(sub[9].length === 8, `two RGB pixels must expand to eight RGBA bytes, got
 expect(Array.from(sub[9]).join(',') === '10,20,30,255,40,50,60,255',
   `unexpected expanded sub-image bytes: ${Array.from(sub[9])}`);
 
-console.log('verify-lwjgl-texture-subimage: OK RGB sub-image expanded for tracked RGBA storage');
+// A deferred texture handle can be refreshed before it has received WebGL base
+// storage. A complete level-zero sub-image then has enough information to create
+// the texture instead of emitting INVALID_OPERATION for an undefined level.
+context.boundTexture2DId = 2;
+const imagesBeforePromotion = calls.filter(call => call[0] === 'image').length;
+const subsBeforePromotion = calls.filter(call => call[0] === 'sub').length;
+context.Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(
+  lib, glCtx.TEXTURE_2D, 0, 0, 0, 1, 1, glCtx.RGB, glCtx.UNSIGNED_BYTE, 1, 0,
+);
+expect(calls.filter(call => call[0] === 'image').length === imagesBeforePromotion + 1,
+  'undefined level-zero storage was not promoted to texImage2D');
+expect(calls.filter(call => call[0] === 'sub').length === subsBeforePromotion,
+  'undefined level-zero storage still issued texSubImage2D');
+expect(context.textureStorageUploadFormat[2] === glCtx.RGB,
+  `promoted storage format was not tracked: ${context.textureStorageUploadFormat[2]}`);
+
+console.log('verify-lwjgl-texture-subimage: OK RGB storage compatibility and undefined level-zero promotion');
