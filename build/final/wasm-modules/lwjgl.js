@@ -471,13 +471,32 @@ var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__
 // LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1: high-frequency draw/upload counters are diagnostics only. Browser gameplay defaults them off; Node/static verifiers opt in.
 var detailedDrawTelemetryEnabled = typeof window === "undefined" || window.__LWJGL_DETAILED_DRAW_TELEMETRY__ === true;
 var frameCount = 0;
+// LWJGL_FRAME_TIMING_RING_V1: capture frame intervals without allocating or
+// sorting in the swap-buffer hot path. Tail/jitter statistics are calculated
+// only when the launcher or a verifier explicitly asks for a snapshot.
+var presentationTargetFps = 60;
 var presentationStats = {
 	swapCount: 0,
 	samples: [],
 	lastFramebufferStatus: null,
 	lastViewport: null,
+	targetFps: presentationTargetFps,
+	targetFrameMs: 1000 / presentationTargetFps,
 	recentFps: 0,
 	recentFrameMs: 0,
+	frameSampleCount: 0,
+	lastFrameMs: 0,
+	frameP50Ms: 0,
+	frameP95Ms: 0,
+	frameP99Ms: 0,
+	frameMinMs: 0,
+	frameMaxMs: 0,
+	frameJitterStdDevMs: 0,
+	frameJitterP95Ms: 0,
+	recentLongFrameCount: 0,
+	longFrameCount: 0,
+	recentDroppedFrameEstimate: 0,
+	droppedFrameEstimate: 0,
 	legacyDrawCalls: 0,
 	webglDrawCalls: 0,
 	quadBatches: 0,
@@ -492,9 +511,109 @@ var presentationStats = {
 	immediateColorAttribDeferredObserved: false,
 	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled
 };
-var recentSwapTimes = [];
+var recentFrameIntervals = new Float64Array(240);
+var recentFrameIntervalCount = 0;
+var recentFrameIntervalCursor = 0;
+var recentFrameIntervalSum = 0;
+var lastPresentationSwapTime = NaN;
+function presentationPercentile(sorted, fraction)
+{
+	if(sorted.length == 0) return 0;
+	var index = Math.ceil(fraction * sorted.length) - 1;
+	return sorted[Math.max(0, Math.min(sorted.length - 1, index))];
+}
+function resetPresentationTimingWindow()
+{
+	recentFrameIntervals.fill(0);
+	recentFrameIntervalCount = 0;
+	recentFrameIntervalCursor = 0;
+	recentFrameIntervalSum = 0;
+	lastPresentationSwapTime = NaN;
+	presentationStats.recentFps = 0;
+	presentationStats.recentFrameMs = 0;
+	presentationStats.frameSampleCount = 0;
+	presentationStats.lastFrameMs = 0;
+	presentationStats.frameP50Ms = 0;
+	presentationStats.frameP95Ms = 0;
+	presentationStats.frameP99Ms = 0;
+	presentationStats.frameMinMs = 0;
+	presentationStats.frameMaxMs = 0;
+	presentationStats.frameJitterStdDevMs = 0;
+	presentationStats.frameJitterP95Ms = 0;
+	presentationStats.recentLongFrameCount = 0;
+	presentationStats.recentDroppedFrameEstimate = 0;
+}
+function recordPresentationFrameInterval(swapNow)
+{
+	if(Number.isFinite(lastPresentationSwapTime))
+	{
+		var frameInterval = swapNow - lastPresentationSwapTime;
+		if(Number.isFinite(frameInterval) && frameInterval >= 0 && frameInterval < 10000)
+		{
+			if(recentFrameIntervalCount == recentFrameIntervals.length)
+				recentFrameIntervalSum -= recentFrameIntervals[recentFrameIntervalCursor];
+			else
+				recentFrameIntervalCount++;
+			recentFrameIntervals[recentFrameIntervalCursor] = frameInterval;
+			recentFrameIntervalCursor = (recentFrameIntervalCursor + 1) % recentFrameIntervals.length;
+			recentFrameIntervalSum += frameInterval;
+			presentationStats.lastFrameMs = frameInterval;
+			presentationStats.frameSampleCount = recentFrameIntervalCount;
+			presentationStats.recentFrameMs = recentFrameIntervalSum / recentFrameIntervalCount;
+			presentationStats.recentFps = recentFrameIntervalSum > 0 ? recentFrameIntervalCount * 1000 / recentFrameIntervalSum : 0;
+			if(frameInterval > Math.max(25, presentationStats.targetFrameMs * 1.5)) presentationStats.longFrameCount++;
+			presentationStats.droppedFrameEstimate += Math.max(0, Math.round(frameInterval / presentationStats.targetFrameMs) - 1);
+		}
+	}
+	lastPresentationSwapTime = swapNow;
+}
+function updatePresentationTimingStats()
+{
+	var count = recentFrameIntervalCount;
+	if(count == 0) return presentationStats;
+	var intervals = new Array(count);
+	var oldest = (recentFrameIntervalCursor - count + recentFrameIntervals.length) % recentFrameIntervals.length;
+	var sum = 0;
+	for(var i = 0;i < count;i++)
+	{
+		var interval = recentFrameIntervals[(oldest + i) % recentFrameIntervals.length];
+		intervals[i] = interval;
+		sum += interval;
+	}
+	var sorted = intervals.slice().sort(function(a, b) { return a - b; });
+	var mean = sum / count;
+	var variance = 0;
+	var deviations = new Array(count);
+	var median = presentationPercentile(sorted, 0.5);
+	var recentLongFrames = 0;
+	var recentDroppedFrames = 0;
+	var longFrameThresholdMs = Math.max(25, presentationStats.targetFrameMs * 1.5);
+	for(var j = 0;j < count;j++)
+	{
+		var delta = intervals[j] - mean;
+		variance += delta * delta;
+		deviations[j] = Math.abs(intervals[j] - median);
+		if(intervals[j] > longFrameThresholdMs) recentLongFrames++;
+		recentDroppedFrames += Math.max(0, Math.round(intervals[j] / presentationStats.targetFrameMs) - 1);
+	}
+	deviations.sort(function(a, b) { return a - b; });
+	presentationStats.frameP50Ms = median;
+	presentationStats.frameP95Ms = presentationPercentile(sorted, 0.95);
+	presentationStats.frameP99Ms = presentationPercentile(sorted, 0.99);
+	presentationStats.frameMinMs = sorted[0];
+	presentationStats.frameMaxMs = sorted[sorted.length - 1];
+	presentationStats.frameJitterStdDevMs = Math.sqrt(variance / count);
+	presentationStats.frameJitterP95Ms = presentationPercentile(deviations, 0.95);
+	presentationStats.recentLongFrameCount = recentLongFrames;
+	presentationStats.recentDroppedFrameEstimate = recentDroppedFrames;
+	return presentationStats;
+}
 if(typeof window !== "undefined")
+	{
 	window.__lwjglPresentationStats = presentationStats;
+	window.__lwjglRefreshPresentationStats = updatePresentationTimingStats;
+	window.__lwjglResetPresentationTimingWindow = resetPresentationTimingWindow;
+	}
 // Set to a non-zero value to stop after a certain number of frames
 var frameLimit = 0;
 var unsupportedDrawModes = new Set();
@@ -1561,14 +1680,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	presentationStats.swapCount++;
 	var swapNow = performance.now();
-	recentSwapTimes.push(swapNow);
-	if(recentSwapTimes.length > 121) recentSwapTimes.shift();
-	if(recentSwapTimes.length >= 2)
-	{
-		var recentDuration = recentSwapTimes[recentSwapTimes.length - 1] - recentSwapTimes[0];
-		presentationStats.recentFps = recentDuration > 0 ? (recentSwapTimes.length - 1) * 1000 / recentDuration : 0;
-		presentationStats.recentFrameMs = recentDuration > 0 ? recentDuration / (recentSwapTimes.length - 1) : 0;
-	}
+	recordPresentationFrameInterval(swapNow);
 	if(presentationReadbackDiagnostics && presentationStats.samples.length < 8 && (presentationStats.swapCount == 1 || (presentationStats.swapCount % 300) == 0))
 	{
 		try

@@ -58,6 +58,12 @@ jobs:
             --source-sha "${{ steps.source.outputs.sha }}"
           test -s test_output/pages-overlays/deploy/web-runtime-profile.json
           grep -q '"profile": "full-stock-campaign"' test_output/pages-overlays/deploy/web-runtime-profile.json
+          test -s test_output/pages-overlays/deploy/launch.html
+          grep -Fq 'id="resolutionPreset"' test_output/pages-overlays/deploy/launch.html
+          grep -Fq "id='settingsBtn'" test_output/pages-overlays/deploy/launch.html
+          grep -Fq '640x360' test_output/pages-overlays/deploy/launch.html
+          grep -Fq 'RESOLUTION' test_output/pages-overlays/deploy/launch.html
+          grep -Fq 'LWJGL_FRAME_TIMING_RING_V1' test_output/pages-overlays/deploy/build/final/wasm-modules/lwjgl.js
           test -s test_output/pages-overlays/deploy/jars/fixer_patch.jar
           test -s test_output/pages-overlays/deploy/jars/bridge.jar
           test -s test_output/pages-overlays/deploy/jars/starfarer.api.jar
@@ -164,12 +170,33 @@ jobs:
           check_setting resources/settings.json '"devMode":true'
           check_setting starsector/starsector/data/config/settings.json '"devMode":true' '"enableMemoryLeakChecking":false'
           check_setting starsector/starsector/settings.json '"devMode":true'
+          check_setting build/final/wasm-modules/lwjgl.js 'LWJGL_FRAME_TIMING_RING_V1' '__lwjglRefreshPresentationStats'
+
+      - name: Verify live resolution controls are published
+        env:
+          LIVE_LAUNCH_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
+          SOURCE_SHA: '${{ steps.source.outputs.sha }}'
+        run: |
+          set -euo pipefail
+          body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_LAUNCH_URL}?source=${SOURCE_SHA}")"
+          for marker in 'id="resolutionPreset"' "id='settingsBtn'" '640x360' 'RESOLUTION'; do
+            if [[ "$body" != *"$marker"* ]]; then
+              echo "Live launcher is missing resolution marker: ${marker}" >&2
+              exit 1
+            fi
+          done
 
       - name: Install JavaScript dependencies
         run: npm ci
 
       - name: Install Chromium
         run: npx playwright install chromium
+
+      - name: Verify source and live resolution interaction
+        run: |
+          node ci/verify-launch-resolution-ui.js
+          STARSECTOR_RESOLUTION_TEST_URL='https://adybag14-cyber.github.io/starsectorquick/launch.html' \
+            node ci/verify-launch-resolution-ui.js
 
       - name: Verify live mature campaign gameplay from clean browser state
         env:
@@ -178,6 +205,10 @@ jobs:
           STARSECTOR_FRAME_SETTLE_MS: '30000'
           STARSECTOR_EXPECT_STATE: 'campaign'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
+          STARSECTOR_MIN_RECENT_FPS: '8'
+          STARSECTOR_MAX_FRAME_P95_MS: '150'
+          STARSECTOR_MAX_FRAME_P99_MS: '220'
+          STARSECTOR_MAX_JITTER_P95_MS: '60'
           STARSECTOR_TEST_OUTPUT_DIR: 'test_output/pages-live'
         run: |
           node ci/campaign-render-test.js

@@ -13,6 +13,19 @@ const settleMs = Number(process.env.STARSECTOR_FRAME_SETTLE_MS || 15000);
 const deepGameplay = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_DEEP_GAMEPLAY || 'false'));
 const saveLoadSmokeEnabled = /^(?:1|true|yes)$/i.test(String(process.env.STARSECTOR_SAVE_LOAD_SMOKE || 'false'));
 const saveLoadSmokeTimeoutMs = Math.max(60000, Number(process.env.STARSECTOR_SAVE_LOAD_TIMEOUT_MS || 360000));
+function readOptionalMetricLimit(name, fallback = null) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${name} must be a finite non-negative number`);
+  return value;
+}
+const performanceThresholds = {
+  minRecentFps: readOptionalMetricLimit('STARSECTOR_MIN_RECENT_FPS', 2),
+  maxFrameP95Ms: readOptionalMetricLimit('STARSECTOR_MAX_FRAME_P95_MS'),
+  maxFrameP99Ms: readOptionalMetricLimit('STARSECTOR_MAX_FRAME_P99_MS'),
+  maxJitterP95Ms: readOptionalMetricLimit('STARSECTOR_MAX_JITTER_P95_MS'),
+};
 const configOverrides = process.env.STARSECTOR_WINDOW_CONFIG
   ? JSON.parse(process.env.STARSECTOR_WINDOW_CONFIG)
   : {};
@@ -1101,18 +1114,42 @@ ${fallback}`);
 
   let gameplayPerformance = null;
   if (deepGameplay && expectedState === 'campaign' && !fatalSeenAt) {
-    const perfBefore = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const perfBefore = await page.evaluate(() => {
+      if (typeof window.__lwjglResetPresentationTimingWindow === 'function') {
+        window.__lwjglResetPresentationTimingWindow();
+      }
+      return { ...(window.__lwjglPresentationStats || {}) };
+    });
     const started = Date.now();
     await page.keyboard.down('w');
     await sleep(2200);
     await page.keyboard.up('w');
     await sleep(5800);
-    const perfAfter = await page.evaluate(() => ({ ...(window.__lwjglPresentationStats || {}) }));
+    const perfAfter = await page.evaluate(() => {
+      if (typeof window.__lwjglRefreshPresentationStats === 'function') {
+        window.__lwjglRefreshPresentationStats();
+      }
+      return { ...(window.__lwjglPresentationStats || {}) };
+    });
     gameplayPerformance = {
       durationMs: Date.now() - started,
       swapDelta: Number(perfAfter.swapCount || 0) - Number(perfBefore.swapCount || 0),
       recentFps: Number(perfAfter.recentFps || 0),
       recentFrameMs: Number(perfAfter.recentFrameMs || 0),
+      frameSampleCount: Number(perfAfter.frameSampleCount || 0),
+      targetFps: Number(perfAfter.targetFps || 60),
+      targetFrameMs: Number(perfAfter.targetFrameMs || (1000 / 60)),
+      frameP50Ms: Number(perfAfter.frameP50Ms || 0),
+      frameP95Ms: Number(perfAfter.frameP95Ms || 0),
+      frameP99Ms: Number(perfAfter.frameP99Ms || 0),
+      frameMinMs: Number(perfAfter.frameMinMs || 0),
+      frameMaxMs: Number(perfAfter.frameMaxMs || 0),
+      frameJitterStdDevMs: Number(perfAfter.frameJitterStdDevMs || 0),
+      frameJitterP95Ms: Number(perfAfter.frameJitterP95Ms || 0),
+      recentLongFrameCount: Number(perfAfter.recentLongFrameCount || 0),
+      longFrameDelta: Number(perfAfter.longFrameCount || 0) - Number(perfBefore.longFrameCount || 0),
+      recentDroppedFrameEstimate: Number(perfAfter.recentDroppedFrameEstimate || 0),
+      droppedFrameEstimateDelta: Number(perfAfter.droppedFrameEstimate || 0) - Number(perfBefore.droppedFrameEstimate || 0),
       webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
@@ -1125,8 +1162,18 @@ ${fallback}`);
       immediatePointerLayoutRefreshCount: Number(perfAfter.immediatePointerLayoutRefreshes || 0),
       immediateColorAttribDeferredObserved: Boolean(perfAfter.immediateColorAttribDeferredObserved),
     };
-    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.recentFps >= 2;
-    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} fps=${gameplayPerformance.recentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} pointerRefreshes=${gameplayPerformance.immediatePointerLayoutRefreshDelta}/${gameplayPerformance.immediatePointerLayoutRefreshCount} colorDeferred=${gameplayPerformance.immediateColorAttribDeferredObserved} responsive=${gameplayPerformance.responsive}`);
+    const timingTelemetryAvailable = gameplayPerformance.frameSampleCount > 0
+      && gameplayPerformance.frameP95Ms > 0
+      && gameplayPerformance.frameP99Ms > 0;
+    gameplayPerformance.thresholds = performanceThresholds;
+    gameplayPerformance.thresholdsMet = Boolean(
+      gameplayPerformance.recentFps >= performanceThresholds.minRecentFps
+      && (performanceThresholds.maxFrameP95Ms === null || (timingTelemetryAvailable && gameplayPerformance.frameP95Ms <= performanceThresholds.maxFrameP95Ms))
+      && (performanceThresholds.maxFrameP99Ms === null || (timingTelemetryAvailable && gameplayPerformance.frameP99Ms <= performanceThresholds.maxFrameP99Ms))
+      && (performanceThresholds.maxJitterP95Ms === null || (timingTelemetryAvailable && gameplayPerformance.frameJitterP95Ms <= performanceThresholds.maxJitterP95Ms))
+    );
+    gameplayPerformance.responsive = gameplayPerformance.swapDelta >= 20 && gameplayPerformance.thresholdsMet;
+    logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} samples=${gameplayPerformance.frameSampleCount} fps=${gameplayPerformance.recentFps.toFixed(2)}/${performanceThresholds.minRecentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.recentLongFrameCount} droppedEstimate=${gameplayPerformance.recentDroppedFrameEstimate} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} pointerRefreshes=${gameplayPerformance.immediatePointerLayoutRefreshDelta}/${gameplayPerformance.immediatePointerLayoutRefreshCount} colorDeferred=${gameplayPerformance.immediateColorAttribDeferredObserved} thresholdsMet=${gameplayPerformance.thresholdsMet} responsive=${gameplayPerformance.responsive}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
@@ -1449,6 +1496,7 @@ ${fallback}`);
     abilityKeyResults,
     gameplayPerformanceSafe,
     gameplayPerformance,
+    performanceThresholds,
     shortcutBefore,
     shortcutAfter,
     jarPackResponses,

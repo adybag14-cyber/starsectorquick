@@ -110,6 +110,10 @@ jobs:
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
+          STARSECTOR_MIN_RECENT_FPS: '8'
+          STARSECTOR_MAX_FRAME_P95_MS: '150'
+          STARSECTOR_MAX_FRAME_P99_MS: '220'
+          STARSECTOR_MAX_JITTER_P95_MS: '60'
         run: bash ci/run-campaign-experiment.sh 'campaign-direct-main-thread-java17' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
       - name: Validate Pages overlay from verified candidate
         run: |

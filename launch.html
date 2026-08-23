@@ -35,14 +35,15 @@
 
         <div class="launcher-actions">
             <button id='startBtn' class="btn">LAUNCH STARSECTOR</button>
-            <button id='settingsBtn' class="btn secondary" type="button" aria-expanded="false" aria-controls="launcher-settings">SETTINGS</button>
+            <button id='settingsBtn' class="btn secondary" type="button" aria-expanded="false" aria-controls="launcher-settings" aria-label="Open display and resolution settings">RESOLUTION</button>
         </div>
         <section id="launcher-settings" class="settings-panel" hidden>
             <h2 class="settings-title">Display Settings</h2>
             <div class="settings-row">
                 <label for="resolutionPreset">Render resolution</label>
                 <select id="resolutionPreset">
-                    <option value="1024x768">1024 × 768 (Fastest)</option>
+                    <option value="640x360">640 × 360 (Performance)</option>
+                    <option value="1024x768">1024 × 768 (Standard)</option>
                     <option value="1280x720">1280 × 720</option>
                     <option value="1600x900">1600 × 900</option>
                     <option value="1920x1080">1920 × 1080 (Full HD)</option>
@@ -619,7 +620,7 @@
         const RENDER_RESOLUTION_STORAGE_KEY = 'starsectorquick.renderResolution.v1';
         const RENDER_RESOLUTION_DEFAULT = { width: 1024, height: 768 };
         const RENDER_RESOLUTION_LIMITS = { minWidth: 640, minHeight: 360, maxWidth: 3840, maxHeight: 2160 };
-        const RENDER_RESOLUTION_PRESETS = new Set(['1024x768','1280x720','1600x900','1920x1080','2560x1440','3840x2160']);
+        const RENDER_RESOLUTION_PRESETS = new Set(['640x360','1024x768','1280x720','1600x900','1920x1080','2560x1440','3840x2160']);
 
         function normalizeRenderResolution(width, height) {
             const w = Math.round(Number(width));
@@ -665,11 +666,15 @@
 
         function updateResolutionStatus(width, height) {
             const status = document.getElementById('resolutionStatus');
-            if (!status) return;
             const pixels = width * height;
             const relative = pixels / (1024 * 768);
             const note = relative > 2 ? 'Higher resolutions increase GPU/CPU upload work and may lower FPS.' : 'Lower resolutions generally provide the best FPS and latency.';
-            status.innerHTML = `<strong>${width} × ${height}</strong> internal render (${relative.toFixed(2)}× 1024×768 pixel load). ${note}`;
+            if (status) status.innerHTML = `<strong>${width} × ${height}</strong> internal render (${relative.toFixed(2)}× 1024×768 pixel load). ${note}`;
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) {
+                settingsBtn.textContent = `RESOLUTION · ${width}×${height}`;
+                settingsBtn.setAttribute('aria-label', `Open display settings. Current render resolution ${width} by ${height}.`);
+            }
         }
 
         function applyRenderResolution(width, height, persist = true) {

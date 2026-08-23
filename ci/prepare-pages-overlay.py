@@ -177,6 +177,9 @@ def main() -> int:
         raise RuntimeError("public launcher is not using normal sector size")
     if "window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'Galatia'" not in launch:
         raise RuntimeError("public launcher is not starting in Galatia")
+    for marker in ('id="resolutionPreset"', "id='settingsBtn'", "640x360", "RESOLUTION"):
+        if marker not in launch:
+            raise RuntimeError(f"public launcher is missing resolution control marker: {marker}")
 
     lwjgl_js = (
         ROOT / "build" / "final" / "wasm-modules" / "lwjgl.js"
@@ -185,6 +188,8 @@ def main() -> int:
         raise RuntimeError("LWJGL candidate is missing production preserveDrawingBuffer=false")
     if 'powerPreference: "high-performance"' not in lwjgl_js:
         raise RuntimeError("LWJGL candidate is missing high-performance WebGL context preference")
+    if "LWJGL_FRAME_TIMING_RING_V1" not in lwjgl_js:
+        raise RuntimeError("LWJGL candidate is missing allocation-free frame-tail telemetry")
 
     settings_expectations = {
         "data/config/settings.json": ('"devMode":true', '"enableMemoryLeakChecking":false'),
