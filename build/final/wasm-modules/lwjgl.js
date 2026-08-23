@@ -691,6 +691,22 @@ var textureMatrixUniformDirty = true;
 // place instead of allocating a matrix and vec3 for every transform call.
 var compatMatrixScratch = glMatrix.mat4.create();
 var compatVec3Scratch = glMatrix.vec3.create();
+// LWJGL_MATRIX_STACK_POOL_V1: sprite/UI rendering uses short-lived push/pop
+// pairs heavily. Recycle their 16-float matrices instead of allocating a new
+// typed array on every push, while bounding retained scratch memory.
+var compatMatrixStackPool = [];
+var compatMatrixStackPoolMax = 64;
+function acquireCompatMatrixStackEntry(source)
+{
+	var out = compatMatrixStackPool.length > 0 ? compatMatrixStackPool.pop() : glMatrix.mat4.create();
+	glMatrix.mat4.copy(out, source);
+	return out;
+}
+function releaseCompatMatrixStackEntry(matrix)
+{
+	if(matrix && compatMatrixStackPool.length < compatMatrixStackPoolMax)
+		compatMatrixStackPool.push(matrix);
+}
 function setCompatVec3(x, y, z)
 {
 	compatVec3Scratch[0] = x;
@@ -2474,7 +2490,7 @@ function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
 	var stack = ensureCurMatrixStack();
-	stack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
+	stack.push(acquireCompatMatrixStackEntry(stack[stack.length - 1]));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
@@ -2491,7 +2507,7 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 		);
 		return;
 	}
-	stack.pop();
+	releaseCompatMatrixStackEntry(stack.pop());
 	markCurMatrixUniformDirty();
 }
 
