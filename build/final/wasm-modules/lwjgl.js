@@ -490,7 +490,8 @@ var presentationStats = {
 	immediateInterleavedBytes: 0,
 	immediatePointerLayoutRefreshes: 0,
 	immediateColorAttribDeferredObserved: false,
-	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled
+	detailedDrawTelemetryActive: detailedDrawTelemetryEnabled,
+	projectionUniformDirtyActive: true
 };
 var recentSwapTimes = [];
 if(typeof window !== "undefined")
@@ -511,6 +512,13 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_PROJECTION_UNIFORM_DIRTY_V1: projection is stable across most legacy draws.
+// Keep model-view uploads unchanged and only skip redundant projection uploads.
+var projectionUniformDirty = true;
+function markCurMatrixUniformDirty()
+{
+	if(curMatrixStack === projMatrixStack) projectionUniformDirty = true;
+}
 function getCurMatrixTop()
 {
 	return curMatrixStack[curMatrixStack.length - 1];
@@ -518,6 +526,7 @@ function getCurMatrixTop()
 function setCurMatrixTop(m)
 {
 	curMatrixStack[curMatrixStack.length - 1] = m;
+	markCurMatrixUniformDirty();
 }
 
 function ensureFramebufferSize()
@@ -812,7 +821,11 @@ function drawArraysImpl(mode, first, count)
 {
 	// TODO: Conditional
 	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	if(projectionUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+		projectionUniformDirty = false;
+	}
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -1644,6 +1657,7 @@ function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLoadIdentity);
 	glMatrix.mat4.identity(getCurMatrixTop());
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, nearVal, farVal, funcPtr)
@@ -2006,6 +2020,7 @@ function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
 	curMatrixStack.pop();
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
