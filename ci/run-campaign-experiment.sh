@@ -61,6 +61,18 @@ fi
 
 test -s starsector/starsector/graphics/particlealpha32sq.png
 
+# Browser production retains dev-mode dynamic loading, but playtesting mode
+# removes the developer-only campaign flags that can add simulation work and
+# change normal gameplay semantics.
+for settings in \
+  data/config/settings.json \
+  resources/settings.json \
+  starsector/starsector/data/config/settings.json \
+  starsector/starsector/settings.json; do
+  grep -Fq '"devMode":true' "$settings"
+  grep -Fq '"playtestingMode":true' "$settings"
+done
+
 # Keep the loose browser source copies lightweight as a Janino fallback. The
 # class actually used by the current launcher is also patched directly in
 # scripts-precompiled.jar below.

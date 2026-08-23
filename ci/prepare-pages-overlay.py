@@ -187,10 +187,10 @@ def main() -> int:
         raise RuntimeError("LWJGL candidate is missing high-performance WebGL context preference")
 
     settings_expectations = {
-        "data/config/settings.json": ('"devMode":true', '"enableMemoryLeakChecking":false'),
-        "resources/settings.json": ('"devMode":true',),
-        "starsector/starsector/data/config/settings.json": ('"devMode":true', '"enableMemoryLeakChecking":false'),
-        "starsector/starsector/settings.json": ('"devMode":true',),
+        "data/config/settings.json": ('"devMode":true', '"playtestingMode":true', '"enableMemoryLeakChecking":false'),
+        "resources/settings.json": ('"devMode":true', '"playtestingMode":true'),
+        "starsector/starsector/data/config/settings.json": ('"devMode":true', '"playtestingMode":true', '"enableMemoryLeakChecking":false'),
+        "starsector/starsector/settings.json": ('"devMode":true', '"playtestingMode":true'),
     }
     for settings_rel, markers in settings_expectations.items():
         settings_text = (ROOT / settings_rel).read_text(encoding="utf-8-sig")

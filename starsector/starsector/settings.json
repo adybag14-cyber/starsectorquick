@@ -9,7 +9,7 @@
 	"fps":60,
 	"devMode":true,
 	"godMode":false, # 100x damage dealt, no damage taken
-	"playtestingMode":false, # turns off some debug flags while in dev mode; doesn't do anything if not in dev mode.
+	"playtestingMode":true, # retain dev-mode loading while disabling developer-only campaign flags
 	
 	# if set to true, will print which rules are checked, which conditions pass/fail, etc
 	# also likely to add a noticeable delay to when interaction options are selected
@@ -1988,7 +1988,6 @@
 		},
 	}
 }
-
 
 
 
