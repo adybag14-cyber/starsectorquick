@@ -76,6 +76,8 @@ grep -q 'LWJGL_ALPHA_TEST_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q 'LWJGL_ATTRIB_STACK_COMPAT_V1' build/final/wasm-modules/lwjgl.js
 grep -q '__lwjglGraphicsInfo' build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-texture-subimage.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-compat-draw-diagnostics.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-interleaved.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-pointer-dirty.js build/final/wasm-modules/lwjgl.js

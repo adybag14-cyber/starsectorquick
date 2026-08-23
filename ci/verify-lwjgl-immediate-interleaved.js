@@ -29,6 +29,7 @@ function make(enabled){
     vertexBuffer:{id:'v'}, colorBuffer:{id:'c'}, texCoordBuffer:{id:'t'}, vertexPosition:3,colorLocation:4,texCoord:5,
     strictWebGLValidation:false,clientArrayWarnings:new Set(),warnOnce(){},
     uploadDataImpl:(buf,buffer,attr,size,type,stride)=>legacy.push({data:Array.from(buf),buffer,attr,size,type,stride}),
+    compatRecordImmediateDraw(){},
     drawArraysImpl:(mode,first,count)=>draws.push({mode,first,count}), Float32Array,Math,console
   });
   vm.runInContext(code,c); return {c,calls,legacy,draws};

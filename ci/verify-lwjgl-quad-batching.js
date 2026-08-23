@@ -44,6 +44,12 @@ const drawArrays = extractFunction(source, 'drawArraysImpl');
 
 const calls = [];
 let uploadedIndices = null;
+const mvLocation = { kind: 'model-view-uniform' };
+const projLocation = { kind: 'projection-uniform' };
+const texMatrixLocation = { kind: 'texture-matrix-uniform' };
+const modelMatrix = { kind: 'model-view-matrix' };
+const projectionMatrix = { kind: 'projection-matrix' };
+const textureMatrix = { kind: 'texture-matrix' };
 const glCtx = {
   ELEMENT_ARRAY_BUFFER: 0x8893,
   STATIC_DRAW: 0x88E4,
@@ -55,7 +61,7 @@ const glCtx = {
   LINES: 0x0001,
   LINE_LOOP: 0x0002,
   LINE_STRIP: 0x0003,
-  uniformMatrix4fv() {},
+  uniformMatrix4fv(location, transpose, matrix) { calls.push(['uniformMatrix4fv', location, transpose, matrix]); },
   bindBuffer(target, buffer) { calls.push(['bindBuffer', target, buffer]); },
   bufferData(target, data, usage) {
     uploadedIndices = Array.from(data);
@@ -78,10 +84,15 @@ const context = vm.createContext({
     quadDrawCallsSaved: 0,
     quadIndexBufferUploads: 0,
   },
-  mvLocation: {},
-  projLocation: {},
-  modelViewMatrixStack: [[]],
-  projMatrixStack: [[]],
+  mvLocation,
+  projLocation,
+  texMatrixLocation,
+  modelViewMatrixStack: [modelMatrix],
+  projMatrixStack: [projectionMatrix],
+  textureMatrixStack: [textureMatrix],
+  modelViewMatrixUniformDirty: true,
+  projMatrixUniformDirty: true,
+  textureMatrixUniformDirty: true,
   unsupportedDrawModes: new Set(),
   warnOnce() {},
   assert(value) { if (!value) throw new Error('assertion failed'); },
@@ -92,6 +103,14 @@ const context = vm.createContext({
 vm.runInContext(`${ensureQuad}\n${drawArrays}`, context);
 
 context.drawArraysImpl(7, 0, 8);
+const matrixUploads = calls.filter(call => call[0] === 'uniformMatrix4fv');
+expect(matrixUploads.length === 3, `draw should upload three fixed-function matrices, got ${matrixUploads.length}`);
+expect(matrixUploads[0][1] === mvLocation && matrixUploads[0][3] === modelMatrix,
+  'model-view matrix upload changed');
+expect(matrixUploads[1][1] === projLocation && matrixUploads[1][3] === projectionMatrix,
+  'projection matrix upload changed');
+expect(matrixUploads[2][1] === texMatrixLocation && matrixUploads[2][3] === textureMatrix,
+  'texture matrix was not uploaded before the draw');
 let draws = calls.filter(call => call[0] === 'drawElements');
 expect(draws.length === 1, `two quads should use one indexed draw, got ${draws.length}`);
 expect(draws[0][2] === 12, `two quads should emit 12 indices, got ${draws[0][2]}`);
@@ -106,6 +125,8 @@ expect(context.presentationStats.quadIndexBufferUploads === 1, 'first batch shou
 
 const uploadsAfterFirst = calls.filter(call => call[0] === 'bufferData').length;
 context.drawArraysImpl(7, 0, 12);
+expect(calls.filter(call => call[0] === 'uniformMatrix4fv').length === 3,
+  'unchanged matrices should not be uploaded again');
 expect(calls.filter(call => call[0] === 'drawElements').length === 2, 'three quads should add one indexed draw');
 expect(calls.filter(call => call[0] === 'bufferData').length === uploadsAfterFirst,
   'smaller follow-up batch should reuse geometric index capacity');
@@ -113,7 +134,13 @@ expect(context.presentationStats.quadDrawCallsSaved === 3,
   `expected cumulative three saved calls, got ${context.presentationStats.quadDrawCallsSaved}`);
 
 const indexedBeforeSingle = calls.filter(call => call[0] === 'drawElements').length;
+context.textureMatrixUniformDirty = true;
 context.drawArraysImpl(7, 0, 4);
+const uploadsAfterTextureChange = calls.filter(call => call[0] === 'uniformMatrix4fv');
+expect(uploadsAfterTextureChange.length === 4,
+  `one dirty matrix should add one uniform upload, got ${uploadsAfterTextureChange.length}`);
+expect(uploadsAfterTextureChange[3][1] === texMatrixLocation && uploadsAfterTextureChange[3][3] === textureMatrix,
+  'texture-only invalidation uploaded the wrong matrix');
 expect(calls.filter(call => call[0] === 'drawElements').length === indexedBeforeSingle,
   'single quad should not pay indexed-draw overhead');
 expect(calls.some(call => call[0] === 'drawArrays' && call[1] === glCtx.TRIANGLE_FAN && call[2] === 0 && call[3] === 4),

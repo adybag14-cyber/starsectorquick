@@ -8,6 +8,12 @@ function hasCampaignCenterSubject(stats) {
     || (bright >= 120 && warm >= 12);
 }
 
+function hasSafeCampaignSpaceBackground(stats) {
+  return Boolean(stats
+    && Number(stats.nearWhiteRatio ?? 1) < 0.65
+    && Number(stats.interiorNearWhiteRatio ?? 1) < 0.50);
+}
+
 function isCampaignFramePlayable(stats) {
   return Boolean(stats
     && Number(stats.nonBlackRatio || 0) > 0.03
@@ -15,6 +21,7 @@ function isCampaignFramePlayable(stats) {
     && Number(stats.midToneRatio || 0) > 0.025
     && Number(stats.quantizedColorCount || 0) >= 200
     && Number(stats.variance || 0) >= 400
+    && hasSafeCampaignSpaceBackground(stats)
     && hasCampaignCenterSubject(stats));
 }
 
@@ -29,6 +36,7 @@ function campaignCenterSubjectGate(expectedState, firstStats, secondStats) {
 
 module.exports = {
   hasCampaignCenterSubject,
+  hasSafeCampaignSpaceBackground,
   isCampaignFramePlayable,
   campaignCenterSubjectGate,
 };

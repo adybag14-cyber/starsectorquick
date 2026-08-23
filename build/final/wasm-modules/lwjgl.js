@@ -213,13 +213,14 @@ var vertexShaderSrc = `
 	attribute vec2 aTexCoord;
 	uniform mat4 modelView;
 	uniform mat4 projection;
+	uniform mat4 textureMatrix;
 	uniform float uPointSize;
 	varying vec2 vTexCoord;
 	varying vec4 vColor;
 	void main() {
 		gl_Position = projection * modelView * aVertexPosition;
 		gl_PointSize = uPointSize;
-		vTexCoord = aTexCoord;
+		vTexCoord = (textureMatrix * vec4(aTexCoord, 0.0, 1.0)).xy;
 		vColor = aColor;
 	}
 `;
@@ -276,6 +277,7 @@ var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
 var mvLocation = glCtx.getUniformLocation(program, "modelView");
 var projLocation = glCtx.getUniformLocation(program, "projection");
+var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
 var pointSizeLocation = glCtx.getUniformLocation(program, "uPointSize");
 var pointSizeState = 1.0;
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
@@ -324,6 +326,13 @@ function setCompatEnableState(cap, enabled)
 function snapshotAttribState(mask)
 {
 	var state = { mask: mask };
+	if(mask & 0x0001/*GL_CURRENT_BIT*/)
+	{
+		state.current = {
+			color: immediateModeData.currentColor.slice(),
+			texCoord: immediateModeData.currentTexCoord.slice()
+		};
+	}
 	if(mask & 0x2000/*GL_ENABLE_BIT*/)
 	{
 		state.enable = {};
@@ -366,10 +375,25 @@ function snapshotAttribState(mask)
 			depthPass: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS), clearValue: glCtx.getParameter(glCtx.STENCIL_CLEAR_VALUE)
 		};
 	}
+	if(mask & 0x00040000/*GL_TEXTURE_BIT*/)
+	{
+		state.texture = { boundTexture2DId: boundTexture2DId };
+	}
 	return state;
 }
 function restoreAttribState(state)
 {
+	if(state.current)
+	{
+		immediateModeData.currentColor = state.current.color.slice();
+		immediateModeData.currentTexCoord = state.current.texCoord.slice();
+		applyCurrentColorAttrib();
+		if(!texCoordData.enabled)
+		{
+			glCtx.disableVertexAttribArray(texCoord);
+			glCtx.vertexAttrib2f(texCoord, immediateModeData.currentTexCoord[0], immediateModeData.currentTexCoord[1]);
+		}
+	}
 	if(state.enable)
 	{
 		for(const key of Object.keys(state.enable)) setCompatEnableState(Number(key), state.enable[key]);
@@ -397,6 +421,11 @@ function restoreAttribState(state)
 		glCtx.stencilMask(state.stencil.writeMask);
 		glCtx.stencilOp(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
 		glCtx.clearStencil(state.stencil.clearValue);
+	}
+	if(state.texture)
+	{
+		boundTexture2DId = state.texture.boundTexture2DId;
+		glCtx.bindTexture(glCtx.TEXTURE_2D, boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null);
 	}
 	// GL_COLOR_BUFFER_BIT owns the alpha comparison function/reference. The
 	// alpha-test enable itself is restored above through GL_ENABLE_BIT.
@@ -468,6 +497,9 @@ var immediateBeginActive = false;
 var verboseLog = false;
 var strictWebGLValidation = typeof window !== "undefined" && window.__LWJGL_STRICT_WEBGL_VALIDATION__ === true;
 var presentationReadbackDiagnostics = typeof window !== "undefined" && window.__LWJGL_PRESENTATION_READBACK_DIAGNOSTICS__ === true;
+var compatDrawDiagnosticsEnabled = typeof window !== "undefined" && window.__LWJGL_COMPAT_DRAW_DIAGNOSTICS__ === true;
+var compatDrawDiagnostics = { enabled: compatDrawDiagnosticsEnabled, frames: [], currentLargeDraws: [], currentClears: [] };
+if(typeof window !== "undefined") window.__lwjglCompatDrawDiagnostics = compatDrawDiagnostics;
 // LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1: high-frequency draw/upload counters are diagnostics only. Browser gameplay defaults them off; Node/static verifiers opt in.
 var detailedDrawTelemetryEnabled = typeof window === "undefined" || window.__LWJGL_DETAILED_DRAW_TELEMETRY__ === true;
 var frameCount = 0;
@@ -630,13 +662,265 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_MATRIX_STACK_GUARD_V1: OpenGL matrix stacks always retain their base identity matrix.
+var matrixStackWarnings = new Set();
+function ensureCurMatrixStack()
+{
+	if(!Array.isArray(curMatrixStack))
+		throw new Error("LWJGL current matrix stack is invalid");
+	if(curMatrixStack.length === 0)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-empty-recovery",
+			"LWJGL recovered an empty matrix stack with an identity matrix."
+		);
+		curMatrixStack.push(glMatrix.mat4.create());
+	}
+	return curMatrixStack;
+}
+// LWJGL_MATRIX_UNIFORM_DIRTY_CACHE_V1: fixed-function callers commonly issue
+// thousands of draws while projection and texture matrices remain unchanged.
+// Avoid crossing the WebGL boundary for matrix uniforms until the matching
+// compatibility stack actually changes.
+var modelViewMatrixUniformDirty = true;
+var projMatrixUniformDirty = true;
+var textureMatrixUniformDirty = true;
+function markCurMatrixUniformDirty()
+{
+	if(curMatrixStack === modelViewMatrixStack)
+		modelViewMatrixUniformDirty = true;
+	else if(curMatrixStack === projMatrixStack)
+		projMatrixUniformDirty = true;
+	else if(curMatrixStack === textureMatrixStack)
+		textureMatrixUniformDirty = true;
+}
 function getCurMatrixTop()
 {
-	return curMatrixStack[curMatrixStack.length - 1];
+	var stack = ensureCurMatrixStack();
+	return stack[stack.length - 1];
 }
 function setCurMatrixTop(m)
 {
-	curMatrixStack[curMatrixStack.length - 1] = m;
+	var stack = ensureCurMatrixStack();
+	stack[stack.length - 1] = m;
+	markCurMatrixUniformDirty();
+}
+
+// LWJGL_COMPAT_LARGE_DRAW_DIAGNOSTICS_V1: opt-in capture for screen-covering
+// fixed-function draws. This is intentionally disabled in production and only
+// records a bounded summary instead of copying arbitrary game vertex buffers.
+function compatReadScalar(view, offset, type)
+{
+	if(type == glCtx.FLOAT) return view.getFloat32(offset, true);
+	if(type == glCtx.BYTE) return view.getInt8(offset);
+	if(type == glCtx.UNSIGNED_BYTE) return view.getUint8(offset);
+	if(type == glCtx.SHORT) return view.getInt16(offset, true);
+	if(type == glCtx.UNSIGNED_SHORT) return view.getUint16(offset, true);
+	if(type == 0x1404/*GL_INT*/) return view.getInt32(offset, true);
+	if(type == 0x1405/*GL_UNSIGNED_INT*/) return view.getUint32(offset, true);
+	if(type == 0x140A/*GL_DOUBLE*/) return view.getFloat64(offset, true);
+	return NaN;
+}
+function compatNormalizeTextureComponent(value, type)
+{
+	if(type == glCtx.UNSIGNED_BYTE) return value / 255;
+	if(type == glCtx.BYTE) return Math.max(-1, value / 127);
+	if(type == glCtx.UNSIGNED_SHORT) return value / 65535;
+	if(type == glCtx.SHORT) return Math.max(-1, value / 32767);
+	if(type == glCtx.UNSIGNED_INT) return value / 4294967295;
+	if(type == glCtx.FLOAT) return value;
+	return NaN;
+}
+function compatSummarizeTextureUpload(data, width, height, format, type)
+{
+	var summary = {
+		width, height, format, type,
+		dataNull: data == null,
+		dataLength: data ? data.length : 0,
+		dataType: data && data.constructor ? data.constructor.name : null
+	};
+	if(data == null || !data.length || width <= 0 || height <= 0) return summary;
+	if(type == glCtx.UNSIGNED_SHORT_5_6_5 || type == glCtx.UNSIGNED_SHORT_4_4_4_4 || type == glCtx.UNSIGNED_SHORT_5_5_5_1)
+	{
+		summary.packed = true;
+		summary.firstValues = Array.from(data.subarray(0, Math.min(8, data.length)));
+		return summary;
+	}
+	var components = getTexelComponentCount(format);
+	var pixelCount = Math.min(Math.max(0, width * height), Math.floor(data.length / components));
+	var sampleCount = Math.min(pixelCount, 2048);
+	if(sampleCount <= 0) return summary;
+	var sums = [0, 0, 0, 0];
+	var nearWhite = 0, nearBlack = 0, transparent = 0;
+	var firstPixel = null;
+	for(var i=0;i<sampleCount;i++)
+	{
+		var pixelIndex = Math.min(pixelCount - 1, Math.floor(i * pixelCount / sampleCount));
+		var base = pixelIndex * components;
+		var rgba = [0, 0, 0, 1];
+		for(var c=0;c<components && c<4;c++)
+			rgba[c] = compatNormalizeTextureComponent(data[base + c], type);
+		if(components == 1) rgba[1] = rgba[2] = rgba[0];
+		if(components == 2) rgba[2] = rgba[0];
+		if(!firstPixel) firstPixel = rgba.slice();
+		for(var channel=0;channel<4;channel++) sums[channel] += rgba[channel];
+		if(rgba[0] >= 0.97 && rgba[1] >= 0.97 && rgba[2] >= 0.97) nearWhite++;
+		if(rgba[0] <= 0.03 && rgba[1] <= 0.03 && rgba[2] <= 0.03) nearBlack++;
+		if(rgba[3] <= 0.03) transparent++;
+	}
+	summary.components = components;
+	summary.sampleCount = sampleCount;
+	summary.firstPixel = firstPixel;
+	summary.meanRgba = sums.map(function(sum) { return sum / sampleCount; });
+	summary.nearWhiteRatio = nearWhite / sampleCount;
+	summary.nearBlackRatio = nearBlack / sampleCount;
+	summary.transparentRatio = transparent / sampleCount;
+	return summary;
+}
+function compatSnapshotTextureDebugInfo(id)
+{
+	var info = textureDebugInfo[id];
+	if(!info) return null;
+	return {
+		id: info.id,
+		fullUploadCount: info.fullUploadCount || 0,
+		subUploadCount: info.subUploadCount || 0,
+		copyUploadCount: info.copyUploadCount || 0,
+		lastFullUpload: info.lastFullUpload || null,
+		lastSubUpload: info.lastSubUpload || null,
+		lastCopyUpload: info.lastCopyUpload || null
+	};
+}
+function compatProjectedBounds(readPosition, count)
+{
+	if(count < 3 || count > 64) return null;
+	var mv = modelViewMatrixStack[modelViewMatrixStack.length - 1];
+	var proj = projMatrixStack[projMatrixStack.length - 1];
+	var objectPos = glMatrix.vec4.create();
+	var eyePos = glMatrix.vec4.create();
+	var clipPos = glMatrix.vec4.create();
+	var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	for(var i=0;i<count;i++)
+	{
+		var pos = readPosition(i);
+		if(!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return null;
+		objectPos[0] = pos[0]; objectPos[1] = pos[1]; objectPos[2] = Number.isFinite(pos[2]) ? pos[2] : 0; objectPos[3] = 1;
+		glMatrix.vec4.transformMat4(eyePos, objectPos, mv);
+		glMatrix.vec4.transformMat4(clipPos, eyePos, proj);
+		if(!Number.isFinite(clipPos[3]) || Math.abs(clipPos[3]) < 1e-8) return null;
+		var x = clipPos[0] / clipPos[3];
+		var y = clipPos[1] / clipPos[3];
+		minX = Math.min(minX, x); minY = Math.min(minY, y);
+		maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+	}
+	var clippedWidth = Math.max(0, Math.min(1, maxX) - Math.max(-1, minX));
+	var clippedHeight = Math.max(0, Math.min(1, maxY) - Math.max(-1, minY));
+	return { minX, minY, maxX, maxY, coverage: clippedWidth * clippedHeight / 4 };
+}
+function compatRecordLargeDraw(source, mode, count, bounds, extra)
+{
+	if(!bounds || bounds.coverage < 0.45) return;
+	var expectedTexture = boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null;
+	var actualTexture = glCtx.getParameter(glCtx.TEXTURE_BINDING_2D);
+	var record = {
+		source, mode, count,
+		bounds,
+		texture2DEnabled,
+		boundTexture2DId,
+		boundTextureExists: boundTexture2DId > 0 && !!textureObjects[boundTexture2DId],
+		actualBoundTextureMatches: actualTexture === expectedTexture,
+		textureStorageUploadFormat: textureStorageUploadFormat[boundTexture2DId] || null,
+		textureDebugInfo: compatSnapshotTextureDebugInfo(boundTexture2DId),
+		textureMatrix: Array.from(textureMatrixStack[textureMatrixStack.length - 1]),
+		currentColor: immediateModeData.currentColor.slice(),
+		blendEnabled: glCtx.isEnabled(glCtx.BLEND),
+		blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+		blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+		alphaTestEnabled: alphaTestState.enabled,
+		viewport: Array.from(glCtx.getParameter(glCtx.VIEWPORT)),
+		...extra
+	};
+	compatDrawDiagnostics.currentLargeDraws.push(record);
+	if(compatDrawDiagnostics.currentLargeDraws.length > 96) compatDrawDiagnostics.currentLargeDraws.shift();
+}
+function compatRecordImmediateDraw(mode, count)
+{
+	if(!compatDrawDiagnosticsEnabled) return;
+	var interleaved = immediateInterleavedEnabled;
+	var bounds = compatProjectedBounds(function(i) {
+		var base = interleaved ? i * 9 : i * 3;
+		var buf = interleaved ? immediateModeData.interleavedBuf : immediateModeData.vertexBuf;
+		return [buf[base], buf[base + 1], buf[base + 2]];
+	}, count);
+	var firstColor = count > 0 ? (interleaved
+		? Array.from(immediateModeData.interleavedBuf.subarray(3, 7))
+		: Array.from(immediateModeData.colorBuf.subarray(0, 4))) : [];
+	var texCoordBounds = null;
+	if(count > 0)
+	{
+		var minS = Infinity, minT = Infinity, maxS = -Infinity, maxT = -Infinity;
+		for(var i=0;i<count;i++)
+		{
+			var texBase = interleaved ? i * 9 + 7 : i * 2;
+			var texBuf = interleaved ? immediateModeData.interleavedBuf : immediateModeData.texCoordBuf;
+			var s = texBuf[texBase], t = texBuf[texBase + 1];
+			if(!Number.isFinite(s) || !Number.isFinite(t)) { texCoordBounds = null; break; }
+			minS = Math.min(minS, s); minT = Math.min(minT, t);
+			maxS = Math.max(maxS, s); maxT = Math.max(maxT, t);
+			texCoordBounds = { minS, minT, maxS, maxT };
+		}
+	}
+	compatRecordLargeDraw('immediate', mode, count, bounds, {
+		colorArrayEnabled: true,
+		texCoordArrayEnabled: true,
+		firstColor,
+		texCoordBounds
+	});
+}
+function compatRecordClientDraw(source, v, data, mode, count)
+{
+	if(!compatDrawDiagnosticsEnabled || !data.enabled || count < 3 || count > 64) return;
+	var layout = normalizeLegacyClientArrayLayout(data.type, data.stride);
+	var stride = clientArrayEffectiveStride(data.size, layout.type, layout.stride);
+	var componentBytes = clientArrayComponentBytes(layout.type);
+	var byteLength = clientArrayByteLength(data.size, layout.type, layout.stride, count);
+	if(stride <= 0 || componentBytes <= 0 || byteLength <= 0) return;
+	var bytes = data.buf;
+	if(bytes == null)
+	{
+		if(!v || !data.pointer) return;
+		bytes = new Uint8Array(v.buffer, Number(data.pointer), byteLength);
+	}
+	var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	var bounds = compatProjectedBounds(function(i) {
+		var base = i * stride;
+		return [
+			compatReadScalar(view, base, layout.type),
+			data.size > 1 ? compatReadScalar(view, base + componentBytes, layout.type) : 0,
+			data.size > 2 ? compatReadScalar(view, base + componentBytes * 2, layout.type) : 0
+		];
+	}, count);
+	compatRecordLargeDraw(source, mode, count, bounds, {
+		colorArrayEnabled: colorData.enabled,
+		texCoordArrayEnabled: texCoordData.enabled,
+		vertexType: layout.type,
+		vertexSize: data.size,
+		vertexStride: stride
+	});
+}
+function compatFinishFrame()
+{
+	if(!compatDrawDiagnosticsEnabled) return;
+	compatDrawDiagnostics.frames.push({
+		swap: presentationStats.swapCount,
+		largeDraws: compatDrawDiagnostics.currentLargeDraws,
+		clears: compatDrawDiagnostics.currentClears,
+		endState: { texture2DEnabled, boundTexture2DId, currentColor: immediateModeData.currentColor.slice() }
+	});
+	if(compatDrawDiagnostics.frames.length > 6) compatDrawDiagnostics.frames.shift();
+	compatDrawDiagnostics.currentLargeDraws = [];
+	compatDrawDiagnostics.currentClears = [];
 }
 
 function ensureFramebufferSize()
@@ -649,13 +933,18 @@ function ensureFramebufferSize()
 		return;
 	fbWidth = nextWidth;
 	fbHeight = nextHeight;
+	// Resizing the presentation FBO is bridge bookkeeping, not an application
+	// texture bind. Preserve the desktop GL binding that Starsector expects to
+	// survive the resize; otherwise the next fixed-function quad samples texture
+	// zero and the campaign background depends on unrelated draw order.
+	var restoreTexture2D = boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null;
 	glCtx.bindTexture(glCtx.TEXTURE_2D, fbTexture);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.NEAREST);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.NEAREST);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE);
 	glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
 	glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, fbWidth, fbHeight, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
-	glCtx.bindTexture(glCtx.TEXTURE_2D, null);
+	glCtx.bindTexture(glCtx.TEXTURE_2D, restoreTexture2D);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, depthRb);
 	glCtx.renderbufferStorage(glCtx.RENDERBUFFER, glCtx.DEPTH24_STENCIL8, fbWidth, fbHeight);
 	glCtx.bindRenderbuffer(glCtx.RENDERBUFFER, null);
@@ -876,10 +1165,20 @@ function ensureImmediateArrayCapacity(buf, neededLength)
 	nextBuf.set(buf);
 	return nextBuf;
 }
+// LWJGL_DISPLAY_LIST_NONFATAL_V1: non-listable legacy calls execute
+// immediately, as in desktop GL. Normal vectors are irrelevant to the bridge's
+// unlit shader and must not terminate CheerpJ during campaign construction.
+var displayListCompatibilityWarnings = new Set();
 function checkNoList(list)
 {
 	if(list != null)
-		throw new Error("Unsupported command in list");
+	{
+		warnOnce(
+			displayListCompatibilityWarnings,
+			"immediate-command-during-list",
+			"LWJGL executed a non-recorded legacy OpenGL command immediately while compiling a display list."
+		);
+	}
 }
 function pushInList(list, args, callee)
 {
@@ -929,9 +1228,23 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
-	// TODO: Conditional
-	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
-	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	// LWJGL_TEXTURE_MATRIX_COMPAT_V1: fixed-function OpenGL transforms texture
+	// coordinates independently from model/view and projection coordinates.
+	if(modelViewMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
+		modelViewMatrixUniformDirty = false;
+	}
+	if(projMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+		projMatrixUniformDirty = false;
+	}
+	if(textureMatrixUniformDirty)
+	{
+		glCtx.uniformMatrix4fv(texMatrixLocation, false, textureMatrixStack[textureMatrixStack.length - 1]);
+		textureMatrixUniformDirty = false;
+	}
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -994,6 +1307,7 @@ function pushDrawArraysInList(list, v, mode, first, count)
 }
 function drawArraysInList(mode, first, count, capturedVertexData, capturedColorData, capturedTexCoordData)
 {
+	compatRecordClientDraw('display-list-client', null, capturedVertexData, mode, count);
 	// Upload vertex data
 	uploadData(null, capturedVertexData, vertexBuffer, vertexPosition, count);
 	// Upload color data
@@ -1013,6 +1327,13 @@ var cmdLists = [null];
 // The first null implicitly solves resetting on 0 id
 var textureObjects = [null];
 var textureGenerateMipmap = [false];
+// WebGL2 requires sub-image source formats to be compatible with the base
+// texture storage. Desktop GL accepts RGB updates for an RGBA texture, so keep
+// the normalized base upload format and expand those updates when necessary.
+var textureStorageUploadFormat = [null];
+var textureStorageWidth = [0];
+var textureStorageHeight = [0];
+var textureDebugInfo = [null];
 var boundTexture2DId = 0;
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
@@ -1669,6 +1990,15 @@ function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 {
 	checkNoList(curList);
+	if(compatDrawDiagnosticsEnabled)
+	{
+		compatDrawDiagnostics.currentClears.push({
+			mask: a,
+			color: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE)),
+			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK))
+		});
+		if(compatDrawDiagnostics.currentClears.length > 32) compatDrawDiagnostics.currentClears.shift();
+	}
 	glCtx.clear(a);
 }
 
@@ -1721,6 +2051,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
 	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
 	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+	compatFinishFrame();
 	frameCount++;
 	if(frameLimit && frameCount >= frameLimit)
 	{
@@ -1756,6 +2087,7 @@ function Java_org_lwjgl_opengl_GL11_nglLoadIdentity(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglLoadIdentity);
 	glMatrix.mat4.identity(getCurMatrixTop());
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, nearVal, farVal, funcPtr)
@@ -1835,6 +2167,11 @@ function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 		buf[i] = id;
 		textureObjects[id] = glCtx.createTexture();
 		textureGenerateMipmap[id] = false;
+		textureStorageUploadFormat[id] = null;
+		textureStorageWidth[id] = 0;
+		textureStorageHeight[id] = 0;
+		if(compatDrawDiagnosticsEnabled)
+			textureDebugInfo[id] = { id, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 };
 	}
 }
 
@@ -1868,6 +2205,22 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	var v = lib.getJNIDataView();
 	var upload = normalizeTextureUpload(v, memPtr, width, height, internalFormat, format, type);
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
+	if(level == 0)
+	{
+		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
+	}
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.fullUploadCount++;
+		info.lastFullUpload = {
+			level, requestedInternalFormat: internalFormat, requestedFormat: format,
+			uploadInternalFormat: upload.internalFormat,
+			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
+		};
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 	if(strictWebGLValidation)
@@ -1940,6 +2293,7 @@ function Java_org_lwjgl_opengl_GL11_nglDrawArrays(lib, mode, first, count, funcP
 		// Capture client state at this point in time
 		return pushDrawArraysInList(curList, v, mode, first, count);
 	}
+	compatRecordClientDraw('client', v, vertexData, mode, count);
 	// Upload vertex data
 	uploadData(v, vertexData, vertexBuffer, vertexPosition, count);
 	// Upload color data
@@ -2110,14 +2464,26 @@ function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-	curMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));
+	var stack = ensureCurMatrixStack();
+	stack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-	curMatrixStack.pop();
+	var stack = ensureCurMatrixStack();
+	if(stack.length <= 1)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-underflow",
+			"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow."
+		);
+		return;
+	}
+	stack.pop();
+	markCurMatrixUniformDirty();
 }
 
 function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
@@ -2166,6 +2532,18 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
 	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
+	if(level == 0)
+	{
+		textureStorageUploadFormat[boundTexture2DId] = internalFormat;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
+	}
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.copyUploadCount++;
+		info.lastCopyUpload = { kind: 'image', level, internalFormat, x, y, width, height };
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 }
@@ -2174,6 +2552,12 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xof
 {
 	checkNoList(curList);
 	glCtx.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.copyUploadCount++;
+		info.lastCopyUpload = { kind: 'sub-image', level, xoffset, yoffset, x, y, width, height };
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 }
@@ -2218,8 +2602,42 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	checkNoList(curList);
 	assert(target == glCtx.TEXTURE_2D);
 	var v = lib.getJNIDataView();
-	var upload = normalizeTextureUpload(v, memPtr, width, height, format, format, type);
-	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	var trackedStorageFormat = textureStorageUploadFormat[boundTexture2DId];
+	var trackedWidth = textureStorageWidth[boundTexture2DId] || 0;
+	var trackedHeight = textureStorageHeight[boundTexture2DId] || 0;
+	// Starsector's loader normally requests RGBA storage even for RGB source
+	// pixels. A deferred handle has no base glTexImage2D call from which to retain
+	// that internal format, so preserve the same WebGL-compatible RGBA contract.
+	var storageFormat = trackedStorageFormat || (format == glCtx.RGB ? glCtx.RGBA : format);
+	var upload = normalizeTextureUpload(v, memPtr, width, height, storageFormat, format, type);
+	// LWJGL_TEX_SUBIMAGE_STORAGE_COMPAT_V1: the browser's deferred loader may
+	// retain a desktop texture handle before its WebGL storage has been created,
+	// or its tiny placeholder can be smaller than the eventual decoded image. A
+	// zero-offset level-zero refresh carries every pixel needed to establish or
+	// grow that storage; partial updates retain strict texSubImage2D semantics.
+	var regionExceedsStorage = xoffset + width > trackedWidth || yoffset + height > trackedHeight;
+	var promotedToFullImage = level == 0 && xoffset == 0 && yoffset == 0 && (!trackedStorageFormat || regionExceedsStorage);
+	if(promotedToFullImage)
+	{
+		glCtx.texImage2D(target, level, upload.format, width, height, 0, upload.format, upload.type, upload.data);
+		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+		textureStorageWidth[boundTexture2DId] = width;
+		textureStorageHeight[boundTexture2DId] = height;
+	}
+	else
+	{
+		glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	}
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.subUploadCount++;
+		info.lastSubUpload = {
+			level, xoffset, yoffset, requestedFormat: format, promotedToFullImage,
+			trackedWidth, trackedHeight, regionExceedsStorage,
+			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
+		};
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 	if(strictWebGLValidation)
@@ -2507,6 +2925,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
 	var vertexCount = immediateModeData.vertexPos / 3;
+	compatRecordImmediateDraw(immediateModeData.mode, vertexCount);
 	if(immediateInterleavedEnabled)
 	{
 		uploadImmediateInterleaved(vertexCount);
