@@ -54,6 +54,7 @@ def main() -> int:
     require(text, "LWJGL_TEXTURE_MATRIX_COMPAT_V1", "module")
     require(text, "LWJGL_MATRIX_UNIFORM_DIRTY_CACHE_V1", "module")
     require(text, "LWJGL_MATRIX_STACK_GUARD_V1", "module")
+    require(text, "LWJGL_MATRIX_INPLACE_TRANSFORMS_V1", "module")
     require(text, "uniform mat4 textureMatrix;", "fixed-function vertex shader")
     require(text, "textureMatrix * vec4(aTexCoord, 0.0, 1.0)", "fixed-function vertex shader")
     require(text, "preserveDrawingBuffer: false", "production WebGL context")
@@ -87,6 +88,11 @@ def main() -> int:
     load_identity = function_block(text, "Java_org_lwjgl_opengl_GL11_nglLoadIdentity")
     push_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglPushMatrix")
     pop_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglPopMatrix")
+    ortho_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglOrtho")
+    translate_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglTranslatef")
+    multiply_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglMultMatrixf")
+    rotate_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglRotatef")
+    scale_matrix = function_block(text, "Java_org_lwjgl_opengl_GL11_nglScalef")
     ensure_framebuffer = function_block(text, "ensureFramebufferSize")
 
     require(enable, "setTexture2DEnabled(true);", "glEnable")
@@ -142,6 +148,20 @@ def main() -> int:
     require(push_matrix, "ensureCurMatrixStack();", "matrix push stack guard")
     require(pop_matrix, "if(stack.length <= 1)", "matrix pop underflow guard")
     require(pop_matrix, "markCurMatrixUniformDirty();", "matrix pop invalidation")
+    require(ortho_matrix, "glMatrix.mat4.multiply(m, m, compatMatrixScratch)", "in-place orthographic matrix multiplication")
+    require(translate_matrix, "glMatrix.mat4.translate(m, m, setCompatVec3(x, y, z))", "in-place matrix translation")
+    require(multiply_matrix, "glMatrix.mat4.multiply(m, m, buf)", "in-place matrix multiplication")
+    require(rotate_matrix, "glMatrix.mat4.rotate(m, m", "in-place matrix rotation")
+    require(scale_matrix, "glMatrix.mat4.scale(m, m, setCompatVec3(x, y, z))", "in-place matrix scaling")
+    for block, label in (
+        (ortho_matrix, "orthographic matrix"),
+        (translate_matrix, "translation matrix"),
+        (multiply_matrix, "multiplied matrix"),
+        (rotate_matrix, "rotation matrix"),
+        (scale_matrix, "scale matrix"),
+    ):
+        reject(block, "glMatrix.mat4.create()", label)
+        reject(block, "glMatrix.vec3.fromValues", label)
     require(draw_arrays, "if(quadCount <= 1)", "single-quad fast path")
     require(draw_arrays, "glCtx.drawElements(glCtx.TRIANGLES, quadCount * 6, glCtx.UNSIGNED_INT, 0);", "batched GL_QUADS draw")
     require(draw_arrays, "presentationStats.quadDrawCallsSaved += quadCount - 1", "quad draw-call savings telemetry")

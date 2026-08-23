@@ -686,6 +686,18 @@ function ensureCurMatrixStack()
 var modelViewMatrixUniformDirty = true;
 var projMatrixUniformDirty = true;
 var textureMatrixUniformDirty = true;
+// LWJGL_MATRIX_INPLACE_TRANSFORMS_V1: matrix transforms are a high-frequency
+// fixed-function path. Reuse scratch storage and update the active matrix in
+// place instead of allocating a matrix and vec3 for every transform call.
+var compatMatrixScratch = glMatrix.mat4.create();
+var compatVec3Scratch = glMatrix.vec3.create();
+function setCompatVec3(x, y, z)
+{
+	compatVec3Scratch[0] = x;
+	compatVec3Scratch[1] = y;
+	compatVec3Scratch[2] = z;
+	return compatVec3Scratch;
+}
 function markCurMatrixUniformDirty()
 {
 	if(curMatrixStack === modelViewMatrixStack)
@@ -2095,10 +2107,8 @@ function Java_org_lwjgl_opengl_GL11_nglOrtho(lib, left, right, bottom, top, near
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglOrtho);
 	var m = getCurMatrixTop();
-	var o = glMatrix.mat4.create();
-	glMatrix.mat4.ortho(o, left, right, bottom, top, nearVal, farVal);
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.multiply(out, m, o));
+	glMatrix.mat4.ortho(compatMatrixScratch, left, right, bottom, top, nearVal, farVal);
+	setCurMatrixTop(glMatrix.mat4.multiply(m, m, compatMatrixScratch));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTranslatef(lib, x, y, z, funcPtr)
@@ -2106,8 +2116,7 @@ function Java_org_lwjgl_opengl_GL11_nglTranslatef(lib, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglTranslatef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.translate(out, m, glMatrix.vec3.fromValues(x, y, z)));
+	setCurMatrixTop(glMatrix.mat4.translate(m, m, setCompatVec3(x, y, z)));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPtr)
@@ -2493,8 +2502,7 @@ function Java_org_lwjgl_opengl_GL11_nglMultMatrixf(lib, memPtr, funcPtr)
 	var m = getCurMatrixTop();
 	var v = lib.getJNIDataView();
 	var buf = new Float32Array(v.buffer, Number(memPtr), 16);
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.multiply(out, m, buf));
+	setCurMatrixTop(glMatrix.mat4.multiply(m, m, buf));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglRotatef(lib, angle, x, y, z, funcPtr)
@@ -2502,8 +2510,7 @@ function Java_org_lwjgl_opengl_GL11_nglRotatef(lib, angle, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglRotatef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.rotate(out, m, angle * Math.PI / 180.0, glMatrix.vec3.fromValues(x, y, z)));
+	setCurMatrixTop(glMatrix.mat4.rotate(m, m, angle * Math.PI / 180.0, setCompatVec3(x, y, z)));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
@@ -2567,8 +2574,7 @@ function Java_org_lwjgl_opengl_GL11_nglScalef(lib, x, y, z, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglScalef);
 	var m = getCurMatrixTop();
-	var out = glMatrix.mat4.create();
-	setCurMatrixTop(glMatrix.mat4.scale(out, m, glMatrix.vec3.fromValues(x, y, z)));
+	setCurMatrixTop(glMatrix.mat4.scale(m, m, setCompatVec3(x, y, z)));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCallLists(lib, n, type, memPtr, funcPtr)
