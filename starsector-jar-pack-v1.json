@@ -28,13 +28,13 @@
     "fixer_patch.jar": {
       "offset": 0,
       "length": 254308,
-      "sha256": "a2300a111ee19ffc8a2fee19ef361daa8b7e3ad4fd9944da389248418cd8d2b1",
+      "sha256": "8a278941a96c95423d893b1e84e1e70dd6f92fa430d96883b5f7cf5f80aecc44",
       "type": "application/java-archive"
     },
     "bridge.jar": {
       "offset": 254308,
       "length": 93475,
-      "sha256": "38d816b1f660a0e74c0d6a82982e5fc68b7eccb4d3918038e678a39411db4645",
+      "sha256": "14b117c371074f1b180757e44752c241d55c34ca28e294f9938e2601cd2b254a",
       "type": "application/java-archive"
     },
     "fixer.jar": {
@@ -70,7 +70,7 @@
     "starfarer_obf.jar": {
       "offset": 11177580,
       "length": 6029585,
-      "sha256": "08530e59afbaa82fd9469ea2220310ef2158612a63ff0d73153a2986b56c156d",
+      "sha256": "a7ad5e41643cb1a786e31254fe7070d6769342790d981449a3d267c225cfc6e5",
       "type": "application/java-archive"
     },
     "jogg-0.0.7.jar": {
