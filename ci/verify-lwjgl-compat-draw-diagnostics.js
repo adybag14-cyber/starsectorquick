@@ -36,6 +36,9 @@ const path = process.argv[2];
 if (!path) throw new Error('usage: node ci/verify-lwjgl-compat-draw-diagnostics.js <lwjgl.js>');
 const source = fs.readFileSync(path, 'utf8');
 const code = [
+  'compatNormalizeTextureComponent',
+  'compatSummarizeTextureUpload',
+  'compatSnapshotTextureDebugInfo',
   'compatProjectedBounds',
   'compatRecordLargeDraw',
   'compatRecordImmediateDraw',
@@ -47,14 +50,26 @@ const glCtx = {
   BLEND_SRC_RGB: 0x80C9,
   BLEND_DST_RGB: 0x80C8,
   VIEWPORT: 0x0BA2,
+  TEXTURE_BINDING_2D: 0x8069,
+  UNSIGNED_BYTE: 0x1401,
+  BYTE: 0x1400,
+  UNSIGNED_SHORT: 0x1403,
+  SHORT: 0x1402,
+  UNSIGNED_INT: 0x1405,
+  FLOAT: 0x1406,
+  UNSIGNED_SHORT_5_6_5: 0x8363,
+  UNSIGNED_SHORT_4_4_4_4: 0x8033,
+  UNSIGNED_SHORT_5_5_5_1: 0x8034,
   isEnabled: () => true,
   getParameter(name) {
     if (name === this.VIEWPORT) return [0, 0, 1024, 768];
     if (name === this.BLEND_SRC_RGB) return 0x0302;
     if (name === this.BLEND_DST_RGB) return 0x0303;
+    if (name === this.TEXTURE_BINDING_2D) return textureObject;
     return null;
   },
 };
+const textureObject = { id: 7 };
 const context = vm.createContext({
   compatDrawDiagnosticsEnabled: true,
   compatDrawDiagnostics: { enabled: true, frames: [], currentLargeDraws: [], currentClears: [] },
@@ -75,6 +90,7 @@ const context = vm.createContext({
   },
   modelViewMatrixStack: [identity],
   projMatrixStack: [identity],
+  textureMatrixStack: [identity],
   immediateInterleavedEnabled: true,
   immediateModeData: {
     currentColor: [1, 1, 1, 1],
@@ -86,11 +102,20 @@ const context = vm.createContext({
     ]),
     vertexBuf: new Float32Array(0),
     colorBuf: new Float32Array(0),
+    texCoordBuf: new Float32Array(0),
   },
   texture2DEnabled: false,
   boundTexture2DId: 7,
-  textureObjects: [null, null, null, null, null, null, null, { id: 7 }],
+  textureObjects: [null, null, null, null, null, null, null, textureObject],
   textureStorageUploadFormat: [null, null, null, null, null, null, null, 0x1908],
+  textureDebugInfo: [null, null, null, null, null, null, null, {
+    id: 7,
+    fullUploadCount: 1,
+    subUploadCount: 0,
+    copyUploadCount: 0,
+    lastFullUpload: { width: 2, height: 2, nearWhiteRatio: 0 },
+  }],
+  getTexelComponentCount: () => 4,
   alphaTestState: { enabled: false },
   Float32Array,
   Array,
@@ -108,6 +133,13 @@ expect(Math.abs(records[0].bounds.coverage - 1) < 1e-6,
 expect(records[0].texture2DEnabled === false, 'texture enable state was not captured');
 expect(records[0].boundTexture2DId === 7 && records[0].boundTextureExists === true,
   'bound texture identity was not captured');
+expect(records[0].actualBoundTextureMatches === true, 'actual WebGL binding did not match logical texture');
+expect(records[0].textureDebugInfo && records[0].textureDebugInfo.lastFullUpload.width === 2,
+  'texture upload metadata was not captured');
 expect(records[0].firstColor.join(',') === '1,1,1,1', 'first vertex color was not captured');
+expect(records[0].texCoordBounds.minS === 0 && records[0].texCoordBounds.maxS === 1
+  && records[0].texCoordBounds.minT === 0 && records[0].texCoordBounds.maxT === 1,
+  'texture-coordinate range was not captured');
+expect(records[0].textureMatrix.join(',') === identity.join(','), 'texture matrix was not captured');
 
-console.log('verify-lwjgl-compat-draw-diagnostics: OK full-screen untextured white quad captured');
+console.log('verify-lwjgl-compat-draw-diagnostics: OK full-screen draw state, UVs, binding, and upload metadata captured');

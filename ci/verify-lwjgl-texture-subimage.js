@@ -75,6 +75,7 @@ const context = vm.createContext({
   boundTexture2DId: 1,
   textureGenerateMipmap: [false, false],
   textureStorageUploadFormat: [null, null],
+  compatDrawDiagnosticsEnabled: false,
   strictWebGLValidation: false,
   texImageWarnings: new Set(),
   warnOnce() {},

@@ -213,13 +213,14 @@ var vertexShaderSrc = `
 	attribute vec2 aTexCoord;
 	uniform mat4 modelView;
 	uniform mat4 projection;
+	uniform mat4 textureMatrix;
 	uniform float uPointSize;
 	varying vec2 vTexCoord;
 	varying vec4 vColor;
 	void main() {
 		gl_Position = projection * modelView * aVertexPosition;
 		gl_PointSize = uPointSize;
-		vTexCoord = aTexCoord;
+		vTexCoord = (textureMatrix * vec4(aTexCoord, 0.0, 1.0)).xy;
 		vColor = aColor;
 	}
 `;
@@ -276,6 +277,7 @@ var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
 var mvLocation = glCtx.getUniformLocation(program, "modelView");
 var projLocation = glCtx.getUniformLocation(program, "projection");
+var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
 var pointSizeLocation = glCtx.getUniformLocation(program, "uPointSize");
 var pointSizeState = 1.0;
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
@@ -684,6 +686,76 @@ function compatReadScalar(view, offset, type)
 	if(type == 0x140A/*GL_DOUBLE*/) return view.getFloat64(offset, true);
 	return NaN;
 }
+function compatNormalizeTextureComponent(value, type)
+{
+	if(type == glCtx.UNSIGNED_BYTE) return value / 255;
+	if(type == glCtx.BYTE) return Math.max(-1, value / 127);
+	if(type == glCtx.UNSIGNED_SHORT) return value / 65535;
+	if(type == glCtx.SHORT) return Math.max(-1, value / 32767);
+	if(type == glCtx.UNSIGNED_INT) return value / 4294967295;
+	if(type == glCtx.FLOAT) return value;
+	return NaN;
+}
+function compatSummarizeTextureUpload(data, width, height, format, type)
+{
+	var summary = {
+		width, height, format, type,
+		dataNull: data == null,
+		dataLength: data ? data.length : 0,
+		dataType: data && data.constructor ? data.constructor.name : null
+	};
+	if(data == null || !data.length || width <= 0 || height <= 0) return summary;
+	if(type == glCtx.UNSIGNED_SHORT_5_6_5 || type == glCtx.UNSIGNED_SHORT_4_4_4_4 || type == glCtx.UNSIGNED_SHORT_5_5_5_1)
+	{
+		summary.packed = true;
+		summary.firstValues = Array.from(data.subarray(0, Math.min(8, data.length)));
+		return summary;
+	}
+	var components = getTexelComponentCount(format);
+	var pixelCount = Math.min(Math.max(0, width * height), Math.floor(data.length / components));
+	var sampleCount = Math.min(pixelCount, 2048);
+	if(sampleCount <= 0) return summary;
+	var sums = [0, 0, 0, 0];
+	var nearWhite = 0, nearBlack = 0, transparent = 0;
+	var firstPixel = null;
+	for(var i=0;i<sampleCount;i++)
+	{
+		var pixelIndex = Math.min(pixelCount - 1, Math.floor(i * pixelCount / sampleCount));
+		var base = pixelIndex * components;
+		var rgba = [0, 0, 0, 1];
+		for(var c=0;c<components && c<4;c++)
+			rgba[c] = compatNormalizeTextureComponent(data[base + c], type);
+		if(components == 1) rgba[1] = rgba[2] = rgba[0];
+		if(components == 2) rgba[2] = rgba[0];
+		if(!firstPixel) firstPixel = rgba.slice();
+		for(var channel=0;channel<4;channel++) sums[channel] += rgba[channel];
+		if(rgba[0] >= 0.97 && rgba[1] >= 0.97 && rgba[2] >= 0.97) nearWhite++;
+		if(rgba[0] <= 0.03 && rgba[1] <= 0.03 && rgba[2] <= 0.03) nearBlack++;
+		if(rgba[3] <= 0.03) transparent++;
+	}
+	summary.components = components;
+	summary.sampleCount = sampleCount;
+	summary.firstPixel = firstPixel;
+	summary.meanRgba = sums.map(function(sum) { return sum / sampleCount; });
+	summary.nearWhiteRatio = nearWhite / sampleCount;
+	summary.nearBlackRatio = nearBlack / sampleCount;
+	summary.transparentRatio = transparent / sampleCount;
+	return summary;
+}
+function compatSnapshotTextureDebugInfo(id)
+{
+	var info = textureDebugInfo[id];
+	if(!info) return null;
+	return {
+		id: info.id,
+		fullUploadCount: info.fullUploadCount || 0,
+		subUploadCount: info.subUploadCount || 0,
+		copyUploadCount: info.copyUploadCount || 0,
+		lastFullUpload: info.lastFullUpload || null,
+		lastSubUpload: info.lastSubUpload || null,
+		lastCopyUpload: info.lastCopyUpload || null
+	};
+}
 function compatProjectedBounds(readPosition, count)
 {
 	if(count < 3 || count > 64) return null;
@@ -713,13 +785,18 @@ function compatProjectedBounds(readPosition, count)
 function compatRecordLargeDraw(source, mode, count, bounds, extra)
 {
 	if(!bounds || bounds.coverage < 0.45) return;
+	var expectedTexture = boundTexture2DId > 0 ? textureObjects[boundTexture2DId] : null;
+	var actualTexture = glCtx.getParameter(glCtx.TEXTURE_BINDING_2D);
 	var record = {
 		source, mode, count,
 		bounds,
 		texture2DEnabled,
 		boundTexture2DId,
 		boundTextureExists: boundTexture2DId > 0 && !!textureObjects[boundTexture2DId],
+		actualBoundTextureMatches: actualTexture === expectedTexture,
 		textureStorageUploadFormat: textureStorageUploadFormat[boundTexture2DId] || null,
+		textureDebugInfo: compatSnapshotTextureDebugInfo(boundTexture2DId),
+		textureMatrix: Array.from(textureMatrixStack[textureMatrixStack.length - 1]),
 		currentColor: immediateModeData.currentColor.slice(),
 		blendEnabled: glCtx.isEnabled(glCtx.BLEND),
 		blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
@@ -743,10 +820,26 @@ function compatRecordImmediateDraw(mode, count)
 	var firstColor = count > 0 ? (interleaved
 		? Array.from(immediateModeData.interleavedBuf.subarray(3, 7))
 		: Array.from(immediateModeData.colorBuf.subarray(0, 4))) : [];
+	var texCoordBounds = null;
+	if(count > 0)
+	{
+		var minS = Infinity, minT = Infinity, maxS = -Infinity, maxT = -Infinity;
+		for(var i=0;i<count;i++)
+		{
+			var texBase = interleaved ? i * 9 + 7 : i * 2;
+			var texBuf = interleaved ? immediateModeData.interleavedBuf : immediateModeData.texCoordBuf;
+			var s = texBuf[texBase], t = texBuf[texBase + 1];
+			if(!Number.isFinite(s) || !Number.isFinite(t)) { texCoordBounds = null; break; }
+			minS = Math.min(minS, s); minT = Math.min(minT, t);
+			maxS = Math.max(maxS, s); maxT = Math.max(maxT, t);
+			texCoordBounds = { minS, minT, maxS, maxT };
+		}
+	}
 	compatRecordLargeDraw('immediate', mode, count, bounds, {
 		colorArrayEnabled: true,
 		texCoordArrayEnabled: true,
-		firstColor
+		firstColor,
+		texCoordBounds
 	});
 }
 function compatRecordClientDraw(source, v, data, mode, count)
@@ -1099,9 +1192,11 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
-	// TODO: Conditional
+	// LWJGL_TEXTURE_MATRIX_COMPAT_V1: fixed-function OpenGL transforms texture
+	// coordinates independently from model/view and projection coordinates.
 	glCtx.uniformMatrix4fv(mvLocation, false, modelViewMatrixStack[modelViewMatrixStack.length - 1]);
 	glCtx.uniformMatrix4fv(projLocation, false, projMatrixStack[projMatrixStack.length - 1]);
+	glCtx.uniformMatrix4fv(texMatrixLocation, false, textureMatrixStack[textureMatrixStack.length - 1]);
 	// Client-array upload/capture currently assumes first==0. Preserve that
 	// established contract rather than pretending a non-zero base vertex is safe.
 	assert(first == 0);
@@ -1188,6 +1283,7 @@ var textureGenerateMipmap = [false];
 // texture storage. Desktop GL accepts RGB updates for an RGBA texture, so keep
 // the normalized base upload format and expand those updates when necessary.
 var textureStorageUploadFormat = [null];
+var textureDebugInfo = [null];
 var boundTexture2DId = 0;
 // We need to use an FBO as the main target to support copyTexSubImage2D that seems broken otherwise
 fbTexture = glCtx.createTexture();
@@ -2021,6 +2117,8 @@ function Java_org_lwjgl_opengl_GL11_nglGenTextures(lib, n, memPtr, funcPtr)
 		textureObjects[id] = glCtx.createTexture();
 		textureGenerateMipmap[id] = false;
 		textureStorageUploadFormat[id] = null;
+		if(compatDrawDiagnosticsEnabled)
+			textureDebugInfo[id] = { id, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 };
 	}
 }
 
@@ -2056,6 +2154,16 @@ function Java_org_lwjgl_opengl_GL11_nglTexImage2D(lib, target, level, internalFo
 	glCtx.texImage2D(target, level, upload.internalFormat, width, height, border, upload.format, upload.type, upload.data);
 	if(level == 0)
 		textureStorageUploadFormat[boundTexture2DId] = upload.format;
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.fullUploadCount++;
+		info.lastFullUpload = {
+			level, requestedInternalFormat: internalFormat, requestedFormat: format,
+			uploadInternalFormat: upload.internalFormat,
+			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
+		};
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 	if(strictWebGLValidation)
@@ -2357,6 +2465,12 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, intern
 	glCtx.copyTexImage2D(target, level, internalFormat, x, y, width, height, border);
 	if(level == 0)
 		textureStorageUploadFormat[boundTexture2DId] = internalFormat;
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.copyUploadCount++;
+		info.lastCopyUpload = { kind: 'image', level, internalFormat, x, y, width, height };
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 }
@@ -2365,6 +2479,12 @@ function Java_org_lwjgl_opengl_GL11_nglCopyTexSubImage2D(lib, target, level, xof
 {
 	checkNoList(curList);
 	glCtx.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.copyUploadCount++;
+		info.lastCopyUpload = { kind: 'sub-image', level, xoffset, yoffset, x, y, width, height };
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 }
@@ -2412,6 +2532,15 @@ function Java_org_lwjgl_opengl_GL11_nglTexSubImage2D(lib, target, level, xoffset
 	var storageFormat = textureStorageUploadFormat[boundTexture2DId] || format;
 	var upload = normalizeTextureUpload(v, memPtr, width, height, storageFormat, format, type);
 	glCtx.texSubImage2D(target, level, xoffset, yoffset, width, height, upload.format, upload.type, upload.data);
+	if(compatDrawDiagnosticsEnabled)
+	{
+		var info = textureDebugInfo[boundTexture2DId] || (textureDebugInfo[boundTexture2DId] = { id: boundTexture2DId, fullUploadCount: 0, subUploadCount: 0, copyUploadCount: 0 });
+		info.subUploadCount++;
+		info.lastSubUpload = {
+			level, xoffset, yoffset, requestedFormat: format,
+			...compatSummarizeTextureUpload(upload.data, width, height, upload.format, upload.type)
+		};
+	}
 	if(level == 0 && textureGenerateMipmap[boundTexture2DId])
 		glCtx.generateMipmap(target);
 	if(strictWebGLValidation)

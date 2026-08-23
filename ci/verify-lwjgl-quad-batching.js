@@ -44,6 +44,12 @@ const drawArrays = extractFunction(source, 'drawArraysImpl');
 
 const calls = [];
 let uploadedIndices = null;
+const mvLocation = { kind: 'model-view-uniform' };
+const projLocation = { kind: 'projection-uniform' };
+const texMatrixLocation = { kind: 'texture-matrix-uniform' };
+const modelMatrix = { kind: 'model-view-matrix' };
+const projectionMatrix = { kind: 'projection-matrix' };
+const textureMatrix = { kind: 'texture-matrix' };
 const glCtx = {
   ELEMENT_ARRAY_BUFFER: 0x8893,
   STATIC_DRAW: 0x88E4,
@@ -55,7 +61,7 @@ const glCtx = {
   LINES: 0x0001,
   LINE_LOOP: 0x0002,
   LINE_STRIP: 0x0003,
-  uniformMatrix4fv() {},
+  uniformMatrix4fv(location, transpose, matrix) { calls.push(['uniformMatrix4fv', location, transpose, matrix]); },
   bindBuffer(target, buffer) { calls.push(['bindBuffer', target, buffer]); },
   bufferData(target, data, usage) {
     uploadedIndices = Array.from(data);
@@ -78,10 +84,12 @@ const context = vm.createContext({
     quadDrawCallsSaved: 0,
     quadIndexBufferUploads: 0,
   },
-  mvLocation: {},
-  projLocation: {},
-  modelViewMatrixStack: [[]],
-  projMatrixStack: [[]],
+  mvLocation,
+  projLocation,
+  texMatrixLocation,
+  modelViewMatrixStack: [modelMatrix],
+  projMatrixStack: [projectionMatrix],
+  textureMatrixStack: [textureMatrix],
   unsupportedDrawModes: new Set(),
   warnOnce() {},
   assert(value) { if (!value) throw new Error('assertion failed'); },
@@ -92,6 +100,14 @@ const context = vm.createContext({
 vm.runInContext(`${ensureQuad}\n${drawArrays}`, context);
 
 context.drawArraysImpl(7, 0, 8);
+const matrixUploads = calls.filter(call => call[0] === 'uniformMatrix4fv');
+expect(matrixUploads.length === 3, `draw should upload three fixed-function matrices, got ${matrixUploads.length}`);
+expect(matrixUploads[0][1] === mvLocation && matrixUploads[0][3] === modelMatrix,
+  'model-view matrix upload changed');
+expect(matrixUploads[1][1] === projLocation && matrixUploads[1][3] === projectionMatrix,
+  'projection matrix upload changed');
+expect(matrixUploads[2][1] === texMatrixLocation && matrixUploads[2][3] === textureMatrix,
+  'texture matrix was not uploaded before the draw');
 let draws = calls.filter(call => call[0] === 'drawElements');
 expect(draws.length === 1, `two quads should use one indexed draw, got ${draws.length}`);
 expect(draws[0][2] === 12, `two quads should emit 12 indices, got ${draws[0][2]}`);
