@@ -61,7 +61,7 @@ jobs:
           test -s test_output/pages-overlays/deploy/launch.html
           grep -Fq 'id="resolutionPreset"' test_output/pages-overlays/deploy/launch.html
           grep -Fq "id='settingsBtn'" test_output/pages-overlays/deploy/launch.html
-          grep -Fq '640x360' test_output/pages-overlays/deploy/launch.html
+          grep -Fq '1024x768' test_output/pages-overlays/deploy/launch.html
           grep -Fq 'RESOLUTION' test_output/pages-overlays/deploy/launch.html
           grep -Fq 'LWJGL_FRAME_TIMING_RING_V1' test_output/pages-overlays/deploy/build/final/wasm-modules/lwjgl.js
           grep -Fq 'launch.html?manual=1' test_output/pages-overlays/deploy/index.html
@@ -185,7 +185,7 @@ jobs:
         run: |
           set -euo pipefail
           body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_LAUNCH_URL}?source=${SOURCE_SHA}")"
-          for marker in 'id="resolutionPreset"' "id='settingsBtn'" '640x360' 'RESOLUTION'; do
+          for marker in 'id="resolutionPreset"' "id='settingsBtn'" '1024x768' 'RESOLUTION'; do
             if [[ "$body" != *"$marker"* ]]; then
               echo "Live launcher is missing resolution marker: ${marker}" >&2
               exit 1

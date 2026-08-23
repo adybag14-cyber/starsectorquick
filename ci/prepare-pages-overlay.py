@@ -177,7 +177,7 @@ def main() -> int:
         raise RuntimeError("public launcher is not using normal sector size")
     if "window.__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__ || 'Galatia'" not in launch:
         raise RuntimeError("public launcher is not starting in Galatia")
-    for marker in ('id="resolutionPreset"', "id='settingsBtn'", "640x360", "RESOLUTION"):
+    for marker in ('id="resolutionPreset"', "id='settingsBtn'", "1024x768", "RESOLUTION"):
         if marker not in launch:
             raise RuntimeError(f"public launcher is missing resolution control marker: {marker}")
     index = (ROOT / "index.html").read_text(encoding="utf-8")

@@ -36,15 +36,8 @@ const { chromium } = require('playwright');
   assert.match(await page.locator('#settingsBtn').getAttribute('aria-label'), /1024 by 768/i);
   await page.locator('#settingsBtn').click();
   assert.strictEqual(await page.locator('#launcher-settings').isVisible(), true, 'settings panel opens');
-  await page.locator('#resolutionPreset').selectOption('640x360');
-  const performancePreset = await page.evaluate(() => ({
-    w: window.__STARSECTOR_RENDER_WIDTH__, h: window.__STARSECTOR_RENDER_HEIGHT__,
-    status: document.getElementById('resolutionStatus').textContent,
-    button: document.getElementById('settingsBtn').textContent,
-  }));
-  assert.deepStrictEqual([performancePreset.w, performancePreset.h], [640, 360]);
-  assert.match(performancePreset.status, /640\s*×\s*360/);
-  assert.match(performancePreset.button, /640\s*×\s*360/);
+  assert.strictEqual(await page.locator('#resolutionPreset option').first().getAttribute('value'), '1024x768', '1024x768 is the lowest named UI-safe preset');
+  assert.strictEqual(await page.locator('#resolutionPreset option[value="640x360"]').count(), 0, 'rejected sub-1024 performance preset stays unpublished');
   await page.locator('#resolutionPreset').selectOption('1920x1080');
   const fullHd = await page.evaluate(() => ({
     w: window.__STARSECTOR_RENDER_WIDTH__, h: window.__STARSECTOR_RENDER_HEIGHT__,
