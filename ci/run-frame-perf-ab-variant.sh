@@ -19,6 +19,7 @@ mkdir -p "$WORKTREE/.ci-cache"
 cp "$ARCHIVE" "$WORKTREE/.ci-cache/starsector_linux-0.98a-RC8.zip"
 cp "$ROOT/ci/patch-frame-perf-fixed-seed.py" "$WORKTREE/ci/patch-frame-perf-fixed-seed.py"
 cp "$ROOT/ci/patch-frame-tail-telemetry.py" "$WORKTREE/ci/patch-frame-tail-telemetry.py"
+cp "$ROOT/ci/patch-frame-perf-long-window.py" "$WORKTREE/ci/patch-frame-perf-long-window.py"
 cp "$ROOT/ci/patch-static-draw-telemetry.py" "$WORKTREE/ci/patch-static-draw-telemetry.py"
 cp "$ROOT/ci/verify-lwjgl-frame-timing.js" "$WORKTREE/ci/verify-lwjgl-frame-timing.js"
 if ! (
@@ -26,10 +27,12 @@ if ! (
   cd "$WORKTREE"
   python3 ci/patch-frame-perf-fixed-seed.py
   python3 ci/patch-frame-tail-telemetry.py
+  python3 ci/patch-frame-perf-long-window.py
   python3 ci/patch-static-draw-telemetry.py
   node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
   grep -q 'FRAME_TAIL_TELEMETRY_BENCH_V1' build/final/wasm-modules/lwjgl.js
   grep -q 'frameP95Ms: Number(perfAfter.frameP95Ms' ci/campaign-render-test.js
+  grep -q 'FINALIST_FRAME_WINDOW_V1' ci/campaign-render-test.js
 ); then
   ACTUAL_REF=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null || printf '%s' "$REF")
   printf '%s	%s	%s	%s
@@ -53,7 +56,6 @@ set +e
   STARSECTOR_DEEP_GAMEPLAY=true \
   STARSECTOR_PUBLIC_TUTORIAL_SMOKE=false \
   STARSECTOR_SAVE_LOAD_SMOKE=false \
-  STARSECTOR_SCREENSHOT_TIMEOUT_MS=30000 \
   STARSECTOR_TEST_TIMEOUT_MS=720000 \
     bash ci/run-campaign-experiment.sh "$NAME" sync false campaign '{}'
 )
