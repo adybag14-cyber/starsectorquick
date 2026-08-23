@@ -218,7 +218,7 @@ jobs:
           if-no-files-found: warn
 
   frame-perf-same-runner:
-    name: 1024x768 vs 640x360 frame-tail A/B
+    name: 1024x768 vs 800x600 frame-tail A/B
     if: github.event_name == 'pull_request' && github.head_ref == 'diag/resolution-performance-frame-tail-ab'
     runs-on: ubuntu-latest
     timeout-minutes: 100
@@ -264,8 +264,8 @@ jobs:
           test "$(wc -c < "$archive")" -gt 200000000
       - name: 1024x768 baseline A
         run: bash ci/run-frame-perf-ab-variant.sh resolution-1024-a origin/feature/starsector-webgl-integration '{"__STARSECTOR_RENDER_WIDTH__":1024,"__STARSECTOR_RENDER_HEIGHT__":768}'
-      - name: 640x360 performance resolution
-        run: bash ci/run-frame-perf-ab-variant.sh resolution-640 origin/feature/starsector-webgl-integration '{"__STARSECTOR_RENDER_WIDTH__":640,"__STARSECTOR_RENDER_HEIGHT__":360}'
+      - name: 800x600 performance resolution
+        run: bash ci/run-frame-perf-ab-variant.sh resolution-800 origin/feature/starsector-webgl-integration '{"__STARSECTOR_RENDER_WIDTH__":800,"__STARSECTOR_RENDER_HEIGHT__":600}'
       - name: 1024x768 baseline B
         run: bash ci/run-frame-perf-ab-variant.sh resolution-1024-b origin/feature/starsector-webgl-integration '{"__STARSECTOR_RENDER_WIDTH__":1024,"__STARSECTOR_RENDER_HEIGHT__":768}'
       - name: Summarize drift-adjusted frame metrics

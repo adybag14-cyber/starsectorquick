@@ -3,7 +3,7 @@ import json, re, statistics
 from pathlib import Path
 
 ROOT = Path('test_output/frame-perf-ab')
-ORDER = ['resolution-1024-a', 'resolution-640', 'resolution-1024-b']
+ORDER = ['resolution-1024-a', 'resolution-800', 'resolution-1024-b']
 BASELINE_SHA = 'bb67299ca71fe57fb10c083cb6ef3c4d460dfcdf'
 SEED = 'SEK968276040'
 WORLD = (218, 917, 59, 21)
@@ -50,7 +50,7 @@ def main():
     st = statuses(); rows = [parse(n) for n in ORDER]
     for r in rows: r.update(st.get(r['name'], {}))
     by = {r['name']: r for r in rows}
-    a, c, b = by['resolution-1024-a'], by['resolution-640'], by['resolution-1024-b']
+    a, c, b = by['resolution-1024-a'], by['resolution-800'], by['resolution-1024-b']
     c['drift_adjusted'] = {}
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         av, bv, cv = a.get(metric), b.get(metric), c.get(metric)
@@ -63,7 +63,7 @@ def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'summary.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
     lines = [
-        '# 1024x768 vs 640x360 same-runner frame-tail A/B', '',
+        '# 1024x768 vs 800x600 same-runner frame-tail A/B', '',
         f'Fixed seed `{SEED}`; expected world `218/917/59/21`.', '',
         '| variant | resolution | rc/verify | FPS | frame ms | p95 | p99 | jitter p95 | shortcut avg | swaps | world |',
         '|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|',
@@ -73,7 +73,7 @@ def main():
         resolution = 'x'.join(str(x) for x in r.get('resolution', (0, 0)))
         lines.append(f"| {r['name']} | {resolution} | {r.get('rc','-')} / {r.get('verify_rc','-')} | {fmt(r.get('fps'))} | {fmt(r.get('frame_ms'))} | {fmt(r.get('p95_ms'))} | {fmt(r.get('p99_ms'))} | {fmt(r.get('jitter_p95_ms'))} | {fmt(r.get('shortcut_avg_ms'))} | {r.get('swaps','-')} | {world} |")
     d = c['drift_adjusted']
-    lines += ['', 'Drift-adjusted 640x360 delta versus 1024x768:']
+    lines += ['', 'Drift-adjusted 800x600 delta versus 1024x768:']
     for metric in ('fps','frame_ms','p95_ms','p99_ms','jitter_p95_ms'):
         v = d[metric]
         lines.append(f"- {metric}=n/a" if v['delta'] is None else f"- {metric}={v['delta']:+.3f} ({v['pct']:+.2f}%)")
@@ -81,7 +81,7 @@ def main():
     print('\n'.join(lines))
     expected_resolutions = {
         'resolution-1024-a': (1024, 768),
-        'resolution-640': (640, 360),
+        'resolution-800': (800, 600),
         'resolution-1024-b': (1024, 768),
     }
     for name, expected_ref in [(name, BASELINE_SHA) for name in ORDER]:
