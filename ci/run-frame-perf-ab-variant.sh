@@ -3,6 +3,7 @@ set -uo pipefail
 
 NAME=${1:?variant name required}
 REF=${2:?git ref required}
+CONFIG=${3:-'{}'}
 ROOT=${GITHUB_WORKSPACE:-$(pwd)}
 WORKTREE="${RUNNER_TEMP:-/tmp}/starsector-frame-perf-${NAME}"
 ARCHIVE="$ROOT/.ci-cache/starsector_linux-0.98a-RC8.zip"
@@ -19,14 +20,12 @@ mkdir -p "$WORKTREE/.ci-cache"
 cp "$ARCHIVE" "$WORKTREE/.ci-cache/starsector_linux-0.98a-RC8.zip"
 cp "$ROOT/ci/patch-frame-perf-fixed-seed.py" "$WORKTREE/ci/patch-frame-perf-fixed-seed.py"
 cp "$ROOT/ci/patch-frame-tail-telemetry.py" "$WORKTREE/ci/patch-frame-tail-telemetry.py"
-cp "$ROOT/ci/patch-projection-uniform-dirty-telemetry.py" "$WORKTREE/ci/patch-projection-uniform-dirty-telemetry.py"
 cp "$ROOT/ci/verify-lwjgl-frame-timing.js" "$WORKTREE/ci/verify-lwjgl-frame-timing.js"
 if ! (
   set -euo pipefail
   cd "$WORKTREE"
   python3 ci/patch-frame-perf-fixed-seed.py
   python3 ci/patch-frame-tail-telemetry.py
-  python3 ci/patch-projection-uniform-dirty-telemetry.py
   node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
   grep -q 'FRAME_TAIL_TELEMETRY_BENCH_V1' build/final/wasm-modules/lwjgl.js
   grep -q 'frameP95Ms: Number(perfAfter.frameP95Ms' ci/campaign-render-test.js
@@ -55,7 +54,7 @@ set +e
   STARSECTOR_SAVE_LOAD_SMOKE=false \
   STARSECTOR_SCREENSHOT_TIMEOUT_MS=30000 \
   STARSECTOR_TEST_TIMEOUT_MS=720000 \
-    bash ci/run-campaign-experiment.sh "$NAME" sync false campaign '{}'
+    bash ci/run-campaign-experiment.sh "$NAME" sync false campaign "$CONFIG"
 )
 RC=$?
 set -e
