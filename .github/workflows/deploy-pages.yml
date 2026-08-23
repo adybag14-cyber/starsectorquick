@@ -64,6 +64,11 @@ jobs:
           grep -Fq '640x360' test_output/pages-overlays/deploy/launch.html
           grep -Fq 'RESOLUTION' test_output/pages-overlays/deploy/launch.html
           grep -Fq 'LWJGL_FRAME_TIMING_RING_V1' test_output/pages-overlays/deploy/build/final/wasm-modules/lwjgl.js
+          grep -Fq 'launch.html?manual=1' test_output/pages-overlays/deploy/index.html
+          if grep -Fq 'launch.html?autostart=1' test_output/pages-overlays/deploy/index.html; then
+            echo 'Packaged Pages root still bypasses resolution controls via autostart.' >&2
+            exit 1
+          fi
           test -s test_output/pages-overlays/deploy/jars/fixer_patch.jar
           test -s test_output/pages-overlays/deploy/jars/bridge.jar
           test -s test_output/pages-overlays/deploy/jars/starfarer.api.jar
@@ -174,6 +179,7 @@ jobs:
 
       - name: Verify live resolution controls are published
         env:
+          LIVE_ROOT_URL: 'https://adybag14-cyber.github.io/starsectorquick/'
           LIVE_LAUNCH_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
           SOURCE_SHA: '${{ steps.source.outputs.sha }}'
         run: |
@@ -185,6 +191,11 @@ jobs:
               exit 1
             fi
           done
+          root_body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_ROOT_URL}?source=${SOURCE_SHA}")"
+          if [[ "$root_body" != *'launch.html?manual=1'* ]] || [[ "$root_body" == *'launch.html?autostart=1'* ]]; then
+            echo 'Live Pages root does not open the configurable manual launcher.' >&2
+            exit 1
+          fi
 
       - name: Install JavaScript dependencies
         run: npm ci

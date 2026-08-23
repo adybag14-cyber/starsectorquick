@@ -180,6 +180,9 @@ def main() -> int:
     for marker in ('id="resolutionPreset"', "id='settingsBtn'", "640x360", "RESOLUTION"):
         if marker not in launch:
             raise RuntimeError(f"public launcher is missing resolution control marker: {marker}")
+    index = (ROOT / "index.html").read_text(encoding="utf-8")
+    if "launch.html?manual=1" not in index or "launch.html?autostart=1" in index:
+        raise RuntimeError("Pages root must open the configurable manual launcher")
 
     lwjgl_js = (
         ROOT / "build" / "final" / "wasm-modules" / "lwjgl.js"
