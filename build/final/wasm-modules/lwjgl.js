@@ -662,6 +662,23 @@ var projMatrixStack = [glMatrix.mat4.create()];
 var modelViewMatrixStack = [glMatrix.mat4.create()];
 var textureMatrixStack = [glMatrix.mat4.create()];
 var curMatrixStack = modelViewMatrixStack;
+// LWJGL_MATRIX_STACK_GUARD_V1: OpenGL matrix stacks always retain their base identity matrix.
+var matrixStackWarnings = new Set();
+function ensureCurMatrixStack()
+{
+	if(!Array.isArray(curMatrixStack))
+		throw new Error("LWJGL current matrix stack is invalid");
+	if(curMatrixStack.length === 0)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-empty-recovery",
+			"LWJGL recovered an empty matrix stack with an identity matrix."
+		);
+		curMatrixStack.push(glMatrix.mat4.create());
+	}
+	return curMatrixStack;
+}
 // LWJGL_MATRIX_UNIFORM_DIRTY_CACHE_V1: fixed-function callers commonly issue
 // thousands of draws while projection and texture matrices remain unchanged.
 // Avoid crossing the WebGL boundary for matrix uniforms until the matching
@@ -680,11 +697,13 @@ function markCurMatrixUniformDirty()
 }
 function getCurMatrixTop()
 {
-	return curMatrixStack[curMatrixStack.length - 1];
+	var stack = ensureCurMatrixStack();
+	return stack[stack.length - 1];
 }
 function setCurMatrixTop(m)
 {
-	curMatrixStack[curMatrixStack.length - 1] = m;
+	var stack = ensureCurMatrixStack();
+	stack[stack.length - 1] = m;
 	markCurMatrixUniformDirty();
 }
 
@@ -2445,14 +2464,25 @@ function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-	curMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));
+	var stack = ensureCurMatrixStack();
+	stack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
 }
 
 function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
 {
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-	curMatrixStack.pop();
+	var stack = ensureCurMatrixStack();
+	if(stack.length <= 1)
+	{
+		warnOnce(
+			matrixStackWarnings,
+			"matrix-stack-underflow",
+			"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow."
+		);
+		return;
+	}
+	stack.pop();
 	markCurMatrixUniformDirty();
 }
 

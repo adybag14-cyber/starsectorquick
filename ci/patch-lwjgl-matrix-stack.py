@@ -27,89 +27,67 @@ def main() -> None:
         print("LWJGL matrix-stack guard already present")
         return
 
-    old_helpers = """var curMatrixStack = modelViewMatrixStack;
-function getCurMatrixTop()
-{
-\treturn curMatrixStack[curMatrixStack.length - 1];
-}
-function setCurMatrixTop(m)
-{
-\tcurMatrixStack[curMatrixStack.length - 1] = m;
-}
-"""
-    new_helpers = f"""var curMatrixStack = modelViewMatrixStack;
+    old_stack_anchor = "var curMatrixStack = modelViewMatrixStack;\n"
+    new_stack_anchor = f"""var curMatrixStack = modelViewMatrixStack;
 // {MARKER}: OpenGL matrix stacks always retain their base identity matrix.
 var matrixStackWarnings = new Set();
 function ensureCurMatrixStack()
 {{
 \tif(!Array.isArray(curMatrixStack))
-\t\tthrow new Error(\"LWJGL current matrix stack is invalid\");
+\t\tthrow new Error("LWJGL current matrix stack is invalid");
 \tif(curMatrixStack.length === 0)
 \t{{
 \t\twarnOnce(
 \t\t\tmatrixStackWarnings,
-\t\t\t\"matrix-stack-empty-recovery\",
-\t\t\t\"LWJGL recovered an empty matrix stack with an identity matrix.\"
+\t\t\t"matrix-stack-empty-recovery",
+\t\t\t"LWJGL recovered an empty matrix stack with an identity matrix."
 \t\t);
 \t\tcurMatrixStack.push(glMatrix.mat4.create());
 \t}}
 \treturn curMatrixStack;
 }}
-function getCurMatrixTop()
-{{
+"""
+    text = replace_once(text, old_stack_anchor, new_stack_anchor, "matrix stack anchor")
+
+    old_get = """function getCurMatrixTop()
+{
+\treturn curMatrixStack[curMatrixStack.length - 1];
+}
+"""
+    new_get = """function getCurMatrixTop()
+{
 \tvar stack = ensureCurMatrixStack();
 \treturn stack[stack.length - 1];
-}}
-function setCurMatrixTop(m)
-{{
-\tvar stack = ensureCurMatrixStack();
-\tstack[stack.length - 1] = m;
-}}
-"""
-    text = replace_once(text, old_helpers, new_helpers, "matrix helper block")
-
-    old_push_pop = """function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
-{
-\tif(curList)
-\t\treturn pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-\tcurMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));
-}
-
-function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
-{
-\tif(curList)
-\t\treturn pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-\tcurMatrixStack.pop();
 }
 """
-    new_push_pop = """function Java_org_lwjgl_opengl_GL11_nglPushMatrix(lib, funcPtr)
-{
-\tif(curList)
-\t\treturn pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPushMatrix);
-\tvar stack = ensureCurMatrixStack();
-\tstack.push(glMatrix.mat4.clone(stack[stack.length - 1]));
-}
+    text = replace_once(text, old_get, new_get, "matrix top getter")
 
-function Java_org_lwjgl_opengl_GL11_nglPopMatrix(lib, funcPtr)
-{
-\tif(curList)
-\t\treturn pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglPopMatrix);
-\tvar stack = ensureCurMatrixStack();
+    text = replace_once(
+        text,
+        "\tcurMatrixStack[curMatrixStack.length - 1] = m;",
+        "\tvar stack = ensureCurMatrixStack();\n\tstack[stack.length - 1] = m;",
+        "matrix top setter",
+    )
+    text = replace_once(
+        text,
+        "\tcurMatrixStack.push(glMatrix.mat4.clone(curMatrixStack[curMatrixStack.length - 1]));",
+        "\tvar stack = ensureCurMatrixStack();\n\tstack.push(glMatrix.mat4.clone(stack[stack.length - 1]));",
+        "matrix push",
+    )
+    guarded_pop = """\tvar stack = ensureCurMatrixStack();
 \tif(stack.length <= 1)
 \t{
 \t\twarnOnce(
 \t\t\tmatrixStackWarnings,
-\t\t\t\"matrix-stack-underflow\",
-\t\t\t\"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow.\"
+\t\t\t"matrix-stack-underflow",
+\t\t\t"LWJGL ignored glPopMatrix at the base matrix to prevent stack underflow."
 \t\t);
 \t\treturn;
 \t}
-\tstack.pop();
-}
-"""
-    text = replace_once(text, old_push_pop, new_push_pop, "push/pop block")
+\tstack.pop();"""
+    text = replace_once(text, "\tcurMatrixStack.pop();", guarded_pop, "matrix pop")
 
-    LWJGL.write_text(text, encoding="utf-8")
+    LWJGL.write_text(text, encoding="utf-8", newline="\n")
     print("Applied LWJGL matrix-stack underflow guard")
 
 
