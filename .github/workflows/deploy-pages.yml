@@ -80,6 +80,12 @@ jobs:
           grep -Fq '"devMode":true' test_output/pages-overlays/deploy/starsector/starsector/data/config/settings.json
           grep -Fq '"enableMemoryLeakChecking":false' test_output/pages-overlays/deploy/starsector/starsector/data/config/settings.json
           grep -Fq '"devMode":true' test_output/pages-overlays/deploy/starsector/starsector/settings.json
+          test -s gwt-runtime/index.html
+          test -s gwt-runtime/root-index.html
+          test -s gwt-runtime/starfarer/starfarer.nocache.js
+          test "$(find gwt-runtime/starfarer -name '*.cache.js' -type f | wc -l)" -eq 2
+          grep -Fq 'id="resolutionButton"' gwt-runtime/index.html
+          grep -Fq '[gwt-frame]' gwt-runtime/starfarer/*.cache.js
 
       - name: Publish overlay to gh-pages
         id: publish
@@ -93,6 +99,10 @@ jobs:
           # the repository owner's LFS download quota.
           GIT_LFS_SKIP_SMUDGE=1 git worktree add --detach .pages-worktree origin/gh-pages
           cp -a test_output/pages-overlays/deploy/. .pages-worktree/
+          mkdir -p .pages-worktree/gwt
+          cp gwt-runtime/index.html .pages-worktree/gwt/index.html
+          cp -a gwt-runtime/starfarer .pages-worktree/gwt/
+          cp gwt-runtime/root-index.html .pages-worktree/index.html
           touch .pages-worktree/.nojekyll
           # Collapse the final combined Starsector data tree into one immutable payload.
           # The service worker serves byte ranges from this pack, avoiding thousands of
@@ -111,6 +121,13 @@ jobs:
           test -s .pages-worktree/starsector-graphics-pack-v1/planets.bin
           test -s .pages-worktree/starsector-graphics-pack-v1/ships.bin
           SOURCE_SHA="${{ steps.source.outputs.sha }}"
+          python3 ci/build-gwt-packs.py --root .pages-worktree --runtime-source gwt-runtime
+          test -s .pages-worktree/gwt/gwt-data-pack-v4.bin
+          test -s .pages-worktree/gwt/gwt-data-pack-v4.json
+          test -s .pages-worktree/gwt/gwt-graphics-pack-v4.bin
+          test -s .pages-worktree/gwt/gwt-graphics-pack-v4.json
+          printf '{"runtime":"gwt","version":"0.98a-RC8","sourceSha":"%s"}\n' "$SOURCE_SHA" \
+            > .pages-worktree/gwt/gwt-runtime-profile.json
           git -C .pages-worktree config user.name 'github-actions[bot]'
           git -C .pages-worktree config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           # The overlay may contain intentionally ignored runtime binaries such as
@@ -176,11 +193,13 @@ jobs:
           check_setting starsector/starsector/data/config/settings.json '"devMode":true' '"enableMemoryLeakChecking":false'
           check_setting starsector/starsector/settings.json '"devMode":true'
           check_setting build/final/wasm-modules/lwjgl.js 'LWJGL_FRAME_TIMING_RING_V1' '__lwjglRefreshPresentationStats'
+          check_setting gwt/gwt-runtime-profile.json '"runtime":"gwt"' '"sourceSha":"'"${SOURCE_SHA}"'"'
 
       - name: Verify live resolution controls are published
         env:
           LIVE_ROOT_URL: 'https://adybag14-cyber.github.io/starsectorquick/'
           LIVE_LAUNCH_URL: 'https://adybag14-cyber.github.io/starsectorquick/launch.html'
+          LIVE_GWT_URL: 'https://adybag14-cyber.github.io/starsectorquick/gwt/'
           SOURCE_SHA: '${{ steps.source.outputs.sha }}'
         run: |
           set -euo pipefail
@@ -191,9 +210,16 @@ jobs:
               exit 1
             fi
           done
+          gwt_body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_GWT_URL}?source=${SOURCE_SHA}")"
+          for marker in 'id="resolutionButton"' 'id="resolutionPreset"' '1024x768' 'RESOLUTION'; do
+            if [[ "$gwt_body" != *"$marker"* ]]; then
+              echo "Live GWT runtime is missing resolution marker: ${marker}" >&2
+              exit 1
+            fi
+          done
           root_body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_ROOT_URL}?source=${SOURCE_SHA}")"
-          if [[ "$root_body" != *'launch.html?manual=1'* ]] || [[ "$root_body" == *'launch.html?autostart=1'* ]]; then
-            echo 'Live Pages root does not open the configurable manual launcher.' >&2
+          if [[ "$root_body" != *'./gwt/'* ]] || [[ "$root_body" != *'launch.html?manual=1'* ]]; then
+            echo 'Live Pages root does not open GWT with the CheerpJ fallback retained.' >&2
             exit 1
           fi
 
@@ -206,8 +232,16 @@ jobs:
       - name: Verify source and live resolution interaction
         run: |
           node ci/verify-launch-resolution-ui.js
-          STARSECTOR_RESOLUTION_TEST_URL='https://adybag14-cyber.github.io/starsectorquick/launch.html' \
+          STARSECTOR_LIVE_ROOT_MODE='gwt' \
+            STARSECTOR_RESOLUTION_TEST_URL='https://adybag14-cyber.github.io/starsectorquick/launch.html' \
             node ci/verify-launch-resolution-ui.js
+
+      - name: Verify live optimized GWT runtime
+        env:
+          STARSECTOR_GWT_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/gwt/'
+          STARSECTOR_GWT_TEST_TIMEOUT_MS: '300000'
+          STARSECTOR_GWT_TEST_OUTPUT_DIR: 'test_output/gwt-pages'
+        run: node ci/verify-gwt-pages-runtime.js
 
       - name: Verify live mature campaign gameplay from clean browser state
         env:
@@ -250,6 +284,7 @@ jobs:
           path: |
             test_output/pages-live
             test_output/pages-tutorial
+            test_output/gwt-pages
             test_output/pages-build
             test_output/pages-overlays/deploy/web-runtime-profile.json
             test_output/pages-overlays/deploy/web-runtime-manifest.json
