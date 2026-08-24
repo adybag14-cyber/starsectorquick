@@ -139,7 +139,8 @@ jobs:
           # whitespace rules would change the byte-faithful runtime payload.
           git -C .pages-worktree diff --cached --check -- . \
             ':(exclude)data/**' \
-            ':(exclude)starsector/starsector/data/**'
+            ':(exclude)starsector/starsector/data/**' \
+            ':(exclude)gwt/*.bin'
           if git -C .pages-worktree diff --cached --name-status | grep -q '^D'; then
             echo 'Refusing Pages overlay that deletes existing deployed files.' >&2
             git -C .pages-worktree diff --cached --name-status >&2
