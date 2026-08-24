@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Starsector GWT</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #02060a; color: #bfefff; font: 14px monospace; }
+    #status { padding: 8px 12px; }
+    #gameCanvas { display: block; width: min(100vw, 1024px); height: auto; margin: 0 auto; background: #000; }
+    #displayControls { position: fixed; z-index: 10; top: 8px; right: 16px; font: 13px monospace; }
+    #runtimeFallback { display: block; margin-top: 6px; color: #7fd6e8; text-align: right; font-size: 11px; }
+    #resolutionButton, #applyResolution { border: 1px solid #0bc9ee; color: #9eefff; background: #07131a; padding: 7px 10px; cursor: pointer; }
+    #resolutionPanel { display: none; margin-top: 6px; padding: 10px; border: 1px solid #166071; background: #031016ee; }
+    #resolutionPanel.open { display: block; }
+    #resolutionPanel label { display: block; margin: 6px 0; }
+    #resolutionPanel select, #resolutionPanel input { width: 104px; box-sizing: border-box; color: #e6fbff; background: #061016; border: 1px solid #33515c; padding: 5px; }
+  </style>
+</head>
+<body>
+  <div id="status">GWT module loading…</div>
+  <div id="displayControls">
+    <button id="resolutionButton" type="button" aria-expanded="false">RESOLUTION</button>
+    <div id="resolutionPanel">
+      <label>Render resolution
+        <select id="resolutionPreset">
+          <option value="1024x768">1024 × 768</option>
+          <option value="1280x720">1280 × 720</option>
+          <option value="1600x900">1600 × 900</option>
+          <option value="1920x1080">1920 × 1080</option>
+          <option value="2560x1440">2560 × 1440</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <label>Custom size
+        <input id="resolutionWidth" type="number" min="640" max="3840" value="1024" aria-label="Render width">
+        ×
+        <input id="resolutionHeight" type="number" min="360" max="2160" value="768" aria-label="Render height">
+      </label>
+      <button id="applyResolution" type="button">APPLY</button>
+    </div>
+    <a id="runtimeFallback" href="../launch.html?manual=1" title="Use the persistence-compatible runtime">CheerpJ persistent-save fallback</a>
+  </div>
+  <canvas id="gameCanvas" width="1024" height="768"></canvas>
+  <script>
+    window.__gwtGate = { errors: [], logs: [], startedAt: performance.now() };
+    window.addEventListener('error', event => {
+      window.__gwtGate.errors.push(String(event.error && event.error.stack || event.message));
+      document.getElementById('status').textContent = 'Runtime error: ' + event.message;
+    });
+    for (const level of ['log', 'warn', 'error']) {
+      const original = console[level].bind(console);
+      console[level] = (...args) => {
+        const text = args.map(String).join(' ');
+        window.__gwtGate.logs.push({ level, text });
+        if (text.includes('[gwt-stage] state-enter:')) {
+          const status = document.getElementById('status');
+          status.hidden = true;
+          status.textContent = '';
+        }
+        original(...args);
+      };
+    }
+    const resolutionStorageKey = 'starsectorquick.renderResolution.v1';
+    const clampResolution = (value, min, max) => Math.max(min, Math.min(max, Math.round(Number(value) || min)));
+    let renderResolution = { width: 1024, height: 768 };
+    try { renderResolution = { ...renderResolution, ...JSON.parse(localStorage.getItem(resolutionStorageKey) || 'null') }; } catch (_) {}
+    renderResolution.width = clampResolution(renderResolution.width, 640, 3840);
+    renderResolution.height = clampResolution(renderResolution.height, 360, 2160);
+    const resolutionButton = document.getElementById('resolutionButton');
+    const resolutionPanel = document.getElementById('resolutionPanel');
+    const resolutionWidth = document.getElementById('resolutionWidth');
+    const resolutionHeight = document.getElementById('resolutionHeight');
+    const resolutionPreset = document.getElementById('resolutionPreset');
+    const updateResolutionControls = () => {
+      resolutionWidth.value = renderResolution.width;
+      resolutionHeight.value = renderResolution.height;
+      const key = `${renderResolution.width}x${renderResolution.height}`;
+      resolutionPreset.value = [...resolutionPreset.options].some(option => option.value === key) ? key : 'custom';
+      resolutionButton.textContent = `RESOLUTION · ${renderResolution.width}×${renderResolution.height}`;
+    };
+    resolutionButton.addEventListener('click', () => {
+      const open = !resolutionPanel.classList.contains('open');
+      resolutionPanel.classList.toggle('open', open);
+      resolutionButton.setAttribute('aria-expanded', String(open));
+    });
+    resolutionPreset.addEventListener('change', () => {
+      const match = resolutionPreset.value.match(/^(\d+)x(\d+)$/);
+      if (match) { resolutionWidth.value = match[1]; resolutionHeight.value = match[2]; }
+    });
+    document.getElementById('applyResolution').addEventListener('click', () => {
+      renderResolution = {
+        width: clampResolution(resolutionWidth.value, 640, 3840),
+        height: clampResolution(resolutionHeight.value, 360, 2160)
+      };
+      localStorage.setItem(resolutionStorageKey, JSON.stringify(renderResolution));
+      location.reload();
+    });
+    updateResolutionControls();
+  </script>
+  <script src="starfarer/starfarer.nocache.js"></script>
+</body>
+</html>

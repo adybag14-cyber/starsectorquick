@@ -6,6 +6,7 @@ const { chromium } = require('playwright');
 
 (async () => {
   const liveUrl = String(process.env.STARSECTOR_RESOLUTION_TEST_URL || '').trim();
+  const liveRootMode = String(process.env.STARSECTOR_LIVE_ROOT_MODE || 'launch').trim();
   const testUrl = liveUrl || 'http://resolution.test/launch.html';
   const indexHtml = fs.readFileSync('index.html', 'utf8');
   assert.match(indexHtml, /launch\.html\?manual=1/g, 'Pages root must open the configurable manual launcher');
@@ -24,9 +25,14 @@ const { chromium } = require('playwright');
   } else {
     const rootUrl = new URL('./', testUrl).toString();
     await page.goto(`${rootUrl}?resolutionRoute=${Date.now()}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(url => url.pathname.endsWith('/launch.html') && url.searchParams.get('manual') === '1');
-    assert.strictEqual(await page.locator('#settingsBtn').isVisible(), true, 'Pages root exposes the resolution button');
-    assert.strictEqual(await page.locator('#settingsBtn').isEnabled(), true, 'Pages root keeps resolution enabled before launch');
+    if (liveRootMode === 'gwt') {
+      await page.waitForURL(url => url.pathname.endsWith('/gwt/'));
+      assert.strictEqual(await page.locator('#resolutionButton').isVisible(), true, 'Pages root exposes the GWT resolution button');
+    } else {
+      await page.waitForURL(url => url.pathname.endsWith('/launch.html') && url.searchParams.get('manual') === '1');
+      assert.strictEqual(await page.locator('#settingsBtn').isVisible(), true, 'Pages root exposes the resolution button');
+      assert.strictEqual(await page.locator('#settingsBtn').isEnabled(), true, 'Pages root keeps resolution enabled before launch');
+    }
   }
   await page.goto(`${testUrl}?manual=1`, { waitUntil: 'domcontentloaded' });
   assert.strictEqual(await page.locator('#launcher-settings').isHidden(), true, 'settings panel starts hidden');
