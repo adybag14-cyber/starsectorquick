@@ -9,9 +9,9 @@ Build provenance:
 
 - GWT: 2.12.2, optimized `OBF`, two permutations
 - Java source set: 3,585 compiled units
-- canonical source-tree digest: `135aca32aac0cb9037e20824dfc424ef03fc56ecb55b56fb9e7bd03f1f3bd19a`
-- `4A498B62021A25CF6620E01AC1957F24.cache.js`: `d0684f12d79daa09025fac4ef00041c59ba0c7201af7f211531a41ddb4881c22`
-- `B63DFE0D3C9E9F10A408C4BA057B87D6.cache.js`: `5ca36621feb13625bf34ef97cf4b9f450fb8471a05739a884e4ca8ea5f326734`
+- source-tree aggregate SHA-256: `0a89897aef931dfb4806d19360d5c587d46d46b692913a13c19844600ae5c8b1`
+- `65EBC5E87CA8B85D1E0BF9C668B5C8B0.cache.js`: `ed71246f34f5481aa0b96f8b88dc33ec127c9750a73c5ac94288451c6e49660d`
+- `E3F89E823494D846C13F41F04CAD0510.cache.js`: `6231ee9e180d99f3f3b21097e8419d954e1075e3d64f4622d089a40b9189210c`
 - data allow-list: 1,400 files
 - graphics allow-list: 3,383 files
 
@@ -19,6 +19,13 @@ Validated browser behavior includes the title, the full normal new-game and
 developer quick-start flows, Galatia tutorial campaign rendering, hyperspace,
 keyboard/pointer input, WebGL framebuffer/stencil composites, and 1024x768 to
 1280x720 resolution persistence.
+
+The canvas uses the largest aspect-correct fit inside the current browser
+viewport and recomputes that fit when the viewport or internal resolution
+changes. Presentation is paced directly by `requestAnimationFrame`, with no
+artificial 60 FPS ceiling; 120 Hz and 144 Hz displays may therefore present
+more than 60 frames per second while simulation continues to use timestamp
+deltas.
 
 `ci/verify-gwt-pages-runtime.js` drives the deployed normal-new-game tutorial
 path into Galatia and rejects a mostly-white framebuffer. Its `software-ci`

@@ -80,6 +80,64 @@ function verifyRenderer(renderer) {
   }
 }
 
+async function readPresentation(page) {
+  return page.evaluate(() => {
+    const canvas = document.getElementById('gameCanvas');
+    const rect = canvas.getBoundingClientRect();
+    return {
+      pacing: window.__starsectorFramePacing ? { ...window.__starsectorFramePacing } : null,
+      fit: window.__starsectorCanvasFit ? { ...window.__starsectorCanvasFit } : null,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      cssWidth: rect.width,
+      cssHeight: rect.height,
+      left: rect.left,
+      top: rect.top,
+    };
+  });
+}
+
+function verifyPresentation(presentation, label) {
+  assert.deepStrictEqual(presentation.pacing,
+    { mode: 'native-refresh', capped: false, targetFps: null },
+    `${label} is not using native refresh pacing`);
+  assert.ok(presentation.fit, `${label} did not publish canvas-fit diagnostics`);
+  const expectedScale = Math.min(
+    presentation.viewportWidth / presentation.canvasWidth,
+    presentation.viewportHeight / presentation.canvasHeight,
+  );
+  const expectedWidth = Math.floor(presentation.canvasWidth * expectedScale);
+  const expectedHeight = Math.floor(presentation.canvasHeight * expectedScale);
+  assert.ok(Math.abs(presentation.cssWidth - expectedWidth) <= 2,
+    `${label} width does not maximally fit the viewport: ${JSON.stringify(presentation)}`);
+  assert.ok(Math.abs(presentation.cssHeight - expectedHeight) <= 2,
+    `${label} height does not maximally fit the viewport: ${JSON.stringify(presentation)}`);
+  assert.ok(presentation.cssWidth <= presentation.viewportWidth + 1 &&
+    presentation.cssHeight <= presentation.viewportHeight + 1,
+  `${label} overflows the viewport: ${JSON.stringify(presentation)}`);
+  assert.ok(Math.max(
+    presentation.cssWidth / presentation.viewportWidth,
+    presentation.cssHeight / presentation.viewportHeight,
+  ) >= 0.995, `${label} leaves avoidable browser space unused: ${JSON.stringify(presentation)}`);
+  const internalAspect = presentation.canvasWidth / presentation.canvasHeight;
+  const cssAspect = presentation.cssWidth / presentation.cssHeight;
+  assert.ok(Math.abs(cssAspect - internalAspect) <= 0.005,
+    `${label} distorts the render aspect ratio: ${JSON.stringify(presentation)}`);
+}
+
+async function setViewportAndVerify(page, width, height, label) {
+  await page.setViewportSize({ width, height });
+  await page.waitForFunction(expected => {
+    const fit = window.__starsectorCanvasFit;
+    return fit && fit.viewportWidth === expected.width && fit.viewportHeight === expected.height;
+  }, { width, height }, { timeout });
+  const presentation = await readPresentation(page);
+  verifyPresentation(presentation, label);
+  return presentation;
+}
+
 async function clickCanvas(page, xRatio, yRatio) {
   const canvas = page.locator('#gameCanvas');
   const box = await canvas.boundingBox();
@@ -192,6 +250,8 @@ async function startGalatiaTutorial(page) {
     );
     evidence.renderer = await readRenderer(page);
     verifyRenderer(evidence.renderer);
+    evidence.baselinePresentation = await readPresentation(page);
+    verifyPresentation(evidence.baselinePresentation, 'GWT title 1024x768');
     evidence.baseline = await page.evaluate(() => ({ ...window.__starsectorFrameStats }));
     await page.screenshot({ path: path.join(outputDir, 'title-1024x768.png'), fullPage: true });
     verifyStats(evidence.baseline, 'GWT title 1024x768');
@@ -205,12 +265,22 @@ async function startGalatiaTutorial(page) {
     }, null, { timeout });
     await waitForRuntime(page);
     assert.match(await page.locator('#resolutionButton').innerText(), /1280\s*[×x]\s*720/);
+    evidence.resizedPresentation = await readPresentation(page);
+    verifyPresentation(evidence.resizedPresentation, 'GWT title 1280x720');
+    evidence.wideViewportPresentation = await setViewportAndVerify(
+      page, 1920, 956, 'GWT title wide viewport');
+    evidence.smallViewportPresentation = await setViewportAndVerify(
+      page, 800, 600, 'GWT title small viewport');
+    evidence.restoredViewportPresentation = await setViewportAndVerify(
+      page, 1366, 900, 'GWT title restored viewport');
     evidence.resized = await page.evaluate(() => ({ ...window.__starsectorFrameStats }));
     await page.screenshot({ path: path.join(outputDir, 'title-1280x720.png'), fullPage: true });
     verifyStats(evidence.resized, 'GWT title 1280x720');
 
     await startGalatiaTutorial(page);
     evidence.campaign = await page.evaluate(() => ({ ...window.__starsectorFrameStats }));
+    evidence.campaignPresentation = await readPresentation(page);
+    verifyPresentation(evidence.campaignPresentation, 'GWT Galatia campaign 1280x720');
     evidence.galatiaPixels = await analyzeCanvas(page, 'galatia-campaign-1280x720.png');
     evidence.stateEntries = await page.evaluate(() => window.__gwtGate.logs
       .filter(row => row.text.includes('[gwt-stage] state-enter:'))
