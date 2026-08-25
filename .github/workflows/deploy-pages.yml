@@ -237,11 +237,15 @@ jobs:
             STARSECTOR_RESOLUTION_TEST_URL='https://adybag14-cyber.github.io/starsectorquick/launch.html' \
             node ci/verify-launch-resolution-ui.js
 
-      - name: Verify live optimized GWT runtime
+      - name: Verify live optimized GWT runtime and Galatia background
         env:
           STARSECTOR_GWT_TEST_URL: 'https://adybag14-cyber.github.io/starsectorquick/gwt/'
-          STARSECTOR_GWT_TEST_TIMEOUT_MS: '300000'
+          STARSECTOR_GWT_TEST_TIMEOUT_MS: '600000'
           STARSECTOR_GWT_TEST_OUTPUT_DIR: 'test_output/gwt-pages'
+          # GitHub-hosted Chromium exposes SwiftShader rather than a gaming GPU.
+          # This lane gates frame progress, controls, campaign boot, and pixels;
+          # GPU-backed 60 FPS uses the strict hardware profile separately.
+          STARSECTOR_GWT_RENDERER_PROFILE: 'software-ci'
         run: node ci/verify-gwt-pages-runtime.js
 
       - name: Verify live mature campaign gameplay from clean browser state

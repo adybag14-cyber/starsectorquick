@@ -20,6 +20,12 @@ developer quick-start flows, Galatia tutorial campaign rendering, hyperspace,
 keyboard/pointer input, WebGL framebuffer/stencil composites, and 1024x768 to
 1280x720 resolution persistence.
 
+`ci/verify-gwt-pages-runtime.js` drives the deployed normal-new-game tutorial
+path into Galatia and rejects a mostly-white framebuffer. Its `software-ci`
+profile is a frame-progress gate for GitHub-hosted SwiftShader; the `hardware`
+profile retains the 58 FPS, 22 ms p95, 30 ms p99, and 3 ms jitter ceilings used
+for GPU-backed browser validation.
+
 The current browser XStream bridge retains campaign save objects for the life
 of the page. Cross-reload save persistence is not yet equivalent to desktop
 XStream; the retained CheerpJ launcher remains the persistence-compatible
