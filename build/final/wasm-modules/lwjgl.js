@@ -469,6 +469,23 @@ function snapshotAttribState(mask)
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
 			state.enable[cap] = getCompatEnableState(cap);
 	}
+	// GL_ATTRIB_ENABLE_OWNERSHIP_V1: these groups own their enable flags
+	// even when GL_ENABLE_BIT was not requested. Leave every unsaved flag
+	// alone, and avoid reading flags twice for the common ALL_ATTRIB_BITS.
+	if(!(mask & 0x2000/*GL_ENABLE_BIT*/) && (mask & (0x4000|0x0100|0x0400|0x80000)))
+	{
+		state.enable = {};
+		if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
+		{
+			state.enable[glCtx.BLEND] = getCompatEnableState(glCtx.BLEND);
+			state.enable[0x0BC0/*GL_ALPHA_TEST*/] = getCompatEnableState(0x0BC0);
+		}
+		if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/) state.enable[glCtx.DEPTH_TEST] = getCompatEnableState(glCtx.DEPTH_TEST);
+		if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/) state.enable[glCtx.STENCIL_TEST] = getCompatEnableState(glCtx.STENCIL_TEST);
+		if(mask & 0x80000/*GL_SCISSOR_BIT*/) state.enable[glCtx.SCISSOR_TEST] = getCompatEnableState(glCtx.SCISSOR_TEST);
+	}
+	if(mask & 0x80000/*GL_SCISSOR_BIT*/)
+		state.scissor = Array.from(glCtx.getParameter(glCtx.SCISSOR_BOX));
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
 		state.color = snapshotColorAttribState();
@@ -537,6 +554,8 @@ function restoreAttribState(state)
 		glCtx.clearStencil(state.stencil.clearValue);
 		extendedAttribShadow.stencil = extendedAttribCacheEnabled() ? cloneExtendedAttribState("stencil", state.stencil) : null;
 	}
+	if(state.scissor)
+		glCtx.scissor(...state.scissor);
 	if(state.texture)
 	{
 		boundTexture2DId = state.texture.boundTexture2DId;
@@ -624,6 +643,7 @@ var frameCount = 0;
 var presentationTargetFps = 60;
 var presentationStats = {
 	swapCount: 0,
+	scissorProtectedPresents: 0,
 	samples: [],
 	lastFramebufferStatus: null,
 	lastViewport: null,
@@ -2167,6 +2187,31 @@ function campaignFrameBoundary()
 }
 // LWJGL_CAMPAIGN_BOUNDARY_EXPERIMENT_V1_END
 
+// LWJGL_UNCLIPPED_PRESENT_V1: a swap copies the complete rendered image.
+// A game/UI scissor box must not clip that copy, but must still govern the next
+// game draw. This temporary synchronous change does not mutate the shadow state.
+function presentMainFramebuffer()
+{
+	var scissorEnabled = getCompatEnableState(glCtx.SCISSOR_TEST);
+	try
+	{
+		if(scissorEnabled)
+		{
+			glCtx.disable(glCtx.SCISSOR_TEST);
+			presentationStats.scissorProtectedPresents++;
+		}
+		glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+		glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
+		glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
+	}
+	finally
+	{
+		glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+		glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+		if(scissorEnabled) glCtx.enable(glCtx.SCISSOR_TEST);
+	}
+}
+
 function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 {
 	if(verboseLog)
@@ -2212,10 +2257,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 			presentationStats.samples.push({swap: presentationStats.swapCount, error: String(err)});
 		}
 	}
-	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
-	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
-	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
-	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+	presentMainFramebuffer();
 	compatFinishFrame();
 	frameCount++;
 	if(frameLimit && frameCount >= frameLimit)

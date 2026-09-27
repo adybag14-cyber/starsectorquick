@@ -1,4 +1,5 @@
 'use strict';
+const { captureExperimentFlags, restoreExperimentFlags } = require('./renderer-experiment-state');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -43,6 +44,7 @@ async function runPairedExperiment(page, out) {
     framesPerWindow:240,warmupFrames:24,measurement:'last 240 consecutive presentation intervals at prespecified polling stop',
     note:'Application presentation, not GPU completion or monitor scan-out; profiler and screenshots are outside all timed windows.',blocks:[]};
   const file=path.join(out,'extended-attrib-ab.json');
+  const originalFlags = await captureExperimentFlags(page);
   try {
     const order=[false,true,true,false,true,false,false,true];
     for(let index=0;index<order.length;index++) {
@@ -91,11 +93,17 @@ async function runPairedExperiment(page, out) {
     report.summary=summarizeBlocks(report.blocks);report.ok=true;
   } catch(error) {report.ok=false;report.error=error.stack||String(error);throw error;}
   finally {
-    await page.evaluate(()=>{
-      window.__LWJGL_COLOR_ATTRIB_CACHE__=true;window.__LWJGL_EXTENDED_ATTRIB_CACHE__=true;
-      window.__lwjglInvalidateExtendedAttribState?.();
-    }).catch(()=>{});
-    fs.writeFileSync(file,JSON.stringify(report,null,2));
+    try {
+      await restoreExperimentFlags(page, originalFlags);
+      report.flagsRestored = true;
+    } catch (cleanupError) {
+      report.flagsRestored = false;
+      report.ok = false;
+      report.cleanupError = String(cleanupError);
+      throw cleanupError;
+    } finally {
+      fs.writeFileSync(file, JSON.stringify(report, null, 2));
+    }
   }
   return report;
 }

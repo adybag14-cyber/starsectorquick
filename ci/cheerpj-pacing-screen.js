@@ -1,4 +1,5 @@
 'use strict';
+const { captureExperimentFlags, restoreExperimentFlags } = require('./renderer-experiment-state');
 const fs=require('node:fs');const path=require('node:path');const assert=require('node:assert/strict');
 const {intervalStats}=require('./cheerpj-paired-experiment');
 async function runPacingScreen(page,out){
@@ -7,6 +8,7 @@ async function runPacingScreen(page,out){
   const report={design:order,framesPerWindow:240,warmupFrames:24,
     note:'Exploratory screen, two reverse-order windows per configuration; not a confirmatory throughput claim.',blocks:[]};
   const file=path.join(out,'campaign-pacing-screen.json');
+  const originalFlags = await captureExperimentFlags(page);
   try{
     for(let index=0;index<order.length;index++){
       const name=order[index],config=definitions[name];
@@ -45,9 +47,18 @@ async function runPacingScreen(page,out){
     }
     report.ok=true;
   }catch(e){report.ok=false;report.error=e.stack||String(e);throw e;}
-  finally{
-    await page.evaluate(()=>{window.__LWJGL_EXTENDED_ATTRIB_CACHE__=false;window.__LWJGL_CAMPAIGN_PACING__='none';window.__lwjglInvalidateExtendedAttribState?.();}).catch(()=>{});
-    fs.writeFileSync(file,JSON.stringify(report,null,2));
+  finally {
+    try {
+      await restoreExperimentFlags(page, originalFlags);
+      report.flagsRestored = true;
+    } catch (cleanupError) {
+      report.flagsRestored = false;
+      report.ok = false;
+      report.cleanupError = String(cleanupError);
+      throw cleanupError;
+    } finally {
+      fs.writeFileSync(file, JSON.stringify(report, null, 2));
+    }
   }
   return report;
 }

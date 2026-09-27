@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const os = require('node:os');
+const { captureExperimentFlags } = require('./renderer-experiment-state');
 
 function summarizeProfile(profile) {
   const nodes = new Map(profile.nodes.map(node => [node.id, node]));
@@ -127,6 +128,10 @@ async function collectDiagnostics(page, context, outputDir) {
     if (process.env.STARSECTOR_PACING_SCREEN === 'true') {
       report.pacingScreen = await require('./cheerpj-pacing-screen').runPacingScreen(page, out);
     }
+    if (process.env.STARSECTOR_RAF_PAIRED === 'true') {
+      report.rafPaired = await require('./cheerpj-raf-paired').runRafPairedExperiment(page, out);
+    }
+    report.profileFlags = await captureExperimentFlags(page);
     const session = await context.newCDPSession(page);
     try {
       await session.send('Profiler.enable');

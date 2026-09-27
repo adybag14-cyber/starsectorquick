@@ -896,11 +896,14 @@ npm ci
 npx playwright install chromium
 node ci/verify-launch-resolution-ui.js
 node ci/verify-lwjgl-color-attrib-cache.js
+node ci/verify-lwjgl-clipping-state.js
 node ci/verify-lwjgl-extended-attrib-cache.js
 node ci/test-paired-experiment.js
+node ci/test-renderer-experiment-state.js
 node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
+node ci/test-campaign-capture-routing.js
 node ci/verify-hot-canvas-screenshot-fallback.js
 python3 ci/test-runtime-graphics-audit.py
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
@@ -935,6 +938,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_DEEP_GAMEPLAY=false \
   STARSECTOR_SAVE_LOAD_SMOKE=false \
   STARSECTOR_RUNNER_DIAGNOSTICS=false \
+  STARSECTOR_RAF_PAIRED=false \
   STARSECTOR_COLOR_CACHE_AB=false \
   STARSECTOR_EXTENDED_CACHE_AB=false \
   STARSECTOR_PACING_SCREEN=false \

@@ -22,6 +22,7 @@ const { chromium } = require('playwright');
   const extraEnd = source.indexOf('// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_END');
   const extra = extraBegin < 0 ? '' : source.slice(extraBegin, extraEnd);
   const code = source.slice(begin,end) + '\n' + extra + '\n' + [
+    'getCompatEnableState','setCompatEnableState',
     'snapshotAttribState','restoreAttribState','Java_org_lwjgl_opengl_GL11_nglClearColor',
     'Java_org_lwjgl_opengl_GL11_nglBlendFunc','Java_org_lwjgl_opengl_GL11_nglColorMask',
   ].map(functionSource).join('\n');
@@ -34,7 +35,7 @@ const { chromium } = require('playwright');
         const glCanvas=document.getElementById('gl');
         const glCtx=glCanvas.getContext('webgl2');
         if(!glCtx)throw new Error('WebGL2 unavailable');
-        const alphaTestState={func:519,ref:0}; const curList=null;
+        const alphaTestState={enabled:false,func:519,ref:0}; const curList=null;
         function checkNoList(){} function syncAlphaTestUniforms(){}
         eval(code);
         const checks=[];

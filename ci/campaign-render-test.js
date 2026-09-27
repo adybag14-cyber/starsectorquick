@@ -159,6 +159,8 @@ function panelVisualThreshold(tab, renderWidth = 1024, renderHeight = 768) {
 }
 
 async function waitForVisualTransition(canvas, baseline, options = {}) {
+  const capture = options.capture;
+  if (typeof capture !== 'function') throw new Error('A verified canvas capture callback is required');
   const region = options.region || { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
   const threshold = Number(options.threshold ?? 0.025);
   const timeoutMs = Number(options.timeoutMs ?? 8000);
@@ -168,7 +170,7 @@ async function waitForVisualTransition(canvas, baseline, options = {}) {
   let lastFrame = null;
   while (Date.now() - started <= timeoutMs) {
     await sleep(pollMs);
-    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastFrame = await capture();
     const visualDiff = pixelDiffRatio(baseline, lastFrame, region);
     bestDiff = Math.max(bestDiff, visualDiff);
     if (visualDiff >= threshold) {
@@ -179,6 +181,8 @@ async function waitForVisualTransition(canvas, baseline, options = {}) {
 }
 
 async function waitForCampaignFrame(canvas, options = {}) {
+  const capture = options.capture;
+  if (typeof capture !== 'function') throw new Error('A verified canvas capture callback is required');
   const timeoutMs = Number(options.timeoutMs ?? 8000);
   const pollMs = Math.max(100, Number(options.pollMs ?? 400));
   const started = Date.now();
@@ -186,7 +190,7 @@ async function waitForCampaignFrame(canvas, options = {}) {
   let lastStats = null;
   while (Date.now() - started <= timeoutMs) {
     await sleep(pollMs);
-    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastFrame = await capture();
     lastStats = pixelStats(lastFrame);
     if (isCampaignFramePlayable(lastStats)) {
       return { ready: true, readyMs: Date.now() - started, frame: lastFrame, stats: lastStats };
@@ -514,7 +518,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         `${label} canvas visibility`,
       );
       return await withTimeout(
-        gameCanvas.screenshot({ path, timeout: screenshotActionTimeoutMs }),
+        gameCanvas.screenshot({ ...(path ? { path } : {}), timeout: screenshotActionTimeoutMs }),
         screenshotTimeoutMs,
         label,
       );
@@ -547,7 +551,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         Number(windowConfig.__STARSECTOR_RENDER_HEIGHT__ || 768),
       );
       if (!cropped) throw new Error(`${label} viewport fallback could not locate game-container border`);
-      fs.writeFileSync(path, cropped.buffer);
+      if (path) fs.writeFileSync(path, cropped.buffer);
       logs.push(`[diagnostic] ${label} recovered from CDP compositor viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
       flushLogs();
       return cropped.buffer;
@@ -562,6 +566,12 @@ ${fallback}`);
       return null;
     }
   };
+  const captureProbeFrame = async () => {
+    const bytes = await safeScreenshot(null, 'gameplay probe frame');
+    if (!bytes) throw new Error('Gameplay frame capture failed through locator and compositor paths');
+    return bytes;
+  };
+
 
   const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
   const firstFrameCapturedAt = first ? Date.now() : null;
@@ -644,7 +654,7 @@ ${fallback}`);
         if (fatalSeenAt || errors.length > 0) break;
         const x = box.x + box.width * nx;
         const y = box.y + box.height * ny;
-        const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const beforePanel = deepGameplay ? await captureProbeFrame() : null;
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const panelStartedAt = Date.now();
@@ -667,6 +677,7 @@ ${fallback}`);
           listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
           if (tabReady.matched) {
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
+              capture: captureProbeFrame,
               timeoutMs: 9000,
               pollMs: 800,
               threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -721,7 +732,7 @@ ${fallback}`);
             await sleep(350);
           }
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignFrame(gameCanvas, { capture: captureProbeFrame, timeoutMs: 8000, pollMs: 800 });
           const returnFrame = returned.frame;
           if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
           controlResult.returnReadyMs = returned.readyMs;
@@ -775,7 +786,7 @@ ${fallback}`);
         });
         const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
-        const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+        const beforeFrame = await captureProbeFrame();
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const shortcutStartedAt = Date.now();
@@ -791,6 +802,7 @@ ${fallback}`);
           const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
           if (ready.matched) {
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              capture: captureProbeFrame,
               timeoutMs: 8000,
               pollMs: 800,
               threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -813,6 +825,7 @@ ${fallback}`);
           // Validate the non-deep/tutorial path by the actual canvas transition,
           // instead of requiring both queue entries to be consumed immediately.
           const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              capture: captureProbeFrame,
             timeoutMs: 8000,
             pollMs: 800,
             threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -859,7 +872,7 @@ ${fallback}`);
 
         if (deepGameplay && transition?.readyMatched) {
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignFrame(gameCanvas, { capture: captureProbeFrame, timeoutMs: 8000, pollMs: 800 });
           shortcutResult.returnedToCampaign = returned.ready;
           shortcutResult.returnReadyMs = returned.readyMs;
           shortcutResult.failed = shortcutResult.failed || !returned.ready;
@@ -925,7 +938,7 @@ ${fallback}`);
       const logStart = logs.length;
       const gameplayStart = gameplayEvents.length;
       const beforeInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
-      const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      const beforeFrame = await captureProbeFrame();
 
       await page.keyboard.press(key);
       let pressReady = await waitForGameplayEvent(
@@ -953,7 +966,7 @@ ${fallback}`);
         await sleep(confirmed.matched ? 450 : 150);
       }
 
-      const afterFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      const afterFrame = await captureProbeFrame();
       fs.writeFileSync(`${outputDir}/gameplay-ability-${digit}.png`, afterFrame);
       const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
       const events = gameplayEvents.slice(gameplayStart);
