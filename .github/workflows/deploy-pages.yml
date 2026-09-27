@@ -118,6 +118,11 @@ jobs:
           test -s .pages-worktree/starsector-jar-pack-v1.bin
           test -s .pages-worktree/starsector-jar-pack-v1.json
           python3 ci/build-pages-graphics-packs.py --root .pages-worktree
+          python3 ci/audit-graphics-pack.py \
+            --manifest .pages-worktree/starsector-graphics-pack-v1.json \
+            --pack-dir .pages-worktree/starsector-graphics-pack-v1 \
+            --archive .ci-cache/starsector_linux-0.98a-RC8.zip \
+            --output test_output/deploy-graphics-pack-audit.json --require-byte-exact
           test -s .pages-worktree/starsector-graphics-pack-v1.json
           test -d .pages-worktree/starsector-graphics-pack-v1
           test -s .pages-worktree/starsector-graphics-pack-v1/planets.bin

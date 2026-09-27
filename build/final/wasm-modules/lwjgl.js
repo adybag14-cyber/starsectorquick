@@ -323,6 +323,52 @@ function setCompatEnableState(cap, enabled)
 	}
 	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
 }
+// LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1_BEGIN
+// Snapshot only the color-buffer values owned by this bridge. Unlike a broad
+// context-method wrapper, this adds no call trampoline to every WebGL operation.
+// Unknown blend enums/NaNs invalidate the shadow and retain authoritative GL
+// queries; nested snapshots own independent arrays. The switch keeps the exact
+// query path available for same-campaign, alternating A/B measurements.
+var colorAttribShadow = null;
+var colorAttribCacheStats = { hits: 0, readbacks: 0 };
+if(typeof window !== "undefined") window.__lwjglColorAttribCacheStats = colorAttribCacheStats;
+function readColorAttribState()
+{
+	colorAttribCacheStats.readbacks++;
+	return {
+		blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+		blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+		blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
+		blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+		colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
+		clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
+	};
+}
+function cloneColorAttribState(state)
+{
+	return { blendSrcRgb: state.blendSrcRgb, blendDstRgb: state.blendDstRgb,
+		blendSrcAlpha: state.blendSrcAlpha, blendDstAlpha: state.blendDstAlpha,
+		colorMask: state.colorMask.slice(), clearColor: state.clearColor.slice() };
+}
+function snapshotColorAttribState()
+{
+	if(typeof window !== "undefined" && window.__LWJGL_COLOR_ATTRIB_CACHE__ === false)
+	{
+		colorAttribShadow = null;
+		return readColorAttribState();
+	}
+	if(colorAttribShadow === null) colorAttribShadow = readColorAttribState();
+	else colorAttribCacheStats.hits++;
+	return cloneColorAttribState(colorAttribShadow);
+}
+function knownBlendFactor(value)
+{
+	return Number.isInteger(value) && (value === 0 || value === 1 || (value >= 0x0300 && value <= 0x0307));
+}
+if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
+	glCtx.canvas.addEventListener("webglcontextrestored", function() { colorAttribShadow = null; });
+// LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1_END
+
 function snapshotAttribState(mask)
 {
 	var state = { mask: mask };
@@ -341,14 +387,7 @@ function snapshotAttribState(mask)
 	}
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
-		state.color = {
-			blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
-			blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
-			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
-			blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
-			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
-			clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
-		};
+		state.color = snapshotColorAttribState();
 		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
 	}
 	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
@@ -403,6 +442,7 @@ function restoreAttribState(state)
 		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
 		glCtx.colorMask(...state.color.colorMask);
 		glCtx.clearColor(...state.color.clearColor);
+		if(colorAttribShadow !== null) colorAttribShadow = cloneColorAttribState(state.color);
 	}
 	if(state.depth)
 	{
@@ -1984,7 +2024,12 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval()
 function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 {
 	checkNoList(curList);
-	return glCtx.clearColor(r, g, b, a);
+	glCtx.clearColor(r, g, b, a);
+	if(colorAttribShadow !== null)
+	{
+		if(Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) colorAttribShadow = null;
+		else colorAttribShadow.clearColor = [r, g, b, a].map(Math.fround);
+	}
 }
 
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
@@ -2518,6 +2563,15 @@ function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
 	glCtx.blendFunc(sfactor, dfactor);
+	if(colorAttribShadow !== null)
+	{
+		if(knownBlendFactor(sfactor) && knownBlendFactor(dfactor))
+		{
+			colorAttribShadow.blendSrcRgb = colorAttribShadow.blendSrcAlpha = sfactor;
+			colorAttribShadow.blendDstRgb = colorAttribShadow.blendDstAlpha = dfactor;
+		}
+		else colorAttribShadow = null;
+	}
 }
 
 function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
@@ -2525,6 +2579,7 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
 	glCtx.colorMask(r, g, b, a);
+	if(colorAttribShadow !== null) colorAttribShadow.colorMask = [!!r, !!g, !!b, !!a];
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)

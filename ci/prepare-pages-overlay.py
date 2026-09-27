@@ -100,6 +100,26 @@ def copy_file(rel: str, output: Path) -> dict[str, object]:
     return {"path": rel, "bytes": src.stat().st_size, "sha256": sha256(src)}
 
 
+def graphics_overlay_paths(root: Path) -> set[str]:
+    """Always promote the complete prepared graphics tree, not only git-dirty art.
+
+    An old published image can differ even when the source file is unchanged;
+    selecting only git diff silently retains that stale image in the next pack.
+    """
+    base = root / "starsector" / "starsector" / "graphics"
+    if not base.is_dir():
+        raise RuntimeError("complete runtime graphics tree is missing")
+    selected = set()
+    for image in base.rglob("*"):
+        if image.is_symlink():
+            raise RuntimeError(f"graphics overlay cannot contain symlinks: {image}")
+        if image.is_file():
+            selected.add(image.relative_to(root).as_posix())
+    if not selected:
+        raise RuntimeError("complete runtime graphics tree is empty")
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="test_output/pages-overlays/deploy")
@@ -150,6 +170,7 @@ def main() -> int:
     changed = git_paths("diff", "--name-only", "-z", "HEAD", "--")
     untracked = git_paths("ls-files", "--others", "--exclude-standard", "-z")
     selected = set(REQUIRED_FILES)
+    selected.update(graphics_overlay_paths(ROOT))
     for rel in changed | untracked:
         if rel.startswith("data/") or rel.startswith("starsector/starsector/"):
             selected.add(rel)

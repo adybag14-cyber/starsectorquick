@@ -44,9 +44,11 @@ python3 ci/restore-official-runtime-assets.py \
   --section graphics \
   | tee "$OUT/official-asset-restore.log"
 
+python3 ci/repair-official-graphics.py --archive "$OFFICIAL_ZIP" \
+  --root starsector/starsector --output "$OUT/graphics-repairs.json"
 python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
 python3 ci/audit-runtime-graphics.py --archive "$OFFICIAL_ZIP" \
-  --root starsector/starsector --output "$OUT/graphics-audit.json" --require-complete
+  --root starsector/starsector --output "$OUT/graphics-audit.json" --require-byte-exact
 if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" ]]; then
   python3 ci/prepare-browser-minimal-economy.py | tee "$OUT/browser-economy.log"
 fi
@@ -893,6 +895,8 @@ npm ci
 # make a browser-runtime diagnostic fail before Playwright launches.
 npx playwright install chromium
 node ci/verify-launch-resolution-ui.js
+node ci/verify-lwjgl-color-attrib-cache.js
+python3 ci/test-runtime-graphics-audit.py
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
   node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
 echo $! > /tmp/starsector-http.pid
@@ -924,6 +928,8 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_EXPECT_STATE=campaign \
   STARSECTOR_DEEP_GAMEPLAY=false \
   STARSECTOR_SAVE_LOAD_SMOKE=false \
+  STARSECTOR_RUNNER_DIAGNOSTICS=false \
+  STARSECTOR_COLOR_CACHE_AB=false \
   STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
   STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
     node ci/campaign-render-test.js

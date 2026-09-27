@@ -321,6 +321,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const localNegativeMisses = [];
   const screenshotErrors = [];
   const graphicsErrors = [];
+  const runtimeGraphicsAudit = require('./runtime-graphics-audit').createRuntimeGraphicsAudit();
   const runtimeErrorSignals = [];
   const gameplayEvents = [];
   const disallowedRecovery = [];
@@ -428,6 +429,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
+    runtimeGraphicsAudit.console(text);
     const hardRuntimeError = /fatal\s+starsector\s+null|NullPointerException|Exception in thread|(?:^|\b)Fatal\s*:\s*|auto campaign aborting|exhausted all new-game/i.test(text);
     if (hardRuntimeError) {
       runtimeErrorSignals.push(text);
@@ -452,9 +454,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   });
   page.on('requestfailed', request => {
     const failure = request.failure();
+    runtimeGraphicsAudit.requestFailed(request.url(), failure?.errorText || 'unknown');
     logs.push(`[requestfailed] ${request.url()} :: ${failure ? failure.errorText : 'unknown'}`);
   });
   page.on('response', response => {
+    runtimeGraphicsAudit.response(response.url(), response.status());
     const headers = response.headers();
     if (headers['x-starsectorquick-jar-pack'] === 'v1') {
       jarPackResponses += 1;
@@ -1472,11 +1476,12 @@ ${fallback}`);
     }
   }
 
+  const runtimeGraphics = runtimeGraphicsAudit.summary();
   const ok = reachedExpected && rendered && campaignVisualQuality && campaignSpaceBackgroundSafe && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && abilityKeysSafe && gameplayPerformanceSafe
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
-    && graphicsErrors.length === 0
+    && graphicsErrors.length === 0 && runtimeGraphics.safe
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
     && saveLoadSmoke.ok
@@ -1555,6 +1560,7 @@ ${fallback}`);
     starterAbilityMappingReady,
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
+    runtimeGraphics,
     localNegativeMisses: [...new Set(localNegativeMisses)],
     saveLoadSmoke,
     state,

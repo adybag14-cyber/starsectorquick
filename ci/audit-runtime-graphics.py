@@ -26,12 +26,11 @@ def digest(data: bytes) -> str:
 
 
 def image_signature_ok(name: str, data: bytes) -> bool:
-    suffix = PurePosixPath(name).suffix.lower()
-    if suffix == '.png': return data.startswith(b'\x89PNG\r\n\x1a\n')
-    if suffix in {'.jpg', '.jpeg'}: return data.startswith(b'\xff\xd8\xff')
-    if suffix == '.gif': return data.startswith((b'GIF87a', b'GIF89a'))
-    if suffix == '.bmp': return data.startswith(b'BM')
-    return bool(data)  # TGA has no mandatory leading magic; decoder tests cover it.
+    # ImageIO selects decoders by content, not the filename suffix. A PNG saved
+    # as .jpg is a byte difference, but is not an absent or undecodable image.
+    if data.startswith((bytes.fromhex('89504e470d0a1a0a'), bytes.fromhex('ffd8ff'), b'GIF87a', b'GIF89a', b'BM')):
+        return True
+    return PurePosixPath(name).suffix.lower() == '.tga' and bool(data)
 
 
 def archive_images(archive: ZipFile) -> dict:
@@ -114,6 +113,7 @@ def main() -> int:
     parser.add_argument('--archive', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--require-complete', action='store_true')
+    parser.add_argument('--require-byte-exact', action='store_true')
     args = parser.parse_args()
     if not (args.root/'graphics').is_dir(): parser.error('Runtime graphics directory does not exist')
     report = audit(args.root, args.archive)
@@ -122,7 +122,8 @@ def main() -> int:
     print(json.dumps({key: report[key] for key in ['officialImages', 'exactImages', 'completeOfficialImageSet', 'allOfficialImagesByteExact']}))
     print('missing=%d different=%d invalid=%d literal-reference-misses=%d' % tuple(len(report[key])
         for key in ['missing', 'different', 'invalidImages', 'referenceMisses']))
-    return 1 if args.require_complete and not report['completeOfficialImageSet'] else 0
+    return 1 if ((args.require_complete and not report['completeOfficialImageSet'])
+        or (args.require_byte_exact and not report['allOfficialImagesByteExact'])) else 0
 
 
 if __name__ == '__main__': raise SystemExit(main())

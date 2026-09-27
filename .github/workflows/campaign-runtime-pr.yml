@@ -111,6 +111,8 @@ jobs:
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_RUNNER_DIAGNOSTICS: 'true'
+          STARSECTOR_COLOR_CACHE_AB: 'true'
+          STARSECTOR_DIAGNOSTIC_WINDOWS: '1'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
@@ -131,6 +133,12 @@ jobs:
           test -s test_output/pages-overlays/pr-check/jars/starfarer.api.jar
           test -s test_output/pages-overlays/pr-check/jars/starfarer_obf.jar
           test -s test_output/pages-overlays/pr-check/jars/scripts-precompiled.jar
+          python3 ci/build-pages-graphics-packs.py --root test_output/pages-overlays/pr-check
+          python3 ci/audit-graphics-pack.py \
+            --manifest test_output/pages-overlays/pr-check/starsector-graphics-pack-v1.json \
+            --pack-dir test_output/pages-overlays/pr-check/starsector-graphics-pack-v1 \
+            --archive .ci-cache/starsector_linux-0.98a-RC8.zip \
+            --output test_output/pages-overlays/pr-check/graphics-pack-audit.json --require-byte-exact
       - name: Upload campaign-direct-main-thread-java17 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -141,6 +149,7 @@ jobs:
             test_output/campaign-direct-main-thread-java17-tutorial
             test_output/pages-overlays/pr-check/web-runtime-profile.json
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
+            test_output/pages-overlays/pr-check/graphics-pack-audit.json
           if-no-files-found: warn
 
 

@@ -1,0 +1,39 @@
+name: CheerpJ graphics and diagnostics contracts
+
+on:
+  pull_request:
+    branches: [feature/starsector-webgl-integration]
+    paths:
+      - build/final/wasm-modules/lwjgl.js
+      - ci/*graphics*
+      - ci/*attrib-cache*
+      - ci/cheerpj-runner-diagnostics.js
+      - .github/workflows/cheerpj-diagnostics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  graphics-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify reviewed image repairs and runtime failure classification
+        run: |
+          python3 ci/test-runtime-graphics-audit.py -v
+          node ci/test-runtime-graphics-audit.js
+      - name: Compare cached snapshots with authoritative WebGL state
+        run: |
+          node ci/verify-lwjgl-color-attrib-cache.js
+          node ci/verify-lwjgl-frame-timing.js
+          python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js

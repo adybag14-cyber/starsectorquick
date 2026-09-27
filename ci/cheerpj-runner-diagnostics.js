@@ -73,6 +73,54 @@ async function collectDiagnostics(page, context, outputDir) {
         p99Ms: result.stats.frameP99Ms, jitterP95Ms: result.stats.frameJitterP95Ms });
       console.log('[runner-timing]', JSON.stringify(report.windows.at(-1)));
     }
+    if (process.env.STARSECTOR_COLOR_CACHE_AB === 'true') {
+      // Eight counterbalanced windows in the SAME real, unpaused campaign and
+      // browser. No screenshots, CPU profiling or resource fetches in a window.
+      report.comparison = { design: 'ABBABAAB', baseline: 'uncached color snapshots',
+        candidate: 'color snapshot shadow', blocks: [] };
+      const order = [false, true, true, false, true, false, false, true];
+      for (let i = 0; i < order.length; i++) {
+        const enabled = order[i];
+        const warmStart = await page.evaluate(enabled => {
+          if (!window.__lwjglColorAttribCacheStats) throw new Error('Candidate color cache not loaded');
+          window.__LWJGL_COLOR_ATTRIB_CACHE__ = enabled;
+          return window.__lwjglPresentationStats.swapCount;
+        }, enabled);
+        await page.waitForFunction(start => window.__lwjglPresentationStats.swapCount >= start + 24,
+          warmStart, { timeout: 30000, polling: 250 });
+        const before = await page.evaluate(() => {
+          window.__lwjglResetPresentationTimingWindow();
+          return { swaps: window.__lwjglPresentationStats.swapCount, cache: {...window.__lwjglColorAttribCacheStats} };
+        });
+        await page.waitForFunction(start => window.__lwjglPresentationStats.swapCount >= start + 241,
+          before.swaps, { timeout: 120000, polling: 250 });
+        const after = await page.evaluate(() => {
+          window.__lwjglRefreshPresentationStats();
+          const s=window.__lwjglPresentationStats;
+          return { state: window.__STARSECTOR_RUNTIME_STATE__?.state, enabled: window.__LWJGL_COLOR_ATTRIB_CACHE__,
+            sampleCount:s.frameSampleCount, fps:s.recentFps, meanMs:s.recentFrameMs,
+            p95Ms:s.frameP95Ms, p99Ms:s.frameP99Ms, jitterP95Ms:s.frameJitterP95Ms,
+            cache:{...window.__lwjglColorAttribCacheStats} };
+        });
+        if (after.state!=='campaign' || after.sampleCount!==240 || after.enabled!==enabled) throw new Error('Invalid A/B window');
+        const block={index:i,enabled,...after,readbackDelta:after.cache.readbacks-before.cache.readbacks,
+          hitDelta:after.cache.hits-before.cache.hits};
+        if(enabled ? block.hitDelta<=0 : block.readbackDelta<=0) throw new Error('A/B branch not exercised');
+        report.comparison.blocks.push(block);
+        console.log('[runner-color-ab]',JSON.stringify(block));
+      }
+      const median=values=>{const v=[...values].sort((a,b)=>a-b);return (v[(v.length-1)>>1]+v[v.length>>1])/2;};
+      const metrics=['fps','meanMs','p95Ms','p99Ms','jitterP95Ms'];
+      report.comparison.medians={baseline:{},candidate:{},changePercent:{}};
+      for(const metric of metrics){
+        const a=median(report.comparison.blocks.filter(b=>!b.enabled).map(b=>b[metric]));
+        const b=median(report.comparison.blocks.filter(b=>b.enabled).map(b=>b[metric]));
+        report.comparison.medians.baseline[metric]=a;
+        report.comparison.medians.candidate[metric]=b;
+        report.comparison.medians.changePercent[metric]=a?(b-a)*100/a:null;
+      }
+      await page.evaluate(()=>{window.__LWJGL_COLOR_ATTRIB_CACHE__=true;});
+    }
     const session = await context.newCDPSession(page);
     try {
       await session.send('Profiler.enable');

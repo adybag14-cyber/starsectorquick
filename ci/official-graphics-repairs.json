@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "release": "0.98a-RC8",
+  "description": "Reviewed deviations from older stock import; repairs are guarded against both local and official hashes. No original artwork is embedded.",
+  "images": [
+    {
+      "path": "graphics/damage/fragmentation.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "8bf458d5cb929343190f5c68e5bbeffcbd2a4a2fd12b72035575ff77f69bd6d3",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/icons/intel/gate_active.png",
+      "expectedLocalSha256": "738bbf94e0b145ac40ded2cd4604a100c9971d3e0c722190dd61726c2a903e81",
+      "officialSha256": "521531b2b938efa35abc751ce1f87b612a0f29d618fade217721c643b2b0a4fc",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/icons/radar_circle.png",
+      "expectedLocalSha256": "694c961fb96a50a3cf2835538cc96eba9d2f896e04336954c3aa9422c9348a0b",
+      "officialSha256": "7bc927b833211bc029e03c75611c909515aea1836f9f1ab039c79370d0586a6f",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/characters/cavin_pharoh.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "d481c24d0479ce7c6e6bd6454220de4a193549296194b800349d61bcb797e465",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/portraits/characters/ga_recruiter.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "1a8597c2312915eaea108768a53676d5b2d4d6c30c00417762c9e1c8454d5f4d",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/portraits/characters/horus_yaribay.png",
+      "expectedLocalSha256": "651aa9a76958ceb8da7b4ce2284ab808719bf9e14a4ed2e52bdb1536ad2a6624",
+      "officialSha256": "aa5867a3026a8bcdf32de5efabdf14783e67a4c273fb6540f9170c38691925fb",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/characters/larix.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "96569289ecb39ace15e614c0d6294d388da4ef2dd3fdb0d397a0b722d08caed3",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/portraits/characters/ulmus_pond.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "c0ea8a2bef026c1610142391fc5558a3c3a2c4ad5e039fcdc4f9b107cbbec23f",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/portraits/portrait14.png",
+      "expectedLocalSha256": "a0310f044aa3a8c9823896eedc63bc241a7e4b8e1e367e19789d628a489a4ac1",
+      "officialSha256": "02f24e826bdeba295673e669b7ba6a07f420b5b18d42a45a6b0ce989476f4b62",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/portrait23.png",
+      "expectedLocalSha256": "c15fcd5bdff8cac62cc83e068a4ef92918b52f3a5f15ead8e6cf795f1ff7352f",
+      "officialSha256": "d9d155b4b7f099f246125df46877b49cf0c9446dc3e09841683dd991daf76526",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/portrait24.png",
+      "expectedLocalSha256": "6f991b4ee77c86588c2f4874e744af0a3dc88d16654eb2a85cc4c82dff1d20b6",
+      "officialSha256": "627fb08e36f88bf7d2bcce6212e46fa92b7e5ff8dbb5839a6db8db20081399a9",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/portrait_diktat13.png",
+      "expectedLocalSha256": "d0679a2d264e3fd8d0b6a377e8f535fae554de03430fd3a981e15ae48f3dc89c",
+      "officialSha256": "5854d7ef5e6d65af191846258a39597a0760d85473f4ad801e66cc845caf297f",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/portraits/portrait_league06.png",
+      "expectedLocalSha256": "3ba7766ef0f98cfb811f76e721e2cb92e7e44463425849f6024ba5441abcde81",
+      "officialSha256": "32a16f6ed84b653770c7d4a774fdb549ed12c7c3b5e5331ac5e6db001acb1537",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/ships/fighters/warthog_lowtech.png",
+      "expectedLocalSha256": "fdc17be123bb1e31ea0b70af4a54bd1814b551ec9cc446d95b7891363b695521",
+      "officialSha256": "e7282c6c685b477596d2bb81dab6080bc1e497c3537a3e3e56f48f5dd196ecc4",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/ships/legion/legion.png",
+      "expectedLocalSha256": "6a10bf03374fa89ad2763b3812c0bec8ffd0457541162ad2940593bf47eb8983",
+      "officialSha256": "ac841d45392764e93fcd5808ff599e86d87d5807e2d47e273ae9b45f1bc55fec",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/ships/odyssey.png",
+      "expectedLocalSha256": "98d62f5823551931a9c967b4b9eb551488dc5c7a43189773c92e36a27432bc86",
+      "officialSha256": "913bb23d435cdd79c5518c9db59c0658243785ad5eed796100e58c4365848604",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/ships/onslaught/onslaught_base.png",
+      "expectedLocalSha256": "0436e619f2251b6bdffed371781855b660420a0856b0b09442ddd4061f4bfeeb",
+      "officialSha256": "982665f67483c6e254825921fa0aa850d7f8bea736055f14b8161ac629d01903",
+      "reason": "canonical-stock-encoding"
+    },
+    {
+      "path": "graphics/ships/shroud/eye_circle4.png",
+      "expectedLocalSha256": "9e7106fdd69a1e87c1ccf491e3425aa79b0b0cb63358c863ad0aced9e05d524b",
+      "officialSha256": "92f73253fed3a2c1b9030dc0b53b65948bf9e226cb09d94f22bd311ffb8cd0eb",
+      "reason": "transparent-4x4-placeholder"
+    },
+    {
+      "path": "graphics/ships/shuttle.png",
+      "expectedLocalSha256": "7adfd7522e97b3123c4af62c3f55ed8ea23d88d084322a51cb6ea12d914aaa58",
+      "officialSha256": "9efa065f8a57985238c92ffd470de3a6b7cd108b4d3c525b964fc45201bb97e7",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/terrain/map_asteroid_belt.png",
+      "expectedLocalSha256": "a2aea0964830ea5e458d100040ecf3cc21e4af9acfa040ba6ce99ab7ddf9eac8",
+      "officialSha256": "5043fdd91d993e6a62b07cad50907df97599b8227bf0317ed3b48aec4ed25ab5",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/warroom/taskicons/icon_rescind_order.png",
+      "expectedLocalSha256": "f2f187deadaaa3f5649dcd666e6c05e6d0dedc452e66492ceb74118f6552402f",
+      "officialSha256": "8a52ffb3b4ebc8b007ba9c08344db9aee23c642928f1f3d2471eb962c055639f",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/weapons/mining_laser_hardpoint_base.png",
+      "expectedLocalSha256": "a421ea6fc6386e4efa70d245b61cac29cc694eef222226de52cc5a75134b3c32",
+      "officialSha256": "0b5c7c6272a2c8337efb716a792943c770c8d0ce0c890c1a14a77438d7737797",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/weapons/mining_laser_hardpoint_glow.png",
+      "expectedLocalSha256": "efa99cf5b3ab67f49c77ec36f2fc6ee09e7bf6c6f5176729774292eaf2025c5b",
+      "officialSha256": "283ca244dff4c1a1fcad83005ab60f4803d3161101320376bc649aea8a66c44f",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/weapons/mining_laser_turret_base.png",
+      "expectedLocalSha256": "2e34c303b3c5fc6b431f38ce4440b26aa6a1fba1cac893acb66c42259a4056b1",
+      "officialSha256": "e0e3a8456197bb1fe792ed9439c8c58a6665928b5da2bb8ac12478af5f76c082",
+      "reason": "older-stock-import-artwork"
+    },
+    {
+      "path": "graphics/weapons/mining_laser_turret_glow.png",
+      "expectedLocalSha256": "4b790bda6a544c0d1ade6bad05a09b4624b377bb0f0a73ca56f77ac168ffe7bb",
+      "officialSha256": "61ff8d2e8dd2e81e29f9f51a8049ac1b4fde754076a6f1d4e68b68492cb7d697",
+      "reason": "older-stock-import-artwork"
+    }
+  ]
+}
