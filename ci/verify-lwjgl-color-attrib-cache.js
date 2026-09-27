@@ -18,7 +18,10 @@ const { chromium } = require('playwright');
     assert.ok(next > start, name);
     return source.slice(start,next);
   };
-  const code = source.slice(begin,end) + '\n' + [
+  const extraBegin = source.indexOf('// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_BEGIN');
+  const extraEnd = source.indexOf('// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_END');
+  const extra = extraBegin < 0 ? '' : source.slice(extraBegin, extraEnd);
+  const code = source.slice(begin,end) + '\n' + extra + '\n' + [
     'snapshotAttribState','restoreAttribState','Java_org_lwjgl_opengl_GL11_nglClearColor',
     'Java_org_lwjgl_opengl_GL11_nglBlendFunc','Java_org_lwjgl_opengl_GL11_nglColorMask',
   ].map(functionSource).join('\n');

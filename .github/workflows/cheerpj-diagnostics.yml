@@ -35,5 +35,7 @@ jobs:
       - name: Compare cached snapshots with authoritative WebGL state
         run: |
           node ci/verify-lwjgl-color-attrib-cache.js
+          node ci/verify-lwjgl-extended-attrib-cache.js
+          node ci/test-paired-experiment.js
           node ci/verify-lwjgl-frame-timing.js
           python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js

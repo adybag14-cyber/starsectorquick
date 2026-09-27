@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {intervalStats,summarizeBlocks,percentile}=require('./cheerpj-paired-experiment');
+assert.deepEqual(intervalStats([16,17,50,17]),{samples:4,fps:40,meanMs:25,p50Ms:17,p95Ms:50,p99Ms:50,maxMs:50,jitterP95Ms:33});
+for(const values of [[],[NaN],[Infinity],[-1],null])assert.throws(()=>intervalStats(values));
+assert.equal(percentile([1,2,3,4],.5),2);
+assert.equal(percentile([1,2,3,4],.99),4);
+const order=[false,true,true,false,true,false,false,true];
+const blocks=order.map((enabled,index)=>{const intervalsMs=Array(240).fill(enabled?80:100);return{enabled,index,intervalsMs,statistics:intervalStats(intervalsMs)};});
+const result=summarizeBlocks(blocks);
+assert.equal(result.baseline.fps,10);assert.equal(result.candidate.fps,12.5);
+assert.equal(result.changePercent.fps,25);assert.equal(result.changePercent.p95Ms,-20);
+assert.equal(result.pooled.baseline.samples,960);assert.equal(result.pooled.candidate.samples,960);
+assert.equal(result.pairedChanges.length,4);assert.ok(result.pairedChanges.every(row=>row.fpsPercent===25));
+assert.throws(()=>summarizeBlocks(blocks.slice(1)));assert.throws(()=>summarizeBlocks([...blocks].reverse()));
+const snapshot=JSON.stringify(blocks);summarizeBlocks(blocks);assert.equal(JSON.stringify(blocks),snapshot);
+console.log('test-paired-experiment: OK raw percentiles, jitter, pooling, order, mutation and negative fixtures');

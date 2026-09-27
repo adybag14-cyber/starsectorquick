@@ -121,6 +121,9 @@ async function collectDiagnostics(page, context, outputDir) {
       }
       await page.evaluate(()=>{window.__LWJGL_COLOR_ATTRIB_CACHE__=true;});
     }
+    if (process.env.STARSECTOR_EXTENDED_CACHE_AB === 'true') {
+      report.extendedComparison = await require('./cheerpj-paired-experiment').runPairedExperiment(page, out);
+    }
     const session = await context.newCDPSession(page);
     try {
       await session.send('Profiler.enable');
