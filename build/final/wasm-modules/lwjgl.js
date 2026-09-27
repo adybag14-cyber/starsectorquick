@@ -275,6 +275,57 @@ var quadIndexVertexCapacity = 0;
 var vertexPosition = glCtx.getAttribLocation(program, "aVertexPosition");
 var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
+
+// LWJGL_VERTEX_ARRAY_COALESCING_V1_BEGIN
+// This bridge owns one default VAO and three linked-program attribute slots.
+// Optional experiment: omit ONLY duplicate enable/disable writes. Pointer,
+// constant-value, buffer, shader and draw operations are never omitted. Unknown
+// indices retain driver validation. Adding another VAO requires extending this
+// ownership model (enforced by the regression test), not reusing these shadows.
+var vertexArrayEnableShadow = [];
+var vertexArrayCacheActive = false;
+var vertexArrayStats = { requests: 0, driverWrites: 0, coalesced: 0, invalidations: 0 };
+function invalidateVertexArrayState()
+{
+	vertexArrayEnableShadow.length = 0;
+	vertexArrayCacheActive = false;
+	vertexArrayStats.invalidations++;
+}
+function setBridgeVertexArrayEnabled(index, enabled)
+{
+	vertexArrayStats.requests++;
+	var selected = typeof window !== "undefined" && window.__LWJGL_VERTEX_ARRAY_CACHE__ === true;
+	var owned = selected && Number.isInteger(index) && index >= 0 &&
+		(index === vertexPosition || index === colorLocation || index === texCoord);
+	if(!selected && vertexArrayCacheActive) invalidateVertexArrayState();
+	if(selected && owned)
+	{
+		vertexArrayCacheActive = true;
+		if(vertexArrayEnableShadow[index] === enabled)
+		{
+			vertexArrayStats.coalesced++;
+			return;
+		}
+	}
+	// Forget before a potentially throwing call; do not cache a rejected write.
+	if(owned) vertexArrayEnableShadow[index] = undefined;
+	if(enabled) glCtx.enableVertexAttribArray(index);
+	else glCtx.disableVertexAttribArray(index);
+	vertexArrayStats.driverWrites++;
+	if(selected && owned) vertexArrayEnableShadow[index] = enabled;
+}
+if(typeof window !== "undefined")
+{
+	window.__lwjglVertexArrayStats = vertexArrayStats;
+	window.__lwjglInvalidateVertexArrayState = invalidateVertexArrayState;
+}
+if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
+{
+	glCtx.canvas.addEventListener("webglcontextlost", invalidateVertexArrayState);
+	glCtx.canvas.addEventListener("webglcontextrestored", invalidateVertexArrayState);
+}
+// LWJGL_VERTEX_ARRAY_COALESCING_V1_END
+
 var mvLocation = glCtx.getUniformLocation(program, "modelView");
 var projLocation = glCtx.getUniformLocation(program, "projection");
 var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
@@ -572,7 +623,7 @@ function restoreAttribState(state)
 		applyCurrentColorAttrib();
 		if(!texCoordData.enabled)
 		{
-			glCtx.disableVertexAttribArray(texCoord);
+			setBridgeVertexArrayEnabled(texCoord, false);
 			glCtx.vertexAttrib2f(texCoord, immediateModeData.currentTexCoord[0], immediateModeData.currentTexCoord[1]);
 		}
 	}
@@ -1293,12 +1344,12 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 			return false;
 		}
 	}
-	glCtx.enableVertexAttribArray(attributeLocation);
+	setBridgeVertexArrayEnabled(attributeLocation, true);
 	return true;
 }
 function applyCurrentColorAttrib()
 {
-	glCtx.disableVertexAttribArray(colorLocation);
+	setBridgeVertexArrayEnabled(colorLocation, false);
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -1333,7 +1384,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		}
 		else
 		{
-			glCtx.disableVertexAttribArray(attributeLocation);
+			setBridgeVertexArrayEnabled(attributeLocation, false);
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -3197,9 +3248,9 @@ function uploadImmediateInterleaved(vertexCount)
 		immediatePointerLayoutDirty = false;
 		presentationStats.immediatePointerLayoutRefreshes++;
 	}
-	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.enableVertexAttribArray(texCoord);
+	setBridgeVertexArrayEnabled(vertexPosition, true);
+	setBridgeVertexArrayEnabled(colorLocation, true);
+	setBridgeVertexArrayEnabled(texCoord, true);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -3235,7 +3286,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
 		else
 		{
-			glCtx.disableVertexAttribArray(texCoord);
+			setBridgeVertexArrayEnabled(texCoord, false);
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}

@@ -4,7 +4,7 @@ const fs=require('node:fs');const assert=require('node:assert/strict');const {ch
  const source=fs.readFileSync(process.argv[2]||'build/final/wasm-modules/lwjgl.js','utf8');
  const section=name=>{const a=source.indexOf('// '+name+'_BEGIN'),b=source.indexOf('// '+name+'_END');assert.ok(a>=0&&b>a,name);return source.slice(a,b);};
  const fn=name=>{const a=source.indexOf('function '+name+'(');assert.ok(a>=0,name);return source.slice(a,Math.min(...['\nfunction ','\nvar '].map(x=>source.indexOf(x,a+10)).filter(i=>i>a)));};
- const code=[section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),
+ const code=require('./renderer-test-helpers').vertexArraySection(source) + [section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),
   ...['getCompatEnableState','setCompatEnableState','snapshotAttribState','restoreAttribState','Java_org_lwjgl_opengl_GL11_nglDepthMask','Java_org_lwjgl_opengl_GL11_nglDepthFunc','Java_org_lwjgl_opengl_GL11_nglClearDepth'].map(fn)].join('\n');
  const depthWrites=source.split('\n').filter(line=>/glCtx\.(?:depthMask|depthFunc|clearDepth)\(/.test(line));
  assert.equal(depthWrites.length,6,'New depth write requires mirror review');

@@ -21,7 +21,7 @@ const { chromium } = require('playwright');
   const extraBegin = source.indexOf('// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_BEGIN');
   const extraEnd = source.indexOf('// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_END');
   const extra = extraBegin < 0 ? '' : source.slice(extraBegin, extraEnd);
-  const code = source.slice(begin,end) + '\n' + extra + '\n' + [
+  const code = require('./renderer-test-helpers').vertexArraySection(source) + source.slice(begin,end) + '\n' + extra + '\n' + [
     'getCompatEnableState','setCompatEnableState',
     'snapshotAttribState','restoreAttribState','Java_org_lwjgl_opengl_GL11_nglClearColor',
     'Java_org_lwjgl_opengl_GL11_nglBlendFunc','Java_org_lwjgl_opengl_GL11_nglColorMask',

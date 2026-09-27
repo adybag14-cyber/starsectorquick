@@ -898,6 +898,7 @@ node ci/verify-launch-resolution-ui.js
 node ci/verify-lwjgl-color-attrib-cache.js
 node ci/verify-lwjgl-clipping-state.js
 node ci/verify-lwjgl-depth-state.js
+node ci/verify-lwjgl-vertex-array-cache.js
 node ci/verify-lwjgl-extended-attrib-cache.js
 node ci/test-paired-experiment.js
 node ci/test-renderer-experiment-state.js
@@ -941,6 +942,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_DEEP_GAMEPLAY=false \
   STARSECTOR_SAVE_LOAD_SMOKE=false \
   STARSECTOR_RUNNER_DIAGNOSTICS=false \
+  STARSECTOR_VERTEX_ARRAY_PAIRED=false \
   STARSECTOR_RAF_PAIRED=false \
   STARSECTOR_DEPTH_PAIRED=false \
   STARSECTOR_STALL_ATTRIBUTION=false \

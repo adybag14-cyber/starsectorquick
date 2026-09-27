@@ -13,7 +13,7 @@ const src=fs.readFileSync(path,'utf8');
 for(const marker of ['WEBGL_IMMEDIATE_INTERLEAVED_V1','__LWJGL_IMMEDIATE_INTERLEAVED__','immediateInterleavedUploadsSaved','LWJGL_DETAILED_DRAW_TELEMETRY_OPTIN_V1','detailedDrawTelemetryActive']) expect(src.includes(marker),`missing ${marker}`);
 const pointerDirtyPresent=src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1');
 const names=['ensureImmediateArrayCapacity','appendImmediateVertex','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglTexCoord2f','Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord','Java_org_lwjgl_opengl_GL11_nglVertex3f','uploadImmediateInterleaved','Java_org_lwjgl_opengl_GL11_nglEnd'];
-const code=names.map(n=>extract(src,n)).join('\n');
+const code=require('./renderer-test-helpers').vertexArraySection(src) + names.map(n=>extract(src,n)).join('\n');
 function make(enabled){
   const calls=[]; const legacy=[]; const draws=[];
   const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,NO_ERROR:0,

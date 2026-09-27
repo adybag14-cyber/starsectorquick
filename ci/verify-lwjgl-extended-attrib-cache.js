@@ -20,7 +20,7 @@ const { chromium } = require('playwright');
     'Java_org_lwjgl_opengl_GL11_nglViewport','Java_org_lwjgl_opengl_GL11_nglEnable','Java_org_lwjgl_opengl_GL11_nglDisable',
     'Java_org_lwjgl_opengl_GL11_nglClearDepth','Java_org_lwjgl_opengl_GL11_nglDepthMask','Java_org_lwjgl_opengl_GL11_nglDepthFunc',
     'Java_org_lwjgl_opengl_GL11_nglStencilFunc','Java_org_lwjgl_opengl_GL11_nglStencilOp'];
-  const code = [section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),...names.map(fn)].join('\n');
+  const code = require('./renderer-test-helpers').vertexArraySection(source) + [section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),...names.map(fn)].join('\n');
   const browser = await chromium.launch({headless:true,args:['--enable-unsafe-swiftshader']});
   try {
     const page=await browser.newPage();

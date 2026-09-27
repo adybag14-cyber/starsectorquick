@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
   const names=['getCompatEnableState','setCompatEnableState','snapshotAttribState','restoreAttribState',
     'Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers'];
   const optional=['presentMainFramebuffer'];
-  const code=[section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),
+  const code=require('./renderer-test-helpers').vertexArraySection(source) + [section('LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1'),section('LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1'),
     ...names.map(fn),...optional.filter(name=>source.includes('function '+name+'(')).map(fn)].join('\n');
   const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swiftshader']});
   let result;

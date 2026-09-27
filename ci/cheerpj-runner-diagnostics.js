@@ -134,6 +134,9 @@ async function collectDiagnostics(page, context, outputDir) {
     if (process.env.STARSECTOR_DEPTH_PAIRED === 'true') {
       report.depthPaired = await require('./cheerpj-depth-paired').runDepthPairedExperiment(page, out);
     }
+    if (process.env.STARSECTOR_VERTEX_ARRAY_PAIRED === 'true') {
+      report.vertexArrayPaired = await require('./cheerpj-vertex-array-paired').runVertexArrayPairedExperiment(page, out);
+    }
     report.profileFlags = await captureExperimentFlags(page);
     const session = await context.newCDPSession(page);
     try {
