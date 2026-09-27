@@ -1,0 +1,50 @@
+name: Launcher routing and layout
+
+on:
+  pull_request:
+    branches: [feature/starsector-webgl-integration]
+    paths:
+      - index.html
+      - launch.html
+      - gwt-runtime/root-index.html
+      - ci/verify-launch-*.js
+      - .github/workflows/deploy-pages.yml
+      - .github/workflows/launcher-ui.yml
+  push:
+    branches: [feature/starsector-webgl-integration]
+    paths:
+      - index.html
+      - launch.html
+      - gwt-runtime/root-index.html
+      - ci/verify-launch-*.js
+      - .github/workflows/deploy-pages.yml
+      - .github/workflows/launcher-ui.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launcher-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify CheerpJ entrypoints, centering, resize and resolution controls
+        run: |
+          node ci/verify-launch-layout.js
+          node ci/verify-launch-resolution-ui.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: launcher-layout-evidence
+          path: test_output/launcher-layout
+          if-no-files-found: warn
