@@ -301,4 +301,5 @@ jobs:
             test_output/pages-build
             test_output/pages-overlays/deploy/web-runtime-profile.json
             test_output/pages-overlays/deploy/web-runtime-manifest.json
+            test_output/deploy-graphics-pack-audit.json
           if-no-files-found: warn
