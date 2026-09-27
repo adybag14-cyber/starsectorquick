@@ -37,5 +37,9 @@ jobs:
           node ci/verify-lwjgl-color-attrib-cache.js
           node ci/verify-lwjgl-extended-attrib-cache.js
           node ci/test-paired-experiment.js
+          node ci/test-campaign-frame-boundary.js
+          node ci/test-incremental-log-writer.js
+          node ci/test-compositor-viewport.js
+          node ci/verify-hot-canvas-screenshot-fallback.js
           node ci/verify-lwjgl-frame-timing.js
           python3 ci/verify-lwjgl-fixed-function.py build/final/wasm-modules/lwjgl.js

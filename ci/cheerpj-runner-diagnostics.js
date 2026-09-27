@@ -124,6 +124,9 @@ async function collectDiagnostics(page, context, outputDir) {
     if (process.env.STARSECTOR_EXTENDED_CACHE_AB === 'true') {
       report.extendedComparison = await require('./cheerpj-paired-experiment').runPairedExperiment(page, out);
     }
+    if (process.env.STARSECTOR_PACING_SCREEN === 'true') {
+      report.pacingScreen = await require('./cheerpj-pacing-screen').runPacingScreen(page, out);
+    }
     const session = await context.newCDPSession(page);
     try {
       await session.send('Profiler.enable');

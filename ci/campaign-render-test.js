@@ -8,6 +8,7 @@ const {
   isCampaignFramePlayable,
 } = require('./campaign-visual-gate');
 const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
+const { captureCompositorViewport } = require('./capture-compositor-viewport');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -341,11 +342,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   let jarPackResponseBytes = 0;
   let browser;
 
-  const flushLogs = () => {
-    try {
-      fs.writeFileSync(`${outputDir}/browser-live.log`, logs.join('\n'));
-    } catch (_) {}
-  };
+  const liveLogWriter = require('./incremental-log-writer').createIncrementalLogWriter(`${outputDir}/browser-live.log`);
+  const flushLogs = () => liveLogWriter.flush(logs);
 
   browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
@@ -539,9 +537,9 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       // border in the PNG. This keeps the visual gate strict without depending
       // on a saturated renderer main thread.
       const viewportFrame = await withTimeout(
-        page.screenshot(),
-        screenshotTimeoutMs,
-        `${label} viewport fallback`,
+        captureCompositorViewport(page, screenshotTimeoutMs),
+        screenshotTimeoutMs + 1000,
+        `${label} compositor viewport fallback`,
       );
       const cropped = cropGameCanvasFromViewportScreenshot(
         viewportFrame,
@@ -550,7 +548,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       );
       if (!cropped) throw new Error(`${label} viewport fallback could not locate game-container border`);
       fs.writeFileSync(path, cropped.buffer);
-      logs.push(`[diagnostic] ${label} recovered from viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
+      logs.push(`[diagnostic] ${label} recovered from CDP compositor viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
       flushLogs();
       return cropped.buffer;
     } catch (fallbackError) {
@@ -1476,12 +1474,14 @@ ${fallback}`);
     }
   }
 
+  flushLogs();
+  const logEvidenceSafe = !liveLogWriter.stats.error;
   const runtimeGraphics = runtimeGraphicsAudit.summary();
   const ok = reachedExpected && rendered && campaignVisualQuality && campaignSpaceBackgroundSafe && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && abilityKeysSafe && gameplayPerformanceSafe
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
-    && graphicsErrors.length === 0 && runtimeGraphics.safe
+    && graphicsErrors.length === 0 && runtimeGraphics.safe && logEvidenceSafe
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
     && saveLoadSmoke.ok
@@ -1561,6 +1561,8 @@ ${fallback}`);
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
     runtimeGraphics,
+    logEvidenceSafe,
+    liveLogWriter: { ...liveLogWriter.stats },
     localNegativeMisses: [...new Set(localNegativeMisses)],
     saveLoadSmoke,
     state,

@@ -107,12 +107,13 @@ jobs:
           # Exercise the production renderer for the final pacing gate. The
           # bounded upload/draw tracer is opt-in and was used to isolate the
           # background defect, but sampling texture payloads distorts timings.
-          EXPERIMENT_CONFIG: '{"__LWJGL_EXTENDED_ATTRIB_CACHE__":true}'
+          EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_RUNNER_DIAGNOSTICS: 'true'
           STARSECTOR_COLOR_CACHE_AB: 'false'
-          STARSECTOR_EXTENDED_CACHE_AB: 'true'
+          STARSECTOR_EXTENDED_CACHE_AB: 'false'
+          STARSECTOR_PACING_SCREEN: 'true'
           STARSECTOR_DIAGNOSTIC_WINDOWS: '1'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
@@ -186,7 +187,7 @@ jobs:
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__LWJGL_EXTENDED_ATTRIB_CACHE__":true}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
         run: |
           set +e
           bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"

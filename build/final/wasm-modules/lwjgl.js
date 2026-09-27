@@ -2132,6 +2132,41 @@ function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 	glCtx.clear(a);
 }
 
+// LWJGL_CAMPAIGN_BOUNDARY_EXPERIMENT_V1_BEGIN
+// Diagnostic-only frame submission/pacing choices. Startup/title JNI calls stay
+// synchronous. None is the existing path; no game draw or simulation is skipped.
+var campaignBoundaryStats = { flushes: 0, rafRequests: 0, rafCompleted: 0, timerFallbacks: 0 };
+if(typeof window !== "undefined") window.__lwjglCampaignBoundaryStats = campaignBoundaryStats;
+function campaignFrameBoundary()
+{
+	if(typeof window === "undefined" || window.__STARSECTOR_RUNTIME_STATE__?.state !== "campaign") return;
+	var mode = window.__LWJGL_CAMPAIGN_PACING__;
+	if(mode === "flush")
+	{
+		glCtx.flush();
+		campaignBoundaryStats.flushes++;
+		return;
+	}
+	if(mode !== "raf" || typeof requestAnimationFrame !== "function" || document.visibilityState !== "visible") return;
+	campaignBoundaryStats.rafRequests++;
+	return new Promise(function(resolve) {
+		var done = false;
+		var frame = null;
+		var timer = null;
+		function complete(fromTimer) {
+			if(done) return;
+			done = true;
+			if(fromTimer) { campaignBoundaryStats.timerFallbacks++; if(frame !== null) cancelAnimationFrame(frame); }
+			else { campaignBoundaryStats.rafCompleted++; if(timer !== null) clearTimeout(timer); }
+			resolve();
+		}
+		frame = requestAnimationFrame(function() { complete(false); });
+		// Losing visibility during the pending frame must not strand the JVM.
+		timer = setTimeout(function() { complete(true); }, 100);
+	});
+}
+// LWJGL_CAMPAIGN_BOUNDARY_EXPERIMENT_V1_END
+
 function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 {
 	if(verboseLog)
@@ -2188,6 +2223,8 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		console.warn("Frame limit reached");
 		return;
 	}
+	var campaignBoundary = campaignFrameBoundary();
+	if(campaignBoundary) return campaignBoundary;
 	// CheerpJ custom JNI calls must not keep the Java VM suspended on a browser
 	// animation-frame Promise. The framebuffer has already been blitted above.
 	return;

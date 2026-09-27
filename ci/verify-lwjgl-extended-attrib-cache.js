@@ -98,7 +98,55 @@ const { chromium } = require('playwright');
       const image=()=>{setCompatEnableState(glCtx.SCISSOR_TEST,false);glCtx.clearColor(.25,.5,.75,1);glCtx.clear(glCtx.COLOR_BUFFER_BIT);const data=new Uint8Array(64*64*4);glCtx.readPixels(0,0,64,64,glCtx.RGBA,glCtx.UNSIGNED_BYTE,data);return Array.from(data);};
       window.__LWJGL_EXTENDED_ATTRIB_CACHE__=false;const a=snapshotAttribState(mask);restoreAttribState(a);const pixelsA=image();
       window.__LWJGL_EXTENDED_ATTRIB_CACHE__=true;const b=snapshotAttribState(mask);restoreAttribState(b);same(image(),pixelsA,'framebuffer-byte-parity');
-      return {checks,stats:extendedAttribStats,unchangedReadbackSnapshots:300,unchangedEnableReads:500};
+      // Nontrivial pixel parity: overlapping opaque/alpha draws with nested
+      // depth, stencil, viewport and enable snapshots. This must produce real
+      // colored regions, not two equally empty frames.
+      const makeShader=(type,source)=>{const shader=glCtx.createShader(type);glCtx.shaderSource(shader,source);glCtx.compileShader(shader);if(!glCtx.getShaderParameter(shader,glCtx.COMPILE_STATUS))throw new Error(glCtx.getShaderInfoLog(shader));return shader;};
+      const program=glCtx.createProgram();
+      glCtx.attachShader(program,makeShader(glCtx.VERTEX_SHADER,'#version 300 es\\nlayout(location=0) in vec2 position; uniform float z; void main(){gl_Position=vec4(position,z,1.0);}'));
+      glCtx.attachShader(program,makeShader(glCtx.FRAGMENT_SHADER,'#version 300 es\\nprecision highp float; uniform vec4 tint; out vec4 color; void main(){color=tint;}'));
+      glCtx.linkProgram(program);if(!glCtx.getProgramParameter(program,glCtx.LINK_STATUS))throw new Error(glCtx.getProgramInfoLog(program));
+      glCtx.useProgram(program);
+      const vao=glCtx.createVertexArray();glCtx.bindVertexArray(vao);
+      glCtx.bindBuffer(glCtx.ARRAY_BUFFER,glCtx.createBuffer());
+      glCtx.bufferData(glCtx.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),glCtx.STATIC_DRAW);
+      glCtx.vertexAttribPointer(0,2,glCtx.FLOAT,false,0,0);glCtx.enableVertexAttribArray(0);
+      const tint=glCtx.getUniformLocation(program,'tint');const zloc=glCtx.getUniformLocation(program,'z');
+      const draw=(r,g,b,a,z)=>{glCtx.uniform4f(tint,r,g,b,a);glCtx.uniform1f(zloc,z);glCtx.drawArrays(glCtx.TRIANGLES,0,6);};
+      const fixture=enabled=>{
+        window.__LWJGL_EXTENDED_ATTRIB_CACHE__=enabled;invalidateExtendedAttribState();
+        for(const cap of caps)Java_org_lwjgl_opengl_GL11_nglDisable(null,cap,0);
+        glCtx.colorMask(true,true,true,true);glCtx.clearColor(0,0,0,1);glCtx.stencilMask(255);glCtx.clearStencil(0);
+        Java_org_lwjgl_opengl_GL11_nglClearDepth(null,1,0);Java_org_lwjgl_opengl_GL11_nglDepthMask(null,true,0);
+        glCtx.clear(glCtx.COLOR_BUFFER_BIT|glCtx.DEPTH_BUFFER_BIT|glCtx.STENCIL_BUFFER_BIT);
+        invalidateExtendedAttribState();
+        Java_org_lwjgl_opengl_GL11_nglEnable(null,glCtx.DEPTH_TEST,0);Java_org_lwjgl_opengl_GL11_nglEnable(null,glCtx.STENCIL_TEST,0);
+        Java_org_lwjgl_opengl_GL11_nglDepthFunc(null,glCtx.LESS,0);
+        Java_org_lwjgl_opengl_GL11_nglStencilFunc(null,glCtx.ALWAYS,1,255,0);
+        Java_org_lwjgl_opengl_GL11_nglStencilOp(null,glCtx.KEEP,glCtx.KEEP,glCtx.REPLACE,0);
+        Java_org_lwjgl_opengl_GL11_nglViewport(null,4,4,48,48,0);draw(1,0,0,1,.2);
+        const saved=snapshotAttribState(mask);
+        Java_org_lwjgl_opengl_GL11_nglViewport(null,12,12,24,36,0);Java_org_lwjgl_opengl_GL11_nglDepthFunc(null,glCtx.GREATER,0);
+        Java_org_lwjgl_opengl_GL11_nglStencilFunc(null,glCtx.EQUAL,1,255,0);Java_org_lwjgl_opengl_GL11_nglStencilOp(null,glCtx.KEEP,glCtx.KEEP,glCtx.KEEP,0);
+        draw(0,1,0,1,.7);
+        const nested=snapshotAttribState(mask);
+        Java_org_lwjgl_opengl_GL11_nglDisable(null,glCtx.DEPTH_TEST,0);Java_org_lwjgl_opengl_GL11_nglEnable(null,glCtx.BLEND,0);
+        glCtx.blendFunc(glCtx.SRC_ALPHA,glCtx.ONE_MINUS_SRC_ALPHA);
+        Java_org_lwjgl_opengl_GL11_nglViewport(null,8,20,48,16,0);draw(0,0,1,.5,0);
+        restoreAttribState(nested);draw(1,1,0,1,.9);
+        restoreAttribState(saved);draw(1,0,1,1,.5);
+        const bytes=new Uint8Array(64*64*4);glCtx.readPixels(0,0,64,64,glCtx.RGBA,glCtx.UNSIGNED_BYTE,bytes);
+        return Array.from(bytes);
+      };
+      let renderParityBytes=0;
+      for(let repeat=0;repeat<4;repeat++){
+        const expected=fixture(false);const actual=fixture(true);same(actual,expected,'depth-stencil-blend-render-'+repeat);
+        const colors=new Set();for(let i=0;i<actual.length;i+=4)colors.add(actual.slice(i,i+4).join(','));
+        if(colors.size<4)throw new Error('Trivial/vacuous rendering fixture: '+colors.size+' colors');
+        renderParityBytes+=actual.length;
+      }
+      same(glCtx.getError(),glCtx.NO_ERROR,'render-fixture-no-gl-errors');
+      return {checks,stats:extendedAttribStats,unchangedReadbackSnapshots:300,unchangedEnableReads:500,renderParityBytes};
     `)(code),code);
     console.log('verify-lwjgl-extended-attrib-cache: OK '+JSON.stringify(report));
   } finally {await browser.close();}

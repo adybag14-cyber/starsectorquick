@@ -898,6 +898,10 @@ node ci/verify-launch-resolution-ui.js
 node ci/verify-lwjgl-color-attrib-cache.js
 node ci/verify-lwjgl-extended-attrib-cache.js
 node ci/test-paired-experiment.js
+node ci/test-campaign-frame-boundary.js
+node ci/test-incremental-log-writer.js
+node ci/test-compositor-viewport.js
+node ci/verify-hot-canvas-screenshot-fallback.js
 python3 ci/test-runtime-graphics-audit.py
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
   node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
@@ -933,6 +937,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_RUNNER_DIAGNOSTICS=false \
   STARSECTOR_COLOR_CACHE_AB=false \
   STARSECTOR_EXTENDED_CACHE_AB=false \
+  STARSECTOR_PACING_SCREEN=false \
   STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
   STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
     node ci/campaign-render-test.js
