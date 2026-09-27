@@ -68,3 +68,26 @@ Official references consulted 2026-09-27:
 - https://chromium.googlesource.com/chromium/src/+/main/docs/gpu/swiftshader.md
 - https://chromium.googlesource.com/chromium/src/+/HEAD/docs/gpu/using-gpu-hardware-in-headless-chrome.md
 - https://pptr.dev/next/troubleshooting#chrome-headless-shell-disables-gpu-compositing
+
+## Combined experiment after the first driver-mode run
+
+Run 36342155105 verified actual CPU SwiftShader driver mode and completed all
+functional campaign tests. Its normal 8-second gate observed 14.64 FPS,
+125.6ms p95 and 146.0ms p99, but 67.3ms jitter still missed the unchanged 60ms
+limit. The separate four-second trace contained no `GLES2::ReadPixels` events;
+it now showed 280 depth-mask queries taking about 785ms of a 4,085.5ms window.
+This is evidence that removing the browser readback bottleneck exposes the
+previously identified depth-query synchronization cost. It does not justify a
+matched percentage speedup across different generated campaign worlds.
+
+The next qualification therefore keeps explicit driver mode and toggles ONLY the
+narrow depth mirror within the same campaign. Main and Full-HD candidate tests
+explicitly select the mirror; the public default and original browser profile
+remain unchanged. The public tutorial keeps its fixed Galatia/tutorial settings
+and forwards only the Boolean depth experiment, not deep-gameplay or recovery
+options. No RAF or broad-cache changes are mixed into this comparison.
+
+The same 8 FPS /150ms p95 /220ms p99 /60ms jitter limits still apply. The paired
+experiment retains all 1,920 raw intervals and authoritative read/hit counters.
+A separate four-second post-measurement trace can verify whether depth waits
+actually disappear rather than merely move into an unobserved method.

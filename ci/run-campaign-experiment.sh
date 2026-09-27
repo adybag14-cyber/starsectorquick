@@ -901,6 +901,7 @@ node ci/verify-lwjgl-depth-state.js
 node ci/verify-lwjgl-extended-attrib-cache.js
 node ci/test-paired-experiment.js
 node ci/test-renderer-experiment-state.js
+node ci/test-tutorial-window-config.js
 node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
@@ -930,6 +931,7 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
 if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   TUTORIAL_OUT="${OUT}-tutorial"
+  TUTORIAL_WINDOW_CONFIG="$(node ci/tutorial-window-config.js "$WINDOW_CONFIG")"
   rm -rf "$TUTORIAL_OUT"
   STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
   STARSECTOR_TEST_TIMEOUT_MS=720000 \
@@ -945,7 +947,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_COLOR_CACHE_AB=false \
   STARSECTOR_EXTENDED_CACHE_AB=false \
   STARSECTOR_PACING_SCREEN=false \
-  STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
+  STARSECTOR_WINDOW_CONFIG="$TUTORIAL_WINDOW_CONFIG" \
   STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
     node ci/campaign-render-test.js
   python3 ci/verify-full-campaign-map.py "$TUTORIAL_OUT/browser.log" \

@@ -107,7 +107,7 @@ jobs:
           # Exercise the production renderer for the final pacing gate. The
           # bounded upload/draw tracer is opt-in and was used to isolate the
           # background defect, but sampling texture payloads distorts timings.
-          EXPERIMENT_CONFIG: '{}'
+          EXPERIMENT_CONFIG: '{"__LWJGL_DEPTH_STATE_CACHE__":true}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
           STARSECTOR_RUNNER_DIAGNOSTICS: 'true'
@@ -117,9 +117,9 @@ jobs:
           STARSECTOR_RAF_PAIRED: 'false'
           STARSECTOR_STALL_ATTRIBUTION: 'true'
           STARSECTOR_STALL_DURATION_MS: '4000'
-          STARSECTOR_DEPTH_PAIRED: 'false'
+          STARSECTOR_DEPTH_PAIRED: 'true'
           STARSECTOR_BROWSER_RENDERER: 'swiftshader-driver'
-          STARSECTOR_DIAGNOSTIC_WINDOWS: '3'
+          STARSECTOR_DIAGNOSTIC_WINDOWS: '1'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
@@ -193,7 +193,7 @@ jobs:
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
           STARSECTOR_BROWSER_RENDERER: 'swiftshader-driver'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__LWJGL_DEPTH_STATE_CACHE__":true}'
         run: |
           set +e
           bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
