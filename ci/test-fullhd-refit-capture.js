@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');const vm=require('node:vm');
+(async()=>{
+ const source=fs.readFileSync(process.argv[2]||'ci/campaign-render-test.js','utf8');
+ const start=source.indexOf('function panelVisualThreshold('),end=source.indexOf('\nasync function waitForCampaignFrame',start);
+ assert.ok(start>=0&&end>start);
+ let clock=0;
+ const context=vm.createContext({Date:{now:()=>clock},sleep:async ms=>{clock+=ms;},pixelDiffRatio:(_before,frame)=>frame.diff});
+ vm.runInContext(source.slice(start,end),context);
+ assert.equal(context.panelVisualThreshold('REFIT',1024,768),.08,'standard resolution unchanged');
+ assert.equal(context.panelVisualThreshold('OUTPOSTS',1024,768),.04,'sparse Command unchanged');
+ assert.equal(context.panelVisualThreshold('MAP',1920,1080),.08*(1024*768)/(1920*1080),'other Full-HD panels unchanged');
+ const threshold=context.panelVisualThreshold('REFIT',1920,1080);
+ assert.ok(threshold>=.05,'Refit polling cannot return before the unchanged Full-HD verifier requires >5%');
+ let reads=0;const frames=[{diff:.04812245550594689},{diff:.05},{diff:.071}];
+ const result=await context.waitForVisualTransition({},null,{threshold,timeoutMs:1000,pollMs:100,capture:async()=>frames[reads++]});
+ assert.equal(reads,3,'under-threshold transition frames are not accepted');
+ assert.equal(result.opened,true);assert.equal(result.visualDiff,.071);assert.equal(result.frame,frames[2]);
+ clock=0;
+ const failed=await context.waitForVisualTransition({},null,{threshold,timeoutMs:150,pollMs:100,capture:async()=>({diff:.048})});
+ assert.equal(failed.opened,false,'genuinely incomplete panel stays a failure');
+ const workflow=fs.readFileSync('.github/workflows/campaign-runtime-pr.yml','utf8');
+ assert.match(workflow,/float\(refit.get\('visualDiff'\) or 0\) > 0\.05/,'existing independent >5% requirement retained');
+ console.log('test-fullhd-refit-capture: OK original requirement, intermediate-frame rejection, unchanged other panels and timeout failure');
+})().catch(error=>{console.error(error);process.exitCode=1;});

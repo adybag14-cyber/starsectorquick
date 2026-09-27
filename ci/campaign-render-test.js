@@ -155,7 +155,12 @@ function panelVisualThreshold(tab, renderWidth = 1024, renderHeight = 768) {
   const width = Math.max(1, Number(renderWidth) || 1024);
   const height = Math.max(1, Number(renderHeight) || 768);
   const areaScale = Math.min(1, (1024 * 768) / (width * height));
-  return Math.max(0.02, base * areaScale);
+  const scaledThreshold = Math.max(0.02, base * areaScale);
+  // The existing independent Full-HD lane requires Refit to change >5% of
+  // this region. Do not stop polling at the lower area-scaled threshold and
+  // hand that still-transitioning frame to a stricter downstream verifier.
+  return tab === 'REFIT' && width === 1920 && height === 1080
+    ? Math.max(0.05, scaledThreshold) : scaledThreshold;
 }
 
 async function waitForVisualTransition(canvas, baseline, options = {}) {
@@ -173,7 +178,7 @@ async function waitForVisualTransition(canvas, baseline, options = {}) {
     lastFrame = await capture();
     const visualDiff = pixelDiffRatio(baseline, lastFrame, region);
     bestDiff = Math.max(bestDiff, visualDiff);
-    if (visualDiff >= threshold) {
+    if (visualDiff > threshold) {
       return { opened: true, openMs: Date.now() - started, visualDiff, bestDiff, frame: lastFrame };
     }
   }

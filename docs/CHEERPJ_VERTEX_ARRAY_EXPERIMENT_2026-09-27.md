@@ -81,3 +81,38 @@ candidate renderer. A bounded two-profile diagnostic reproduced that loss while
 the explicit software-driver profile retained its context and exact pixel. Both
 failures are retained; no test assertion or CI driver policy is weakened. Hosted
 qualification must still run the original two-profile contract.
+
+## First hosted trial and qualification failures
+
+Candidate 61b763e, hosted run 36346229667, completed all eight paired windows.
+Median FPS was 11.424 OFF versus 11.768 ON (+3.01%); p95 fell from 136.65 to
+129.15ms and jitter from 52.45 to 46.45ms, while p99 rose from 175.40 to 182.35ms
+(+3.96%, worse). The candidate suppressed 1,388,566 of 1,933,314 requested array
+state writes across its measurement blocks. These counters are not a direct
+percentage-speedup calculation. The option remains OFF by default.
+
+The existing main gate failed: a 700.4ms p99 and the first ability's toggle cleanup
+did not settle. The entire failed artifact is retained. The default workload had
+coalescing OFF; no causal claim attributes these failures to the optimization.
+
+Full-HD passed all other targeted conditions, but Refit's observed visual change
+was 0.0481224555, below its independent requirement of >0.05. Source inspection
+reproduced an inconsistent early-stop rule: the capture loop stopped once the
+area-scaled threshold (~0.03034 at Full HD) was exceeded. The follow-up strengthens
+that poll to require the existing >0.05 before returning. It does not lower the
+verifier requirement, extend timeouts or accept an incomplete frame. An injected
+0.048/0.050/0.071 sequence now selects only the last frame; a persistently
+incomplete frame still fails. Other resolutions/panels retain their thresholds.
+
+The transponder trace also contains lifecycle events from different plugin
+instances but previously labels only the common ability ID. Added diagnostics
+report owner=player/other/unavailable using exact registered-plugin reference
+comparison and a non-authoritative instance hash. No events, lifecycle tests,
+timeouts or ability state are suppressed or changed. Four identity classification
+checks accompany the existing three-update stable-readiness test. This metadata
+is intended to discriminate hypotheses; it does not claim that ownership ambiguity
+has already been proven to cause this failed cleanup.
+
+The local paired game passed (+4.28% median window FPS, with one negative adjacent
+pair), and a separate enabled-mode actual-game Save/Continue passed. These are
+local shared-workstation tests, not substituted for hosted qualification.

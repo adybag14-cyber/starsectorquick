@@ -124,6 +124,24 @@ public final class BrowserGameplayProbe {
         System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet() + " event=" + event + " tab=" + value);
     }
 
+    // Diagnostic identity only: do not suppress NPC events or alter any
+    // ability state. Identical ability IDs can belong to different fleets.
+    private static java.lang.String classifyOwner(AbilityPlugin ability, AbilityPlugin registeredPlayerAbility) {
+        if (ability == null) return "unavailable";
+        return ability == registeredPlayerAbility ? "player" : "other";
+    }
+
+    private static java.lang.String abilityOwner(AbilityPlugin ability) {
+        try {
+            if (ability == null || Global.getSector() == null || Global.getSector().getPlayerFleet() == null) {
+                return "unavailable";
+            }
+            return classifyOwner(ability, Global.getSector().getPlayerFleet().getAbility(ability.getId()));
+        } catch (Throwable ignored) {
+            return "unavailable";
+        }
+    }
+
     private static void emit(java.lang.String event, AbilityPlugin ability) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY)) return;
         try {
@@ -152,6 +170,8 @@ public final class BrowserGameplayProbe {
                     "BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
                             + " event=" + event
                             + " id=" + id
+                            + " owner=" + abilityOwner(ability)
+                            + " instanceHash=" + java.lang.Integer.toHexString(System.identityHashCode(ability))
                             + " name=" + name
                             + " usable=" + usable
                             + " active=" + active
@@ -202,6 +222,8 @@ public final class BrowserGameplayProbe {
             System.out.println("BrowserGameplayProbe: seq=" + SEQ.incrementAndGet()
                     + " event=" + event
                     + " id=" + safe(ability == null ? null : ability.getId())
+                    + " owner=" + abilityOwner(ability)
+                    + " instanceHash=" + java.lang.Integer.toHexString(System.identityHashCode(ability))
                     + " usable=" + (ability != null && safeBool(ability, 0))
                     + " buttonEnabled=" + buttonEnabled
                     + " active=" + (ability != null && safeBool(ability, 1))

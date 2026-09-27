@@ -907,6 +907,7 @@ node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
 node ci/test-campaign-capture-routing.js
+node ci/test-fullhd-refit-capture.js
 node ci/verify-hot-canvas-screenshot-fallback.js
 python3 ci/test-runtime-graphics-audit.py
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
