@@ -601,8 +601,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 671,
-      "sha256": "7d3b342a44046329b9a0b8072d90c5f8c0bae4b177218212f8d1124d58bd92d9"
+      "bytes": 760,
+      "sha256": "c3e855d0a36eb5322ba38ce547ab039b04f3bf8135aced2c4492e3c5043bbda9"
     },
     {
       "path": "jars/Fixer.java",
@@ -651,8 +651,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 114410,
-      "sha256": "ba4bdfba77b6dd149b67d9fb3d95832d7a421c256a36c65ea2c5d2d74a079b33"
+      "bytes": 116279,
+      "sha256": "c452a370955b1b1d29fe65a2b9f7e484374b4c2fd9113f01de6e3d304e54012b"
     },
     {
       "path": "resources/settings.json",
@@ -4409,5 +4409,38 @@
       "bytes": 25981,
       "sha256": "1420090b4f50d34c6bc9f31cd9e8693f5363f3fba55fd093b10ec7eb877e0d40"
     }
-  ]
+  ],
+  "launcherPatch": {
+    "sourceSha": "f8c5b25240223bd2070301fe6baf108e15c2a09c",
+    "basePagesSha": "65a2b6435250f77729faa03ce1517985abefcf7c",
+    "generatedAt": "2026-09-27T14:09:48.266607+00:00",
+    "defaultRuntime": "CheerpJ",
+    "entrypoint": "launch.html?manual=1",
+    "scope": "HTML-only routing and layout correction; original Java, WebGL, data, graphics, GWT and runtime profile preserved",
+    "changedPublishedFiles": [
+      "index.html",
+      "launch.html",
+      "web-runtime-manifest.json"
+    ],
+    "verification": {
+      "layoutChecksPassed": 73,
+      "liveCandidateWidths": [
+        1920,
+        1366,
+        800
+      ],
+      "campaignRenderingAndInputPassed": true,
+      "existingTutorialVisualGate": "Fails unchanged baseline and candidate at 1600x900; all existing Boolean results identical. Not a full runtime certification.",
+      "matureGameplayHarnessPassed": true,
+      "saveContinuePassed": true,
+      "restoredWorld": {
+        "systems": 225,
+        "planets": 965,
+        "markets": 59,
+        "factions": 21
+      },
+      "hostedFullHdPassed": true,
+      "hostedMainThreadFirstAttempt": "Performance gate failed; retry in progress. No thresholds changed."
+    }
+  }
 }
