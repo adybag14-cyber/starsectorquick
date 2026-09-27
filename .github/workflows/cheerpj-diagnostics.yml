@@ -36,6 +36,7 @@ jobs:
         run: |
           node ci/verify-lwjgl-color-attrib-cache.js
           node ci/verify-lwjgl-clipping-state.js
+          node ci/verify-lwjgl-depth-state.js
           node ci/verify-lwjgl-extended-attrib-cache.js
           node ci/test-paired-experiment.js
           node ci/test-renderer-experiment-state.js

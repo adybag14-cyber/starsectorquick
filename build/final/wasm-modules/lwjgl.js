@@ -382,6 +382,55 @@ var extendedEnableShadow = Object.create(null);
 var extendedAttribStats = { depthHits: 0, depthReads: 0, viewportHits: 0, viewportReads: 0,
 	stencilHits: 0, stencilReads: 0, enableHits: 0, enableReads: 0 };
 if(typeof window !== "undefined") window.__lwjglExtendedAttribStats = extendedAttribStats;
+// LWJGL_DEPTH_STATE_WRITE_THROUGH_V1_BEGIN
+// A driver read of DEPTH_WRITEMASK can flush prior drawing. This independent
+// experiment mirrors only the three depth-buffer values whose writes are all
+// owned by this bridge. Real GL calls still validate each write. Unknown values
+// invalidate the mirror instead of guessing. Startup is seeded from real GL.
+var depthStateShadow = null;
+var depthStateStats = { driverReads: 0, hits: 0, writes: 0, restores: 0, invalidations: 0 };
+if(typeof window !== "undefined") window.__lwjglDepthStateStats = depthStateStats;
+function depthStateCacheEnabled()
+{
+	return typeof window !== "undefined" && window.__LWJGL_DEPTH_STATE_CACHE__ !== false;
+}
+function invalidateDepthState()
+{
+	depthStateShadow = null;
+	depthStateStats.invalidations++;
+}
+function readDepthStateFromDriver()
+{
+	depthStateStats.driverReads++;
+	return { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
+		func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
+}
+function snapshotDepthState()
+{
+	if(!depthStateCacheEnabled())
+	{
+		depthStateShadow = null;
+		return readDepthStateFromDriver();
+	}
+	if(depthStateShadow === null) depthStateShadow = readDepthStateFromDriver();
+	else depthStateStats.hits++;
+	return { writeMask: depthStateShadow.writeMask, func: depthStateShadow.func, clearValue: depthStateShadow.clearValue };
+}
+function rememberDepthStateWrite(field, value)
+{
+	if(depthStateShadow === null) return;
+	if(!depthStateCacheEnabled()) { invalidateDepthState(); return; }
+	if(field === "writeMask") depthStateShadow.writeMask = !!value;
+	else if(field === "func" && Number.isInteger(value) && value >= 0x0200 && value <= 0x0207)
+		depthStateShadow.func = value;
+	else if(field === "clearValue" && Number.isFinite(value))
+		depthStateShadow.clearValue = Math.min(1, Math.max(0, Math.fround(value)));
+	else { invalidateDepthState(); return; }
+	depthStateStats.writes++;
+}
+if(typeof window !== "undefined") window.__lwjglInvalidateDepthState = invalidateDepthState;
+// LWJGL_DEPTH_STATE_WRITE_THROUGH_V1_END
+
 function extendedAttribCacheEnabled()
 {
 	return typeof window !== "undefined" && window.__LWJGL_EXTENDED_ATTRIB_CACHE__ === true;
@@ -390,6 +439,7 @@ function invalidateExtendedAttribState()
 {
 	extendedAttribShadow.depth = extendedAttribShadow.viewport = extendedAttribShadow.stencil = null;
 	extendedEnableShadow = Object.create(null);
+	invalidateDepthState();
 }
 function cloneExtendedAttribState(group, value)
 {
@@ -401,9 +451,7 @@ function cloneExtendedAttribState(group, value)
 function readExtendedAttribState(group)
 {
 	extendedAttribStats[group + "Reads"]++;
-	if(group === "depth") return {
-		writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK), func: glCtx.getParameter(glCtx.DEPTH_FUNC),
-		clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
+	if(group === "depth") return readDepthStateFromDriver();
 	if(group === "viewport") return {
 		box: Array.from(glCtx.getParameter(glCtx.VIEWPORT)), depthRange: Array.from(glCtx.getParameter(glCtx.DEPTH_RANGE)) };
 	return { func: glCtx.getParameter(glCtx.STENCIL_FUNC), ref: glCtx.getParameter(glCtx.STENCIL_REF),
@@ -413,6 +461,12 @@ function readExtendedAttribState(group)
 }
 function snapshotExtendedAttribState(group)
 {
+	// Keep readExtendedAttribState authoritative for diagnostics and tests.
+	if(group === "depth")
+	{
+		if(depthStateCacheEnabled()) return snapshotDepthState();
+		depthStateShadow = null;
+	}
 	if(!extendedAttribCacheEnabled())
 	{
 		extendedAttribShadow[group] = null;
@@ -538,6 +592,8 @@ function restoreAttribState(state)
 		glCtx.depthMask(state.depth.writeMask);
 		glCtx.depthFunc(state.depth.func);
 		glCtx.clearDepth(state.depth.clearValue);
+		depthStateShadow = depthStateCacheEnabled() ? cloneExtendedAttribState("depth", state.depth) : null;
+		if(depthStateShadow !== null) depthStateStats.restores++;
 		extendedAttribShadow.depth = extendedAttribCacheEnabled() ? cloneExtendedAttribState("depth", state.depth) : null;
 	}
 	if(state.viewport)
@@ -2640,6 +2696,7 @@ function Java_org_lwjgl_opengl_GL11_nglClearDepth(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglClearDepth);
 	glCtx.clearDepth(a);
+	rememberDepthStateWrite("clearValue", a);
 	var value = extendedAttribShadow.depth;
 	if(value !== null && (a !== value.clearValue)) extendedAttribShadow.depth = null;
 }
@@ -2649,6 +2706,7 @@ function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
 	glCtx.depthFunc(a);
+	rememberDepthStateWrite("func", a);
 	var value = extendedAttribShadow.depth;
 	if(value !== null && (a !== value.func)) extendedAttribShadow.depth = null;
 }
@@ -2732,6 +2790,7 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
 	glCtx.depthMask(a);
+	rememberDepthStateWrite("writeMask", a);
 	var value = extendedAttribShadow.depth;
 	if(value !== null && (!!a !== value.writeMask)) extendedAttribShadow.depth = null;
 }

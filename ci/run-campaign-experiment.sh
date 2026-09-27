@@ -897,6 +897,7 @@ npx playwright install chromium
 node ci/verify-launch-resolution-ui.js
 node ci/verify-lwjgl-color-attrib-cache.js
 node ci/verify-lwjgl-clipping-state.js
+node ci/verify-lwjgl-depth-state.js
 node ci/verify-lwjgl-extended-attrib-cache.js
 node ci/test-paired-experiment.js
 node ci/test-renderer-experiment-state.js
@@ -939,6 +940,7 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_SAVE_LOAD_SMOKE=false \
   STARSECTOR_RUNNER_DIAGNOSTICS=false \
   STARSECTOR_RAF_PAIRED=false \
+  STARSECTOR_DEPTH_PAIRED=false \
   STARSECTOR_STALL_ATTRIBUTION=false \
   STARSECTOR_COLOR_CACHE_AB=false \
   STARSECTOR_EXTENDED_CACHE_AB=false \

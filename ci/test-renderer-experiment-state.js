@@ -8,6 +8,7 @@ const { captureExperimentFlags, restoreExperimentFlags } = require('./renderer-e
 const { runPairedExperiment } = require('./cheerpj-paired-experiment');
 const { runPacingScreen } = require('./cheerpj-pacing-screen');
 const { runRafPairedExperiment } = require('./cheerpj-raf-paired');
+const { runDepthPairedExperiment } = require('./cheerpj-depth-paired');
 
 (async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'starsector-experiment-state-'));
@@ -16,7 +17,7 @@ const { runRafPairedExperiment } = require('./cheerpj-raf-paired');
     for (const initial of [{}, { __LWJGL_COLOR_ATTRIB_CACHE__: false, __LWJGL_EXTENDED_ATTRIB_CACHE__: true, __LWJGL_CAMPAIGN_PACING__: 'flush' }]) {
       let invalidations = 0;
       const window = { ...initial, __lwjglInvalidateExtendedAttribState: () => invalidations++,
-        __lwjglExtendedAttribStats: {}, __lwjglSnapshotPresentationIntervals: () => ({}),
+        __lwjglExtendedAttribStats: {}, __lwjglDepthStateStats: {}, __lwjglSnapshotPresentationIntervals: () => ({}),
         __lwjglPresentationStats: { swapCount: 0 }, __lwjglCampaignBoundaryStats: {} };
       const page = { evaluate: async (fn, arg) => vm.runInNewContext('('+fn.toString()+')(input)', {window, input:arg}),
         waitForFunction: async () => { throw new Error('injected warmup failure'); } };
@@ -24,7 +25,7 @@ const { runRafPairedExperiment } = require('./cheerpj-raf-paired');
       window.__LWJGL_COLOR_ATTRIB_CACHE__ = true;window.__LWJGL_EXTENDED_ATTRIB_CACHE__ = false;window.__LWJGL_CAMPAIGN_PACING__ = 'raf';
       await restoreExperimentFlags(page, before);
       assert.deepEqual(JSON.parse(JSON.stringify(await captureExperimentFlags(page))), before);checks++;
-      for (const [name, experiment] of [['extended-attrib-ab.json', runPairedExperiment], ['campaign-pacing-screen.json', runPacingScreen], ['campaign-raf-paired.json', runRafPairedExperiment]]) {
+      for (const [name, experiment] of [['extended-attrib-ab.json', runPairedExperiment], ['campaign-pacing-screen.json', runPacingScreen], ['campaign-raf-paired.json', runRafPairedExperiment], ['depth-state-paired.json', runDepthPairedExperiment]]) {
         await assert.rejects(experiment(page, directory), /injected warmup failure/);checks++;
         assert.deepEqual(JSON.parse(JSON.stringify(await captureExperimentFlags(page))), before);checks++;
         assert.equal(JSON.parse(fs.readFileSync(path.join(directory,name),'utf8')).ok, false);checks++;

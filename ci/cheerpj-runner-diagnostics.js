@@ -131,6 +131,9 @@ async function collectDiagnostics(page, context, outputDir) {
     if (process.env.STARSECTOR_RAF_PAIRED === 'true') {
       report.rafPaired = await require('./cheerpj-raf-paired').runRafPairedExperiment(page, out);
     }
+    if (process.env.STARSECTOR_DEPTH_PAIRED === 'true') {
+      report.depthPaired = await require('./cheerpj-depth-paired').runDepthPairedExperiment(page, out);
+    }
     report.profileFlags = await captureExperimentFlags(page);
     const session = await context.newCDPSession(page);
     try {
