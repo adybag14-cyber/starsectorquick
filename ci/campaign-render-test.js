@@ -1193,6 +1193,11 @@ ${fallback}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
 
+  if (process.env.STARSECTOR_RUNNER_DIAGNOSTICS === 'true') {
+    const { collectDiagnostics } = require('./cheerpj-runner-diagnostics');
+    await collectDiagnostics(page, context, outputDir);
+  }
+
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
     bodyState: document.body.dataset.runtimeState || '',

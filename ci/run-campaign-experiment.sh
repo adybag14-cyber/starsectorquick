@@ -45,6 +45,8 @@ python3 ci/restore-official-runtime-assets.py \
   | tee "$OUT/official-asset-restore.log"
 
 python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
+python3 ci/audit-runtime-graphics.py --archive "$OFFICIAL_ZIP" \
+  --root starsector/starsector --output "$OUT/graphics-audit.json" --require-complete
 if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" ]]; then
   python3 ci/prepare-browser-minimal-economy.py | tee "$OUT/browser-economy.log"
 fi

@@ -110,6 +110,7 @@ jobs:
           EXPERIMENT_CONFIG: '{}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
+          STARSECTOR_RUNNER_DIAGNOSTICS: 'true'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}

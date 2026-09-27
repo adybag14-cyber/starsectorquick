@@ -1,0 +1,92 @@
+'use strict';
+
+// Deliberately separate observer-heavy profiling from the unprofiled timing
+// windows. No skipped rendering, synthetic frames, or changed pass thresholds.
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const os = require('node:os');
+
+function summarizeProfile(profile) {
+  const nodes = new Map(profile.nodes.map(node => [node.id, node]));
+  const costs = new Map();
+  let totalUs = 0;
+  for (let i = 0; i < (profile.samples || []).length; i++) {
+    const node = nodes.get(profile.samples[i]);
+    if (!node) continue;
+    const us = Number(profile.timeDeltas?.[i] || 0);
+    const frame = node.callFrame;
+    const key = JSON.stringify([frame.functionName, frame.url, frame.lineNumber]);
+    const row = costs.get(key) || { function: frame.functionName || '(anonymous)', url: frame.url,
+      line: frame.lineNumber + 1, selfUs: 0, samples: 0 };
+    row.selfUs += us; row.samples++; totalUs += us; costs.set(key, row);
+  }
+  return { totalUs, top: [...costs.values()].sort((a, b) => b.selfUs - a.selfUs).slice(0, 60)
+    .map(row => ({ ...row, selfPercent: totalUs ? row.selfUs * 100 / totalUs : 0 })) };
+}
+
+async function collectDiagnostics(page, context, outputDir) {
+  const out = path.join(outputDir, 'runner-diagnostics');
+  fs.mkdirSync(out, { recursive: true });
+  const report = { checkedAt: new Date().toISOString(), commit: process.env.GITHUB_SHA || null,
+    runId: process.env.GITHUB_RUN_ID || null, attempt: process.env.GITHUB_RUN_ATTEMPT || null,
+    machine: { platform: process.platform, architecture: process.arch, cpu: os.cpus()[0]?.model,
+      logicalCpus: os.cpus().length, totalMemory: os.totalmem(), browser: context.browser().version() },
+    windows: [], profile: null };
+  try {
+    report.runtime = await page.evaluate(() => ({
+      state: window.__STARSECTOR_RUNTIME_STATE__, renderer: window.__lwjglGraphicsInfo,
+      canvas: [document.getElementById('lwjglCanvas')?.width, document.getElementById('lwjglCanvas')?.height],
+      resources: performance.getEntriesByType('resource').filter(entry => /cjrtnc|lwjgl\.js/.test(entry.name))
+        .map(entry => ({ url: entry.name, transferSize: entry.transferSize, encodedBodySize: entry.encodedBodySize })),
+    }));
+    if (report.runtime.state?.state !== 'campaign') throw new Error('Profiling requires a real campaign');
+    const loader = report.runtime.resources.find(entry => /\/loader\.js(?:\?|$)/.test(entry.url));
+    if (loader) {
+      const response = await context.request.get(loader.url);
+      const bytes = await response.body();
+      report.loader = { url: loader.url, status: response.status(), bytes: bytes.length,
+        sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+        lastModified: response.headers()['last-modified'] || null, etag: response.headers().etag || null };
+    }
+    // Let late ability effects settle before the fixed-size windows. Keep the
+    // campaign and all its normal rendering intact throughout every sample.
+    await page.waitForTimeout(5000);
+    const windows = Number(process.env.STARSECTOR_DIAGNOSTIC_WINDOWS || 3);
+    if (!Number.isInteger(windows) || windows < 1 || windows > 8) throw new Error('Invalid diagnostic window count');
+    for (let i = 0; i < windows; i++) {
+      const start = await page.evaluate(() => {
+        window.__lwjglResetPresentationTimingWindow();
+        return { at: performance.now(), swaps: window.__lwjglPresentationStats.swapCount };
+      });
+      await page.waitForFunction(swaps => window.__lwjglPresentationStats.swapCount >= swaps + 241,
+        start.swaps, { timeout: 120000, polling: 250 });
+      const result = await page.evaluate(() => {
+        window.__lwjglRefreshPresentationStats();
+        return { at: performance.now(), stats: { ...window.__lwjglPresentationStats },
+          state: window.__STARSECTOR_RUNTIME_STATE__?.state };
+      });
+      if (result.state !== 'campaign' || result.stats.frameSampleCount !== 240) throw new Error('Invalid timing window');
+      report.windows.push({ index: i, wallMs: result.at - start.at, swapDelta: result.stats.swapCount - start.swaps,
+        sampleCount: result.stats.frameSampleCount, fps: result.stats.recentFps,
+        meanMs: result.stats.recentFrameMs, p50Ms: result.stats.frameP50Ms, p95Ms: result.stats.frameP95Ms,
+        p99Ms: result.stats.frameP99Ms, jitterP95Ms: result.stats.frameJitterP95Ms });
+      console.log('[runner-timing]', JSON.stringify(report.windows.at(-1)));
+    }
+    const session = await context.newCDPSession(page);
+    try {
+      await session.send('Profiler.enable');
+      await session.send('Profiler.setSamplingInterval', { interval: 1000 });
+      await session.send('Profiler.start');
+      await page.waitForTimeout(15000);
+      const { profile } = await session.send('Profiler.stop');
+      fs.writeFileSync(path.join(out, 'campaign.cpuprofile'), JSON.stringify(profile));
+      report.profile = summarizeProfile(profile);
+    } finally { await session.detach(); }
+    report.ok = true;
+  } catch (error) { report.ok = false; report.error = error.stack || String(error); }
+  finally { fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2)); }
+  if (!report.ok) throw new Error(report.error);
+  return report;
+}
+module.exports = { collectDiagnostics, summarizeProfile };
