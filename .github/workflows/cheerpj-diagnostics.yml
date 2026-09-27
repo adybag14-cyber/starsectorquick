@@ -39,6 +39,7 @@ jobs:
           node ci/verify-lwjgl-extended-attrib-cache.js
           node ci/test-paired-experiment.js
           node ci/test-renderer-experiment-state.js
+          node ci/test-stall-attribution.js
           node ci/test-campaign-frame-boundary.js
           node ci/test-incremental-log-writer.js
           node ci/test-compositor-viewport.js

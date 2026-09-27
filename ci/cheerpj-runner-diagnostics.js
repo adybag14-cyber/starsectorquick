@@ -142,6 +142,9 @@ async function collectDiagnostics(page, context, outputDir) {
       fs.writeFileSync(path.join(out, 'campaign.cpuprofile'), JSON.stringify(profile));
       report.profile = summarizeProfile(profile);
     } finally { await session.detach(); }
+    if (process.env.STARSECTOR_STALL_ATTRIBUTION === 'true') {
+      report.stallAttribution = await require('./cheerpj-stall-attribution').collectStallAttribution(page, context, out);
+    }
     report.ok = true;
   } catch (error) { report.ok = false; report.error = error.stack || String(error); }
   finally { fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2)); }
