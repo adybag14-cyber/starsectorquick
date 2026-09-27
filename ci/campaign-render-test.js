@@ -349,7 +349,9 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const liveLogWriter = require('./incremental-log-writer').createIncrementalLogWriter(`${outputDir}/browser-live.log`);
   const flushLogs = () => liveLogWriter.flush(logs);
 
-  browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
+  const { browserRendererProfile, readBrowserGpuIdentity } = require('./browser-renderer-profile');
+  const rendererProfile = browserRendererProfile();
+  browser = await chromium.launch({ headless: true, args: rendererProfile.args });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
@@ -485,6 +487,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   console.log(`Expected state=${expectedState} config=${JSON.stringify(windowConfig)}`);
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
+
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline && errors.length === 0 && !fatalSeenAt && !disallowedRecoverySeenAt) {
     const state = await withTimeout(
@@ -502,6 +505,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   }
 
   flushLogs();
+  const browserGpuIdentity = await readBrowserGpuIdentity(browser, rendererProfile);
+  fs.writeFileSync(`${outputDir}/browser-renderer-profile.json`, JSON.stringify(browserGpuIdentity, null, 2));
+  if (rendererProfile.name === 'swiftshader-driver' && (!/SwiftShader/i.test(browserGpuIdentity.gl.glRenderer || '') || browserGpuIdentity.featureStatus.gpu_compositing !== 'enabled')) {
+    throw new Error('Requested CPU SwiftShader driver/compositor was not enabled: '+JSON.stringify(browserGpuIdentity));
+  }
   const game = page.locator('#game-container');
   const gameCanvas = page.locator('#lwjglCanvas');
   const configuredScreenshotTimeoutMs = Number(process.env.STARSECTOR_SCREENSHOT_TIMEOUT_MS || 12000);
@@ -1573,6 +1581,7 @@ ${fallback}`);
     starterAbilityMappingReady,
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
+    browserGpuIdentity,
     runtimeGraphics,
     logEvidenceSafe,
     liveLogWriter: { ...liveLogWriter.stats },

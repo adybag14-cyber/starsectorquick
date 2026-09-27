@@ -146,7 +146,7 @@ async function collectDiagnostics(page, context, outputDir) {
       report.profile = summarizeProfile(profile);
     } finally { await session.detach(); }
     if (process.env.STARSECTOR_STALL_ATTRIBUTION === 'true') {
-      report.stallAttribution = await require('./cheerpj-stall-attribution').collectStallAttribution(page, context, out);
+      report.stallAttribution = await require('./cheerpj-stall-attribution').collectStallAttribution(page, context, out, Number(process.env.STARSECTOR_STALL_DURATION_MS || 12000));
     }
     report.ok = true;
   } catch (error) { report.ok = false; report.error = error.stack || String(error); }

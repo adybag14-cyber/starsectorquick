@@ -392,7 +392,7 @@ var depthStateStats = { driverReads: 0, hits: 0, writes: 0, restores: 0, invalid
 if(typeof window !== "undefined") window.__lwjglDepthStateStats = depthStateStats;
 function depthStateCacheEnabled()
 {
-	return typeof window !== "undefined" && window.__LWJGL_DEPTH_STATE_CACHE__ !== false;
+	return typeof window !== "undefined" && window.__LWJGL_DEPTH_STATE_CACHE__ === true;
 }
 function invalidateDepthState()
 {
