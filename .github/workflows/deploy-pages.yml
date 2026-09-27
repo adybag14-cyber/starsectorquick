@@ -102,7 +102,9 @@ jobs:
           mkdir -p .pages-worktree/gwt
           cp gwt-runtime/index.html .pages-worktree/gwt/index.html
           cp -a gwt-runtime/starfarer .pages-worktree/gwt/
-          cp gwt-runtime/root-index.html .pages-worktree/index.html
+          # index.html from the verified overlay is the canonical CheerpJ entry.
+          # Keep GWT published under /gwt/ without replacing the default route.
+          cmp index.html .pages-worktree/index.html
           touch .pages-worktree/.nojekyll
           # Collapse the final combined Starsector data tree into one immutable payload.
           # The service worker serves byte ranges from this pack, avoiding thousands of
@@ -220,7 +222,7 @@ jobs:
           done
           root_body="$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_ROOT_URL}?source=${SOURCE_SHA}")"
           if [[ "$root_body" != *'./gwt/'* ]] || [[ "$root_body" != *'launch.html?manual=1'* ]]; then
-            echo 'Live Pages root does not open GWT with the CheerpJ fallback retained.' >&2
+            echo 'Live Pages root is missing the CheerpJ launcher or experimental GWT link.' >&2
             exit 1
           fi
 
@@ -232,8 +234,9 @@ jobs:
 
       - name: Verify source and live resolution interaction
         run: |
+          node ci/verify-launch-layout.js
           node ci/verify-launch-resolution-ui.js
-          STARSECTOR_LIVE_ROOT_MODE='gwt' \
+          STARSECTOR_LIVE_ROOT_MODE='launch' \
             STARSECTOR_RESOLUTION_TEST_URL='https://adybag14-cyber.github.io/starsectorquick/launch.html' \
             node ci/verify-launch-resolution-ui.js
 
