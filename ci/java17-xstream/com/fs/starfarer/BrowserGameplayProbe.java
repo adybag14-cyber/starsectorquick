@@ -3,6 +3,7 @@ package com.fs.starfarer;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.loading.AbilitySpecAPI;
+import com.fs.starfarer.api.impl.campaign.abilities.TransponderAbility;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -49,7 +50,7 @@ public final class BrowserGameplayProbe {
         boolean settled;
         try {
             ready = ability.isUsable();
-            settled = !ability.isActive() && !ability.isInProgress() && ability.getLevel() <= 0.0001f;
+            settled = isSettled(ability);
         } catch (Throwable ignored) {
             return;
         }
@@ -70,6 +71,31 @@ public final class BrowserGameplayProbe {
 
         Boolean previousSettled = SETTLED.put(ability, Boolean.valueOf(settled));
         if (settled && Boolean.FALSE.equals(previousSettled)) emit("ability-settled", ability);
+    }
+
+    // A stock Transponder uses progress=1 for its warning indicator even when
+    // inactive. BaseAbilityPlugin derives isInProgress from that UI fraction.
+    // Read the actual inactive/faded/entity-off state instead, ONLY for the exact
+    // stock class. Other plugins keep the original progress requirement. This
+    // diagnostic does not change ability state, cooldowns, or the stock methods.
+    private static boolean isSettled(AbilityPlugin ability) {
+        try {
+            if (ability == null || ability.isActive()) return false;
+            float level = ability.getLevel();
+            if (Float.isNaN(level) || Float.isInfinite(level) || level < 0f || level > 0.0001f) return false;
+            if (ability.getClass() == TransponderAbility.class) {
+                TransponderAbility transponder = (TransponderAbility)ability;
+                return transponder.getEntity() != null && !transponder.getEntity().isTransponderOn();
+            }
+            return !ability.isInProgress();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static java.lang.String settlementBasis(AbilityPlugin ability) {
+        return ability != null && ability.getClass() == TransponderAbility.class
+                ? "stock-transponder-off" : "inactive-progress-complete";
     }
 
     public static void abilityUiAdvance(Object panel) {
@@ -176,6 +202,8 @@ public final class BrowserGameplayProbe {
                             + " usable=" + usable
                             + " active=" + active
                             + " inProgress=" + progress
+                            + " settled=" + isSettled(ability)
+                            + " settlementBasis=" + settlementBasis(ability)
                             + " onCooldown=" + cooldown
                             + " level=" + level
                             + " progress=" + progressFraction

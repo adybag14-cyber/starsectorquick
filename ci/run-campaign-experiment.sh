@@ -239,9 +239,11 @@ javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserGameplayP
 rm -rf .ci-build/verify-gameplay-probe-readiness
 mkdir -p .ci-build/verify-gameplay-probe-readiness
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
-  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java
+  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java ci/VerifyGameplayProbeSettlement.java
 java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
   VerifyGameplayProbeReadiness
+java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
+  VerifyGameplayProbeSettlement
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
@@ -907,6 +909,7 @@ node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
 node ci/test-campaign-capture-routing.js
+STARSECTOR_VERIFY_OWNERSHIP_INTEGRATION=true node ci/test-player-ability-evidence.js
 node ci/test-fullhd-refit-capture.js
 node ci/verify-hot-canvas-screenshot-fallback.js
 python3 ci/test-runtime-graphics-audit.py

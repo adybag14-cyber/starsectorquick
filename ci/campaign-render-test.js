@@ -333,7 +333,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const graphicsErrors = [];
   const runtimeGraphicsAudit = require('./runtime-graphics-audit').createRuntimeGraphicsAudit();
   const runtimeErrorSignals = [];
-  const gameplayEvents = [];
+  const gameplayEvidence = require('./player-ability-evidence').createPlayerAbilityEvidence();
+  const gameplayEvents = gameplayEvidence.playerEvents;
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -395,7 +396,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         if (eq <= 0) continue;
         event[token.slice(0, eq)] = token.slice(eq + 1);
       }
-      gameplayEvents.push(event);
+      gameplayEvidence.record(event);
     }
     const update = text.match(/Bridge Display\.update(?:\([^)]*\))? count=(\d+)/i);
     if (update) updateMax = Math.max(updateMax, Number(update[1]));
@@ -966,7 +967,7 @@ ${fallback}`);
       // and produce a real activation/deactivation state transition.
       let confirmationPress = false;
       let currentEvents = gameplayEvents.slice(gameplayStart);
-      let currentStates = currentEvents.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      let currentStates = currentEvents.filter(event => event.id === expectedId && (event.event === 'ability-activate' || event.event === 'ability-deactivate'));
       if (expectedId === 'transponder' && pressReady.matched && currentStates.length === 0) {
         confirmationPress = true;
         const confirmationStart = gameplayEvents.length;
@@ -1582,7 +1583,9 @@ ${fallback}`);
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
     runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
-    gameplayEvents,
+    gameplayEvents: gameplayEvidence.allEvents,
+    playerGameplayEvents: gameplayEvents,
+    playerAbilityEvidence: gameplayEvidence.summary(),
     starterAbilityMappingReady,
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
