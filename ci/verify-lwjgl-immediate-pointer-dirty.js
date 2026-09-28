@@ -11,7 +11,7 @@ const src=fs.readFileSync(path,'utf8');
 expect(src.includes('LWJGL_IMMEDIATE_POINTER_DIRTY_V1'),'missing dirty marker');
 for(const needle of ['var immediatePointerLayoutDirty = true;','immediatePointerLayoutDirty = true;','immediatePointerLayoutDirty = false;','immediatePointerLayoutRefreshes++']) expect(src.includes(needle),`missing ${needle}`);
 const names=['clientArrayComponentBytes','normalizeLegacyClientArrayLayout','clientArrayEffectiveStride','isWebGLClientArrayType','isIntegerClientArrayType','convertDesktopClientArrayToFloat','uploadDataImpl','uploadImmediateInterleaved'];
-const code=names.map(n=>extract(src,n)).join('\n');
+const code=require('./renderer-test-helpers').vertexArraySection(src) + names.map(n=>extract(src,n)).join('\n');
 const calls=[];
 const glCtx={ARRAY_BUFFER:0x8892,STATIC_DRAW:0x88E4,FLOAT:0x1406,BYTE:0x1400,UNSIGNED_BYTE:0x1401,SHORT:0x1402,UNSIGNED_SHORT:0x1403,NO_ERROR:0,
  bindBuffer:(...a)=>calls.push(['bind',...a]), bufferData:(...a)=>calls.push(['data',...a]), vertexAttribPointer:(...a)=>calls.push(['ptr',...a]), enableVertexAttribArray:(...a)=>calls.push(['enable',...a]), getError:()=>0};

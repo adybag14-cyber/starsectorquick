@@ -44,7 +44,11 @@ python3 ci/restore-official-runtime-assets.py \
   --section graphics \
   | tee "$OUT/official-asset-restore.log"
 
+python3 ci/repair-official-graphics.py --archive "$OFFICIAL_ZIP" \
+  --root starsector/starsector --output "$OUT/graphics-repairs.json"
 python3 ci/sanitize-runtime-assets.py | tee "$OUT/asset-sanitation.log"
+python3 ci/audit-runtime-graphics.py --archive "$OFFICIAL_ZIP" \
+  --root starsector/starsector --output "$OUT/graphics-audit.json" --require-byte-exact
 if [[ "${STARSECTOR_MINIMAL_ASHARU_ECONOMY:-false}" == "true" ]]; then
   python3 ci/prepare-browser-minimal-economy.py | tee "$OUT/browser-economy.log"
 fi
@@ -235,9 +239,11 @@ javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.BrowserGameplayP
 rm -rf .ci-build/verify-gameplay-probe-readiness
 mkdir -p .ci-build/verify-gameplay-probe-readiness
 javac -encoding UTF-8 --release 8 -cp "jars/fixer_patch.jar:$CP" \
-  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java
+  -d .ci-build/verify-gameplay-probe-readiness ci/VerifyGameplayProbeReadiness.java ci/VerifyGameplayProbeSettlement.java
 java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
   VerifyGameplayProbeReadiness
+java -Xverify:all -cp ".ci-build/verify-gameplay-probe-readiness:jars/fixer_patch.jar:$CP" \
+  VerifyGameplayProbeSettlement
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserFastCsvParser \
   | grep -q 'major version: 52'
 javap -verbose -classpath jars/fixer_patch.jar com.fs.starfarer.loading.BrowserTextPreprocessor \
@@ -891,6 +897,22 @@ npm ci
 # make a browser-runtime diagnostic fail before Playwright launches.
 npx playwright install chromium
 node ci/verify-launch-resolution-ui.js
+node ci/verify-lwjgl-color-attrib-cache.js
+node ci/verify-lwjgl-clipping-state.js
+node ci/verify-lwjgl-depth-state.js
+node ci/verify-lwjgl-vertex-array-cache.js
+node ci/verify-lwjgl-extended-attrib-cache.js
+node ci/test-paired-experiment.js
+node ci/test-renderer-experiment-state.js
+node ci/test-tutorial-window-config.js
+node ci/test-campaign-frame-boundary.js
+node ci/test-incremental-log-writer.js
+node ci/test-compositor-viewport.js
+node ci/test-campaign-capture-routing.js
+STARSECTOR_VERIFY_OWNERSHIP_INTEGRATION=true node ci/test-player-ability-evidence.js
+node ci/test-fullhd-refit-capture.js
+node ci/verify-hot-canvas-screenshot-fallback.js
+python3 ci/test-runtime-graphics-audit.py
 STATIC_ROOT="$PWD" STATIC_HOST=127.0.0.1 STATIC_PORT=8000 \
   node ci/range-server.js > /tmp/starsector-http.log 2>&1 &
 echo $! > /tmp/starsector-http.pid
@@ -914,6 +936,7 @@ STARSECTOR_TEST_OUTPUT_DIR="$OUT" \
   node ci/campaign-render-test.js
 if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   TUTORIAL_OUT="${OUT}-tutorial"
+  TUTORIAL_WINDOW_CONFIG="$(node ci/tutorial-window-config.js "$WINDOW_CONFIG")"
   rm -rf "$TUTORIAL_OUT"
   STARSECTOR_TEST_URL=http://127.0.0.1:8000/launch.html \
   STARSECTOR_TEST_TIMEOUT_MS=720000 \
@@ -922,7 +945,15 @@ if [[ "${STARSECTOR_PUBLIC_TUTORIAL_SMOKE:-false}" == "true" ]]; then
   STARSECTOR_EXPECT_STATE=campaign \
   STARSECTOR_DEEP_GAMEPLAY=false \
   STARSECTOR_SAVE_LOAD_SMOKE=false \
-  STARSECTOR_WINDOW_CONFIG='{"__STARSECTOR_AUTO_CAMPAIGN_SECTOR_SIZE__":"normal","__STARSECTOR_AUTO_CAMPAIGN_STARTING_LOCATION__":"Galatia","__STARSECTOR_BROWSER_TUTORIAL__":true,"__STARSECTOR_BROWSER_GAMEPLAY_PROBE__":false}' \
+  STARSECTOR_RUNNER_DIAGNOSTICS=false \
+  STARSECTOR_VERTEX_ARRAY_PAIRED=false \
+  STARSECTOR_RAF_PAIRED=false \
+  STARSECTOR_DEPTH_PAIRED=false \
+  STARSECTOR_STALL_ATTRIBUTION=false \
+  STARSECTOR_COLOR_CACHE_AB=false \
+  STARSECTOR_EXTENDED_CACHE_AB=false \
+  STARSECTOR_PACING_SCREEN=false \
+  STARSECTOR_WINDOW_CONFIG="$TUTORIAL_WINDOW_CONFIG" \
   STARSECTOR_TEST_OUTPUT_DIR="$TUTORIAL_OUT" \
     node ci/campaign-render-test.js
   python3 ci/verify-full-campaign-map.py "$TUTORIAL_OUT/browser.log" \

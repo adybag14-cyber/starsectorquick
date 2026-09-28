@@ -7,7 +7,7 @@ const src=fs.readFileSync(path,'utf8');
 expect(src.includes('LWJGL_IMMEDIATE_COLOR_ATTRIB_DEFER_V1'),'marker missing');
 for(const t of ['immediateBeginActive = true','immediateBeginActive = false','immediateColorAttribDeferredObserved'])expect(src.includes(t),`missing ${t}`);
 const names=['applyCurrentColorAttrib','Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglColor4f','Java_org_lwjgl_opengl_GL11_nglColor3f'];
-const code=names.map(n=>extract(src,n)).join('\n');
+const code=require('./renderer-test-helpers').vertexArraySection(src) + names.map(n=>extract(src,n)).join('\n');
 const calls=[];
 const c=vm.createContext({glCtx:{disableVertexAttribArray:(...a)=>calls.push(['disable',...a]),vertexAttrib4f:(...a)=>calls.push(['color',...a])},colorLocation:4,curList:null,pushInList(){throw Error('list path');},immediateModeData:{mode:0,vertexPos:0,colorPos:0,texCoordPos:0,interleavedPos:0,currentColor:[1,1,1,1],currentTexCoord:[0,0]},immediateBeginActive:false,immediateInterleavedEnabled:true,presentationStats:{immediateColorAttribDeferredObserved:false},verboseLog:false,console});
 vm.runInContext(code,c);

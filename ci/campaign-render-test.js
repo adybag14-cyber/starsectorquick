@@ -8,6 +8,7 @@ const {
   isCampaignFramePlayable,
 } = require('./campaign-visual-gate');
 const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
+const { captureCompositorViewport } = require('./capture-compositor-viewport');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -154,10 +155,17 @@ function panelVisualThreshold(tab, renderWidth = 1024, renderHeight = 768) {
   const width = Math.max(1, Number(renderWidth) || 1024);
   const height = Math.max(1, Number(renderHeight) || 768);
   const areaScale = Math.min(1, (1024 * 768) / (width * height));
-  return Math.max(0.02, base * areaScale);
+  const scaledThreshold = Math.max(0.02, base * areaScale);
+  // The existing independent Full-HD lane requires Refit to change >5% of
+  // this region. Do not stop polling at the lower area-scaled threshold and
+  // hand that still-transitioning frame to a stricter downstream verifier.
+  return tab === 'REFIT' && width === 1920 && height === 1080
+    ? Math.max(0.05, scaledThreshold) : scaledThreshold;
 }
 
 async function waitForVisualTransition(canvas, baseline, options = {}) {
+  const capture = options.capture;
+  if (typeof capture !== 'function') throw new Error('A verified canvas capture callback is required');
   const region = options.region || { x0: 0.08, y0: 0.04, x1: 0.96, y1: 0.88 };
   const threshold = Number(options.threshold ?? 0.025);
   const timeoutMs = Number(options.timeoutMs ?? 8000);
@@ -167,10 +175,10 @@ async function waitForVisualTransition(canvas, baseline, options = {}) {
   let lastFrame = null;
   while (Date.now() - started <= timeoutMs) {
     await sleep(pollMs);
-    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastFrame = await capture();
     const visualDiff = pixelDiffRatio(baseline, lastFrame, region);
     bestDiff = Math.max(bestDiff, visualDiff);
-    if (visualDiff >= threshold) {
+    if (visualDiff > threshold) {
       return { opened: true, openMs: Date.now() - started, visualDiff, bestDiff, frame: lastFrame };
     }
   }
@@ -178,6 +186,8 @@ async function waitForVisualTransition(canvas, baseline, options = {}) {
 }
 
 async function waitForCampaignFrame(canvas, options = {}) {
+  const capture = options.capture;
+  if (typeof capture !== 'function') throw new Error('A verified canvas capture callback is required');
   const timeoutMs = Number(options.timeoutMs ?? 8000);
   const pollMs = Math.max(100, Number(options.pollMs ?? 400));
   const started = Date.now();
@@ -185,7 +195,7 @@ async function waitForCampaignFrame(canvas, options = {}) {
   let lastStats = null;
   while (Date.now() - started <= timeoutMs) {
     await sleep(pollMs);
-    lastFrame = await canvas.screenshot({ timeout: 10000 });
+    lastFrame = await capture();
     lastStats = pixelStats(lastFrame);
     if (isCampaignFramePlayable(lastStats)) {
       return { ready: true, readyMs: Date.now() - started, frame: lastFrame, stats: lastStats };
@@ -321,8 +331,10 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const localNegativeMisses = [];
   const screenshotErrors = [];
   const graphicsErrors = [];
+  const runtimeGraphicsAudit = require('./runtime-graphics-audit').createRuntimeGraphicsAudit();
   const runtimeErrorSignals = [];
-  const gameplayEvents = [];
+  const gameplayEvidence = require('./player-ability-evidence').createPlayerAbilityEvidence();
+  const gameplayEvents = gameplayEvidence.playerEvents;
   const disallowedRecovery = [];
   let campaignSeenAt = 0;
   let titleSeenAt = 0;
@@ -340,13 +352,12 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   let jarPackResponseBytes = 0;
   let browser;
 
-  const flushLogs = () => {
-    try {
-      fs.writeFileSync(`${outputDir}/browser-live.log`, logs.join('\n'));
-    } catch (_) {}
-  };
+  const liveLogWriter = require('./incremental-log-writer').createIncrementalLogWriter(`${outputDir}/browser-live.log`);
+  const flushLogs = () => liveLogWriter.flush(logs);
 
-  browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
+  const { browserRendererProfile, readBrowserGpuIdentity } = require('./browser-renderer-profile');
+  const rendererProfile = browserRendererProfile();
+  browser = await chromium.launch({ headless: true, args: rendererProfile.args });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
@@ -385,7 +396,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         if (eq <= 0) continue;
         event[token.slice(0, eq)] = token.slice(eq + 1);
       }
-      gameplayEvents.push(event);
+      gameplayEvidence.record(event);
     }
     const update = text.match(/Bridge Display\.update(?:\([^)]*\))? count=(\d+)/i);
     if (update) updateMax = Math.max(updateMax, Number(update[1]));
@@ -428,6 +439,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
     if (/watcher state=Title Screen State|Main loop inTitle Screen State/i.test(text) && !titleSeenAt) {
       titleSeenAt = Date.now();
     }
+    runtimeGraphicsAudit.console(text);
     const hardRuntimeError = /fatal\s+starsector\s+null|NullPointerException|Exception in thread|(?:^|\b)Fatal\s*:\s*|auto campaign aborting|exhausted all new-game/i.test(text);
     if (hardRuntimeError) {
       runtimeErrorSignals.push(text);
@@ -452,9 +464,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   });
   page.on('requestfailed', request => {
     const failure = request.failure();
+    runtimeGraphicsAudit.requestFailed(request.url(), failure?.errorText || 'unknown');
     logs.push(`[requestfailed] ${request.url()} :: ${failure ? failure.errorText : 'unknown'}`);
   });
   page.on('response', response => {
+    runtimeGraphicsAudit.response(response.url(), response.status());
     const headers = response.headers();
     if (headers['x-starsectorquick-jar-pack'] === 'v1') {
       jarPackResponses += 1;
@@ -479,6 +493,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   console.log(`Expected state=${expectedState} config=${JSON.stringify(windowConfig)}`);
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
+
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline && errors.length === 0 && !fatalSeenAt && !disallowedRecoverySeenAt) {
     const state = await withTimeout(
@@ -496,6 +511,11 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   }
 
   flushLogs();
+  const browserGpuIdentity = await readBrowserGpuIdentity(browser, rendererProfile);
+  fs.writeFileSync(`${outputDir}/browser-renderer-profile.json`, JSON.stringify(browserGpuIdentity, null, 2));
+  if (rendererProfile.name === 'swiftshader-driver' && (!/SwiftShader/i.test(browserGpuIdentity.gl.glRenderer || '') || browserGpuIdentity.featureStatus.gpu_compositing !== 'enabled')) {
+    throw new Error('Requested CPU SwiftShader driver/compositor was not enabled: '+JSON.stringify(browserGpuIdentity));
+  }
   const game = page.locator('#game-container');
   const gameCanvas = page.locator('#lwjglCanvas');
   const configuredScreenshotTimeoutMs = Number(process.env.STARSECTOR_SCREENSHOT_TIMEOUT_MS || 12000);
@@ -512,7 +532,7 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         `${label} canvas visibility`,
       );
       return await withTimeout(
-        gameCanvas.screenshot({ path, timeout: screenshotActionTimeoutMs }),
+        gameCanvas.screenshot({ ...(path ? { path } : {}), timeout: screenshotActionTimeoutMs }),
         screenshotTimeoutMs,
         label,
       );
@@ -535,9 +555,9 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
       // border in the PNG. This keeps the visual gate strict without depending
       // on a saturated renderer main thread.
       const viewportFrame = await withTimeout(
-        page.screenshot(),
-        screenshotTimeoutMs,
-        `${label} viewport fallback`,
+        captureCompositorViewport(page, screenshotTimeoutMs),
+        screenshotTimeoutMs + 1000,
+        `${label} compositor viewport fallback`,
       );
       const cropped = cropGameCanvasFromViewportScreenshot(
         viewportFrame,
@@ -545,8 +565,8 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
         Number(windowConfig.__STARSECTOR_RENDER_HEIGHT__ || 768),
       );
       if (!cropped) throw new Error(`${label} viewport fallback could not locate game-container border`);
-      fs.writeFileSync(path, cropped.buffer);
-      logs.push(`[diagnostic] ${label} recovered from viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
+      if (path) fs.writeFileSync(path, cropped.buffer);
+      logs.push(`[diagnostic] ${label} recovered from CDP compositor viewport capture clip=${cropped.clip.x},${cropped.clip.y},${cropped.clip.width}x${cropped.clip.height}`);
       flushLogs();
       return cropped.buffer;
     } catch (fallbackError) {
@@ -560,6 +580,12 @@ ${fallback}`);
       return null;
     }
   };
+  const captureProbeFrame = async () => {
+    const bytes = await safeScreenshot(null, 'gameplay probe frame');
+    if (!bytes) throw new Error('Gameplay frame capture failed through locator and compositor paths');
+    return bytes;
+  };
+
 
   const first = await safeScreenshot(`${outputDir}/frame-first.png`, 'first frame screenshot');
   const firstFrameCapturedAt = first ? Date.now() : null;
@@ -642,7 +668,7 @@ ${fallback}`);
         if (fatalSeenAt || errors.length > 0) break;
         const x = box.x + box.width * nx;
         const y = box.y + box.height * ny;
-        const beforePanel = deepGameplay ? await gameCanvas.screenshot({ timeout: 10000 }) : null;
+        const beforePanel = deepGameplay ? await captureProbeFrame() : null;
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const panelStartedAt = Date.now();
@@ -665,6 +691,7 @@ ${fallback}`);
           listenerReadyMs = tabReady.matched ? Date.now() - panelStartedAt : null;
           if (tabReady.matched) {
             panelTransition = await waitForVisualTransition(gameCanvas, beforePanel, {
+              capture: captureProbeFrame,
               timeoutMs: 9000,
               pollMs: 800,
               threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -719,7 +746,7 @@ ${fallback}`);
             await sleep(350);
           }
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignFrame(gameCanvas, { capture: captureProbeFrame, timeoutMs: 8000, pollMs: 800 });
           const returnFrame = returned.frame;
           if (returnFrame) fs.writeFileSync(`${outputDir}/gameplay-return-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`, returnFrame);
           controlResult.returnReadyMs = returned.readyMs;
@@ -773,7 +800,7 @@ ${fallback}`);
         });
         const before = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
         const activeBefore = await page.evaluate(() => document.activeElement?.tagName || '');
-        const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+        const beforeFrame = await captureProbeFrame();
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const shortcutStartedAt = Date.now();
@@ -789,6 +816,7 @@ ${fallback}`);
           const listenerReadyMs = ready.matched ? Date.now() - shortcutStartedAt : null;
           if (ready.matched) {
             const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              capture: captureProbeFrame,
               timeoutMs: 8000,
               pollMs: 800,
               threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -811,6 +839,7 @@ ${fallback}`);
           // Validate the non-deep/tutorial path by the actual canvas transition,
           // instead of requiring both queue entries to be consumed immediately.
           const visual = await waitForVisualTransition(gameCanvas, beforeFrame, {
+              capture: captureProbeFrame,
             timeoutMs: 8000,
             pollMs: 800,
             threshold: panelVisualThreshold(expectedTab, windowConfig.__STARSECTOR_RENDER_WIDTH__, windowConfig.__STARSECTOR_RENDER_HEIGHT__),
@@ -857,7 +886,7 @@ ${fallback}`);
 
         if (deepGameplay && transition?.readyMatched) {
           await page.keyboard.press('Escape');
-          const returned = await waitForCampaignFrame(gameCanvas, { timeoutMs: 8000, pollMs: 800 });
+          const returned = await waitForCampaignFrame(gameCanvas, { capture: captureProbeFrame, timeoutMs: 8000, pollMs: 800 });
           shortcutResult.returnedToCampaign = returned.ready;
           shortcutResult.returnReadyMs = returned.readyMs;
           shortcutResult.failed = shortcutResult.failed || !returned.ready;
@@ -923,7 +952,7 @@ ${fallback}`);
       const logStart = logs.length;
       const gameplayStart = gameplayEvents.length;
       const beforeInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
-      const beforeFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      const beforeFrame = await captureProbeFrame();
 
       await page.keyboard.press(key);
       let pressReady = await waitForGameplayEvent(
@@ -938,7 +967,7 @@ ${fallback}`);
       // and produce a real activation/deactivation state transition.
       let confirmationPress = false;
       let currentEvents = gameplayEvents.slice(gameplayStart);
-      let currentStates = currentEvents.filter(event => event.event === 'ability-activate' || event.event === 'ability-deactivate');
+      let currentStates = currentEvents.filter(event => event.id === expectedId && (event.event === 'ability-activate' || event.event === 'ability-deactivate'));
       if (expectedId === 'transponder' && pressReady.matched && currentStates.length === 0) {
         confirmationPress = true;
         const confirmationStart = gameplayEvents.length;
@@ -951,7 +980,7 @@ ${fallback}`);
         await sleep(confirmed.matched ? 450 : 150);
       }
 
-      const afterFrame = await gameCanvas.screenshot({ timeout: 10000 });
+      const afterFrame = await captureProbeFrame();
       fs.writeFileSync(`${outputDir}/gameplay-ability-${digit}.png`, afterFrame);
       const afterInput = await page.evaluate(() => ({ ...(window.__lwjglInputStats || {}) }));
       const events = gameplayEvents.slice(gameplayStart);
@@ -1192,6 +1221,11 @@ ${fallback}`);
     logs.push(`[gameplay-performance] durationMs=${gameplayPerformance.durationMs} swaps=${gameplayPerformance.swapDelta} samples=${gameplayPerformance.frameSampleCount} fps=${gameplayPerformance.recentFps.toFixed(2)}/${performanceThresholds.minRecentFps.toFixed(2)} frameMs=${gameplayPerformance.recentFrameMs.toFixed(2)} p50=${gameplayPerformance.frameP50Ms.toFixed(2)} p95=${gameplayPerformance.frameP95Ms.toFixed(2)} p99=${gameplayPerformance.frameP99Ms.toFixed(2)} jitterStdDev=${gameplayPerformance.frameJitterStdDevMs.toFixed(2)} jitterP95=${gameplayPerformance.frameJitterP95Ms.toFixed(2)} longFrames=${gameplayPerformance.recentLongFrameCount} droppedEstimate=${gameplayPerformance.recentDroppedFrameEstimate} webglDraws=${gameplayPerformance.webglDrawDelta} quadBatches=${gameplayPerformance.quadBatchDelta} quads=${gameplayPerformance.quadCountDelta} drawCallsSaved=${gameplayPerformance.quadDrawCallsSavedDelta} interleavedDraws=${gameplayPerformance.immediateInterleavedDrawDelta} interleavedUploads=${gameplayPerformance.immediateInterleavedUploadDelta} interleavedSaved=${gameplayPerformance.immediateInterleavedUploadsSavedDelta} interleavedBytes=${gameplayPerformance.immediateInterleavedBytesDelta} pointerRefreshes=${gameplayPerformance.immediatePointerLayoutRefreshDelta}/${gameplayPerformance.immediatePointerLayoutRefreshCount} colorDeferred=${gameplayPerformance.immediateColorAttribDeferredObserved} thresholdsMet=${gameplayPerformance.thresholdsMet} responsive=${gameplayPerformance.responsive}`);
   }
   const gameplayPerformanceSafe = !deepGameplay || expectedState !== 'campaign' || Boolean(gameplayPerformance?.responsive);
+
+  if (process.env.STARSECTOR_RUNNER_DIAGNOSTICS === 'true') {
+    const { collectDiagnostics } = require('./cheerpj-runner-diagnostics');
+    await collectDiagnostics(page, context, outputDir);
+  }
 
   const state = await withTimeout(page.evaluate(() => ({
     runtime: window.__STARSECTOR_RUNTIME_STATE__ || null,
@@ -1467,11 +1501,14 @@ ${fallback}`);
     }
   }
 
+  flushLogs();
+  const logEvidenceSafe = !liveLogWriter.stats.error;
+  const runtimeGraphics = runtimeGraphicsAudit.summary();
   const ok = reachedExpected && rendered && campaignVisualQuality && campaignSpaceBackgroundSafe && progressing
     && inputResponsive && uiControlsSafe && shortcutsResponsive && startingResourcesReady
     && abilityKeysSafe && gameplayPerformanceSafe
     && immediateBridgeEfficient && errors.length === 0 && runtimeErrorSignals.length === 0 && !fatalSeenAt
-    && graphicsErrors.length === 0
+    && graphicsErrors.length === 0 && runtimeGraphics.safe && logEvidenceSafe
     && disallowedRecovery.length === 0
     && screenshotErrors.length === 0
     && saveLoadSmoke.ok
@@ -1546,10 +1583,16 @@ ${fallback}`);
     screenshotErrors,
     graphicsErrors: [...new Set(graphicsErrors)],
     runtimeErrorSignals: [...new Set(runtimeErrorSignals)],
-    gameplayEvents,
+    gameplayEvents: gameplayEvidence.allEvents,
+    playerGameplayEvents: gameplayEvents,
+    playerAbilityEvidence: gameplayEvidence.summary(),
     starterAbilityMappingReady,
     starterAbilitySlots,
     httpErrors: [...new Set(httpErrors)],
+    browserGpuIdentity,
+    runtimeGraphics,
+    logEvidenceSafe,
+    liveLogWriter: { ...liveLogWriter.stats },
     localNegativeMisses: [...new Set(localNegativeMisses)],
     saveLoadSmoke,
     state,

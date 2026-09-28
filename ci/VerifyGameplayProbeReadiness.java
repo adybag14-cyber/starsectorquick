@@ -51,6 +51,15 @@ public final class VerifyGameplayProbeReadiness {
         PrintStream capture = new PrintStream(bytes, true, "UTF-8");
         System.setOut(capture);
         try {
+            final AbilityPlugin sameIdOtherInstance = (AbilityPlugin) Proxy.newProxyInstance(
+                    VerifyGameplayProbeReadiness.class.getClassLoader(),
+                    new Class<?>[] { AbilityPlugin.class }, Proxy.getInvocationHandler(ability));
+            Method classify = BrowserGameplayProbe.class.getDeclaredMethod("classifyOwner", AbilityPlugin.class, AbilityPlugin.class);
+            classify.setAccessible(true);
+            require("player".equals(classify.invoke(null, ability, ability)), "same player instance rejected", bytes);
+            require("other".equals(classify.invoke(null, ability, sameIdOtherInstance)), "same ID confused with same instance", bytes);
+            require("other".equals(classify.invoke(null, ability, null)), "unregistered ability marked player", bytes);
+            require("unavailable".equals(classify.invoke(null, new Object[] { null, null })), "null ownership must be explicit", bytes);
             state.usable = false;
             BrowserGameplayProbe.abilityAdvance(ability);
             require(count(bytes, "event=ability-unready") == 1, "initial unready transition missing", bytes);
@@ -81,7 +90,7 @@ public final class VerifyGameplayProbeReadiness {
             System.setOut(original);
             capture.close();
         }
-        original.println("VerifyGameplayProbeReadiness: OK stableTransitions=2");
+        original.println("VerifyGameplayProbeReadiness: OK stableTransitions=2 ownershipChecks=4; no lifecycle criteria relaxed");
     }
 
     private static int count(ByteArrayOutputStream bytes, String token) throws Exception {

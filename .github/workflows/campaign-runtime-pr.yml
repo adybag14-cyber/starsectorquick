@@ -107,9 +107,20 @@ jobs:
           # Exercise the production renderer for the final pacing gate. The
           # bounded upload/draw tracer is opt-in and was used to isolate the
           # background defect, but sampling texture payloads distorts timings.
-          EXPERIMENT_CONFIG: '{}'
+          EXPERIMENT_CONFIG: '{"__LWJGL_DEPTH_STATE_CACHE__":true}'
           CHEERPJ_JAVA_VERSION: '17'
           STARSECTOR_DEEP_GAMEPLAY: 'true'
+          STARSECTOR_RUNNER_DIAGNOSTICS: 'true'
+          STARSECTOR_COLOR_CACHE_AB: 'false'
+          STARSECTOR_EXTENDED_CACHE_AB: 'false'
+          STARSECTOR_PACING_SCREEN: 'false'
+          STARSECTOR_RAF_PAIRED: 'false'
+          STARSECTOR_STALL_ATTRIBUTION: 'true'
+          STARSECTOR_STALL_DURATION_MS: '4000'
+          STARSECTOR_DEPTH_PAIRED: 'false'
+          STARSECTOR_VERTEX_ARRAY_PAIRED: 'true'
+          STARSECTOR_BROWSER_RENDERER: 'swiftshader-driver'
+          STARSECTOR_DIAGNOSTIC_WINDOWS: '1'
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'true'
           STARSECTOR_SAVE_LOAD_TIMEOUT_MS: '600000'
           STARSECTOR_SAVE_LOAD_SMOKE: ${{ inputs.save_load_smoke && 'true' || 'false' }}
@@ -130,6 +141,12 @@ jobs:
           test -s test_output/pages-overlays/pr-check/jars/starfarer.api.jar
           test -s test_output/pages-overlays/pr-check/jars/starfarer_obf.jar
           test -s test_output/pages-overlays/pr-check/jars/scripts-precompiled.jar
+          python3 ci/build-pages-graphics-packs.py --root test_output/pages-overlays/pr-check
+          python3 ci/audit-graphics-pack.py \
+            --manifest test_output/pages-overlays/pr-check/starsector-graphics-pack-v1.json \
+            --pack-dir test_output/pages-overlays/pr-check/starsector-graphics-pack-v1 \
+            --archive .ci-cache/starsector_linux-0.98a-RC8.zip \
+            --output test_output/pages-overlays/pr-check/graphics-pack-audit.json --require-byte-exact
       - name: Upload campaign-direct-main-thread-java17 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -140,6 +157,7 @@ jobs:
             test_output/campaign-direct-main-thread-java17-tutorial
             test_output/pages-overlays/pr-check/web-runtime-profile.json
             test_output/pages-overlays/pr-check/web-runtime-manifest.json
+            test_output/pages-overlays/pr-check/graphics-pack-audit.json
           if-no-files-found: warn
 
 
@@ -174,8 +192,9 @@ jobs:
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
+          STARSECTOR_BROWSER_RENDERER: 'swiftshader-driver'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__LWJGL_DEPTH_STATE_CACHE__":true}'
         run: |
           set +e
           bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"

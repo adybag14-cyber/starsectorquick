@@ -1,4 +1,4 @@
-const ALIAS_WORKER_VERSION = '20260823-campaign-space-v9';
+const ALIAS_WORKER_VERSION = '20260927-cheerpj-graphics-v10';
 const PROJECT_PREFIX = '/starsectorquick/';
 const CONTENT_RUNTIME_PREFIX = `${PROJECT_PREFIX}starsector/starsector/`;
 const LEGACY_REWRITES = [

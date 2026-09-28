@@ -275,6 +275,57 @@ var quadIndexVertexCapacity = 0;
 var vertexPosition = glCtx.getAttribLocation(program, "aVertexPosition");
 var colorLocation = glCtx.getAttribLocation(program, "aColor");
 var texCoord = glCtx.getAttribLocation(program, "aTexCoord");
+
+// LWJGL_VERTEX_ARRAY_COALESCING_V1_BEGIN
+// This bridge owns one default VAO and three linked-program attribute slots.
+// Optional experiment: omit ONLY duplicate enable/disable writes. Pointer,
+// constant-value, buffer, shader and draw operations are never omitted. Unknown
+// indices retain driver validation. Adding another VAO requires extending this
+// ownership model (enforced by the regression test), not reusing these shadows.
+var vertexArrayEnableShadow = [];
+var vertexArrayCacheActive = false;
+var vertexArrayStats = { requests: 0, driverWrites: 0, coalesced: 0, invalidations: 0 };
+function invalidateVertexArrayState()
+{
+	vertexArrayEnableShadow.length = 0;
+	vertexArrayCacheActive = false;
+	vertexArrayStats.invalidations++;
+}
+function setBridgeVertexArrayEnabled(index, enabled)
+{
+	vertexArrayStats.requests++;
+	var selected = typeof window !== "undefined" && window.__LWJGL_VERTEX_ARRAY_CACHE__ === true;
+	var owned = selected && Number.isInteger(index) && index >= 0 &&
+		(index === vertexPosition || index === colorLocation || index === texCoord);
+	if(!selected && vertexArrayCacheActive) invalidateVertexArrayState();
+	if(selected && owned)
+	{
+		vertexArrayCacheActive = true;
+		if(vertexArrayEnableShadow[index] === enabled)
+		{
+			vertexArrayStats.coalesced++;
+			return;
+		}
+	}
+	// Forget before a potentially throwing call; do not cache a rejected write.
+	if(owned) vertexArrayEnableShadow[index] = undefined;
+	if(enabled) glCtx.enableVertexAttribArray(index);
+	else glCtx.disableVertexAttribArray(index);
+	vertexArrayStats.driverWrites++;
+	if(selected && owned) vertexArrayEnableShadow[index] = enabled;
+}
+if(typeof window !== "undefined")
+{
+	window.__lwjglVertexArrayStats = vertexArrayStats;
+	window.__lwjglInvalidateVertexArrayState = invalidateVertexArrayState;
+}
+if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
+{
+	glCtx.canvas.addEventListener("webglcontextlost", invalidateVertexArrayState);
+	glCtx.canvas.addEventListener("webglcontextrestored", invalidateVertexArrayState);
+}
+// LWJGL_VERTEX_ARRAY_COALESCING_V1_END
+
 var mvLocation = glCtx.getUniformLocation(program, "modelView");
 var projLocation = glCtx.getUniformLocation(program, "projection");
 var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
@@ -306,7 +357,11 @@ function getCompatEnableState(cap)
 {
 	if(cap == 0x0BC0/*GL_ALPHA_TEST*/) return alphaTestState.enabled;
 	if(cap == glCtx.TEXTURE_2D || cap == 0x806F/*GL_TEXTURE_3D*/) return texture2DEnabled;
-	try { return glCtx.isEnabled(cap); } catch(_) { return false; }
+	try {
+		if(cap == glCtx.BLEND || cap == glCtx.CULL_FACE || cap == glCtx.DEPTH_TEST || cap == glCtx.SCISSOR_TEST || cap == glCtx.STENCIL_TEST)
+			return snapshotExtendedEnableState(cap);
+		return glCtx.isEnabled(cap);
+	} catch(_) { return false; }
 }
 function setCompatEnableState(cap, enabled)
 {
@@ -321,8 +376,188 @@ function setCompatEnableState(cap, enabled)
 		setTexture2DEnabled(enabled);
 		return;
 	}
-	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); } catch(_) {}
+	try { enabled ? glCtx.enable(cap) : glCtx.disable(cap); rememberExtendedEnableState(cap, enabled); } catch(_) {}
 }
+// LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1_BEGIN
+// Snapshot only the color-buffer values owned by this bridge. Unlike a broad
+// context-method wrapper, this adds no call trampoline to every WebGL operation.
+// Unknown blend enums/NaNs invalidate the shadow and retain authoritative GL
+// queries; nested snapshots own independent arrays. The switch keeps the exact
+// query path available for same-campaign, alternating A/B measurements.
+var colorAttribShadow = null;
+var colorAttribCacheStats = { hits: 0, readbacks: 0 };
+if(typeof window !== "undefined") window.__lwjglColorAttribCacheStats = colorAttribCacheStats;
+function readColorAttribState()
+{
+	colorAttribCacheStats.readbacks++;
+	return {
+		blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
+		blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
+		blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
+		blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
+		colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
+		clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
+	};
+}
+function cloneColorAttribState(state)
+{
+	return { blendSrcRgb: state.blendSrcRgb, blendDstRgb: state.blendDstRgb,
+		blendSrcAlpha: state.blendSrcAlpha, blendDstAlpha: state.blendDstAlpha,
+		colorMask: state.colorMask.slice(), clearColor: state.clearColor.slice() };
+}
+function snapshotColorAttribState()
+{
+	if(typeof window !== "undefined" && window.__LWJGL_COLOR_ATTRIB_CACHE__ === false)
+	{
+		colorAttribShadow = null;
+		return readColorAttribState();
+	}
+	if(colorAttribShadow === null) colorAttribShadow = readColorAttribState();
+	else colorAttribCacheStats.hits++;
+	return cloneColorAttribState(colorAttribShadow);
+}
+function knownBlendFactor(value)
+{
+	return Number.isInteger(value) && (value === 0 || value === 1 || (value >= 0x0300 && value <= 0x0307));
+}
+if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
+	glCtx.canvas.addEventListener("webglcontextrestored", function() { colorAttribShadow = null; });
+// LWJGL_COLOR_ATTRIB_SNAPSHOT_CACHE_V1_END
+
+// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_BEGIN
+// Cache authoritative snapshots, not guessed GL normalization. Any potentially
+// state-changing bridge write invalidates its group. Restoring a known snapshot
+// can seed the group directly. This leaves invalid enum/clamping semantics to GL.
+var extendedAttribShadow = { depth: null, viewport: null, stencil: null };
+var extendedEnableShadow = Object.create(null);
+var extendedAttribStats = { depthHits: 0, depthReads: 0, viewportHits: 0, viewportReads: 0,
+	stencilHits: 0, stencilReads: 0, enableHits: 0, enableReads: 0 };
+if(typeof window !== "undefined") window.__lwjglExtendedAttribStats = extendedAttribStats;
+// LWJGL_DEPTH_STATE_WRITE_THROUGH_V1_BEGIN
+// A driver read of DEPTH_WRITEMASK can flush prior drawing. This independent
+// experiment mirrors only the three depth-buffer values whose writes are all
+// owned by this bridge. Real GL calls still validate each write. Unknown values
+// invalidate the mirror instead of guessing. Startup is seeded from real GL.
+var depthStateShadow = null;
+var depthStateStats = { driverReads: 0, hits: 0, writes: 0, restores: 0, invalidations: 0 };
+if(typeof window !== "undefined") window.__lwjglDepthStateStats = depthStateStats;
+function depthStateCacheEnabled()
+{
+	return typeof window !== "undefined" && window.__LWJGL_DEPTH_STATE_CACHE__ === true;
+}
+function invalidateDepthState()
+{
+	depthStateShadow = null;
+	depthStateStats.invalidations++;
+}
+function readDepthStateFromDriver()
+{
+	depthStateStats.driverReads++;
+	return { writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
+		func: glCtx.getParameter(glCtx.DEPTH_FUNC), clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE) };
+}
+function snapshotDepthState()
+{
+	if(!depthStateCacheEnabled())
+	{
+		depthStateShadow = null;
+		return readDepthStateFromDriver();
+	}
+	if(depthStateShadow === null) depthStateShadow = readDepthStateFromDriver();
+	else depthStateStats.hits++;
+	return { writeMask: depthStateShadow.writeMask, func: depthStateShadow.func, clearValue: depthStateShadow.clearValue };
+}
+function rememberDepthStateWrite(field, value)
+{
+	if(depthStateShadow === null) return;
+	if(!depthStateCacheEnabled()) { invalidateDepthState(); return; }
+	if(field === "writeMask") depthStateShadow.writeMask = !!value;
+	else if(field === "func" && Number.isInteger(value) && value >= 0x0200 && value <= 0x0207)
+		depthStateShadow.func = value;
+	else if(field === "clearValue" && Number.isFinite(value))
+		depthStateShadow.clearValue = Math.min(1, Math.max(0, Math.fround(value)));
+	else { invalidateDepthState(); return; }
+	depthStateStats.writes++;
+}
+if(typeof window !== "undefined") window.__lwjglInvalidateDepthState = invalidateDepthState;
+// LWJGL_DEPTH_STATE_WRITE_THROUGH_V1_END
+
+function extendedAttribCacheEnabled()
+{
+	return typeof window !== "undefined" && window.__LWJGL_EXTENDED_ATTRIB_CACHE__ === true;
+}
+function invalidateExtendedAttribState()
+{
+	extendedAttribShadow.depth = extendedAttribShadow.viewport = extendedAttribShadow.stencil = null;
+	extendedEnableShadow = Object.create(null);
+	invalidateDepthState();
+}
+function cloneExtendedAttribState(group, value)
+{
+	if(group === "viewport") return { box: value.box.slice(), depthRange: value.depthRange.slice() };
+	if(group === "depth") return { writeMask: value.writeMask, func: value.func, clearValue: value.clearValue };
+	return { func: value.func, ref: value.ref, valueMask: value.valueMask, writeMask: value.writeMask,
+		fail: value.fail, depthFail: value.depthFail, depthPass: value.depthPass, clearValue: value.clearValue };
+}
+function readExtendedAttribState(group)
+{
+	extendedAttribStats[group + "Reads"]++;
+	if(group === "depth") return readDepthStateFromDriver();
+	if(group === "viewport") return {
+		box: Array.from(glCtx.getParameter(glCtx.VIEWPORT)), depthRange: Array.from(glCtx.getParameter(glCtx.DEPTH_RANGE)) };
+	return { func: glCtx.getParameter(glCtx.STENCIL_FUNC), ref: glCtx.getParameter(glCtx.STENCIL_REF),
+		valueMask: glCtx.getParameter(glCtx.STENCIL_VALUE_MASK), writeMask: glCtx.getParameter(glCtx.STENCIL_WRITEMASK),
+		fail: glCtx.getParameter(glCtx.STENCIL_FAIL), depthFail: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_FAIL),
+		depthPass: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS), clearValue: glCtx.getParameter(glCtx.STENCIL_CLEAR_VALUE) };
+}
+function snapshotExtendedAttribState(group)
+{
+	// Keep readExtendedAttribState authoritative for diagnostics and tests.
+	if(group === "depth")
+	{
+		if(depthStateCacheEnabled()) return snapshotDepthState();
+		depthStateShadow = null;
+	}
+	if(!extendedAttribCacheEnabled())
+	{
+		extendedAttribShadow[group] = null;
+		return readExtendedAttribState(group);
+	}
+	var value = extendedAttribShadow[group];
+	if(value === null) value = extendedAttribShadow[group] = readExtendedAttribState(group);
+	else extendedAttribStats[group + "Hits"]++;
+	return cloneExtendedAttribState(group, value);
+}
+function snapshotExtendedEnableState(cap)
+{
+	if(!extendedAttribCacheEnabled())
+	{
+		delete extendedEnableShadow[cap];
+		extendedAttribStats.enableReads++;
+		return glCtx.isEnabled(cap);
+	}
+	if(Object.prototype.hasOwnProperty.call(extendedEnableShadow, cap))
+	{
+		extendedAttribStats.enableHits++;
+		return extendedEnableShadow[cap];
+	}
+	extendedAttribStats.enableReads++;
+	return extendedEnableShadow[cap] = glCtx.isEnabled(cap);
+}
+function rememberExtendedEnableState(cap, enabled)
+{
+	// Only capabilities explicitly supported by the native bridge are tracked.
+	if(cap == glCtx.BLEND || cap == glCtx.CULL_FACE || cap == glCtx.DEPTH_TEST || cap == glCtx.SCISSOR_TEST || cap == glCtx.STENCIL_TEST)
+		extendedEnableShadow[cap] = !!enabled;
+}
+if(typeof window !== "undefined") window.__lwjglInvalidateExtendedAttribState = invalidateExtendedAttribState;
+if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
+{
+	glCtx.canvas.addEventListener("webglcontextlost", invalidateExtendedAttribState);
+	glCtx.canvas.addEventListener("webglcontextrestored", invalidateExtendedAttribState);
+}
+// LWJGL_EXTENDED_ATTRIB_SNAPSHOT_CACHE_V1_END
+
 function snapshotAttribState(mask)
 {
 	var state = { mask: mask };
@@ -339,41 +574,39 @@ function snapshotAttribState(mask)
 		for(const cap of [glCtx.BLEND, glCtx.CULL_FACE, glCtx.DEPTH_TEST, glCtx.SCISSOR_TEST, glCtx.STENCIL_TEST, 0x0BC0/*GL_ALPHA_TEST*/, glCtx.TEXTURE_2D])
 			state.enable[cap] = getCompatEnableState(cap);
 	}
+	// GL_ATTRIB_ENABLE_OWNERSHIP_V1: these groups own their enable flags
+	// even when GL_ENABLE_BIT was not requested. Leave every unsaved flag
+	// alone, and avoid reading flags twice for the common ALL_ATTRIB_BITS.
+	if(!(mask & 0x2000/*GL_ENABLE_BIT*/) && (mask & (0x4000|0x0100|0x0400|0x80000)))
+	{
+		state.enable = {};
+		if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
+		{
+			state.enable[glCtx.BLEND] = getCompatEnableState(glCtx.BLEND);
+			state.enable[0x0BC0/*GL_ALPHA_TEST*/] = getCompatEnableState(0x0BC0);
+		}
+		if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/) state.enable[glCtx.DEPTH_TEST] = getCompatEnableState(glCtx.DEPTH_TEST);
+		if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/) state.enable[glCtx.STENCIL_TEST] = getCompatEnableState(glCtx.STENCIL_TEST);
+		if(mask & 0x80000/*GL_SCISSOR_BIT*/) state.enable[glCtx.SCISSOR_TEST] = getCompatEnableState(glCtx.SCISSOR_TEST);
+	}
+	if(mask & 0x80000/*GL_SCISSOR_BIT*/)
+		state.scissor = Array.from(glCtx.getParameter(glCtx.SCISSOR_BOX));
 	if(mask & 0x4000/*GL_COLOR_BUFFER_BIT*/)
 	{
-		state.color = {
-			blendSrcRgb: glCtx.getParameter(glCtx.BLEND_SRC_RGB),
-			blendDstRgb: glCtx.getParameter(glCtx.BLEND_DST_RGB),
-			blendSrcAlpha: glCtx.getParameter(glCtx.BLEND_SRC_ALPHA),
-			blendDstAlpha: glCtx.getParameter(glCtx.BLEND_DST_ALPHA),
-			colorMask: Array.from(glCtx.getParameter(glCtx.COLOR_WRITEMASK)),
-			clearColor: Array.from(glCtx.getParameter(glCtx.COLOR_CLEAR_VALUE))
-		};
+		state.color = snapshotColorAttribState();
 		state.alpha = { func: alphaTestState.func, ref: alphaTestState.ref };
 	}
 	if(mask & 0x0100/*GL_DEPTH_BUFFER_BIT*/)
 	{
-		state.depth = {
-			writeMask: glCtx.getParameter(glCtx.DEPTH_WRITEMASK),
-			func: glCtx.getParameter(glCtx.DEPTH_FUNC),
-			clearValue: glCtx.getParameter(glCtx.DEPTH_CLEAR_VALUE)
-		};
+		state.depth = snapshotExtendedAttribState("depth");
 	}
 	if(mask & 0x0800/*GL_VIEWPORT_BIT*/)
 	{
-		state.viewport = {
-			box: Array.from(glCtx.getParameter(glCtx.VIEWPORT)),
-			depthRange: Array.from(glCtx.getParameter(glCtx.DEPTH_RANGE))
-		};
+		state.viewport = snapshotExtendedAttribState("viewport");
 	}
 	if(mask & 0x0400/*GL_STENCIL_BUFFER_BIT*/)
 	{
-		state.stencil = {
-			func: glCtx.getParameter(glCtx.STENCIL_FUNC), ref: glCtx.getParameter(glCtx.STENCIL_REF),
-			valueMask: glCtx.getParameter(glCtx.STENCIL_VALUE_MASK), writeMask: glCtx.getParameter(glCtx.STENCIL_WRITEMASK),
-			fail: glCtx.getParameter(glCtx.STENCIL_FAIL), depthFail: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_FAIL),
-			depthPass: glCtx.getParameter(glCtx.STENCIL_PASS_DEPTH_PASS), clearValue: glCtx.getParameter(glCtx.STENCIL_CLEAR_VALUE)
-		};
+		state.stencil = snapshotExtendedAttribState("stencil");
 	}
 	if(mask & 0x00040000/*GL_TEXTURE_BIT*/)
 	{
@@ -390,7 +623,7 @@ function restoreAttribState(state)
 		applyCurrentColorAttrib();
 		if(!texCoordData.enabled)
 		{
-			glCtx.disableVertexAttribArray(texCoord);
+			setBridgeVertexArrayEnabled(texCoord, false);
 			glCtx.vertexAttrib2f(texCoord, immediateModeData.currentTexCoord[0], immediateModeData.currentTexCoord[1]);
 		}
 	}
@@ -403,17 +636,22 @@ function restoreAttribState(state)
 		glCtx.blendFuncSeparate(state.color.blendSrcRgb, state.color.blendDstRgb, state.color.blendSrcAlpha, state.color.blendDstAlpha);
 		glCtx.colorMask(...state.color.colorMask);
 		glCtx.clearColor(...state.color.clearColor);
+		if(colorAttribShadow !== null) colorAttribShadow = cloneColorAttribState(state.color);
 	}
 	if(state.depth)
 	{
 		glCtx.depthMask(state.depth.writeMask);
 		glCtx.depthFunc(state.depth.func);
 		glCtx.clearDepth(state.depth.clearValue);
+		depthStateShadow = depthStateCacheEnabled() ? cloneExtendedAttribState("depth", state.depth) : null;
+		if(depthStateShadow !== null) depthStateStats.restores++;
+		extendedAttribShadow.depth = extendedAttribCacheEnabled() ? cloneExtendedAttribState("depth", state.depth) : null;
 	}
 	if(state.viewport)
 	{
 		glCtx.viewport(...state.viewport.box);
 		glCtx.depthRange(...state.viewport.depthRange);
+		extendedAttribShadow.viewport = extendedAttribCacheEnabled() ? cloneExtendedAttribState("viewport", state.viewport) : null;
 	}
 	if(state.stencil)
 	{
@@ -421,7 +659,10 @@ function restoreAttribState(state)
 		glCtx.stencilMask(state.stencil.writeMask);
 		glCtx.stencilOp(state.stencil.fail, state.stencil.depthFail, state.stencil.depthPass);
 		glCtx.clearStencil(state.stencil.clearValue);
+		extendedAttribShadow.stencil = extendedAttribCacheEnabled() ? cloneExtendedAttribState("stencil", state.stencil) : null;
 	}
+	if(state.scissor)
+		glCtx.scissor(...state.scissor);
 	if(state.texture)
 	{
 		boundTexture2DId = state.texture.boundTexture2DId;
@@ -509,6 +750,7 @@ var frameCount = 0;
 var presentationTargetFps = 60;
 var presentationStats = {
 	swapCount: 0,
+	scissorProtectedPresents: 0,
 	samples: [],
 	lastFramebufferStatus: null,
 	lastViewport: null,
@@ -640,11 +882,21 @@ function updatePresentationTimingStats()
 	presentationStats.recentDroppedFrameEstimate = recentDroppedFrames;
 	return presentationStats;
 }
+// Read-only raw export. Allocation stays outside the per-frame recorder.
+function snapshotPresentationIntervals()
+{
+	var count = recentFrameIntervalCount;
+	var oldest = (recentFrameIntervalCursor - count + recentFrameIntervals.length) % recentFrameIntervals.length;
+	var values = new Array(count);
+	for(var i = 0;i < count;i++) values[i] = recentFrameIntervals[(oldest + i) % recentFrameIntervals.length];
+	return { intervalsMs: values, swapCount: presentationStats.swapCount, count: count };
+}
 if(typeof window !== "undefined")
 	{
 	window.__lwjglPresentationStats = presentationStats;
 	window.__lwjglRefreshPresentationStats = updatePresentationTimingStats;
 	window.__lwjglResetPresentationTimingWindow = resetPresentationTimingWindow;
+	window.__lwjglSnapshotPresentationIntervals = snapshotPresentationIntervals;
 	}
 // Set to a non-zero value to stop after a certain number of frames
 var frameLimit = 0;
@@ -1092,12 +1344,12 @@ function uploadDataImpl(buf, buffer, attributeLocation, size, type, stride, coun
 			return false;
 		}
 	}
-	glCtx.enableVertexAttribArray(attributeLocation);
+	setBridgeVertexArrayEnabled(attributeLocation, true);
 	return true;
 }
 function applyCurrentColorAttrib()
 {
-	glCtx.disableVertexAttribArray(colorLocation);
+	setBridgeVertexArrayEnabled(colorLocation, false);
 	glCtx.vertexAttrib4f(colorLocation,
 		immediateModeData.currentColor[0],
 		immediateModeData.currentColor[1],
@@ -1132,7 +1384,7 @@ function uploadData(v, data, buffer, attributeLocation, count)
 		}
 		else
 		{
-			glCtx.disableVertexAttribArray(attributeLocation);
+			setBridgeVertexArrayEnabled(attributeLocation, false);
 			if(attributeLocation == texCoord)
 				glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
@@ -1984,7 +2236,12 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSetSwapInterval()
 function Java_org_lwjgl_opengl_GL11_nglClearColor(lib, r, g, b, a, funcPtr)
 {
 	checkNoList(curList);
-	return glCtx.clearColor(r, g, b, a);
+	glCtx.clearColor(r, g, b, a);
+	if(colorAttribShadow !== null)
+	{
+		if(Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) colorAttribShadow = null;
+		else colorAttribShadow.clearColor = [r, g, b, a].map(Math.fround);
+	}
 }
 
 function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
@@ -2000,6 +2257,66 @@ function Java_org_lwjgl_opengl_GL11_nglClear(lib, a, funcPtr)
 		if(compatDrawDiagnostics.currentClears.length > 32) compatDrawDiagnostics.currentClears.shift();
 	}
 	glCtx.clear(a);
+}
+
+// LWJGL_CAMPAIGN_BOUNDARY_EXPERIMENT_V1_BEGIN
+// Diagnostic-only frame submission/pacing choices. Startup/title JNI calls stay
+// synchronous. None is the existing path; no game draw or simulation is skipped.
+var campaignBoundaryStats = { flushes: 0, rafRequests: 0, rafCompleted: 0, timerFallbacks: 0 };
+if(typeof window !== "undefined") window.__lwjglCampaignBoundaryStats = campaignBoundaryStats;
+function campaignFrameBoundary()
+{
+	if(typeof window === "undefined" || window.__STARSECTOR_RUNTIME_STATE__?.state !== "campaign") return;
+	var mode = window.__LWJGL_CAMPAIGN_PACING__;
+	if(mode === "flush")
+	{
+		glCtx.flush();
+		campaignBoundaryStats.flushes++;
+		return;
+	}
+	if(mode !== "raf" || typeof requestAnimationFrame !== "function" || document.visibilityState !== "visible") return;
+	campaignBoundaryStats.rafRequests++;
+	return new Promise(function(resolve) {
+		var done = false;
+		var frame = null;
+		var timer = null;
+		function complete(fromTimer) {
+			if(done) return;
+			done = true;
+			if(fromTimer) { campaignBoundaryStats.timerFallbacks++; if(frame !== null) cancelAnimationFrame(frame); }
+			else { campaignBoundaryStats.rafCompleted++; if(timer !== null) clearTimeout(timer); }
+			resolve();
+		}
+		frame = requestAnimationFrame(function() { complete(false); });
+		// Losing visibility during the pending frame must not strand the JVM.
+		timer = setTimeout(function() { complete(true); }, 100);
+	});
+}
+// LWJGL_CAMPAIGN_BOUNDARY_EXPERIMENT_V1_END
+
+// LWJGL_UNCLIPPED_PRESENT_V1: a swap copies the complete rendered image.
+// A game/UI scissor box must not clip that copy, but must still govern the next
+// game draw. This temporary synchronous change does not mutate the shadow state.
+function presentMainFramebuffer()
+{
+	var scissorEnabled = getCompatEnableState(glCtx.SCISSOR_TEST);
+	try
+	{
+		if(scissorEnabled)
+		{
+			glCtx.disable(glCtx.SCISSOR_TEST);
+			presentationStats.scissorProtectedPresents++;
+		}
+		glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+		glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
+		glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
+	}
+	finally
+	{
+		glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
+		glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+		if(scissorEnabled) glCtx.enable(glCtx.SCISSOR_TEST);
+	}
 }
 
 function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
@@ -2047,10 +2364,7 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 			presentationStats.samples.push({swap: presentationStats.swapCount, error: String(err)});
 		}
 	}
-	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, null);
-	glCtx.blitFramebuffer(0, 0, fbWidth, fbHeight, 0, 0, fbWidth, fbHeight, glCtx.COLOR_BUFFER_BIT, glCtx.NEAREST);
-	glCtx.bindFramebuffer(glCtx.READ_FRAMEBUFFER, mainFb);
-	glCtx.bindFramebuffer(glCtx.DRAW_FRAMEBUFFER, mainFb);
+	presentMainFramebuffer();
 	compatFinishFrame();
 	frameCount++;
 	if(frameLimit && frameCount >= frameLimit)
@@ -2058,6 +2372,8 @@ function Java_org_lwjgl_opengl_LinuxContextImplementation_nSwapBuffers()
 		console.warn("Frame limit reached");
 		return;
 	}
+	var campaignBoundary = campaignFrameBoundary();
+	if(campaignBoundary) return campaignBoundary;
 	// CheerpJ custom JNI calls must not keep the Java VM suspended on a browser
 	// animation-frame Promise. The framebuffer has already been blitted above.
 	return;
@@ -2115,6 +2431,8 @@ function Java_org_lwjgl_opengl_GL11_nglViewport(lib, x, y, width, height, funcPt
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglViewport);
 	glCtx.viewport(x, y, width, height);
+	var value = extendedAttribShadow.viewport;
+	if(value !== null && (x !== value.box[0] || y !== value.box[1] || width !== value.box[2] || height !== value.box[3])) extendedAttribShadow.viewport = null;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
@@ -2122,7 +2440,10 @@ function Java_org_lwjgl_opengl_GL11_nglDisable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDisable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
+	{
 		glCtx.disable(a);
+		rememberExtendedEnableState(a, false);
+	}
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = false;
@@ -2141,7 +2462,10 @@ function Java_org_lwjgl_opengl_GL11_nglEnable(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnable);
 	if(a == glCtx.BLEND || a == glCtx.CULL_FACE || a == glCtx.DEPTH_TEST || a == glCtx.SCISSOR_TEST || a == glCtx.STENCIL_TEST)
+	{
 		glCtx.enable(a);
+		rememberExtendedEnableState(a, true);
+	}
 	else if(a == 0x0BC0/*GL_ALPHA_TEST*/)
 	{
 		alphaTestState.enabled = true;
@@ -2423,6 +2747,9 @@ function Java_org_lwjgl_opengl_GL11_nglClearDepth(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglClearDepth);
 	glCtx.clearDepth(a);
+	rememberDepthStateWrite("clearValue", a);
+	var value = extendedAttribShadow.depth;
+	if(value !== null && (a !== value.clearValue)) extendedAttribShadow.depth = null;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
@@ -2430,6 +2757,9 @@ function Java_org_lwjgl_opengl_GL11_nglDepthFunc(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthFunc);
 	glCtx.depthFunc(a);
+	rememberDepthStateWrite("func", a);
+	var value = extendedAttribShadow.depth;
+	if(value !== null && (a !== value.func)) extendedAttribShadow.depth = null;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCullFace(lib, mode, funcPtr)
@@ -2511,6 +2841,9 @@ function Java_org_lwjgl_opengl_GL11_nglDepthMask(lib, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglDepthMask);
 	glCtx.depthMask(a);
+	rememberDepthStateWrite("writeMask", a);
+	var value = extendedAttribShadow.depth;
+	if(value !== null && (!!a !== value.writeMask)) extendedAttribShadow.depth = null;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
@@ -2518,6 +2851,15 @@ function Java_org_lwjgl_opengl_GL11_nglBlendFunc(lib, sfactor, dfactor)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBlendFunc);
 	glCtx.blendFunc(sfactor, dfactor);
+	if(colorAttribShadow !== null)
+	{
+		if(knownBlendFactor(sfactor) && knownBlendFactor(dfactor))
+		{
+			colorAttribShadow.blendSrcRgb = colorAttribShadow.blendSrcAlpha = sfactor;
+			colorAttribShadow.blendDstRgb = colorAttribShadow.blendDstAlpha = dfactor;
+		}
+		else colorAttribShadow = null;
+	}
 }
 
 function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
@@ -2525,6 +2867,7 @@ function Java_org_lwjgl_opengl_GL11_nglColorMask(lib, r, g, b, a, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglColorMask);
 	glCtx.colorMask(r, g, b, a);
+	if(colorAttribShadow !== null) colorAttribShadow.colorMask = [!!r, !!g, !!b, !!a];
 }
 
 function Java_org_lwjgl_opengl_GL11_nglCopyTexImage2D(lib, target, level, internalFormat, x, y, width, height, border, funcPtr)
@@ -2770,11 +3113,15 @@ function Java_org_lwjgl_opengl_GL11_nglStencilFunc(lib, func, ref, mask, funcPtr
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilFunc);
 	glCtx.stencilFunc(func, ref, mask >>> 0);
+	var value = extendedAttribShadow.stencil;
+	if(value !== null && (func !== value.func || ref !== value.ref || (mask >>> 0) !== value.valueMask)) extendedAttribShadow.stencil = null;
 }
 function Java_org_lwjgl_opengl_GL11_nglStencilOp(lib, sfail, dpfail, dppass, funcPtr)
 {
 	if(curList) return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglStencilOp);
 	glCtx.stencilOp(sfail, dpfail, dppass);
+	var value = extendedAttribShadow.stencil;
+	if(value !== null && (sfail !== value.fail || dpfail !== value.depthFail || dppass !== value.depthPass)) extendedAttribShadow.stencil = null;
 }
 
 // LWJGL_POINT_SIZE_COMPAT_V1
@@ -2901,9 +3248,9 @@ function uploadImmediateInterleaved(vertexCount)
 		immediatePointerLayoutDirty = false;
 		presentationStats.immediatePointerLayoutRefreshes++;
 	}
-	glCtx.enableVertexAttribArray(vertexPosition);
-	glCtx.enableVertexAttribArray(colorLocation);
-	glCtx.enableVertexAttribArray(texCoord);
+	setBridgeVertexArrayEnabled(vertexPosition, true);
+	setBridgeVertexArrayEnabled(colorLocation, true);
+	setBridgeVertexArrayEnabled(texCoord, true);
 	if(strictWebGLValidation)
 	{
 		var attribErr = glCtx.getError();
@@ -2939,7 +3286,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 			uploadDataImpl(immediateModeData.texCoordBuf.subarray(0, vertexCount * 2), texCoordBuffer, texCoord, 2, glCtx.FLOAT, 2 * 4);
 		else
 		{
-			glCtx.disableVertexAttribArray(texCoord);
+			setBridgeVertexArrayEnabled(texCoord, false);
 			glCtx.vertexAttrib2f(texCoord, 0, 0);
 		}
 	}

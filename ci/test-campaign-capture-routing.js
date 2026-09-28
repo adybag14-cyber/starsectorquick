@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+(async()=>{
+  const source=fs.readFileSync('ci/campaign-render-test.js','utf8');
+  const read=name=>{const start=source.indexOf('async function '+name+'(');assert.ok(start>=0);const end=source.indexOf('\nasync function ',start+10);assert.ok(end>start);return source.slice(start,end);};
+  const context=vm.createContext({Date,sleep:async()=>{},pixelDiffRatio:()=>.5,pixelStats:()=>({valid:true}),isCampaignFramePlayable:s=>s.valid});
+  vm.runInContext(read('waitForVisualTransition')+'\n'+read('waitForCampaignFrame'),context);
+  let calls=0;
+  const capture=async()=>{calls++;return Buffer.from('owned test frame');};
+  const canvas={screenshot:()=>{throw new Error('unverified direct capture');}};
+  const visual=await context.waitForVisualTransition(canvas,Buffer.from('before'),{capture,pollMs:0,threshold:.2});
+  assert.equal(visual.opened,true);
+  const campaign=await context.waitForCampaignFrame(canvas,{capture,pollMs:0});
+  assert.equal(campaign.ready,true);assert.equal(calls,2);
+  await assert.rejects(context.waitForCampaignFrame(canvas,{}),/verified canvas capture/);
+  await assert.rejects(context.waitForVisualTransition(canvas,Buffer.alloc(0),{}),/verified canvas capture/);
+  await assert.rejects(context.waitForCampaignFrame(canvas,{capture:async()=>{throw new Error('both paths failed');}}),/both paths failed/);
+  assert.equal((source.match(/gameCanvas\.screenshot\(/g)||[]).length,1,'Only the shared primary path may call locator screenshot');
+  assert.equal((source.match(/canvas\.screenshot\(/g)||[]).length,0,'Polling helpers must not bypass fallback');
+  const verifyWaitCalls=[...source.matchAll(/waitFor(?:VisualTransition|CampaignFrame)\(gameCanvas,[\s\S]*?\}\)/g)];
+  assert.equal(verifyWaitCalls.length,5);
+  for(const match of verifyWaitCalls)assert.match(match[0],/capture:\s*captureProbeFrame/);
+  assert.match(source,/if \(path\) fs.writeFileSync\(path, cropped.buffer\)/);
+  console.log('test-campaign-capture-routing: OK explicit capture routing, five callers, failure propagation and no direct bypass');
+})().catch(error=>{console.error(error);process.exitCode=1;});
