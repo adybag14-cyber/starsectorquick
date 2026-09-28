@@ -1,9 +1,9 @@
 {
   "profile": "full-stock-campaign",
-  "sourceSha": "2b82d72b3fc733bfe6280bca150d8081fa168481",
-  "workflowRunId": "32891003242",
-  "generatedAt": "2026-08-25T19:43:44.139065+00:00",
-  "overlayFiles": 878,
+  "sourceSha": "536fe46aabd53a8f1a3f483952d4601c1c4f926b",
+  "workflowRunId": "36403455326",
+  "generatedAt": "2026-09-28T09:28:39.309736+00:00",
+  "overlayFiles": 3774,
   "dataPack": {
     "version": 1,
     "fileCount": 1696,
@@ -14,6 +14,6 @@
     "version": 1,
     "fileCount": 3381,
     "packCount": 25,
-    "bytes": 100465512
+    "bytes": 100681065
   }
 }
