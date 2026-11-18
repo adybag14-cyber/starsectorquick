@@ -54,7 +54,7 @@ The 1920 x 1080 run removed the matrix prototype and enabled vertex batching thr
 | p99 frame time | 86.00 ms | 72.40 ms | -15.81% |
 | p95 adjacent-frame jitter | 12.10 ms | 13.60 ms | +12.40% |
 
-All four adjacent FPS comparisons improved. The jitter measure worsened by 1.5 ms; the candidate is not claimed to improve every stutter metric. The eight-window paired report is valid, but the overall deep-gameplay run failed a Character-panel interaction/return timeout. Rendering, keyboard/mouse input, and background safety passed with no graphics/runtime errors. This is retained as a qualification failure pending comparison with the published build, not relabelled a full pass. Raw results are in the adjacent full-HD JSON.
+All four adjacent FPS comparisons improved. The jitter measure worsened by 1.5 ms; the candidate is not claimed to improve every stutter metric. The eight-window paired report is valid, but the overall deep-gameplay run failed a Character-panel interaction/return timeout. Rendering, keyboard/mouse input, and background safety passed with no graphics/runtime errors. This is retained as a qualification failure pending comparison with the published build, not relabelled a full pass. Raw results are in the adjacent full-HD JSON. The failure investigation identified two harness defects: fixed 1024-based click coordinates and a 1440-wide browser viewport that downsampled the Full HD canvas to 1396 pixels, dropping a healthy small ship below the unchanged center-subject pixel threshold. The harness now sizes its viewport for native-resolution capture and maps fixed native button centers through the actual canvas. A corrected deep-gameplay rerun is required; no visual thresholds or timeouts were lowered.
 
 ## Follow-up qualification
 

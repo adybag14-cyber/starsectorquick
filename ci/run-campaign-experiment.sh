@@ -916,6 +916,7 @@ node ci/test-tutorial-window-config.js
 node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
+node ci/test-campaign-ui-layout.js
 node ci/test-campaign-capture-routing.js
 STARSECTOR_VERIFY_OWNERSHIP_INTEGRATION=true node ci/test-player-ability-evidence.js
 node ci/test-fullhd-refit-capture.js
