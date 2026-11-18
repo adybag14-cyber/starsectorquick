@@ -43,8 +43,21 @@ The constructor-log cleanup was not present in the measured runtime and is not c
 
 Existing gameplay thresholds remain unchanged: 8 FPS minimum, 150 ms p95, 220 ms p99, and 60 ms p95 jitter. A successful paired report means valid evidence; it does not by itself assert a speed improvement.
 
+## Full HD follow-up
+
+The 1920 x 1080 run removed the matrix prototype and enabled vertex batching throughout gameplay. Chromium's default renderer setting still selected ANGLE SwiftShader on this host; this was not a hardware-GPU measurement.
+
+| Median of four windows per arm | Scalar transport | Batched transport | Change |
+|---|---:|---:|---:|
+| FPS | 15.5695 | 16.8324 | +8.11% |
+| p95 frame time | 74.10 ms | 66.95 ms | -9.65% |
+| p99 frame time | 86.00 ms | 72.40 ms | -15.81% |
+| p95 adjacent-frame jitter | 12.10 ms | 13.60 ms | +12.40% |
+
+All four adjacent FPS comparisons improved. The jitter measure worsened by 1.5 ms; the candidate is not claimed to improve every stutter metric. The eight-window paired report is valid, but the overall deep-gameplay run failed a Character-panel interaction/return timeout. Rendering, keyboard/mouse input, and background safety passed with no graphics/runtime errors. This is retained as a qualification failure pending comparison with the published build, not relabelled a full pass. Raw results are in the adjacent full-HD JSON.
+
 ## Follow-up qualification
 
-Full HD, original-build comparison, and GitHub CI results are recorded after completion. No factor-of-two conversion from CI FPS to personal-PC FPS is assumed. These measurements concern application presentation intervals, not GPU completion or input latency.
+Original-build comparison and GitHub CI results are recorded after completion. The first CI attempt was blocked before tests by GitHub's ubuntu-latest moving to Ubuntu 26.04, which the locked Playwright 1.58.0 cannot install dependencies for. Browser jobs are pinned to Ubuntu 24.04; browser versions and acceptance thresholds are unchanged. No factor-of-two conversion from CI FPS to personal-PC FPS is assumed. These measurements concern application presentation intervals, not GPU completion or input latency.
 
 All task files, caches, runtimes, and evidence are kept beneath `C:\Users\adyba\starsector-performance`. The storage guard uses a 20,000,000,000-byte limit with a 2 GB reserve.
