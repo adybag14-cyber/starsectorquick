@@ -236,16 +236,14 @@ public final class PatchCampaignCreateDiagnostics {
                     }
 
                     private void emit(String message) {
-                        super.visitFieldInsn(
-                                Opcodes.GETSTATIC,
-                                "java/lang/System",
-                                "out",
-                                "Ljava/io/PrintStream;");
+                        // The helper is silent by default. Keep this a stack-neutral
+                        // static call: original constructor arguments/results may be
+                        // live on the operand stack at either checkpoint.
                         super.visitLdcInsn("CampaignFleetCtorDiag: " + message);
                         super.visitMethodInsn(
-                                Opcodes.INVOKEVIRTUAL,
-                                "java/io/PrintStream",
-                                "println",
+                                Opcodes.INVOKESTATIC,
+                                "com/fs/starfarer/CampaignFleetDiagnostics",
+                                "log",
                                 "(Ljava/lang/String;)V",
                                 false);
                     }

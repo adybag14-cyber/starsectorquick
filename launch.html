@@ -474,7 +474,7 @@
             n.Java_org_lwjgl_opengl_GL11_nglGenLists = () => 1;
             n.Java_org_lwjgl_opengl_GL11_nglNewList = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglEndList = () => {};
-            n.Java_org_lwjgl_opengl_GL11_nglBegin = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglBegin = () => false;
             n.Java_org_lwjgl_opengl_GL11_nglEnd = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglTexCoord2f = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglVertex2f = () => {};
@@ -1023,6 +1023,8 @@
                     lastName: null,
                     lastAt: 0
                 };
+                // Batch immediate vertices by default; explicit false retains the original transport.
+                if (typeof window.__LWJGL_VERTEX_BATCH__ !== "boolean") window.__LWJGL_VERTEX_BATCH__ = true;
                 const collectNativeStats = window.__LWJGL_COLLECT_NATIVE_STATS__ === true;
                 nativeStats.enabled = collectNativeStats;
                 window.__lwjglNativeStats = nativeStats;

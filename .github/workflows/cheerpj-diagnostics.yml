@@ -5,6 +5,13 @@ on:
     branches: [feature/starsector-webgl-integration]
     paths:
       - build/final/wasm-modules/lwjgl.js
+      - bridge_src/org/lwjgl/opengl/GL11.java
+      - ci/*vertex-batch*
+      - ci/VertexBatchJavaProbe.java
+      - ci/renderer-experiment-state.js
+      - ci/test-renderer-experiment-state.js
+      - ci/refresh-runtime-jar-index.py
+      - ci/test-refresh-runtime-jar-index.py
       - ci/*graphics*
       - ci/*attrib-cache*
       - ci/cheerpj-runner-diagnostics.js
@@ -22,6 +29,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -31,7 +42,10 @@ jobs:
       - name: Verify reviewed image repairs and runtime failure classification
         run: |
           python3 ci/test-runtime-graphics-audit.py -v
+          python3 ci/test-refresh-runtime-jar-index.py
           node ci/test-runtime-graphics-audit.js
+      - name: Verify Java vertex transport and native signatures
+        run: python3 ci/verify-vertex-batch-java.py --output test_output/vertex-batch-java
       - name: Compare cached snapshots with authoritative WebGL state
         run: |
           node ci/verify-lwjgl-color-attrib-cache.js
@@ -39,6 +53,8 @@ jobs:
           node ci/verify-lwjgl-depth-state.js
           node ci/verify-lwjgl-vertex-array-cache.js
           node ci/verify-lwjgl-extended-attrib-cache.js
+          node ci/verify-lwjgl-vertex-batch.js
+          node ci/test-vertex-batch-paired.js
           node ci/test-paired-experiment.js
           node ci/test-renderer-experiment-state.js
           node ci/test-stall-attribution.js

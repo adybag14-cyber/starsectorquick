@@ -3147,7 +3147,10 @@ function Java_org_lwjgl_opengl_GL11_nglPolygonOffset(lib, factor, units, funcPtr
 function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 {
 	if(curList)
-		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
+	{
+		pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
+		return false;
+	}
 	immediateModeData.mode = mode;
 	immediateModeData.vertexPos = 0;
 	immediateModeData.colorPos = 0;
@@ -3158,6 +3161,14 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	// without an explicit texcoord in a new begin/end block starts at (0, 0).
 	immediateModeData.currentTexCoord[0] = 0;
 	immediateModeData.currentTexCoord[1] = 0;
+	var batchRequested = typeof window !== "undefined" && window.__LWJGL_VERTEX_BATCH__ === true;
+	if(typeof vertexBatchStats !== "undefined")
+	{
+		vertexBatchCurrentVertices = 0;
+		if(batchRequested) vertexBatchStats.enabledBegins++;
+		else vertexBatchStats.disabledBegins++;
+	}
+	return batchRequested;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
@@ -3174,6 +3185,36 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 	immediateModeData.texCoordBuf[curPos + 1] = y;
 	immediateModeData.texCoordPos = curPos + 2;
 }
+
+// LWJGL_VERTEX_BATCH_V1_BEGIN
+// One bounded direct-memory geometry message replaces many JNI vertex calls.
+// State/color changes are still sent in order by GL11.java. The counters for
+// submitted geometry are published together at glEnd, outside the vertex loop.
+var vertexBatchStats = {
+    enabledBegins: 0, disabledBegins: 0, batchCalls: 0, batchVertices: 0,
+    legacyVertices: 0, drawVertices: 0, draws: 0
+};
+var vertexBatchCurrentVertices = 0;
+if(typeof window !== "undefined") window.__lwjglVertexBatchStats = vertexBatchStats;
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    var offset = Number(address);
+    if(!Number.isSafeInteger(offset) || offset <= 0 || (offset % 4) !== 0 ||
+        !Number.isInteger(count) || count < 1 || count > 1024)
+        throw new Error("LWJGL invalid vertex batch range");
+    var view = lib.getJNIDataView();
+    var bytes = count * 5 * 4;
+    if(offset > view.buffer.byteLength - bytes)
+        throw new Error("LWJGL vertex batch exceeds JNI memory");
+    var data = new Float32Array(view.buffer, offset, count * 5);
+    for(var i=0; i<data.length; i+=5)
+        appendImmediateVertex(data[i], data[i+1], data[i+2], data[i+3], data[i+4]);
+    vertexBatchCurrentVertices += count;
+    vertexBatchStats.batchCalls++;
+}
+// LWJGL_VERTEX_BATCH_V1_END
 
 // LWJGL_IMMEDIATE_VERTEX_BATCH_V1
 function appendImmediateVertex(x, y, z, texS, texT)
@@ -3292,6 +3333,14 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	}
 	// NOTE: We count vertices
 	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
+	if(typeof vertexBatchStats !== "undefined")
+	{
+		vertexBatchStats.batchVertices += vertexBatchCurrentVertices;
+		vertexBatchStats.legacyVertices += vertexCount - vertexBatchCurrentVertices;
+		vertexBatchStats.drawVertices += vertexCount;
+		vertexBatchStats.draws++;
+		vertexBatchCurrentVertices = 0;
+	}
 }
 
 // These stubs make sure audio creation fails sooner rather than later
@@ -3553,6 +3602,7 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglStencilFunc,
 	Java_org_lwjgl_opengl_GL11_nglStencilOp,
 	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch,
 	Java_org_lwjgl_opengl_GL11_nglPointSize,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
 	Java_org_lwjgl_opengl_GL11_nglPolygonOffset,
