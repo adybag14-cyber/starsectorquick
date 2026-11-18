@@ -4,13 +4,15 @@
 
 The launcher enables bounded immediate-mode vertex transport batches. Java retains xyz and texture coordinates in one reusable native-order direct buffer (1,024 vertices, 20 KiB). Color and state boundaries flush pending vertices in order. JavaScript copies each batch into the existing immediate renderer; draw topology, vertex payload, resolution, textures, and simulation behavior are preserved.
 
+The JavaScript receiver also reuses a whole-JNI-memory Float32 view, refreshing it when memory identity or length changes. It retains all range checks and reads a fresh JNI data view each call. The `memoryViewCreations` diagnostic counts actual rebuilds. Unit verification proves 512 messages can reuse one view and that replacement/growth/shrink paths remain exact.
+
 An explicit `window.__LWJGL_VERTEX_BATCH__ = false` before launch selects the scalar transport for diagnosis and paired measurement. Display-list compilation stays scalar. Calling a list flushes the pending prefix and returns to scalar transport until the next Java `glBegin`. The inline no-WebGL fallback returns false from the new boolean native begin handshake.
 
 Fleet constructor tracing is a separate change. The existing patch emitted 48 diagnostic lines for every fleet construction. The new helper is silent by default; `-Dstarsector.browserCampaignCreateDiagnostics=true` restores those exact messages. It reads this property at class initialization. The tutorial startup hook, campaign creation checkpoints, economy probes, and gameplay probe remain unchanged.
 
 The build also refreshes the actual size of the rebuilt `bridge.jar` in `jars/index.list`, which previously omitted that rebuilt artifact from its refresh set.
 
-## Local evidence, 18 November 2026
+## Initial local evidence before JNI-view reuse, 18 November 2026
 
 The first real campaign experiment used Windows Hermes, Ryzen 9 7950X3D, Chromium 145 / ANGLE SwiftShader, a 1024 x 768 framebuffer, and the existing full-campaign gameplay probe at 8x speed. It completed the existing campaign, rendering, input, menu, and ability checks.
 
@@ -35,7 +37,7 @@ The constructor-log cleanup was not present in the measured runtime and is not c
 ## Correctness and measurement checks
 
 - Java native-signature compilation and 1,995 behavioral checks cover direct-memory addressing, color/state ordering, list fallback, capacity boundaries, toggles, and allocation fallback.
-- JavaScript verification covers 3,270 checks, 369,520 submitted vertices, all 10 supported primitive modes, exact Float32 payload equality, draw topology, invalid memory ranges, and immediate buffer reuse.
+- JavaScript verification covers 3,306 checks, 369,520 submitted vertices, all 10 supported primitive modes, exact Float32 payload equality, draw topology, invalid memory ranges, and immediate buffer reuse.
 - Paired-harness fixtures cover 154 checks, including real branch counters, raw timing agreement, unchanged controls, partial-failure evidence, post-measurement screenshot timing, and cleanup.
 - Shared renderer flag-state tests pass 41 checks.
 - Fleet diagnostic verification applies the production transformer to a 24-call executable constructor fixture. Original instruction order and checksum 276 are preserved, JVM verification succeeds with live stack values, disabled logging is silent, and opt-in restores all 48 lines in order.
@@ -61,3 +63,7 @@ All four adjacent FPS comparisons improved. The jitter measure worsened by 1.5 m
 Original-build comparison and GitHub CI results are recorded after completion. The first CI attempt was blocked before tests by GitHub's ubuntu-latest moving to Ubuntu 26.04, which the locked Playwright 1.58.0 cannot install dependencies for. Browser jobs are pinned to Ubuntu 24.04; browser versions and acceptance thresholds are unchanged. No factor-of-two conversion from CI FPS to personal-PC FPS is assumed. These measurements concern application presentation intervals, not GPU completion or input latency.
 
 All task files, caches, runtimes, and evidence are kept beneath `C:\Users\adyba\starsector-performance`. The storage guard uses a 20,000,000,000-byte limit with a 2 GB reserve.
+
+The first published-build ABBA pilot is excluded from matched-gain conclusions: it paused before the camera and centered ship settled, and cross-run scene equality failed even between the two original-build runs. Its complete exploratory data and failure are retained. The cached-view follow-up adds a centered-scene gate, further unpaused settling, and geometry preflight outside timing.
+
+For Windows hardware validation, `STARSECTOR_BROWSER_RENDERER=d3d11-hardware` selects explicit D3D11 and rejects active software fallback. The Hermes capability probe confirmed the NVIDIA RTX 4090. Software CI profiles retain their original arguments.

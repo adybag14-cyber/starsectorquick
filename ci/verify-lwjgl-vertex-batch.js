@@ -6,7 +6,7 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const file = process.argv[2] || 'build/final/wasm-modules/lwjgl.js';
 const source = fs.readFileSync(file, 'utf8');
-let checks = 0, submittedVertices = 0;
+let checks = 0, submittedVertices = 0, cachedViewBatches = 0, sameBufferResizes = 0;
 function eq(a,b,what) { assert.deepEqual(a,b,what); checks++; }
 function ok(a,what) { assert.ok(a,what); checks++; }
 function extract(name) {
@@ -40,12 +40,12 @@ const code = source.slice(begin,end) + '\n' + [
   'Java_org_lwjgl_opengl_GL11_nglVertex3f',
   'Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord'
 ].map(extract).join('\n');
-function make(interleaved, flag) {
+function make(interleaved, flag, float32Constructor = Float32Array) {
   const uploads=[],draws=[],genericColor=[];
   const window={};
   if(flag!==undefined)window.__LWJGL_VERTEX_BATCH__=flag;
   const c=vm.createContext({
-    window, Float32Array, Number, Math, console,
+    window, Float32Array: float32Constructor, Number, Math, console,
     curList:null, immediateBeginActive:false,
     immediateInterleavedEnabled:interleaved, verboseLog:false,
     immediateModeData:{
@@ -145,6 +145,75 @@ for(const count of [1023,1024,1025,2048,2501]) {
   eq(x.draws,y.draws,'capacity chunks never split primitive');
   eq(x.c.vertexBatchStats.batchCalls,Math.ceil(count/1024),'bounded message count');
 }
+// Count production Float32Array buffer-view allocations, excluding test-side
+// transport writes and numeric-sized output buffers. Fresh DataView wrappers,
+// changing addresses/counts, and rewritten transport bytes must reuse one view.
+for(const interleaved of [false,true]) {
+  let allocations=0, jniReads=0, submissions=0;
+  const countedFloat32 = new Proxy(Float32Array, {
+    construct(target,args) {
+      if(args[0] instanceof ArrayBuffer) allocations++;
+      return Reflect.construct(target,args);
+    }
+  });
+  const batch=make(interleaved,true,countedFloat32);
+  const scalar=make(interleaved,false);
+  let memory=new ArrayBuffer(4099); // valid messages need not fill a 4-byte-sized heap
+  const lib={getJNIDataView:()=>{jniReads++;return new DataView(memory);}};
+  call(batch,'nglBegin',7);call(scalar,'nglBegin',7);
+  function submit(offset,count,seed) {
+    const data=new Float32Array(memory,offset,count*5);
+    for(let i=0;i<count;i++)data.set(row(seed+i),i*5);
+    batch.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib,BigInt(offset),count,0);
+    for(let i=0;i<count;i++)call(scalar,'nglVertex3fTexCoord',...row(seed+i));
+    data.fill(123456); // accepted geometry must already be copied out of JNI memory
+    submissions++;cachedViewBatches++;
+  }
+  for(let i=0;i<512;i++)submit([4,64,480][i%3],[1,2,3,7,31][i%5],i);
+  eq(allocations,1,'512 same-memory batches allocate exactly one JNI Float32Array view');
+  eq(batch.c.vertexBatchStats.memoryViewCreations,1,'live counter reports one reused heap view');
+  eq(jniReads,submissions,'same-memory batches still request the current JNI view');
+
+  const previous=memory;
+  memory=new ArrayBuffer(4099); // equal length, different identity
+  new Float32Array(previous,0,Math.floor(previous.byteLength/4)).fill(-654321);
+  submit(12,5,1);
+  eq(allocations,2,'equal-length memory replacement refreshes the view');
+  memory=new ArrayBuffer(16387); // replacement growth and an odd trailing byte count
+  submit(Math.floor(memory.byteLength/4)*4-5*20,5,2);
+  eq(allocations,3,'replacement growth reads the new heap tail');
+
+  const beforeRejected=batch.c.immediateModeData.vertexPos;
+  memory=new ArrayBuffer(83);
+  assert.throws(()=>batch.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib,64,1,0),
+    /exceeds JNI memory/);checks++;
+  eq(batch.c.immediateModeData.vertexPos,beforeRejected,'fresh smaller heap rejects stale cached range');
+  eq(allocations,3,'invalid range does not allocate a heap view');
+  submit(4,1,2);
+  eq(allocations,4,'valid smaller heap refreshes the view');
+
+  const resizable=new ArrayBuffer(4099,{maxByteLength:16387});
+  if(typeof resizable.resize==='function' && resizable.resizable) {
+    memory=resizable;
+    submit(64,3,0);
+    eq(allocations,5,'resizable heap starts with one whole-memory view');
+    memory.resize(8195);
+    submit(Math.floor(memory.byteLength/4)*4-3*20,3,1);
+    eq(allocations,6,'same-identity heap growth refreshes view length');
+    memory.resize(1027);
+    submit(Math.floor(memory.byteLength/4)*4-2*20,2,2);
+    eq(allocations,7,'same-identity heap shrink refreshes view length');
+    sameBufferResizes+=2;
+  }
+  call(batch,'nglEnd');call(scalar,'nglEnd');
+  eq(jniReads,submissions+1,'every valid batch and buffer-range check reads fresh JNI memory');
+  eq(batch.uploads,scalar.uploads,'cached view preserves exact Float32 data across heap/offset/count changes');
+  eq(batch.draws,scalar.draws,'cached transport preserves original draw topology');
+  eq(Array.from(batch.c.immediateModeData.currentTexCoord),
+     Array.from(scalar.c.immediateModeData.currentTexCoord),'cached transport preserves final texcoords');
+  eq(batch.c.vertexBatchStats.batchCalls,submissions,'invalid batch excluded from normal stats');
+  eq(batch.c.vertexBatchStats.memoryViewCreations,allocations,'live counter matches actual view allocations');
+}
 // Absent flag defaults OFF; reads occur only at Begin.
 {
   const x=make(true);
@@ -191,7 +260,7 @@ rejected(64,1,true,[]);
 ok(/\bJava_org_lwjgl_opengl_GL11_nglAppendVertexBatch\s*[,}:]/.test(
    source.slice(source.indexOf('export default {'))), 'native batch export exists');
 console.log('verify-lwjgl-vertex-batch: OK '+JSON.stringify({
-  checks,submittedVertices,primitiveModes:10,
+  checks,submittedVertices,primitiveModes:10,cachedViewBatches,sameBufferResizes,
   float32PayloadParity:true,capacity:1024,reusesTransportImmediately:true,
   listCompileFallback:true,defaultOff:true
 }));

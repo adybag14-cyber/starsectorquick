@@ -347,7 +347,8 @@ if ! verify_asm_jar; then
   asm_downloaded=false
   for asm_url in \
     'https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar' \
-    'https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar'; do
+    'https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar' \
+    'https://repository.ow2.org/nexus/content/repositories/releases/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar'; do
     echo "Downloading ASM 9.7.1 from $asm_url"
     if curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 300 \
          --connect-timeout 20 --max-time 180 -o "$ASM_JAR.tmp" "$asm_url"; then

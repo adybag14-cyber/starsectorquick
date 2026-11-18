@@ -1,11 +1,61 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {chromium}=require('playwright');
 const {browserRendererProfile,readBrowserGpuIdentity}=require('./browser-renderer-profile');
 (async()=>{
  assert.deepEqual(browserRendererProfile('default').args,['--enable-unsafe-swiftshader']);
  assert.throws(()=>browserRendererProfile('unknown'),/Unsupported/);
  assert.throws(()=>browserRendererProfile('--no-sandbox'),/Unsupported/);
+ assert.deepEqual(browserRendererProfile('default'),{name:'default',args:['--enable-unsafe-swiftshader']});
+ assert.deepEqual(browserRendererProfile('swiftshader-driver'),{name:'swiftshader-driver',
+  args:['--enable-unsafe-swiftshader','--enable-gpu','--use-gl=angle','--use-angle=swiftshader']});
+ const hardware=browserRendererProfile('d3d11-hardware');
+ assert.deepEqual(hardware,{name:'d3d11-hardware',args:['--enable-gpu','--use-gl=angle','--use-angle=d3d11']});
+ const hardwareGpu={
+  featureStatus:{webgl:'enabled',gpu_compositing:'enabled'},
+  // Presence of an unused software adapter must not reject the active GPU.
+  devices:[{vendorId:4318,deviceString:'NVIDIA GeForce RTX 4090'},
+   {vendorId:5140,deviceString:'Microsoft Basic Render Driver'}],
+  auxAttributes:{glVendor:'Google Inc. (NVIDIA)',
+   glRenderer:'ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+   displayType:'ANGLE_D3D11'}
+ };
+ async function readFixture(gpu,profile=hardware){
+  let detached=false;
+  const browser={version:()=> 'fixture-chromium',newBrowserCDPSession:async()=>({
+   send:async command=>{assert.equal(command,'SystemInfo.getInfo');return {gpu};},
+   detach:async()=>{detached=true;}
+  })};
+  try{return await readBrowserGpuIdentity(browser,profile);}
+  finally{assert.equal(detached,true,'identity validation must detach its CDP session');}
+ }
+ const identity=await readFixture(hardwareGpu);
+ assert.equal(identity.requested,'d3d11-hardware');
+ assert.deepEqual(identity.args,hardware.args,'metadata records exact launch arguments');
+ assert.equal(identity.gl.glRenderer,hardwareGpu.auxAttributes.glRenderer);
+ assert.equal(identity.devices.length,2);
+ for(const renderer of [
+  'ANGLE (Google, Vulkan SwiftShader Device, SwiftShader driver)',
+  'ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11, D3D11)',
+  'ANGLE (Microsoft, WARP Direct3D11, D3D11)',
+  'llvmpipe (LLVM 19.1.7, 256 bits)',
+  'ANGLE (NVIDIA, OpenGL 4.6)',
+  ''
+ ]){
+  await assert.rejects(readFixture({...hardwareGpu,
+   auxAttributes:{...hardwareGpu.auxAttributes,glRenderer:renderer}}),/Direct3D11 hardware renderer is not active/);
+ }
+ await assert.rejects(readFixture({...hardwareGpu,
+  featureStatus:{webgl:'unavailable_software',gpu_compositing:'enabled'}}),/Direct3D11 hardware renderer is not active/);
+ const softwareGpu={...hardwareGpu,auxAttributes:{glRenderer:'ANGLE (Google, SwiftShader)'}};
+ for(const name of ['default','swiftshader-driver']){
+  const profile=browserRendererProfile(name);
+  assert.equal((await readFixture(softwareGpu,profile)).requested,name,'existing software profiles remain unchanged');
+ }
+ if(process.argv.includes('--unit')){
+  console.log('test-browser-renderer-profile: OK profile arguments, metadata, hardware identity and fallback rejection (no browser launched)');
+  return;
+ }
+ const {chromium}=require('playwright');
  const records=[];
  for(const name of ['default','swiftshader-driver']){
   const profile=browserRendererProfile(name);const browser=await chromium.launch({headless:true,args:profile.args});

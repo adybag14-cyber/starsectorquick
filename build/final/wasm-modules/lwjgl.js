@@ -3192,9 +3192,13 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 // submitted geometry are published together at glEnd, outside the vertex loop.
 var vertexBatchStats = {
     enabledBegins: 0, disabledBegins: 0, batchCalls: 0, batchVertices: 0,
-    legacyVertices: 0, drawVertices: 0, draws: 0
+    legacyVertices: 0, drawVertices: 0, draws: 0, memoryViewCreations: 0
 };
 var vertexBatchCurrentVertices = 0;
+// Cache the whole JNI heap view, not the per-message range. The Java buffer
+// address is reused, but CheerpJ may replace or resize its underlying memory.
+var vertexBatchMemoryView = null;
+var vertexBatchMemoryByteLength = -1;
 if(typeof window !== "undefined") window.__lwjglVertexBatchStats = vertexBatchStats;
 function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, funcPtr)
 {
@@ -3205,11 +3209,21 @@ function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, fu
         !Number.isInteger(count) || count < 1 || count > 1024)
         throw new Error("LWJGL invalid vertex batch range");
     var view = lib.getJNIDataView();
+    var memory = view.buffer;
+    var byteLength = memory.byteLength;
     var bytes = count * 5 * 4;
-    if(offset > view.buffer.byteLength - bytes)
+    if(offset > byteLength - bytes)
         throw new Error("LWJGL vertex batch exceeds JNI memory");
-    var data = new Float32Array(view.buffer, offset, count * 5);
-    for(var i=0; i<data.length; i+=5)
+    if(!vertexBatchMemoryView || vertexBatchMemoryView.buffer !== memory ||
+        vertexBatchMemoryByteLength !== byteLength)
+    {
+        vertexBatchMemoryView = new Float32Array(memory, 0, Math.floor(byteLength / 4));
+        vertexBatchMemoryByteLength = byteLength;
+        vertexBatchStats.memoryViewCreations++;
+    }
+    var data = vertexBatchMemoryView;
+    var end = offset / 4 + count * 5;
+    for(var i=offset / 4; i<end; i+=5)
         appendImmediateVertex(data[i], data[i+1], data[i+2], data[i+3], data[i+4]);
     vertexBatchCurrentVertices += count;
     vertexBatchStats.batchCalls++;
