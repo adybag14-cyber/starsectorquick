@@ -9,6 +9,23 @@ if (!workerVersion || !launchVersion || workerVersion[1] !== launchVersion[1]) {
   throw new Error(`service worker version mismatch worker=${workerVersion && workerVersion[1]} launch=${launchVersion && launchVersion[1]}`);
 }
 
+
+// The previous epoch can keep a whole old JAR pack alive in a returning user's
+// worker and HTTP cache. This runtime update must use distinct asset URLs.
+const previousWorkerVersion = '20260927-cheerpj-graphics-v10';
+assert(workerVersion[1] !== previousWorkerVersion, 'vertex-batch runtime still uses the previous cached JAR epoch');
+const launchFallback = launchSource.match(/const workerVersion = window\.__STARSECTOR_ALIAS_WORKER_VERSION__ \|\| '([^']+)'/);
+assert(launchFallback && launchFallback[1] === workerVersion[1], 'launcher JAR-pack fallback version differs from worker');
+const registrationExpression = launchSource.match(/const workerUrl = (`[^`]+`);/);
+assert(registrationExpression, 'launcher worker registration URL missing');
+const siteRootUrl = 'https://adybag14-cyber.github.io/starsectorquick/';
+const registrationUrl = vm.runInNewContext(registrationExpression[1], { siteRootUrl, aliasWorkerVersion: workerVersion[1] });
+assert(registrationUrl === siteRootUrl + 'starsectorquick-sw.js?v=' + workerVersion[1],
+  'worker registration does not select the matching asset epoch');
+const resetVersion = launchSource.match(/const resetVersion = '([^']+)'/);
+assert(resetVersion && resetVersion[1] === '20260810-campaign-render-v6',
+  'asset cache update must preserve the existing saved-storage migration marker');
+
 function collectJavaOutsideData(root) {
   const found = [];
   const visit = dir => {
@@ -32,6 +49,7 @@ if (outsideDataJava.length) {
 }
 const listeners = {};
 const unexpectedNetwork = [];
+const jarPackRequests = [];
 const payload = new TextEncoder().encode('LEVELUP');
 const manifest = {
   version: 1,
@@ -66,8 +84,14 @@ const selfObject = {
   addEventListener(type, handler) { listeners[type] = handler; }
 };
 
-async function mockFetch(input) {
+async function mockFetch(input, options = {}) {
   const url = String(input instanceof Request ? input.url : input);
+  if (/\/starsector-jar-pack-v1\.(?:json|bin)(?:\?|$)/.test(url)) {
+    const parsed = new URL(url, selfObject.location.origin);
+    jarPackRequests.push({ url: parsed.href, cache: options.cache, credentials: options.credentials });
+    assert(parsed.searchParams.get('sw') === workerVersion[1],
+      'JAR pack request can reuse another runtime epoch: ' + parsed.href);
+  }
   if (url.includes('/starsectorquick/starsector-data-pack-v1.json')) {
     return new Response(JSON.stringify(manifest), {
       status: 200,
@@ -168,8 +192,18 @@ function assert(condition, message) {
   assert(packedJarBadRange.headers.get('content-range') === 'bytes */5', 'packed JAR invalid range content-range mismatch');
   assert(packedJarBadRange.headers.get('x-starsectorquick-jar-pack') === 'v1', 'packed JAR invalid range marker missing');
 
+  const expectedJarPackUrls = ['json', 'bin'].map(extension =>
+    siteRootUrl + 'starsector-jar-pack-v1.' + extension + '?sw=' + encodeURIComponent(workerVersion[1]));
+  assert(jarPackRequests.length === 2, 'JAR manifest/body should load once and remain memoized for range/HEAD requests');
+  assert(expectedJarPackUrls.every(url => jarPackRequests.some(request => request.url === url)),
+    'worker did not fetch both versioned JAR-pack URLs');
+  assert(jarPackRequests.every(request => request.cache === 'force-cache' && request.credentials === 'same-origin'),
+    'JAR-pack cache and credential semantics changed');
+  assert(packedJar.headers.get('x-starsectorquick-sw-version') === workerVersion[1],
+    'JAR response does not identify the current worker epoch');
+
   assert(unexpectedNetwork.length === 0, `known misses escaped to network: ${unexpectedNetwork.join(', ')}`);
-  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} root-java, legacy-java, packed-java, packed-jar, packed-jar-range, packed-jar-head, packed-jar-416, data-miss, legacy-data-miss, directory-miss`);
+  console.log(`ServiceWorkerNegativeCache: OK version=${workerVersion[1]} versioned-jar-pack, preserved-storage-marker, root-java, legacy-java, packed-java, packed-jar, packed-jar-range, packed-jar-head, packed-jar-416, data-miss, legacy-data-miss, directory-miss`);
 })().catch(error => {
   console.error(error && (error.stack || error.message) || error);
   process.exitCode = 1;
