@@ -39,6 +39,7 @@ public final class GL11 {
     // renderer state operation remain ordered through their original native calls.
     private static final int VERTEX_BATCH_CAPACITY = 1024;
     private static FloatBuffer vertexBatchBuffer;
+    private static float[] vertexBatchData;
     private static long vertexBatchAddress;
     private static int vertexBatchCount;
     private static boolean vertexBatchActive;
@@ -48,6 +49,7 @@ public final class GL11 {
         if (vertexBatchBuffer != null) return true;
         if (vertexBatchUnavailable) return false;
         try {
+            float[] data = new float[VERTEX_BATCH_CAPACITY * 5];
             FloatBuffer buffer = ByteBuffer.allocateDirect(VERTEX_BATCH_CAPACITY * 5 * 4)
                     .order(ByteOrder.nativeOrder()).asFloatBuffer();
             long address = MemoryUtil.getAddress(buffer);
@@ -55,6 +57,7 @@ public final class GL11 {
                 vertexBatchUnavailable = true;
                 return false;
             }
+            vertexBatchData = data;
             vertexBatchBuffer = buffer;
             vertexBatchAddress = address;
             return true;
@@ -68,21 +71,42 @@ public final class GL11 {
     private static void flushVertexBatch() {
         int count = vertexBatchCount;
         if (count == 0) return;
-        nglAppendVertexBatch(vertexBatchAddress, count, 0L);
+        if (count == 4) {
+            // Four-vertex messages need no NIO copy or shared-memory read.
+            // Values already have Java float precision in the reused array.
+            float[] data = vertexBatchData;
+            nglAppendVertexQuad(
+                    data[0], data[1], data[2], data[3], data[4],
+                    data[5], data[6], data[7], data[8], data[9],
+                    data[10], data[11], data[12], data[13], data[14],
+                    data[15], data[16], data[17], data[18], data[19], 0L);
+        } else {
+            // All other counts retain the bounded direct-memory transport.
+            ((Buffer) vertexBatchBuffer).position(0);
+            vertexBatchBuffer.put(vertexBatchData, 0, count * 5);
+            ((Buffer) vertexBatchBuffer).position(0);
+            nglAppendVertexBatch(vertexBatchAddress, count, 0L);
+        }
         vertexBatchCount = 0;
     }
 
     private static void appendVertexBatch(float x, float y, float z) {
         int offset = vertexBatchCount * 5;
-        vertexBatchBuffer.put(offset, x);
-        vertexBatchBuffer.put(offset + 1, y);
-        vertexBatchBuffer.put(offset + 2, z);
-        vertexBatchBuffer.put(offset + 3, currentTexCoordS);
-        vertexBatchBuffer.put(offset + 4, currentTexCoordT);
+        float[] data = vertexBatchData;
+        data[offset] = x;
+        data[offset + 1] = y;
+        data[offset + 2] = z;
+        data[offset + 3] = currentTexCoordS;
+        data[offset + 4] = currentTexCoordT;
         vertexBatchCount++;
         if (vertexBatchCount == VERTEX_BATCH_CAPACITY) flushVertexBatch();
     }
     static native void nglAppendVertexBatch(long address, int count, long functionPointer);
+    static native void nglAppendVertexQuad(
+            float x0, float y0, float z0, float s0, float t0,
+            float x1, float y1, float z1, float s1, float t1,
+            float x2, float y2, float z2, float s2, float t2,
+            float x3, float y3, float z3, float s3, float t3, long functionPointer);
 
     private GL11() {}
 

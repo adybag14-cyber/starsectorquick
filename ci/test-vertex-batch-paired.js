@@ -7,18 +7,19 @@ const { runVertexBatchPairedExperiment } = require('./cheerpj-vertex-batch-paire
 const { captureExperimentFlags } = require('./renderer-experiment-state');
 const { intervalStats } = require('./cheerpj-paired-experiment');
 
-function fixture(initial, fault) {
+function fixture(initial, fault, transport = {}) {
   let clock = 0;
   let waits = 0;
   let faultApplied = false;
   let restorationAttempts = 0;
+  let memoryViewReady = false;
   const screenshots = [];
   let intervals = [];
   const canvas = { width: 1024, height: 768 };
   const window = {
     ...initial,
     __STARSECTOR_RUNTIME_STATE__: { state: 'campaign' },
-    __lwjglVertexBatchStats: { enabledBegins: 0, disabledBegins: 0, batchCalls: 0, batchVertices: 0, legacyVertices: 0, drawVertices: 0, draws: 0 },
+    __lwjglVertexBatchStats: { enabledBegins: 0, disabledBegins: 0, batchCalls: 0, quadCalls: 0, memoryViewCreations: 0, batchVertices: 0, legacyVertices: 0, drawVertices: 0, draws: 0 },
     __lwjglPresentationStats: { swapCount: 0 },
     __lwjglResetPresentationTimingWindow: () => { intervals = []; },
     __lwjglRefreshPresentationStats: () => {
@@ -79,12 +80,24 @@ function fixture(initial, fault) {
       window.__lwjglVertexBatchStats.drawVertices += count * 8;
       if (enabled) {
         window.__lwjglVertexBatchStats.enabledBegins += count;
-        window.__lwjglVertexBatchStats.batchCalls += count;
+        // Each primitive submits one four-vertex fast call plus one generic
+        // two-vertex batch, or a single generic six-vertex batch in that fixture.
+        window.__lwjglVertexBatchStats.batchCalls += count * (transport.genericOnly ? 1 : 2);
+        window.__lwjglVertexBatchStats.quadCalls += transport.genericOnly ? 0 : count;
+        if (!memoryViewReady) {
+          window.__lwjglVertexBatchStats.memoryViewCreations++;
+          memoryViewReady = true;
+        }
+        if (measurement && transport.growMemory) window.__lwjglVertexBatchStats.memoryViewCreations++;
         window.__lwjglVertexBatchStats.batchVertices += count * 6;
         window.__lwjglVertexBatchStats.legacyVertices += count * 2;
       } else {
         window.__lwjglVertexBatchStats.disabledBegins += count;
         window.__lwjglVertexBatchStats.legacyVertices += count * 8;
+      }
+      if (!measurement && index === 1) {
+        if (fault === 'initial-quad-counter') window.__lwjglVertexBatchStats.quadCalls = -1;
+        if (fault === 'initial-view-counter') window.__lwjglVertexBatchStats.memoryViewCreations = Infinity;
       }
       // Deliberately slower candidate: a valid experiment must retain a negative
       // result instead of turning an attractive median into a qualification.
@@ -93,7 +106,17 @@ function fixture(initial, fault) {
       clock += measurement ? intervals.reduce((a, b) => a + b, 0) + 100 : count * 100;
       if (measurement && index === 1 && fault && fault !== 'cleanup') {
         faultApplied = true;
-        if (fault === 'counters') window.__lwjglVertexBatchStats.batchCalls -= count;
+        if (fault === 'counters') {
+          window.__lwjglVertexBatchStats.batchCalls -= count * 2;
+          window.__lwjglVertexBatchStats.quadCalls -= count;
+        }
+        if (fault === 'quad-subset') window.__lwjglVertexBatchStats.quadCalls += count * 2;
+        if (fault === 'quad-nonfinite') window.__lwjglVertexBatchStats.quadCalls = Infinity;
+        if (fault === 'quad-negative') window.__lwjglVertexBatchStats.quadCalls = -1;
+        if (fault === 'quad-fractional') window.__lwjglVertexBatchStats.quadCalls += 0.5;
+        if (fault === 'view-nonfinite') window.__lwjglVertexBatchStats.memoryViewCreations = NaN;
+        if (fault === 'view-negative') window.__lwjglVertexBatchStats.memoryViewCreations = -1;
+        if (fault === 'view-fractional') window.__lwjglVertexBatchStats.memoryViewCreations += 0.5;
         if (fault === 'conservation') window.__lwjglVertexBatchStats.drawVertices++;
         if (fault === 'begins') window.__lwjglVertexBatchStats.disabledBegins++;
         if (fault === 'geometry') window.__lwjglVertexBatchStats.draws -= count;
@@ -129,6 +152,9 @@ function fixture(initial, fault) {
       const report = await runVertexBatchPairedExperiment(f.page, directory);
       assert.equal(report.ok, true); checks++;
       assert.equal(report.flagsRestored, true); checks++;
+      assert.equal(report.baseline, 'scalar transport inside revised Java bridge'); checks++;
+      assert.equal(report.candidate, 'reusable Java array with direct four-vertex calls and generic direct-memory batches'); checks++;
+      assert.match(report.note, /disabled branch retains revised bridge branch\/flush overhead; this is not a byte-identical published baseline/); checks++;
       assert.deepEqual(await captureExperimentFlags(f.page), saved); checks++;
       assert.equal(f.waits(), 16); checks++;
       assert.equal(report.candidateScreenshot, 'vertex-batch-enabled.png'); checks++;
@@ -146,9 +172,35 @@ function fixture(initial, fault) {
       assert.equal(report.summary.pooled.candidate.samples, 960); checks++;
       assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.batchCalls > 0 && row.counters.batchVertices > 0 && row.counters.legacyVertices > 0)); checks++;
       assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.batchCalls === 0 && row.counters.legacyVertices === row.counters.drawVertices)); checks++;
+      assert.ok(report.blocks.every(row => row.counters.memoryViewCreations === 0), 'stable heap reuses its warmed memory view'); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.quadCalls === 241 && row.counters.batchCalls === 482)); checks++;
+      assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.quadCalls === 0)); checks++;
+    }
+    // Valid workloads need not reach the specialized quad path, and memory
+    // growth may legitimately recreate the generic memory view during timing.
+    for (const transport of [{ genericOnly: true }, { growMemory: true }]) {
+      const f = fixture(initial, undefined, transport);
+      const saved = await captureExperimentFlags(f.page);
+      const report = await runVertexBatchPairedExperiment(f.page, directory);
+      assert.equal(report.ok, true); checks++;
+      assert.equal(report.flagsRestored, true); checks++;
+      assert.deepEqual(await captureExperimentFlags(f.page), saved); checks++;
+      assert.equal(report.blocks.length, 8); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.quadCalls === (transport.genericOnly ? 0 : 241))); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.memoryViewCreations === (transport.growMemory ? 1 : 0))); checks++;
+      assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.memoryViewCreations === 0)); checks++;
     }
     for (const [fault, error] of [
       ['counters', /batch branch was not exercised/],
+      ['quad-subset', /quad calls exceed total batch calls/],
+      ['quad-nonfinite', /invalid final counter: quadCalls/],
+      ['quad-negative', /invalid final counter: quadCalls/],
+      ['quad-fractional', /invalid final counter: quadCalls/],
+      ['view-nonfinite', /invalid final counter: memoryViewCreations/],
+      ['view-negative', /invalid final counter: memoryViewCreations/],
+      ['view-fractional', /invalid final counter: memoryViewCreations/],
+      ['initial-quad-counter', /invalid initial counter: quadCalls/],
+      ['initial-view-counter', /invalid initial counter: memoryViewCreations/],
       ['conservation', /completed vertex accounting disagrees/],
       ['begins', /disabled primitive during candidate/],
       ['geometry', /no immediate geometry drawn/],
@@ -200,5 +252,5 @@ function fixture(initial, fault) {
     console.log = log;
     fs.rmSync(directory, { recursive: true, force: true });
   }
-  console.log('test-vertex-batch-paired: OK ' + checks + ' checks; paired raw evidence, retained geometry, control flags, screenshot timing, partial failures and cleanup');
+  console.log('test-vertex-batch-paired: OK ' + checks + ' checks; paired raw evidence, quad/view counters, retained geometry, control flags, screenshot timing, partial failures and cleanup');
 })().catch(error => { console.error(error); process.exitCode = 1; });

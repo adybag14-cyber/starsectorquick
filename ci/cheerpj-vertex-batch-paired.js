@@ -6,19 +6,19 @@ const { intervalStats, summarizeBlocks } = require('./cheerpj-paired-experiment'
 const { captureExperimentFlags, restoreExperimentFlags } = require('./renderer-experiment-state');
 
 const order = [false, true, true, false, true, false, false, true];
-const counterNames = ['enabledBegins', 'disabledBegins', 'batchCalls', 'batchVertices', 'legacyVertices', 'drawVertices', 'draws'];
+const counterNames = ['enabledBegins', 'disabledBegins', 'batchCalls', 'quadCalls', 'memoryViewCreations', 'batchVertices', 'legacyVertices', 'drawVertices', 'draws'];
 
 // A completed experiment can have a negative performance result. "ok" means
 // valid paired evidence, never that the candidate was faster or is qualified.
 async function runVertexBatchPairedExperiment(page, out) {
   const report = {
     design: 'ABBABAAB',
-    baseline: 'original per-vertex Java/native transport',
-    candidate: 'bounded Java direct-buffer vertex transport batches',
+    baseline: 'scalar transport inside revised Java bridge',
+    candidate: 'reusable Java array with direct four-vertex calls and generic direct-memory batches',
     framesPerWindow: 240,
     warmupFrames: 24,
     measurement: 'last 240 consecutive presentation intervals at prespecified polling stop',
-    note: 'One running campaign/browser. Only vertex transport batching changes; other renderer flags and framebuffer stay fixed. Application presentation, not GPU completion or input latency. No profiler, screenshots or resource fetching inside timed windows.',
+    note: 'One running campaign/browser. Only vertex transport batching changes; other renderer flags and framebuffer stay fixed. Application presentation, not GPU completion or input latency. No profiler, screenshots or resource fetching inside timed windows. The disabled branch retains revised bridge branch/flush overhead; this is not a byte-identical published baseline.',
     blocks: []
   };
   const file = path.join(out, 'vertex-batch-paired.json');
@@ -97,6 +97,7 @@ async function runVertexBatchPairedExperiment(page, out) {
         assert.ok(Number.isSafeInteger(after.counters[name]) && after.counters[name] >= before.counters[name], 'invalid final counter: ' + name);
         counters[name] = after.counters[name] - before.counters[name];
       }
+      assert.ok(counters.quadCalls <= counters.batchCalls, 'quad calls exceed total batch calls');
       assert.ok(counters.draws > 0 && counters.drawVertices > 0, 'no immediate geometry drawn');
       // These three totals are published together at glEnd, so snapshots taken
       // between JNI calls still conserve completed primitive vertices exactly.
@@ -109,6 +110,7 @@ async function runVertexBatchPairedExperiment(page, out) {
         assert.ok(counters.disabledBegins > 0 && counters.legacyVertices > 0, 'legacy branch was not exercised');
         assert.equal(counters.enabledBegins, 0, 'enabled primitive during baseline');
         assert.equal(counters.batchCalls, 0, 'batch calls during baseline');
+        assert.equal(counters.quadCalls, 0, 'quad calls during baseline');
         assert.equal(counters.batchVertices, 0, 'batch vertices during baseline');
       }
       const statistics = intervalStats(after.raw.intervalsMs);

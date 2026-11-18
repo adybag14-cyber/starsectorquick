@@ -71,7 +71,13 @@ function make(interleaved, flag, float32Constructor = Float32Array) {
 function call(x, name, ...args) {
   return x.c['Java_org_lwjgl_opengl_GL11_'+name](null,...args,0);
 }
-function rawBatch(x, rows) {
+function rawBatch(x, rows, forceGeneric=false) {
+  if(rows.length===4 && !forceGeneric) {
+    x.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad(
+      {getJNIDataView(){throw new Error('quad transport must not read JNI memory');}},
+      ...rows.flat(),0);
+    return;
+  }
   const address=64;
   const memory=new ArrayBuffer(address+1024*5*4);
   const data=new Float32Array(memory,address,rows.length*5);
@@ -132,7 +138,7 @@ for(const interleaved of [false,true]) {
 }
 // Capacity-sized uninterrupted runs exercise the actual 1024-vertex receiver
 // limit independently of the color-flushed cases above.
-for(const count of [1023,1024,1025,2048,2501]) {
+for(const count of [1023,1024,1025,1028,2048,2501]) {
   const x=make(true,true),y=make(true,false);
   call(x,'nglBegin',7);call(y,'nglBegin',7);
   for(let start=0;start<count;start+=1024) {
@@ -145,6 +151,48 @@ for(const count of [1023,1024,1025,2048,2501]) {
   eq(x.draws,y.draws,'capacity chunks never split primitive');
   eq(x.c.vertexBatchStats.batchCalls,Math.ceil(count/1024),'bounded message count');
 }
+// Direct four-vertex messages must retain the generic receiver's exact float
+// and state semantics, for every primitive mode and both output layouts.
+for(const interleaved of [false,true])for(const mode of [0,1,2,3,4,5,6,7,8,9]) {
+  const fast=make(interleaved,true),generic=make(interleaved,true),scalar=make(interleaved,false);
+  for(const x of [fast,generic,scalar])call(x,'nglBegin',mode);
+  for(const [length,seed] of [[4,0],[3,4],[4,7]]) {
+    for(const x of [fast,generic,scalar])call(x,'nglColor4f',Math.fround(seed*.1),.5,.75,1);
+    const rows=Array.from({length},(_,i)=>row(seed+i));
+    rawBatch(fast,rows);rawBatch(generic,rows,true);
+    for(const a of rows)call(scalar,'nglVertex3fTexCoord',...a);
+  }
+  for(const x of [fast,generic,scalar])call(x,'nglEnd');
+  eq(fast.uploads,generic.uploads,'quad primitive parameters match generic Float32 transport');
+  eq(fast.uploads,scalar.uploads,'quad primitive parameters match scalar Float32 transport');
+  eq(fast.draws,scalar.draws,'quad transport never changes primitive topology');
+  eq(fast.genericColor,scalar.genericColor,'quad transport preserves current color');
+  eq(Array.from(fast.c.immediateModeData.currentTexCoord),
+     Array.from(scalar.c.immediateModeData.currentTexCoord),'quad transport preserves final texcoords');
+  eq(fast.c.vertexBatchStats.quadCalls,2,'only exact four-vertex messages use fast native');
+  eq(fast.c.vertexBatchStats.batchCalls,3,'quad calls remain part of normal batch total');
+  eq(fast.c.vertexBatchStats.batchVertices,11,'mixed transport completed vertex conservation');
+  eq(fast.c.vertexBatchStats.legacyVertices,0,'mixed transport has no lost batch vertices');
+  eq(generic.c.vertexBatchStats.quadCalls,0,'generic receiver still accepts four-vertex messages');
+}
+for(const interleaved of [false,true]) {
+  const x=make(interleaved,true);
+  call(x,'nglBegin',7);rawBatch(x,[row(0),row(1),row(2),row(3)]);call(x,'nglEnd');
+  eq(x.c.vertexBatchStats.quadCalls,1,'quad receiver executed');
+  eq(x.c.vertexBatchStats.memoryViewCreations,0,'quad-only transport allocates no JNI memory view');
+}
+for(const compiling of [false,true]) {
+  const x=make(true,true);
+  if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
+  assert.throws(()=>rawBatch(x,[row(0),row(1),row(2),row(3)]),
+    /outside an immediate primitive/);checks++;
+  eq(x.c.immediateModeData.vertexPos,0,'invalid quad state must not mutate geometry');
+  eq(x.c.vertexBatchStats.batchCalls,0,'invalid quad state must not increment batch count');
+  eq(x.c.vertexBatchStats.quadCalls,0,'invalid quad state must not increment quad count');
+}
+ok(source.slice(source.indexOf('export default {')).includes('Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad,'),
+   'native quad export exists');
+
 // Count production Float32Array buffer-view allocations, excluding test-side
 // transport writes and numeric-sized output buffers. Fresh DataView wrappers,
 // changing addresses/counts, and rewritten transport bytes must reuse one view.
@@ -262,5 +310,5 @@ ok(/\bJava_org_lwjgl_opengl_GL11_nglAppendVertexBatch\s*[,}:]/.test(
 console.log('verify-lwjgl-vertex-batch: OK '+JSON.stringify({
   checks,submittedVertices,primitiveModes:10,cachedViewBatches,sameBufferResizes,
   float32PayloadParity:true,capacity:1024,reusesTransportImmediately:true,
-  listCompileFallback:true,defaultOff:true
+  listCompileFallback:true,defaultOff:true,directQuadParity:true
 }));

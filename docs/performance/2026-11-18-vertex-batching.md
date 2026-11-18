@@ -1,69 +1,118 @@
-# Vertex transport and fleet-spawn diagnostic work
+# Runtime performance investigation â€” 18 November 2026
 
-## Change
+This change reduces Java/native geometry transport and routine fleet-construction logging while retaining the game's resolution, textures, effects, simulation and input behavior. Final hardware and GitHub qualification is tracked in [PR #184](https://github.com/adybag14-cyber/starsectorquick/pull/184). A completed paired measurement is not, by itself, a performance or release pass.
 
-The launcher enables bounded immediate-mode vertex transport batches. Java retains xyz and texture coordinates in one reusable native-order direct buffer (1,024 vertices, 20 KiB). Color and state boundaries flush pending vertices in order. JavaScript copies each batch into the existing immediate renderer; draw topology, vertex payload, resolution, textures, and simulation behavior are preserved.
+## Implementation
 
-The JavaScript receiver also reuses a whole-JNI-memory Float32 view, refreshing it when memory identity or length changes. It retains all range checks and reads a fresh JNI data view each call. The `memoryViewCreations` diagnostic counts actual rebuilds. Unit verification proves 512 messages can reuse one view and that replacement/growth/shrink paths remain exact.
+Java collects xyz and texture coordinates in a reusable float array. A batch of exactly four vertices sends its 20 float values directly to a native receiver. This avoids both a direct-buffer copy and a JNI-memory-view read for that common case. It uses the same append function and current primitive mode; it does not combine or remove draws.
 
-An explicit `window.__LWJGL_VERTEX_BATCH__ = false` before launch selects the scalar transport for diagnosis and paired measurement. Display-list compilation stays scalar. Calling a list flushes the pending prefix and returns to scalar transport until the next Java `glBegin`. The inline no-WebGL fallback returns false from the new boolean native begin handshake.
+Other batch sizes copy their used prefix once into a reusable native-order direct buffer. The array and direct buffer each hold 1,024 vertices / 20 KiB: **40 KiB total transport storage**, allocated lazily. The cached native address stays at position zero. Capacity flushes append vertices without ending strips or fans.
 
-Fleet constructor tracing is a separate change. The existing patch emitted 48 diagnostic lines for every fleet construction. The new helper is silent by default; `-Dstarsector.browserCampaignCreateDiagnostics=true` restores those exact messages. It reads this property at class initialization. The tutorial startup hook, campaign creation checkpoints, economy probes, and gameplay probe remain unchanged.
+Every existing color and renderer-state operation flushes pending vertices in order. Display-list compilation remains scalar. Calling a list flushes the prefix and returns to scalar transport until a fresh Java Begin handshake. Allocation/address failure retains scalar transport. The launcher enables batching while respecting an explicit Boolean `window.__LWJGL_VERTEX_BATCH__ = false`.
 
-The build also refreshes the actual size of the rebuilt `bridge.jar` in `jars/index.list`, which previously omitted that rebuilt artifact from its refresh set.
+The generic JavaScript receiver reuses one whole-JNI-memory Float32 view, refreshing it only when memory identity or length changes. It retains address/alignment/count/bounds validation and obtains the current JNI data view each call. Counters record actual view creations, direct four-vertex calls, total batch calls and completed geometry. Quad-only submission creates no JNI memory view.
 
-## Initial local evidence before JNI-view reuse, 18 November 2026
+Fleet construction previously printed 48 injected diagnostic lines per constructor. The new helper is silent by default; `-Dstarsector.browserCampaignCreateDiagnostics=true` restores the exact messages. Tutorial startup, campaign creation checkpoints, economy probes and gameplay instrumentation remain intact. An inspected old local log contained 3,840 such lines for 80 fleets, totaling 475,360 bytes / 22.3% of that log snapshot. This cleanup is not credited with local FPS gains because the measured local runtime retains its previously patched game JARs.
 
-The first real campaign experiment used Windows Hermes, Ryzen 9 7950X3D, Chromium 145 / ANGLE SwiftShader, a 1024 x 768 framebuffer, and the existing full-campaign gameplay probe at 8x speed. It completed the existing campaign, rendering, input, menu, and ability checks.
+The build refreshes the rebuilt `bridge.jar` size in `jars/index.list` and records its SHA-256. A matching launcher/service-worker version refreshes memoized and force-cached JAR packs for returning players. The existing save-data migration marker is unchanged.
 
-The paired design is ABBABAAB: four scalar and four batched windows, each retaining 240 consecutive presentation intervals after 24 warm-up frames. Only the vertex flag changes in the same running campaign. Resolution, other renderer flags, and the game stay fixed. Raw intervals, branch counters, partial failures, and exact flag restoration are retained. No profiler, resource fetching, or screenshot runs inside the timed windows.
+## Verification
 
-| Median of four windows per arm | Scalar transport | Batched transport | Change |
-|---|---:|---:|---:|
-| FPS | 27.2713 | 33.0794 | +21.30% |
-| Mean frame time | 36.6808 ms | 30.2415 ms | -17.56% |
-| p95 frame time | 43.65 ms | 34.70 ms | -20.50% |
-| p99 frame time | 62.60 ms | 50.90 ms | -18.69% |
-| p95 adjacent-frame jitter | 8.35 ms | 5.70 ms | -31.74% |
+- Java native-signature compilation and **14,490 recorder checks** cover exact Float32 values, signed zero, NaN/infinities, real direct-memory addressing, color/state/list ordering, capacity, fallback, and storage reuse. Sentinels prove four-vertex calls do not modify direct memory.
+- JavaScript verification passes **3,522 checks**, covering all ten supported primitive modes and both output layouts, exact scalar/generic/quad payload and draw equivalence, receiver-state guards, invalid memory ranges, reusable buffer views and memory replacement/growth/shrink.
+- The paired harness passes **261 checks** for raw timing agreement, actual transport branches, counter conservation, valid generic-only workloads, legitimate memory growth, unchanged controls, retained partial failures and exact flag restoration.
+- Shared experiment-state verification passes 41 checks.
+- The production fleet transformer preserves the original constructor instruction sequence and checksum 276 under JVM verification, including live operand-stack values. Disabled logging is silent; opt-in restores all 48 lines in order.
+- Jar-index tests check actual sizes, order, idempotence and rejection of missing artifacts/entries without partial writes.
 
-All four adjacent comparisons increased FPS: +37.56%, +6.80%, +21.41%, and +15.97%. Pooled 960-frame results were 27.4535 to 33.1333 FPS; pooled p95 was 46.1 to 35.2 ms and pooled p99 was 72.1 to 64.3 ms.
+Existing gameplay limits remain **8 FPS minimum, 150 ms frame p95, 220 ms frame p99, and 60 ms jitter p95**. Jitter is the p95 absolute deviation from the window's median interval; it is not an adjacent-frame difference. No visual limits, timeouts or performance thresholds were relaxed.
 
-These are same-build transport comparisons. The scalar arm uses the legacy transport inside the revised Java bridge, so it includes the new inactive branch checks. It is not a byte-identical published-build comparison. A separate original-build baseline window produced 35.10 FPS in a different world/time; that unrelated value is not used to calculate an improvement.
+## Measurement method and limits
 
-The first experiment still contained an inactive matrix-reuse prototype in both arms. That prototype was removed from the proposed source after its own paired trial produced no consistent benefit (median FPS -0.535%, mixed pooled and tail results). Its complete source and raw evidence are preserved in the dedicated work folder. Follow-up runs use only the vertex change.
+Each transport experiment uses one running campaign and fixed framebuffer, with counterbalanced **ABBABAAB** windows. Each window retains 240 consecutive presentation intervals after 24 warmup frames. Only the selected transport flag changes. Raw intervals, actual branch counters, control flags and partial failures are retained. Profiling, resource fetching and screenshots occur outside timed windows.
 
-The constructor-log cleanup was not present in the measured runtime and is not credited with this FPS gain. Its observed avoided work was 3,840 constructor log lines across 80 fleet constructions, 475,360 bytes / 22.3% of the inspected browser log snapshot.
+The scalar arm is **scalar transport inside the revised Java bridge**. It retains the added inactive branch/flush checks. These results cannot be presented as byte-identical published-build improvements. They measure application presentation intervals, not GPU completion, scan-out or end-to-end input latency. The local deep-gameplay workload uses the existing 8x campaign probe. No factor-of-two conversion to a personal computer's FPS is assumed.
 
-## Correctness and measurement checks
+Each new mechanism is tested separately. The existing depth-state experiment toggles only its three-value mirror while keeping all real GL writes. Its previous mixed results are retained in the September investigation documents; a profile alone does not justify enabling it.
 
-- Java native-signature compilation and 1,995 behavioral checks cover direct-memory addressing, color/state ordering, list fallback, capacity boundaries, toggles, and allocation fallback.
-- JavaScript verification covers 3,306 checks, 369,520 submitted vertices, all 10 supported primitive modes, exact Float32 payload equality, draw topology, invalid memory ranges, and immediate buffer reuse.
-- Paired-harness fixtures cover 154 checks, including real branch counters, raw timing agreement, unchanged controls, partial-failure evidence, post-measurement screenshot timing, and cleanup.
-- Shared renderer flag-state tests pass 41 checks.
-- Fleet diagnostic verification applies the production transformer to a 24-call executable constructor fixture. Original instruction order and checksum 276 are preserved, JVM verification succeeds with live stack values, disabled logging is silent, and opt-in restores all 48 lines in order.
-- Jar-index tests check actual artifact sizes, ordering, idempotence, and rejection of missing bridge entries/files without partial writes.
+## Four-vertex candidate: completed Full HD hardware trial
 
-Existing gameplay thresholds remain unchanged: 8 FPS minimum, 150 ms p95, 220 ms p99, and 60 ms p95 jitter. A successful paired report means valid evidence; it does not by itself assert a speed improvement.
+The final local deep-gameplay run used an actual RTX 4090 / D3D11, Ryzen 9 7950X3D, Chromium 145.0.7632.6 and a native 1920×1080 framebuffer. Depth caching stayed OFF during the vertex comparison, matching the public default. The existing 8x campaign gameplay probe was active.
 
-## Full HD follow-up
+All seven mouse panel/return tests, seven shortcuts, ability checks, visual checks and input checks passed. All JavaScript, graphics, screenshot and runtime error arrays were empty. The separate unchanged gameplay gate passed at 33.18 FPS, 39.7 ms p95, 45.1 ms p99 and 10.2 ms jitter p95.
 
-The 1920 x 1080 run removed the matrix prototype and enabled vertex batching throughout gameplay. Chromium's default renderer setting still selected ANGLE SwiftShader on this host; this was not a hardware-GPU measurement.
+| Vertex transport metric | Scalar control | Four-vertex candidate |
+|---|---:|---:|
+| Median-window FPS | 33.1005 | 35.1883 (+6.31%) |
+| Median-window frame p95 | 35.15 ms | 33.80 ms |
+| Median-window frame p99 | 42.75 ms | 39.75 ms |
+| Median-window jitter p95 | 5.45 ms | 6.10 ms |
+| Pooled 960-frame FPS | 32.8311 | 34.9728 |
+| Pooled frame p95 | 38.50 ms | 34.70 ms |
+| Pooled frame p99 | 51.20 ms | 42.70 ms |
+| Pooled jitter p95 | 8.90 ms | 6.80 ms |
+| Worst recorded frame | 75.60 ms | 88.00 ms |
 
-| Median of four windows per arm | Scalar transport | Batched transport | Change |
-|---|---:|---:|---:|
-| FPS | 15.5695 | 16.8324 | +8.11% |
-| p95 frame time | 74.10 ms | 66.95 ms | -9.65% |
-| p99 frame time | 86.00 ms | 72.40 ms | -15.81% |
-| p95 adjacent-frame jitter | 12.10 ms | 13.60 ms | +12.40% |
+Three of four adjacent comparisons increased FPS: +9.94%, +3.06%, +15.72%, then -2.19%. Thus the overall throughput and p95/p99 improved, but improvement is not claimed for every window, worst frame or jitter summary. The scalar-control caveat above still applies.
 
-All four adjacent FPS comparisons improved. The jitter measure worsened by 1.5 ms; the candidate is not claimed to improve every stutter metric. The eight-window paired report is valid, but the overall deep-gameplay run failed a Character-panel interaction/return timeout. Rendering, keyboard/mouse input, and background safety passed with no graphics/runtime errors. This is retained as a qualification failure pending comparison with the published build, not relabelled a full pass. Raw results are in the adjacent full-HD JSON. The failure investigation identified two harness defects: fixed 1024-based click coordinates and a 1440-wide browser viewport that downsampled the Full HD canvas to 1396 pixels, dropping a healthy small ship below the unchanged center-subject pixel threshold. The harness now sizes its viewport for native-resolution capture and maps fixed native button centers through the actual canvas. A corrected deep-gameplay rerun is required; no visual thresholds or timeouts were lowered.
+The four candidate windows exercised 335,297 direct four-vertex calls and 1,367,408 total batch calls, with zero new memory views during any timed window. Direct four-vertex coverage was about 24.5% of batch calls; an average batch size near four was not evidence that every message had four vertices.
 
-## Follow-up qualification
+A separate depth-cache toggle in the same session increased median-window FPS 32.58→39.32, but pooled p95 and jitter worsened and the final adjacent FPS pair regressed. Its default remains OFF. No broad cache, pacing, or depth-default change is included.
 
-Original-build comparison and GitHub CI results are recorded after completion. The first CI attempt was blocked before tests by GitHub's ubuntu-latest moving to Ubuntu 26.04, which the locked Playwright 1.58.0 cannot install dependencies for. Browser jobs are pinned to Ubuntu 24.04; browser versions and acceptance thresholds are unchanged. No factor-of-two conversion from CI FPS to personal-PC FPS is assumed. These measurements concern application presentation intervals, not GPU completion or input latency.
+[Raw hardware evidence](2026-11-18-quad-fullhd-hardware.json) contains all raw intervals, counters, GPU/bridge identities and gameplay results. [Candidate screenshot](2026-11-18-quad-fullhd-hardware.png) was captured after timing. CI and the normal tutorial follow-up are reported separately in the PR.
 
-All task files, caches, runtimes, and evidence are kept beneath `C:\Users\adyba\starsector-performance`. The storage guard uses a 20,000,000,000-byte limit with a 2 GB reserve.
+## Earlier local trials
 
-The first published-build ABBA pilot is excluded from matched-gain conclusions: it paused before the camera and centered ship settled, and cross-run scene equality failed even between the two original-build runs. Its complete exploratory data and failure are retained. The cached-view follow-up adds a centered-scene gate, further unpaused settling, and geometry preflight outside timing.
+These are development evidence, not the final four-vertex candidate's qualification.
 
-For Windows hardware validation, `STARSECTOR_BROWSER_RENDERER=d3d11-hardware` selects explicit D3D11 and rejects active software fallback. The Hermes capability probe confirmed the NVIDIA RTX 4090. Software CI profiles retain their original arguments.
+| Candidate / environment | Median scalar FPS â†’ batched FPS | Frame p95 | Frame p99 | Outcome |
+|---|---:|---:|---:|---|
+| Initial direct-buffer B, 1024Ã—768 SwiftShader | 27.27 â†’ 33.08 (+21.30%) | 43.65 â†’ 34.70 ms | 62.60 â†’ 50.90 ms | Full gameplay passed; all four adjacent FPS comparisons improved |
+| B, 1920Ã—1080 default browser profile, actual SwiftShader | 15.57 â†’ 16.83 (+8.11%) | 74.10 â†’ 66.95 ms | 86.00 â†’ 72.40 ms | Paired evidence valid; jitter worsened and deep UI gate failed |
+| Cached JNI view C, corrected native Full HD / SwiftShader | 26.89 â†’ 30.64 (+13.93%) | 42.10 â†’ 36.75 ms | 57.35 â†’ 51.95 ms | Full deep gameplay passed |
+| Java array staging D, Full HD / actual RTX 4090 D3D11 | 27.15 â†’ 29.07 (+7.08%) | 44.35 â†’ 41.55 ms | 54.10 â†’ 68.60 ms | Full deep gameplay passed; p99 worsened |
+
+The first B run retained an inactive matrix-reuse prototype in both arms. Its own paired experiment produced no consistent benefit (median FPS âˆ’0.535% with mixed/worse tails); that prototype was removed and archived.
+
+The initial Full HD UI failure exposed two harness assumptions: 1024-based button coordinates and a viewport that downsampled a 1920-pixel canvas to 1396 pixels. The corrected harness captures the native framebuffer and maps fixed native button centers through the actual canvas. The corrected C and D runs passed all seven mouse panels/returns, seven shortcuts, ability checks, input and visual gates, without changing their thresholds.
+
+D's hardware profile identified repeated driver state queries as a substantial separate cost. Its paired p99 regression also motivated the four-vertex path, which removes the remaining NIO copy from those small messages. Its performance must be measured rather than inferred from correctness checks.
+
+## Latest completed GitHub result before four-vertex transport
+
+Head `feecc1828a10afeed0001741c15a713db3c48dca` tested cached-view candidate C on Ubuntu 24.04, Intel Xeon 6975P-C (four logical CPUs), Chromium 145.0.7632.6 and ANGLE SwiftShader, with a 1024Ã—768 game framebuffer.
+
+[The main job failed its unchanged jitter limit](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44388531355/job/135100178019). Its 8.051-second gameplay sample measured 16.535 FPS, 130.1 ms p95, 161.6 ms p99 and **81.1 ms jitter p95**, exceeding the 60 ms limit. All visual, input, panel, shortcut and ability checks passed; no JavaScript, screenshot, graphics or runtime errors occurred, and 747/747 observed images loaded.
+
+Its valid paired experiment did **not** establish a consistent CI gain:
+
+| Median of four windows | Scalar | Batched C |
+|---|---:|---:|
+| FPS | 15.8559 | 15.7520 |
+| Frame p95 | 116.8 ms | 114.1 ms |
+| Frame p99 | 146.9 ms | 176.8 ms |
+| Jitter p95 | 57.2 ms | 57.55 ms |
+
+Pooled FPS was 15.6554 â†’ 15.9257 (+1.73%); adjacent-pair FPS changes were +3.82%, +5.45%, âˆ’4.26%, +2.11%. These mixed figures and the failed gate remain part of the record. [Raw main artifact](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44388531355/artifacts/14468326057).
+
+Graphics, launcher and no-actions campaign checks passed. The Full HD lane passed its existing resolution/input smoke contract; it is not described as a full deep-gameplay pass. Its generic opening-scene result remains false. [Full HD artifact](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44388531355/artifacts/14468725493).
+
+Browser CI is pinned to Ubuntu 24.04 because the locked Playwright 1.58 browser cannot install dependencies on the newer ubuntu-latest image. A verified OW2 ASM mirror handles observed Maven download failures without changing the pinned bytes or integrity check. One earlier startup failure loading ship_names.json is preserved with unresolved cause; it did not recur in the latest no-actions run.
+
+## Published-build pilots excluded from causal claims
+
+Two fresh-browser original-versus-candidate pilots failed scene/workload equality, including comparisons between two original runs. The first paused before the camera settled. The second added settling, center validation and geometry preflight but still had different background phases and notification overlays.
+
+In the settled ACCA trial, original preflight frames had median 636 draws and 25,872â€“26,456 submitted elements, versus 600 draws and 20,634â€“20,646 elements in C. The difference was mostly 35 indexed-triangle calls; original screenshots contained convoy/survey notifications absent from C. A notification disappeared even while paused, proving that a stable central crop did not establish equal whole-frame work.
+
+Exploratory FPS was 37.41 â†’ 39.46, while p95 was 29.80 â†’ 41.05 ms and p99 31.00 â†’ 55.55 ms. **None of these differences is attributed causally to batching.** Complete failed evidence is retained. The trial did independently prove zero new JNI memory views across 2,353,094 batch calls and successful Character/Escape checks in all four runs.
+
+A future exact-original comparison needs an Aâ†’A common-save preflight that first proves scene, pause, UI and geometry preservation. The existing Continue smoke test checks world counts, not exact scene equality.
+
+## Workspace and reproducibility
+
+All work, caches, runtimes, source and raw evidence are under `C:\Users\adyba\starsector-performance`. The storage guard enforces a 20,000,000,000-byte maximum with a 2 GB reserve. Local experiments run one browser at a time and record source, renderer, bridge and actual GPU identities.
+
+The Windows hardware profile `STARSECTOR_BROWSER_RENDERER=d3d11-hardware` explicitly selects D3D11 and rejects software fallback. Ordinary and CI SwiftShader profiles keep their existing arguments. The real GPU was verified as NVIDIA RTX 4090.
+
+The four-vertex candidate and any separately qualified default change will be reported with their actual final results in PR #184; earlier prototype numbers are not a substitute for that qualification.
