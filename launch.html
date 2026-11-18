@@ -828,7 +828,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20261118-vertex-batch-v1';
+                    const aliasWorkerVersion = '20261118-short-vertex-v2';
                     window.__STARSECTOR_ALIAS_WORKER_VERSION__ = aliasWorkerVersion;
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
@@ -1809,7 +1809,7 @@
                     try {
                         const firstJarUrl = `${siteRootUrl}jars/${jarFiles[0]}`;
                         const firstResp = await primeJarRange(firstJarUrl, 'reload');
-                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20261118-vertex-batch-v1';
+                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20261118-short-vertex-v2';
                         const manifestResp = await fetch(`${siteRootUrl}starsector-jar-pack-v1.json?sw=${encodeURIComponent(workerVersion)}`, {
                             cache: 'force-cache'
                         });

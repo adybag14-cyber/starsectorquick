@@ -13,13 +13,20 @@ function fixture(initial, fault, transport = {}) {
   let faultApplied = false;
   let restorationAttempts = 0;
   let memoryViewReady = false;
+  let pendingBatchVertices = 0;
   const screenshots = [];
   let intervals = [];
   const canvas = { width: 1024, height: 768 };
+  const singleCallsPerPrimitive = transport.singleCalls ?? 1;
+  const pairCallsPerPrimitive = transport.pairCalls ?? 1;
+  const quadCallsPerPrimitive = transport.quadCalls ?? 1;
+  const memoryCallsPerPrimitive = transport.memoryCalls ?? 0;
+  const batchVerticesPerPrimitive = singleCallsPerPrimitive + pairCallsPerPrimitive * 2 + quadCallsPerPrimitive * 4
+    + memoryCallsPerPrimitive * (transport.genericVertices ?? 6);
   const window = {
     ...initial,
     __STARSECTOR_RUNTIME_STATE__: { state: 'campaign' },
-    __lwjglVertexBatchStats: { enabledBegins: 0, disabledBegins: 0, batchCalls: 0, quadCalls: 0, memoryViewCreations: 0, batchVertices: 0, legacyVertices: 0, drawVertices: 0, draws: 0 },
+    __lwjglVertexBatchStats: { enabledBegins: 0, disabledBegins: 0, batchCalls: 0, singleCalls: 0, pairCalls: 0, quadCalls: 0, memoryViewCreations: 0, batchVertices: 0, legacyVertices: 0, drawVertices: 0, draws: 0 },
     __lwjglPresentationStats: { swapCount: 0 },
     __lwjglResetPresentationTimingWindow: () => { intervals = []; },
     __lwjglRefreshPresentationStats: () => {
@@ -76,27 +83,53 @@ function fixture(initial, fault, transport = {}) {
       const count = measurement ? 241 : 24;
       window.__lwjglPresentationStats.swapCount += count;
       const enabled = window.__LWJGL_VERTEX_BATCH__;
+      if (pendingBatchVertices) {
+        // Complete the previous window's open primitive during warmup.
+        window.__lwjglVertexBatchStats.batchVertices += pendingBatchVertices;
+        window.__lwjglVertexBatchStats.drawVertices += pendingBatchVertices;
+        window.__lwjglVertexBatchStats.draws++;
+        pendingBatchVertices = 0;
+      }
       window.__lwjglVertexBatchStats.draws += count;
-      window.__lwjglVertexBatchStats.drawVertices += count * 8;
+      window.__lwjglVertexBatchStats.drawVertices += count * (batchVerticesPerPrimitive + 2);
       if (enabled) {
         window.__lwjglVertexBatchStats.enabledBegins += count;
-        // Each primitive submits one four-vertex fast call plus one generic
-        // two-vertex batch, or a single generic six-vertex batch in that fixture.
-        window.__lwjglVertexBatchStats.batchCalls += count * (transport.genericOnly ? 1 : 2);
-        window.__lwjglVertexBatchStats.quadCalls += transport.genericOnly ? 0 : count;
-        if (!memoryViewReady) {
-          window.__lwjglVertexBatchStats.memoryViewCreations++;
-          memoryViewReady = true;
+        window.__lwjglVertexBatchStats.batchCalls += count * (singleCallsPerPrimitive + pairCallsPerPrimitive + quadCallsPerPrimitive + memoryCallsPerPrimitive);
+        window.__lwjglVertexBatchStats.singleCalls += count * singleCallsPerPrimitive;
+        window.__lwjglVertexBatchStats.pairCalls += count * pairCallsPerPrimitive;
+        window.__lwjglVertexBatchStats.quadCalls += count * quadCallsPerPrimitive;
+        if (memoryCallsPerPrimitive > 0) {
+          if (!memoryViewReady) {
+            window.__lwjglVertexBatchStats.memoryViewCreations++;
+            memoryViewReady = true;
+          }
+          if (measurement && transport.growMemory) window.__lwjglVertexBatchStats.memoryViewCreations++;
         }
-        if (measurement && transport.growMemory) window.__lwjglVertexBatchStats.memoryViewCreations++;
-        window.__lwjglVertexBatchStats.batchVertices += count * 6;
+        window.__lwjglVertexBatchStats.batchVertices += count * batchVerticesPerPrimitive;
         window.__lwjglVertexBatchStats.legacyVertices += count * 2;
       } else {
         window.__lwjglVertexBatchStats.disabledBegins += count;
-        window.__lwjglVertexBatchStats.legacyVertices += count * 8;
+        window.__lwjglVertexBatchStats.legacyVertices += count * (batchVerticesPerPrimitive + 2);
+      }
+      if (measurement && enabled && (transport.openPairAtEnd || transport.openSingleAtEnd)) {
+        // JNI call counters advance before completed-geometry counters at End.
+        // Single/pair submissions need not match completed vertices per snapshot.
+        window.__lwjglVertexBatchStats.enabledBegins++;
+        if (transport.openSingleAtEnd) {
+          window.__lwjglVertexBatchStats.singleCalls++;
+          pendingBatchVertices = 1;
+        } else {
+          window.__lwjglVertexBatchStats.pairCalls++;
+          pendingBatchVertices = 2;
+        }
+        window.__lwjglVertexBatchStats.batchCalls++;
       }
       if (!measurement && index === 1) {
         if (fault === 'initial-quad-counter') window.__lwjglVertexBatchStats.quadCalls = -1;
+        if (fault === 'initial-single-counter') window.__lwjglVertexBatchStats.singleCalls = -1;
+        if (fault === 'initial-single-missing') delete window.__lwjglVertexBatchStats.singleCalls;
+        if (fault === 'initial-pair-counter') window.__lwjglVertexBatchStats.pairCalls = -1;
+        if (fault === 'initial-pair-missing') delete window.__lwjglVertexBatchStats.pairCalls;
         if (fault === 'initial-view-counter') window.__lwjglVertexBatchStats.memoryViewCreations = Infinity;
       }
       // Deliberately slower candidate: a valid experiment must retain a negative
@@ -104,13 +137,37 @@ function fixture(initial, fault, transport = {}) {
       intervals = Array(240).fill(enabled ? 110 : 100);
       if (enabled) { intervals[0] = 400; intervals[239] = 220; }
       clock += measurement ? intervals.reduce((a, b) => a + b, 0) + 100 : count * 100;
-      if (measurement && index === 1 && fault && fault !== 'cleanup') {
+      if (measurement && index === (fault === 'pair-baseline' || fault === 'single-baseline' ? 3 : 1) && fault && fault !== 'cleanup') {
         faultApplied = true;
         if (fault === 'counters') {
-          window.__lwjglVertexBatchStats.batchCalls -= count * 2;
+          window.__lwjglVertexBatchStats.batchCalls -= count * 3;
+          window.__lwjglVertexBatchStats.singleCalls -= count;
           window.__lwjglVertexBatchStats.quadCalls -= count;
+          window.__lwjglVertexBatchStats.pairCalls -= count;
         }
         if (fault === 'quad-subset') window.__lwjglVertexBatchStats.quadCalls += count * 2;
+        // Each specialized subset stays below batchCalls; only their sum fails.
+        if (fault === 'combined-subset') window.__lwjglVertexBatchStats.pairCalls++;
+        if (fault === 'pair-baseline') {
+          window.__lwjglVertexBatchStats.pairCalls++;
+          window.__lwjglVertexBatchStats.batchCalls++;
+        }
+        if (fault === 'single-baseline') {
+          window.__lwjglVertexBatchStats.singleCalls++;
+          window.__lwjglVertexBatchStats.batchCalls++;
+        }
+        if (fault === 'single-missing') delete window.__lwjglVertexBatchStats.singleCalls;
+        if (fault === 'single-nonfinite') window.__lwjglVertexBatchStats.singleCalls = Infinity;
+        if (fault === 'single-negative') window.__lwjglVertexBatchStats.singleCalls = -1;
+        if (fault === 'single-fractional') window.__lwjglVertexBatchStats.singleCalls += 0.5;
+        if (fault === 'single-unsafe') window.__lwjglVertexBatchStats.singleCalls = Number.MAX_SAFE_INTEGER + 1;
+        if (fault === 'single-decreasing') window.__lwjglVertexBatchStats.singleCalls -= count + 1;
+        if (fault === 'pair-missing') delete window.__lwjglVertexBatchStats.pairCalls;
+        if (fault === 'pair-nonfinite') window.__lwjglVertexBatchStats.pairCalls = Infinity;
+        if (fault === 'pair-negative') window.__lwjglVertexBatchStats.pairCalls = -1;
+        if (fault === 'pair-fractional') window.__lwjglVertexBatchStats.pairCalls += 0.5;
+        if (fault === 'pair-unsafe') window.__lwjglVertexBatchStats.pairCalls = Number.MAX_SAFE_INTEGER + 1;
+        if (fault === 'pair-decreasing') window.__lwjglVertexBatchStats.pairCalls -= count + 1;
         if (fault === 'quad-nonfinite') window.__lwjglVertexBatchStats.quadCalls = Infinity;
         if (fault === 'quad-negative') window.__lwjglVertexBatchStats.quadCalls = -1;
         if (fault === 'quad-fractional') window.__lwjglVertexBatchStats.quadCalls += 0.5;
@@ -153,7 +210,7 @@ function fixture(initial, fault, transport = {}) {
       assert.equal(report.ok, true); checks++;
       assert.equal(report.flagsRestored, true); checks++;
       assert.equal(report.baseline, 'scalar transport inside revised Java bridge'); checks++;
-      assert.equal(report.candidate, 'reusable Java array with direct four-vertex calls and generic direct-memory batches'); checks++;
+      assert.equal(report.candidate, 'reusable Java array/direct-buffer staging with primitive native calls for 1, 2 or 4 vertices and generic direct-memory batches'); checks++;
       assert.match(report.note, /disabled branch retains revised bridge branch\/flush overhead; this is not a byte-identical published baseline/); checks++;
       assert.deepEqual(await captureExperimentFlags(f.page), saved); checks++;
       assert.equal(f.waits(), 16); checks++;
@@ -172,13 +229,21 @@ function fixture(initial, fault, transport = {}) {
       assert.equal(report.summary.pooled.candidate.samples, 960); checks++;
       assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.batchCalls > 0 && row.counters.batchVertices > 0 && row.counters.legacyVertices > 0)); checks++;
       assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.batchCalls === 0 && row.counters.legacyVertices === row.counters.drawVertices)); checks++;
-      assert.ok(report.blocks.every(row => row.counters.memoryViewCreations === 0), 'stable heap reuses its warmed memory view'); checks++;
-      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.quadCalls === 241 && row.counters.batchCalls === 482)); checks++;
-      assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.quadCalls === 0)); checks++;
+      assert.ok(report.blocks.every(row => row.counters.memoryViewCreations === 0), 'single/pair/quad-only transport needs no generic memory view'); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.singleCalls === 241 && row.counters.pairCalls === 241 && row.counters.quadCalls === 241 && row.counters.batchCalls === 723)); checks++;
+      assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.singleCalls === 0 && row.counters.pairCalls === 0 && row.counters.quadCalls === 0)); checks++;
     }
-    // Valid workloads need not reach the specialized quad path, and memory
-    // growth may legitimately recreate the generic memory view during timing.
-    for (const transport of [{ genericOnly: true }, { growMemory: true }]) {
+    // Single-only, pair-only, generic-only and mixed batches are all valid.
+    // In-flight native calls need not end within the same measurement window.
+    for (const transport of [
+      { singleCalls: 6, pairCalls: 0, quadCalls: 0, memoryCalls: 0 },
+      { singleCalls: 0, pairCalls: 3, quadCalls: 0, memoryCalls: 0 },
+      { singleCalls: 0, pairCalls: 0, quadCalls: 0, memoryCalls: 1 },
+      { singleCalls: 1, pairCalls: 1, quadCalls: 1, memoryCalls: 1, genericVertices: 3 },
+      { singleCalls: 0, pairCalls: 0, quadCalls: 1, memoryCalls: 1, growMemory: true },
+      { singleCalls: 0, pairCalls: 3, quadCalls: 0, memoryCalls: 0, openPairAtEnd: true },
+      { singleCalls: 6, pairCalls: 0, quadCalls: 0, memoryCalls: 0, openSingleAtEnd: true }
+    ]) {
       const f = fixture(initial, undefined, transport);
       const saved = await captureExperimentFlags(f.page);
       const report = await runVertexBatchPairedExperiment(f.page, directory);
@@ -186,13 +251,46 @@ function fixture(initial, fault, transport = {}) {
       assert.equal(report.flagsRestored, true); checks++;
       assert.deepEqual(await captureExperimentFlags(f.page), saved); checks++;
       assert.equal(report.blocks.length, 8); checks++;
-      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.quadCalls === (transport.genericOnly ? 0 : 241))); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.quadCalls === transport.quadCalls * 241)); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.singleCalls === transport.singleCalls * 241 + (transport.openSingleAtEnd ? 1 : 0))); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.pairCalls === transport.pairCalls * 241 + (transport.openPairAtEnd ? 1 : 0))); checks++;
+      assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.batchCalls === (transport.singleCalls + transport.pairCalls + transport.quadCalls + transport.memoryCalls) * 241 + (transport.openPairAtEnd || transport.openSingleAtEnd ? 1 : 0))); checks++;
+      assert.ok(report.blocks.every(row => row.counters.singleCalls + row.counters.pairCalls + row.counters.quadCalls <= row.counters.batchCalls)); checks++;
+      assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.singleCalls === 0 && row.counters.pairCalls === 0 && row.counters.quadCalls === 0 && row.counters.batchCalls === 0)); checks++;
+      assert.ok(report.blocks.every(row => row.counters.drawVertices === row.counters.batchVertices + row.counters.legacyVertices)); checks++;
+      if (transport.openPairAtEnd) {
+        assert.ok(report.blocks.filter(row => row.enabled).every(row => 2 * row.counters.pairCalls > row.counters.batchVertices),
+          'native submissions and completed geometry may straddle snapshots'); checks++;
+      }
+      if (transport.openSingleAtEnd) {
+        assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.singleCalls > row.counters.batchVertices),
+          'single submissions can precede completed geometry across snapshots'); checks++;
+      }
       assert.ok(report.blocks.filter(row => row.enabled).every(row => row.counters.memoryViewCreations === (transport.growMemory ? 1 : 0))); checks++;
       assert.ok(report.blocks.filter(row => !row.enabled).every(row => row.counters.memoryViewCreations === 0)); checks++;
     }
-    for (const [fault, error] of [
+    for (const [fault, error, failedIndex = 1] of [
       ['counters', /batch branch was not exercised/],
-      ['quad-subset', /quad calls exceed total batch calls/],
+      ['quad-subset', /single, pair and quad calls exceed total batch calls/],
+      ['combined-subset', /single, pair and quad calls exceed total batch calls/],
+      ['pair-baseline', /pair calls during baseline/, 3],
+      ['single-baseline', /single calls during baseline/, 3],
+      ['single-missing', /invalid final counter: singleCalls/],
+      ['single-nonfinite', /invalid final counter: singleCalls/],
+      ['single-negative', /invalid final counter: singleCalls/],
+      ['single-fractional', /invalid final counter: singleCalls/],
+      ['single-unsafe', /invalid final counter: singleCalls/],
+      ['single-decreasing', /invalid final counter: singleCalls/],
+      ['initial-single-counter', /invalid initial counter: singleCalls/],
+      ['initial-single-missing', /invalid initial counter: singleCalls/],
+      ['pair-missing', /invalid final counter: pairCalls/],
+      ['pair-nonfinite', /invalid final counter: pairCalls/],
+      ['pair-negative', /invalid final counter: pairCalls/],
+      ['pair-fractional', /invalid final counter: pairCalls/],
+      ['pair-unsafe', /invalid final counter: pairCalls/],
+      ['pair-decreasing', /invalid final counter: pairCalls/],
+      ['initial-pair-counter', /invalid initial counter: pairCalls/],
+      ['initial-pair-missing', /invalid initial counter: pairCalls/],
       ['quad-nonfinite', /invalid final counter: quadCalls/],
       ['quad-negative', /invalid final counter: quadCalls/],
       ['quad-fractional', /invalid final counter: quadCalls/],
@@ -220,10 +318,10 @@ function fixture(initial, fault, transport = {}) {
       assert.equal(report.ok, false); checks++;
       assert.equal(report.flagsRestored, true); checks++;
       assert.deepEqual(await captureExperimentFlags(f.page), saved); checks++;
-      assert.equal(report.blocks.length, 1); checks++;
+      assert.equal(report.blocks.length, failedIndex); checks++;
       assert.equal(f.screenshots.length, 0); checks++;
       assert.equal(report.blocks[0].intervalsMs.length, 240); checks++;
-      assert.equal(report.failedWindow.index, 1); checks++;
+      assert.equal(report.failedWindow.index, failedIndex); checks++;
       if (fault !== 'wait') { assert.equal(report.failedWindow.after.raw.intervalsMs.length, 240); checks++; }
     }
     const screenshotFailure = fixture(initial, 'screenshot');
@@ -252,5 +350,5 @@ function fixture(initial, fault, transport = {}) {
     console.log = log;
     fs.rmSync(directory, { recursive: true, force: true });
   }
-  console.log('test-vertex-batch-paired: OK ' + checks + ' checks; paired raw evidence, quad/view counters, retained geometry, control flags, screenshot timing, partial failures and cleanup');
+  console.log('test-vertex-batch-paired: OK ' + checks + ' checks; paired raw evidence, single/pair/quad/view counters, retained geometry and snapshot boundaries, control flags, screenshot timing, partial failures and cleanup');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -30,6 +30,8 @@ def replace_native(match):
     if name=="nglBegin": body="return VertexBatchJavaProbe.begin(p0);"
     elif name=="nglEnd": body="VertexBatchJavaProbe.end();"
     elif name=="nglAppendVertexBatch": body="VertexBatchJavaProbe.batch(address, count);"
+    elif name=="nglAppendVertexSingle": body="VertexBatchJavaProbe.single("+",".join(names[:-1])+");"
+    elif name=="nglAppendVertexPair": body="VertexBatchJavaProbe.pair("+",".join(names[:-1])+");"
     elif name=="nglAppendVertexQuad": body="VertexBatchJavaProbe.quad("+",".join(names[:-1])+");"
     elif name=="nglVertex3fTexCoord": body="VertexBatchJavaProbe.vertex(p0,p1,p2,p3,p4);"
     elif name=="nglColor3f": body="VertexBatchJavaProbe.color(p0,p1,p2,1.0f);"
@@ -39,7 +41,7 @@ def replace_native(match):
         body+={"void":"","boolean":" return false;","int":" return 1;","String":' return "fixture";'}[returns]
     return "static "+returns+" "+name+"("+params+") { "+body+" }"
 fixture=native_pattern.sub(replace_native,source)
-assert "nglAppendVertexBatch" in seen and "nglAppendVertexQuad" in seen and "nglBegin" in seen
+assert "nglAppendVertexBatch" in seen and "nglAppendVertexSingle" in seen and "nglAppendVertexPair" in seen and "nglAppendVertexQuad" in seen and "nglBegin" in seen
 assert "static native" not in fixture
 testsource.write_text(fixture,encoding="utf-8",newline="\n")
 cp=os.pathsep.join(str(root/"jars"/name) for name in ("bridge.jar","lwjgl.jar"))

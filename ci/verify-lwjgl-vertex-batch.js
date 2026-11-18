@@ -72,6 +72,18 @@ function call(x, name, ...args) {
   return x.c['Java_org_lwjgl_opengl_GL11_'+name](null,...args,0);
 }
 function rawBatch(x, rows, forceGeneric=false) {
+  if(rows.length===1 && !forceGeneric) {
+    x.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle(
+      {getJNIDataView(){throw new Error('single transport must not read JNI memory');}},
+      ...rows[0],0);
+    return;
+  }
+  if(rows.length===2 && !forceGeneric) {
+    x.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexPair(
+      {getJNIDataView(){throw new Error('pair transport must not read JNI memory');}},
+      ...rows.flat(),0);
+    return;
+  }
   if(rows.length===4 && !forceGeneric) {
     x.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad(
       {getJNIDataView(){throw new Error('quad transport must not read JNI memory');}},
@@ -91,6 +103,8 @@ function row(i) {
     Math.fround(i*.017),Math.fround(i*-.031)];
   if(i===1)a=[-0,+0,NaN,Infinity,-Infinity];
   if(i===2)a=[Infinity,-Infinity,-0,NaN,-0];
+  if(i===3)a=[Math.fround(2**-149),Math.fround(-(2**-149)),Math.fround(2**-126),
+    Math.fround(-(2**-126)),Math.fround(1+2**-23)];
   return a;
 }
 function run(interleaved, batched, count, mode) {
@@ -138,7 +152,7 @@ for(const interleaved of [false,true]) {
 }
 // Capacity-sized uninterrupted runs exercise the actual 1024-vertex receiver
 // limit independently of the color-flushed cases above.
-for(const count of [1023,1024,1025,1028,2048,2501]) {
+for(const count of [1023,1024,1025,1026,1027,1028,2048,2501]) {
   const x=make(true,true),y=make(true,false);
   call(x,'nglBegin',7);call(y,'nglBegin',7);
   for(let start=0;start<count;start+=1024) {
@@ -192,6 +206,90 @@ for(const compiling of [false,true]) {
 }
 ok(source.slice(source.indexOf('export default {')).includes('Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad,'),
    'native quad export exists');
+
+// Pair, quad and generic messages can continue one original primitive. Compare
+// against scalar and forced old-memory transport for every mode/layout.
+for(const interleaved of [false,true])for(const mode of [0,1,2,3,4,5,6,7,8,9]) {
+  const fast=make(interleaved,true),generic=make(interleaved,true),scalar=make(interleaved,false);
+  for(const x of [fast,generic,scalar])call(x,'nglBegin',mode);
+  for(const [length,seed] of [[2,0],[1,2],[2,2],[4,4],[3,8]]) {
+    for(const x of [fast,generic,scalar])call(x,'nglColor4f',Math.fround(seed*.1),.5,.75,1);
+    const rows=Array.from({length},(_,i)=>row(seed+i));
+    rawBatch(fast,rows);rawBatch(generic,rows,true);
+    for(const a of rows)call(scalar,'nglVertex3fTexCoord',...a);
+  }
+  for(const x of [fast,generic,scalar])call(x,'nglEnd');
+  eq(fast.uploads,generic.uploads,'pair primitive parameters match generic Float32 transport');
+  eq(fast.uploads,scalar.uploads,'pair primitive parameters match scalar Float32 transport');
+  eq(fast.draws,scalar.draws,'pair transport does not change primitive topology');
+  eq(fast.genericColor,scalar.genericColor,'pair transport preserves renderer color');
+  eq(Array.from(fast.c.immediateModeData.currentTexCoord),
+     Array.from(scalar.c.immediateModeData.currentTexCoord),'pair transport preserves final texcoords');
+  eq(fast.c.vertexBatchStats.singleCalls,1,'one-vertex packet uses single native');
+  eq(fast.c.vertexBatchStats.pairCalls,2,'only exact two-vertex messages use pair native');
+  eq(fast.c.vertexBatchStats.quadCalls,1,'four-vertex specialization retained');
+  eq(fast.c.vertexBatchStats.batchCalls,5,'single/pair/quad/generic accepted call total');
+  eq(fast.c.vertexBatchStats.batchVertices,12,'mixed short transports complete exact vertices');
+  eq(fast.c.vertexBatchStats.legacyVertices,0,'mixed short transport has no scalar leakage');
+  eq(generic.c.vertexBatchStats.pairCalls,0,'generic receiver still accepts pairs');
+  eq(generic.c.vertexBatchStats.quadCalls,0,'forced generic receiver accepts quads');
+}
+for(const interleaved of [false,true]) {
+  const x=make(interleaved,true);
+  call(x,'nglBegin',7);rawBatch(x,[row(1),row(3)]);call(x,'nglEnd');
+  eq(x.c.vertexBatchStats.pairCalls,1,'pair receiver executed');
+  eq(x.c.vertexBatchStats.batchVertices,2,'pair completed vertex count');
+  eq(x.c.vertexBatchStats.memoryViewCreations,0,'pair-only transport does not create a JNI view');
+}
+for(const compiling of [false,true]) {
+  const x=make(true,true);
+  if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
+  assert.throws(()=>rawBatch(x,[row(0),row(1)]),/outside an immediate primitive/);checks++;
+  eq(x.c.immediateModeData.vertexPos,0,'invalid pair state must not mutate geometry');
+  eq(x.c.vertexBatchCurrentVertices,0,'invalid pair state must not mutate pending vertices');
+  eq(x.c.vertexBatchStats.batchCalls,0,'invalid pair state must not increment batch count');
+  eq(x.c.vertexBatchStats.pairCalls,0,'invalid pair state must not increment pair count');
+  eq(Array.from(x.c.immediateModeData.currentTexCoord),[0,0],'invalid pair state preserves texcoords');
+}
+ok(source.slice(source.indexOf('export default {')).includes('Java_org_lwjgl_opengl_GL11_nglAppendVertexPair,'),
+   'native pair export exists');
+
+// Single packets keep their own batch accounting and use no JNI memory view.
+for(const interleaved of [false,true])for(const mode of [0,1,2,3,4,5,6,7,8,9]) {
+  const fast=make(interleaved,true),generic=make(interleaved,true),scalar=make(interleaved,false);
+  for(const x of [fast,generic,scalar])call(x,'nglBegin',mode);
+  for(const seed of [1,3,2]) {
+    for(const x of [fast,generic,scalar])call(x,'nglColor4f',Math.fround(seed*.1),.5,.75,1);
+    const rows=[row(seed)];
+    rawBatch(fast,rows);rawBatch(generic,rows,true);
+    call(scalar,'nglVertex3fTexCoord',...rows[0]);
+  }
+  for(const x of [fast,generic,scalar])call(x,'nglEnd');
+  eq(fast.uploads,generic.uploads,'single parameters match generic Float32 transport');
+  eq(fast.uploads,scalar.uploads,'single parameters match scalar Float32 transport');
+  eq(fast.draws,scalar.draws,'single transport preserves primitive topology');
+  eq(fast.genericColor,scalar.genericColor,'single transport preserves renderer color');
+  eq(Array.from(fast.c.immediateModeData.currentTexCoord),
+     Array.from(scalar.c.immediateModeData.currentTexCoord),'single transport preserves final texcoords');
+  eq(fast.c.vertexBatchStats.singleCalls,3,'single receiver executed for every packet');
+  eq(fast.c.vertexBatchStats.batchCalls,3,'single calls remain part of batch total');
+  eq(fast.c.vertexBatchStats.batchVertices,3,'single completed batch vertices');
+  eq(fast.c.vertexBatchStats.legacyVertices,0,'single vertices retain batch classification');
+  eq(fast.c.vertexBatchStats.memoryViewCreations,0,'single transport creates no JNI memory view');
+  eq(generic.c.vertexBatchStats.singleCalls,0,'old generic receiver still accepts single packets');
+}
+for(const compiling of [false,true]) {
+  const x=make(true,true);
+  if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
+  assert.throws(()=>rawBatch(x,[row(1)]),/outside an immediate primitive/);checks++;
+  eq(x.c.immediateModeData.vertexPos,0,'invalid single state must not mutate geometry');
+  eq(x.c.vertexBatchCurrentVertices,0,'invalid single state must not mutate pending vertices');
+  eq(x.c.vertexBatchStats.batchCalls,0,'invalid single state must not increment batch count');
+  eq(x.c.vertexBatchStats.singleCalls,0,'invalid single state must not increment single count');
+  eq(Array.from(x.c.immediateModeData.currentTexCoord),[0,0],'invalid single state preserves texcoords');
+}
+ok(source.slice(source.indexOf('export default {')).includes('Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle,'),
+   'native single export exists');
 
 // Count production Float32Array buffer-view allocations, excluding test-side
 // transport writes and numeric-sized output buffers. Fresh DataView wrappers,
@@ -310,5 +408,5 @@ ok(/\bJava_org_lwjgl_opengl_GL11_nglAppendVertexBatch\s*[,}:]/.test(
 console.log('verify-lwjgl-vertex-batch: OK '+JSON.stringify({
   checks,submittedVertices,primitiveModes:10,cachedViewBatches,sameBufferResizes,
   float32PayloadParity:true,capacity:1024,reusesTransportImmediately:true,
-  listCompileFallback:true,defaultOff:true,directQuadParity:true
+  listCompileFallback:true,defaultOff:true,directQuadParity:true,directPairParity:true,directSingleParity:true
 }));

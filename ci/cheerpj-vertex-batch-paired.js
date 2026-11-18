@@ -6,7 +6,7 @@ const { intervalStats, summarizeBlocks } = require('./cheerpj-paired-experiment'
 const { captureExperimentFlags, restoreExperimentFlags } = require('./renderer-experiment-state');
 
 const order = [false, true, true, false, true, false, false, true];
-const counterNames = ['enabledBegins', 'disabledBegins', 'batchCalls', 'quadCalls', 'memoryViewCreations', 'batchVertices', 'legacyVertices', 'drawVertices', 'draws'];
+const counterNames = ['enabledBegins', 'disabledBegins', 'batchCalls', 'singleCalls', 'pairCalls', 'quadCalls', 'memoryViewCreations', 'batchVertices', 'legacyVertices', 'drawVertices', 'draws'];
 
 // A completed experiment can have a negative performance result. "ok" means
 // valid paired evidence, never that the candidate was faster or is qualified.
@@ -14,7 +14,7 @@ async function runVertexBatchPairedExperiment(page, out) {
   const report = {
     design: 'ABBABAAB',
     baseline: 'scalar transport inside revised Java bridge',
-    candidate: 'reusable Java array with direct four-vertex calls and generic direct-memory batches',
+    candidate: 'reusable Java array/direct-buffer staging with primitive native calls for 1, 2 or 4 vertices and generic direct-memory batches',
     framesPerWindow: 240,
     warmupFrames: 24,
     measurement: 'last 240 consecutive presentation intervals at prespecified polling stop',
@@ -97,7 +97,10 @@ async function runVertexBatchPairedExperiment(page, out) {
         assert.ok(Number.isSafeInteger(after.counters[name]) && after.counters[name] >= before.counters[name], 'invalid final counter: ' + name);
         counters[name] = after.counters[name] - before.counters[name];
       }
-      assert.ok(counters.quadCalls <= counters.batchCalls, 'quad calls exceed total batch calls');
+      // Specialized receivers are disjoint subsets; generic memory batches
+      // account for any remainder. Native calls can precede a later glEnd.
+      assert.ok(counters.singleCalls + counters.pairCalls + counters.quadCalls <= counters.batchCalls,
+        'single, pair and quad calls exceed total batch calls');
       assert.ok(counters.draws > 0 && counters.drawVertices > 0, 'no immediate geometry drawn');
       // These three totals are published together at glEnd, so snapshots taken
       // between JNI calls still conserve completed primitive vertices exactly.
@@ -109,8 +112,10 @@ async function runVertexBatchPairedExperiment(page, out) {
       } else {
         assert.ok(counters.disabledBegins > 0 && counters.legacyVertices > 0, 'legacy branch was not exercised');
         assert.equal(counters.enabledBegins, 0, 'enabled primitive during baseline');
-        assert.equal(counters.batchCalls, 0, 'batch calls during baseline');
+        assert.equal(counters.singleCalls, 0, 'single calls during baseline');
+        assert.equal(counters.pairCalls, 0, 'pair calls during baseline');
         assert.equal(counters.quadCalls, 0, 'quad calls during baseline');
+        assert.equal(counters.batchCalls, 0, 'batch calls during baseline');
         assert.equal(counters.batchVertices, 0, 'batch vertices during baseline');
       }
       const statistics = intervalStats(after.raw.intervalsMs);

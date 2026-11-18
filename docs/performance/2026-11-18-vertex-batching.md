@@ -1,26 +1,26 @@
 # Runtime performance investigation — 18 November 2026
 
-**Candidate E is retained:** direct four-vertex native calls plus generic direct-memory batches. The direct-array F experiment passed correctness and gameplay checks but was rejected after inconsistent throughput and worse p99/worst-frame results in its hardware run. Exact-head CI qualification of retained E under the public defaults is pending in [PR #184](https://github.com/adybag14-cyber/starsectorquick/pull/184). Resolution, textures, effects, simulation and input behavior are preserved. A completed paired measurement is not, by itself, a performance or release pass.
+**Candidate G is selected for exact-head CI qualification:** it adds direct one- and two-vertex native calls to E's four-vertex path and bounded generic direct-memory fallback. Its Full HD hardware gameplay gate passed, with median-window FPS up 3.18%, lower p95/jitter and a lower worst frame, but a worse p99. G's exact-head CI and normal-speed tutorial follow-up are still pending; consult [PR #184](https://github.com/adybag14-cyber/starsectorquick/pull/184) for the subsequent run results. Earlier E passed every existing CI gate under public defaults but had flat paired CI FPS and two long candidate intervals. Rejected F, failed gates and all negative measurements remain below. Resolution, textures, effects, simulation and input behavior are preserved. A completed paired measurement is not, by itself, a performance or release pass.
 
-## Current implementation: retained candidate E
+## Current implementation: candidate G
 
-Java collects xyz and texture coordinates in a reusable float array. A batch of exactly four vertices sends its 20 float values directly as primitive native arguments. This avoids a direct-buffer copy and JNI-memory-view read for that common case. It uses the same append function and current primitive mode; it does not combine or remove draws.
+Java collects xyz and texture coordinates in a reusable float array. Batches of exactly one, two or four vertices send their 5, 10 or 20 float values directly as primitive native arguments. These cases avoid the explicit direct-buffer copy and JNI-memory-view read. They use the same append function and current primitive mode; they do not combine or remove draws.
 
 Other batch sizes copy their used prefix once into a reusable native-order direct buffer. The array and direct buffer each hold 1,024 vertices / 20 KiB: **40 KiB total payload transport storage**, allocated lazily. Object headers and runtime metadata are additional. The cached native address stays at position zero. Capacity flushes append vertices without ending strips or fans.
 
 Color and renderer-state operations flush pending vertices in order. Display-list compilation remains scalar. Calling a list flushes the prefix and returns to scalar transport until a fresh Java Begin handshake. Allocation/address failure retains scalar transport. The launcher enables batching while respecting an explicit Boolean `window.__LWJGL_VERTEX_BATCH__ = false`.
 
-The generic JavaScript receiver reuses one whole-JNI-memory Float32 view, refreshing it only when memory identity or length changes. It retains address/alignment/count/bounds validation and obtains the current JNI data view each call. Counters record actual view creations, direct four-vertex calls, total batch calls and completed geometry. Quad-only submission creates no JNI memory view. The direct Java-array F receiver and its producer are not part of retained E; that prototype and its evidence are documented below.
+The generic JavaScript receiver reuses one whole-JNI-memory Float32 view, refreshing it only when memory identity or length changes. It retains address/alignment/count/bounds validation and obtains the current JNI data view each call. Counters record actual view creations, direct single/pair/quad calls, total batch calls and completed geometry. The fixed-size calls create no JNI memory view. Native-call counters and completed geometry may publish on opposite sides of a snapshot boundary, so their validation does not invent a per-call-to-completed-vertex lower bound. The direct Java-array F receiver and its producer are not part of G; that rejected prototype and its evidence are documented below.
 
 Fleet construction previously printed 48 injected diagnostic lines per constructor. The new helper is silent by default; `-Dstarsector.browserCampaignCreateDiagnostics=true` restores the exact messages. Tutorial startup, campaign creation checkpoints, economy probes and gameplay instrumentation remain intact. An inspected old local log contained 3,840 such lines for 80 fleets, totaling 475,360 bytes / 22.3% of that log snapshot. This cleanup is not credited with local FPS gains because the measured local runtime retains its previously patched game JARs.
 
 The build refreshes the rebuilt `bridge.jar` size in `jars/index.list` and records its SHA-256. A matching launcher/service-worker version refreshes memoized and force-cached JAR packs for returning players. The existing save-data migration marker is unchanged.
 
-## Verification of retained E
+## Verification of candidate G
 
-- Java native-signature compilation and **14,490 recorder checks** cover exact Float32 values, signed zero, NaN/infinities, real direct-memory addressing, color/state/list ordering, capacity, fallback and storage reuse. Sentinels prove four-vertex calls do not modify direct memory.
-- JavaScript verification passes **3,522 checks**, covering all ten supported primitive modes and both output layouts, exact scalar/generic/quad payload and draw equivalence, receiver-state guards, invalid memory ranges, reusable buffer views and memory replacement/growth/shrink.
-- The paired harness passes **261 checks** for raw timing agreement, actual transport branches, counter conservation, valid generic-only workloads, legitimate memory growth, unchanged controls, retained partial failures and exact flag restoration.
+- Java native-signature compilation and **25,167 recorder checks** cover exact Float32 values, signed zero, NaN/infinities, real direct-memory addressing, color/state/list ordering, capacity, fallback and storage reuse. Sentinels prove single/pair/quad calls do not modify the entire direct buffer. Generic three-vertex submission still proves prefix-only copy, unchanged suffix and position-zero behavior.
+- JavaScript verification passes **4,040 checks**, covering all ten supported primitive modes and both output layouts, exact scalar/generic/single/pair/quad payload and draw equivalence, receiver-state guards, invalid memory ranges, reusable buffer views and memory replacement/growth/shrink.
+- The paired harness passes **511 checks** for raw timing agreement, actual transport branches including safe monotonic single/pair/quad counters, completed-geometry conservation, snapshot boundaries, valid generic-only workloads, legitimate memory growth, unchanged controls, retained partial failures and exact flag restoration.
 - Shared experiment-state verification passes **41 checks**.
 - The production fleet transformer preserves the original constructor instruction sequence and checksum 276 under JVM verification, including live operand-stack values. Disabled logging is silent; opt-in restores all 48 lines in order.
 - Jar-index tests check actual sizes, order, idempotence and rejection of missing artifacts/entries without partial writes.
@@ -37,10 +37,154 @@ The scalar arm is **scalar transport inside the revised Java bridge**. It retain
 
 Each new mechanism is tested separately. The existing depth-state experiment toggles only its three-value mirror while keeping all real GL writes. Its previous mixed results are retained in the September investigation documents; a profile alone does not justify enabling it.
 
-## Retained E: exact-head CI qualification pending
+## Historical E: exact-head public-default CI passed; paired FPS flat
 
-<!-- E_EXACT_HEAD_CI_PENDING: replace only after the retained-E source head has completed the public-default strict jobs. -->
-Retained E is the current implementation. Its next exact-head CI run must qualify the actual public renderer defaults with the unchanged 8/150/220/60 limits. Earlier E measurements and F's passed gameplay gate do not substitute for that result. The depth diagnostic remains separate and must restore the captured flags.
+Head `201ed7d31d1c901ec5bfcaf3dd28da58461100d1` was tested through merge `de30718837a53990c6240f0865f4bcd58a579901` into base `536fe46aabd53a8f1a3f483952d4601c1c4f926b`. All four workflows and all six checks passed. The [main job](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44403348316/job/135152284640) completed at 21:57:05 UTC after 19 minutes 13 seconds. This qualifies retained E against the existing gates; it does **not** establish a consistent CI FPS or stutter improvement.
+
+The actual environment was Ubuntu 24.04, Intel Xeon 6975P-C with four logical CPUs and 16,464,306,176 bytes of RAM, Chromium 145.0.7632.6, and ANGLE SwiftShader 5.0.0. The main framebuffer and CSS were native 1024×768 in a 1440×1180 viewport. This is software-rendered CI, not the local RTX 4090. This run used E: 14,490 Java, 3,522 renderer, 261 paired-harness and 41 state checks. It does not qualify G.
+
+### Strict gate and actual public flags
+
+The unprofiled strict sample ran for 8.065 seconds, with 130 intervals / 131 swaps. All unchanged limits passed:
+
+| Strict public-default metric | Observed | Existing limit |
+|---|---:|---:|
+| FPS | 16.2346 | at least 8 |
+| Frame p95 | 102.8 ms | at most 150 ms |
+| Frame p99 | 130.8 ms | at most 220 ms |
+| Jitter p95 | 44.9 ms | at most 60 ms |
+
+Its maximum interval was 137.0 ms. Main `result.ok`, `deepGameplay`, `gameplayPerformanceSafe` and `thresholdsMet` were true. All seven mouse panels confirmed their expected tabs and returned to campaign, all seven shortcuts confirmed their expected tabs, and all eight ability checks passed. Campaign startup took 177.788 seconds. All 747 observed images loaded, and JavaScript, screenshot, graphics and runtime error arrays were empty.
+
+The strict sample preceded diagnostics. Its workflow experiment configuration was `{}`. Depth pairing restored captured flags before vertex pairing; both reports recorded `flagsRestored=true`. Vertex `originalFlags` and subsequent CPU `profileFlags` both show depth **absent / effective OFF**, vertex batching **present / true**, and all other tracked overrides absent. Later real driver reads corroborate restoration. Toggling depth afterward did not replace or alter the strict gate.
+
+### Vertex pairing: no consistent CI gain
+
+The same-browser ABBABAAB comparison retained 240 raw intervals per window after 24 warmup frames: 960 intervals per arm. Its scalar control is **scalar transport inside the revised Java bridge**, including inactive branch/flush overhead, not the byte-identical published build.
+
+| E public-default CI transport metric | Revised-bridge scalar | E batching |
+|---|---:|---:|
+| Median-window FPS | 16.1473 | 16.0336 (-0.704%) |
+| Median-window frame p95 | 100.90 ms | 102.70 ms (+1.784%) |
+| Median-window frame p99 | 127.90 ms | 129.35 ms (+1.134%) |
+| Median-window jitter p95 | 44.45 ms | 45.60 ms (+2.587%) |
+| Pooled 960-frame FPS | 15.9676 | 15.9989 (+0.196%) |
+| Pooled frame p95 | 101.40 ms | 107.70 ms |
+| Pooled frame p99 | 130.10 ms | 131.40 ms |
+| Pooled jitter p95 | 43.00 ms | 50.20 ms |
+| Worst recorded frame | 139.80 ms | 594.40 ms |
+
+Adjacent-pair FPS changes were **+2.224%, -0.061%, -2.078%, +0.671%**. Three of four adjacent p99 comparisons worsened. Candidate windows 1 and 4 contained **528.3 ms and 594.4 ms** intervals, respectively; both remain in raw data and aggregate statistics. The favorable 0.196% pooled FPS difference does not outweigh flat/inconsistent throughput, worse p95/p99/jitter summaries or these long intervals. This result supports neither a universal speedup nor a claim that stutter was eliminated.
+
+Candidate counters recorded **1,025,563 total batch calls**, including **207,133 direct four-vertex calls**, and zero new JNI memory views in every timed window. Completed geometry conserved exactly: **4,974,720 batched + 17,621,288 scalar/list vertices = 22,596,008 drawn vertices**. OFF windows recorded no batch or quad calls. These prove branch coverage and conservation, not speed or zero hidden runtime allocations.
+
+| Vertex window | Transport | FPS | Completed immediate primitives / swap | Completed immediate vertices / swap |
+|---:|---|---:|---:|---:|
+| 0 | Scalar | 15.229 | 621.49 | 29,751.61 |
+| 1 | E | 15.567 | 563.67 | 24,365.16 |
+| 2 | E | 16.388 | 544.70 | 22,651.86 |
+| 3 | Scalar | 16.398 | 546.96 | 22,744.74 |
+| 4 | E | 15.816 | 546.94 | 22,740.29 |
+| 5 | Scalar | 16.152 | 548.33 | 22,816.02 |
+| 6 | Scalar | 16.143 | 549.48 | 22,852.99 |
+| 7 | E | 16.251 | 546.95 | 22,742.06 |
+
+The initial scalar window had materially more geometry. Later windows were close to 547 completed immediate primitives and 22.7k vertices per swap. These counters cover this immediate path, not all GPU work. Per-swap values use each recorded `swapDelta`, which spans more than the final 240 timing intervals. This was an unpaused, evolving campaign, not a frozen identical scene. Counter conservation does not remove these limitations.
+
+### Explicit depth diagnostic remains negative
+
+Depth pairing kept vertex batching true throughout and restored original flags before vertex pairing.
+
+| E public-default CI depth metric | Depth OFF | Depth ON |
+|---|---:|---:|
+| Median-window FPS | 16.1172 | 15.5822 (-3.319%) |
+| Median-window frame p95 | 101.70 ms | 121.60 ms |
+| Median-window frame p99 | 121.30 ms | 175.05 ms |
+| Median-window jitter p95 | 44.35 ms | 64.75 ms |
+| Pooled 960-frame FPS | 15.8867 | 15.4653 |
+| Pooled frame p95 | 105.60 ms | 121.60 ms |
+| Pooled frame p99 | 130.70 ms | 181.20 ms |
+| Pooled jitter p95 | 47.30 ms | 62.50 ms |
+| Worst recorded frame | 640.40 ms | 542.20 ms |
+
+All four adjacent p99 comparisons worsened with depth ON. OFF recorded 4,880 driver-read sets and zero hits; ON recorded zero reads and 4,855 hits/restores. The live scene varied from about 545–646 completed immediate primitives and 22.7k–34.3k vertices per swap, so this is not an isolated fixed-workload causal effect. Its raw geometry and all outliers remain available. Depth remains OFF in public defaults.
+
+The separate post-pairing CPU capture showed `getParameter` at 25.53% self time. Later instrumentation recorded 325 calls each for depth write mask, depth function and clear value, corroborating restored driver reads. Neither capture attributes the 528.3/594.4 ms intervals: profiling was outside the unprofiled timed windows.
+
+### Other checks and evidence
+
+The additional normal Galatia tutorial at 1024×768 returned `ok=true`, with tutorial/campaign visual quality and input/shortcut smoke checks passing, 733/733 observed images and no runtime/graphics/JavaScript errors; startup was 181.294 seconds. It was **smoke only**: `deepGameplay=false` and `gameplayPerformance=null`. An inherited thresholds object does not mean a strict sample ran. The no-actions diagnostic separately passed its smoke contract in 191.284 seconds with 742/742 images.
+
+Full HD passed its existing resolution/input smoke contract: native 1920×1080 framebuffer/CSS, seven semantic shortcuts, Refit visual difference 0.445612 (>0.05), 728/728 observed images and no runtime/graphics/JavaScript errors. Generic `result.ok=false` remains recorded because center/tutorial visual conditions failed while the saved second frame showed the welcome/supply dialog. Deep gameplay and the strict FPS sample were disabled, and tab-ready probes were not active. It is **not** a Full HD deep-gameplay/performance pass.
+
+Graphics verification passed E's 14,490 Java, 3,522 renderer, 261 paired and 41 state checks; launcher layout passed 73/73. Pages-overlay validation passed at the tested merge, with all 3,199 official images byte-exact across 25 packs. Main world verification found 216 systems, 916 planets, 59 markets and 21 factions; tutorial verification found 228 systems, 1,015 planets, 59 markets and 21 factions. Raw HTTP miss lists remain preserved; exercised-image audits report zero unresolved failures.
+
+[Complete public-default CI summary and raw depth/vertex windows](2026-11-18-public-default-ci.json) includes the complete qualification summary, both raw paired reports, flags, counters, per-swap geometry, run/job links and artifact hashes. All 59 [main artifact](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44403348316/artifacts/14475335907) files and all 21 [Full HD artifact](https://github.com/adybag14-cyber/starsectorquick/actions/runs/44403348316/artifacts/14473548701) files were downloaded and checked against GitHub SHA-256 digests, including CPU data, main screenshots and the enabled-candidate screenshot. Main artifact SHA-256: `eb3efea76f30e96b9fdd3ad25035ed908761f8c85bbe4cf079b51c1ef98beb88`.
+
+Earlier forced-depth-true jitter failures, F rejection and failed exact-original scene comparisons below remain part of the record. Correcting qualification to public defaults does not erase those failures and must not be presented as a code-level FPS gain.
+
+## Candidate G: direct one- and two-vertex transport
+
+G adds specialized native paths for exactly **one vertex / five float arguments** and **two vertices / ten float arguments**. E's four-vertex / twenty-float path and generic direct-memory receiver remain unchanged. Java retains **40 KiB total payload staging storage**. The focused correctness checks above passed, and an independent review found no native registration, payload order, color/state/list, direct-buffer or accounting blocker.
+
+### Profile motivation, excluded from performance claims
+
+The completed [batch-size profiling record](2026-11-18-batch-size-profile.json) contains 63 cumulative checkpoints. Its last checkpoint records 6,300,000 accepted calls:
+
+| Accepted message size | Calls | Share |
+|---|---:|---:|
+| One vertex | 767,428 | 12.181% |
+| Two vertices | 2,956,919 | 46.935% |
+| Three vertices | 0 | 0% |
+| Four vertices | 1,605,108 | 25.478% |
+
+The new single/pair paths cover about **59.12%** of those messages; with the existing four-vertex path, primitive-argument transport covers about **84.59%**. This was one deep 1024×768 campaign on D3D11 hardware. Its campaign-state filter includes panel testing; snapshots occur every 100,000 calls, so the last partial block is not represented. These are the captured workload's shares, not a promise about every campaign.
+
+**All profiling timings are excluded from FPS and stutter claims.** The profiler was removed before G's clean hardware run. Call frequency motivates this optimization; it does not identify the cause of E's 528.3/594.4 ms CI intervals or prove any hidden allocation/GC behavior.
+
+### G Full HD hardware result
+
+The actual RTX 4090 / D3D11 run used native **1920×1080**, public renderer defaults with depth OFF and vertex batching ON, and the existing 8x deep-gameplay probe. All gameplay, visual, input, seven-panel/return, seven-shortcut and ability checks passed. JavaScript, screenshot, graphics and runtime error arrays were empty. The unchanged strict gameplay gate passed at **30.7523 FPS / 38.4 ms p95 / 44.3 ms p99 / 6.7 ms jitter p95**.
+
+| G transport metric | Revised-bridge scalar | G batching |
+|---|---:|---:|
+| Median-window FPS | 29.8026 | 30.7504 (+0.9478 / +3.18%) |
+| Median-window frame p95 | 41.05 ms | 37.75 ms |
+| Median-window frame p99 | 50.95 ms | 55.05 ms (+8.05%) |
+| Median-window jitter p95 | 8.05 ms | 6.70 ms |
+| Pooled 960-frame FPS | 28.8152 | 30.3866 |
+| Pooled frame p95 | 43.20 ms | 40.90 ms |
+| Pooled frame p99 | 54.40 ms | 58.40 ms |
+| Pooled jitter p95 | 10.20 ms | 9.30 ms |
+| Worst recorded frame | 149.60 ms | 130.60 ms |
+
+Adjacent-pair FPS changes were **+0.38%, +19.39%, -2.42%, +4.55%**. Adjacent p99 changes were **+41.0, -8.7, +3.1, -5.3 ms**: two improved and two worsened. Both median-window and pooled p99 worsened despite the positive FPS, p95, jitter and worst-frame summaries. G is selected for CI qualification, not declared a universal speedup or stutter elimination.
+
+Counters prove the new paths actually ran in every enabled window: **174,974 single + 679,351 pair + 330,337 quad calls**, within **1,401,030 total batch calls**. All enabled windows had zero new JNI memory views. OFF windows had zero total/single/pair/quad calls. Completed geometry conserved: **9,756,456 batched + 29,596,086 scalar/list = 39,352,542 drawn vertices**. These are branch and conservation evidence, not proof of zero hidden runtime allocations.
+
+| Window | Transport | FPS | Completed immediate primitives / swap | Completed immediate vertices / swap |
+|---:|---|---:|---:|---:|
+| 0 | Scalar | 31.449 | 615.56 | 37,665.46 |
+| 1 | G | 31.568 | 615.96 | 36,949.66 |
+| 2 | G | 29.933 | 672.61 | 42,892.09 |
+| 3 | Scalar | 25.072 | 700.96 | 46,006.05 |
+| 4 | G | 28.514 | 658.84 | 41,711.68 |
+| 5 | Scalar | 29.222 | 621.97 | 38,609.34 |
+| 6 | Scalar | 30.383 | 620.69 | 38,388.96 |
+| 7 | G | 31.765 | 621.98 | 38,531.07 |
+
+The unpaused scene evolved. Median immediate primitives per swap were 621.33 scalar versus 640.41 G; median vertices were 38,499.15 versus 40,121.38. The large second adjacent FPS change coincided with different work, so it is not isolated evidence of a 19% transport effect. Counter normalization uses full swapDelta, not the 240-interval timing count. These counters do not capture all GPU work. Absolute FPS from separate E/F/G campaigns is not a controlled incremental E→G comparison.
+
+[Complete G hardware evidence](2026-11-18-short-fullhd-hardware.json) preserves all raw intervals, counters, flags, per-swap geometry, hardware identity and gameplay outcomes. [Enabled G screenshot](2026-11-18-short-fullhd-hardware.png) was captured outside timing and visually inspected: the ship, campaign, HUD and native canvas rendered correctly.
+
+The recorded source HEAD predates this uncommitted G measurement; frozen hashes identify the actual tested bytes: Java source `58f5205ee871ce0f4c3e246251c937a71f19022d131b8f431ef4172a1a025edb`, renderer `3fa752fdb4f7f930dafe16b416f452d0e6ee341f912d8967be18ae6284023479`, production GL11.class `39a406389c5258436f52fc004314a2c82c2c5c6fa2635e47b9e068410af09540`, and bridge JAR `5ea5ad6af4d75841bac670cb74d73ae4c06bd0bbf340e1f91beafc5063847acc`. Only GL11.class changed within the local E bridge archive; all other entries were verified unchanged.
+
+The matching launcher/service-worker/JAR-pack version is `20261118-short-vertex-v2`; the existing save-data marker is unchanged. The negative-cache and packed-resource verification passed with this version.
+
+### G CI and normal-speed follow-up
+
+<!-- G_CI_PENDING: exact-head CI results will be recorded in PR184 and the task evidence after this source/evidence commit. -->
+G's normal-speed tutorial comparison and exact-head CI are pending at this commit. E's six green checks above apply to E only. The original strict thresholds and public-default experiment configuration remain unchanged. The local 8x hardware result does not guarantee a CI or normal-PC FPS increase, and no factor-of-two conversion is applied.
 
 ## Rejected experiment F: direct Java-array transport
 
@@ -121,11 +265,11 @@ The four candidate windows exercised 335,297 direct four-vertex calls and 1,367,
 
 A separate depth-cache toggle in the same session increased median-window FPS 32.58→39.32, but pooled p95 and jitter worsened and the final adjacent FPS pair regressed. Its default remains OFF. No broad cache, pacing, or depth-default change is included.
 
-[Raw hardware evidence](2026-11-18-quad-fullhd-hardware.json) contains all raw intervals, counters, GPU/bridge identities and gameplay results. [Candidate screenshot](2026-11-18-quad-fullhd-hardware.png) was captured after timing. E's CI and normal tutorial follow-ups are reported below; the next exact-head public-default CI qualification remains separate.
+[Raw hardware evidence](2026-11-18-quad-fullhd-hardware.json) contains all raw intervals, counters, GPU/bridge identities and gameplay results. [Candidate screenshot](2026-11-18-quad-fullhd-hardware.png) was captured after timing. E's historical CI and normal tutorial follow-ups are reported below; completed exact-head public-default qualification is reported above.
 
 ## Earlier local trials
 
-These are earlier development evidence, not the next exact-head retained-E qualification.
+These are earlier development evidence, not substitutes for exact-head public-default qualification above.
 
 | Candidate / environment | Median scalar FPS → batched FPS | Frame p95 | Frame p99 | Outcome |
 |---|---:|---:|---:|---|
@@ -239,4 +383,4 @@ All work, caches, runtimes, source and raw evidence are under `C:\Users\adyba\st
 
 The Windows hardware profile `STARSECTOR_BROWSER_RENDERER=d3d11-hardware` explicitly selects D3D11 and rejects software fallback. Ordinary and CI SwiftShader profiles keep their existing arguments. The real GPU was verified as NVIDIA RTX 4090.
 
-Retained E's next exact-head public-default CI result will be reported in PR #184. Earlier prototype numbers and rejected F's successful gameplay gate do not substitute for that qualification. F's complete outcome and raw evidence remain preserved.
+G passed focused correctness and native Full HD deep gameplay; its mixed paired hardware result is recorded above. G's exact-head CI and normal-speed tutorial follow-up remain pending at this source/evidence commit. PR #184 and the task evidence record subsequent results. Historical E's public-default CI passed all gates but had flat paired FPS and 528.3/594.4 ms candidate intervals. Earlier prototype results do not qualify G, and F's complete rejection evidence remains preserved.

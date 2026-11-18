@@ -71,7 +71,17 @@ public final class GL11 {
     private static void flushVertexBatch() {
         int count = vertexBatchCount;
         if (count == 0) return;
-        if (count == 4) {
+        if (count == 1) {
+            // One-vertex messages preserve batch accounting with five floats.
+            float[] data = vertexBatchData;
+            nglAppendVertexSingle(data[0], data[1], data[2], data[3], data[4], 0L);
+        } else if (count == 2) {
+            // Two-vertex messages retain one native call without a NIO copy.
+            float[] data = vertexBatchData;
+            nglAppendVertexPair(
+                    data[0], data[1], data[2], data[3], data[4],
+                    data[5], data[6], data[7], data[8], data[9], 0L);
+        } else if (count == 4) {
             // Four-vertex messages need no NIO copy or shared-memory read.
             // Values already have Java float precision in the reused array.
             float[] data = vertexBatchData;
@@ -102,6 +112,11 @@ public final class GL11 {
         if (vertexBatchCount == VERTEX_BATCH_CAPACITY) flushVertexBatch();
     }
     static native void nglAppendVertexBatch(long address, int count, long functionPointer);
+    static native void nglAppendVertexSingle(
+            float x0, float y0, float z0, float s0, float t0, long functionPointer);
+    static native void nglAppendVertexPair(
+            float x0, float y0, float z0, float s0, float t0,
+            float x1, float y1, float z1, float s1, float t1, long functionPointer);
     static native void nglAppendVertexQuad(
             float x0, float y0, float z0, float s0, float t0,
             float x1, float y1, float z1, float s1, float t1,

@@ -3191,7 +3191,7 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 // State/color changes are still sent in order by GL11.java. The counters for
 // submitted geometry are published together at glEnd, outside the vertex loop.
 var vertexBatchStats = {
-    enabledBegins: 0, disabledBegins: 0, batchCalls: 0, quadCalls: 0, batchVertices: 0,
+    enabledBegins: 0, disabledBegins: 0, batchCalls: 0, singleCalls: 0, pairCalls: 0, quadCalls: 0, batchVertices: 0,
     legacyVertices: 0, drawVertices: 0, draws: 0, memoryViewCreations: 0
 };
 var vertexBatchCurrentVertices = 0;
@@ -3227,6 +3227,31 @@ function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, fu
         appendImmediateVertex(data[i], data[i+1], data[i+2], data[i+3], data[i+4]);
     vertexBatchCurrentVertices += count;
     vertexBatchStats.batchCalls++;
+}
+// LWJGL_VERTEX_SINGLE_TRANSPORT_V1: one explicit float vertex with the same
+// state guard and completed-batch accounting as the other fixed-size messages.
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle(lib,
+    x0, y0, z0, s0, t0, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    appendImmediateVertex(x0, y0, z0, s0, t0);
+    vertexBatchCurrentVertices++;
+    vertexBatchStats.batchCalls++;
+    vertexBatchStats.singleCalls++;
+}
+// LWJGL_VERTEX_PAIR_TRANSPORT_V1: two explicit float vertices, preserving
+// the original primitive and renderer color without a JNI-memory copy/read.
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexPair(lib,
+    x0, y0, z0, s0, t0, x1, y1, z1, s1, t1, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    appendImmediateVertex(x0, y0, z0, s0, t0);
+    appendImmediateVertex(x1, y1, z1, s1, t1);
+    vertexBatchCurrentVertices += 2;
+    vertexBatchStats.batchCalls++;
+    vertexBatchStats.pairCalls++;
 }
 // LWJGL_VERTEX_QUAD_TRANSPORT_V1: four explicit float vertices, same append
 // semantics and current color as the generic receiver, with no heap view/copy.
@@ -3633,6 +3658,8 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglStencilOp,
 	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
 	Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexPair,
 	Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad,
 	Java_org_lwjgl_opengl_GL11_nglPointSize,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
