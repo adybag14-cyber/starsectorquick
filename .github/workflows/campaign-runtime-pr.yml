@@ -163,10 +163,14 @@ jobs:
 
 
   resolution_fullhd:
-    name: Full HD 1920x1080 campaign smoke
+    name: Full HD 1920x1080 campaign ${{ matrix.scenario }}
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [smoke, gameplay]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -188,7 +192,7 @@ jobs:
       - name: Run real 1920x1080 campaign
         env:
           CHEERPJ_JAVA_VERSION: '17'
-          STARSECTOR_DEEP_GAMEPLAY: 'false'
+          STARSECTOR_DEEP_GAMEPLAY: ${{ matrix.scenario == 'gameplay' && 'true' || 'false' }}
           STARSECTOR_PUBLIC_TUTORIAL_SMOKE: 'false'
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
@@ -202,6 +206,7 @@ jobs:
           bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
           rc=$?
           set -e
+          if [[ "$STARSECTOR_DEEP_GAMEPLAY" == true ]]; then exit "$rc"; fi
           echo "Generic campaign harness rc=$rc; applying Full-HD-specific verifier next."
           test -s test_output/resolution-fullhd/result.json
           test -s test_output/resolution-fullhd/browser.log
@@ -244,11 +249,19 @@ jobs:
           assert int(canvas.get('width', 0)) == 1920, canvas
           assert int(canvas.get('height', 0)) == 1080, canvas
           print('Full HD runtime verified:', canvas)
+          if data.get('deepGameplay'):
+              perf = data['gameplayPerformance']
+              assert perf['frameSampleCount'] > 0 and perf['frameP95Ms'] > 0 and perf['frameP99Ms'] > 0, perf
+              import os
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  print(f"1920×1080 campaign: **{perf['recentFps']:.2f} FPS** "
+                        f"({perf['frameSampleCount']} frame intervals, "
+                        f"p95 {perf['frameP95Ms']:.1f} ms, p99 {perf['frameP99Ms']:.1f} ms).", file=summary)
           PY
       - name: Upload Full HD evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-resolution-fullhd
+          name: campaign-runtime-resolution-fullhd${{ matrix.scenario == 'gameplay' && '-gameplay' || '' }}
           path: test_output/resolution-fullhd
           if-no-files-found: warn
