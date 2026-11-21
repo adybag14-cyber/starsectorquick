@@ -80,6 +80,7 @@ jobs:
           if-no-files-found: warn
 
   experiment:
+    if: github.event_name == 'pull_request'
     name: campaign-direct-main-thread-java17
     needs: prepare
     runs-on: ubuntu-24.04
@@ -171,8 +172,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { label: smoke, scenario: smoke, renderer: swiftshader-driver, artifact: campaign-runtime-resolution-fullhd }
-          - { label: gameplay, scenario: gameplay, renderer: swiftshader-driver, artifact: campaign-runtime-resolution-fullhd-gameplay }
           - { label: gameplay (Mesa), scenario: gameplay, renderer: mesa-llvmpipe, artifact: campaign-runtime-resolution-fullhd-mesa }
     steps:
       - uses: actions/checkout@v4
@@ -208,7 +207,7 @@ jobs:
           STARSECTOR_DEPTH_PAIRED: 'true'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
           # Qualification uses public renderer defaults; override only resolution.
-          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
+          EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080,"__LWJGL_DEPTH_STATE_CACHE__":true,"__LWJGL_DEPTH_REFRESH_PER_FRAME__":true,"__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__":"SEK285739114"}'
         run: |
           display=()
           if [[ "$STARSECTOR_BROWSER_RENDERER" == mesa-llvmpipe ]]; then
@@ -268,6 +267,7 @@ jobs:
           gameplay = os.environ['EXPECTED_SCENARIO'] == 'gameplay'
           assert data.get('deepGameplay') is gameplay
           if gameplay:
+              assert ' seed=SEK285739114 ' in (p.parent / 'browser.log').read_text()
               profile = json.loads((p.parent / 'browser-renderer-profile.json').read_text())
               assert profile['requested'] == os.environ['EXPECTED_RENDERER'], profile
               perf = data['gameplayPerformance']

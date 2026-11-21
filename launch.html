@@ -1551,6 +1551,8 @@
                     javaProperties.push(`starsector.autoCampaignSectorSize=${autoCampaignSectorSize}`);
                     javaProperties.push(`-Dstarsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
                     javaProperties.push(`starsector.autoCampaignStartingLocation=${autoCampaignStartingLocation}`);
+                    if (typeof window.__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__ === 'string' && window.__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__)
+                        javaProperties.push(`starsector.autoCampaignSeedString=${window.__STARSECTOR_AUTO_CAMPAIGN_SEED_STRING__}`);
                     javaProperties.push(`-Dstarsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`starsector.autoCampaignTitleSettleMs=${autoCampaignTitleSettleMs}`);
                     javaProperties.push(`-Dstarsector.autoCampaignAllowDirectEscape=${autoCampaignAllowDirectEscape}`);

@@ -493,6 +493,7 @@ if(typeof window !== "undefined") window.__lwjglExtendedAttribStats = extendedAt
 // owned by this bridge. Real GL calls still validate each write. Unknown values
 // invalidate the mirror instead of guessing. Startup is seeded from real GL.
 var depthStateShadow = null;
+var depthSampledSwap = -1;
 var depthStateStats = { driverReads: 0, hits: 0, writes: 0, restores: 0, invalidations: 0 };
 if(typeof window !== "undefined") window.__lwjglDepthStateStats = depthStateStats;
 function depthStateCacheEnabled()
@@ -516,6 +517,11 @@ function snapshotDepthState()
 	{
 		depthStateShadow = null;
 		return readDepthStateFromDriver();
+	}
+	if(window.__LWJGL_DEPTH_REFRESH_PER_FRAME__ === true && depthSampledSwap !== presentationStats.swapCount)
+	{
+		depthSampledSwap = presentationStats.swapCount;
+		depthStateShadow = null;
 	}
 	if(depthStateShadow === null) depthStateShadow = readDepthStateFromDriver();
 	else depthStateStats.hits++;

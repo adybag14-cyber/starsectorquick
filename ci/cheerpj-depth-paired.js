@@ -26,7 +26,15 @@ async function runDepthPairedExperiment(page,out){
    });
    assert.equal(after.state,'campaign');assert.equal(after.depth,enabled);assert.equal(after.extended,false);assert.equal(after.pacing,'none');assert.equal(after.raw.count,240);assert.deepEqual(after.canvas,before.canvas);
    const counters=Object.fromEntries(Object.keys(before.counters).map(k=>[k,after.counters[k]-before.counters[k]]));
-   if(enabled){assert.ok(counters.hits>0);assert.equal(counters.driverReads,0,'hot depth snapshots unexpectedly synchronize');}
+   if(enabled){
+    assert.ok(counters.hits>0);
+    const frameRefresh = await page.evaluate(()=>window.__LWJGL_DEPTH_REFRESH_PER_FRAME__ === true);
+    if(frameRefresh){
+     const swaps=after.raw.swapCount-before.swap;
+     assert.ok(Math.abs(counters.driverReads-swaps)<=2, 'expected one authoritative read per frame');
+     report.candidate='one authoritative depth snapshot per frame, write-through between snapshots';
+    }else assert.equal(counters.driverReads,0,'hot depth snapshots unexpectedly synchronize');
+   }
    else{assert.ok(counters.driverReads>0);assert.equal(counters.hits,0);}
    assert.equal(after.vertexBatch,before.vertexBatch,'vertex transport changed inside depth window');
    let geometry=null;
