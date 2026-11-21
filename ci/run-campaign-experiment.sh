@@ -22,7 +22,7 @@ cleanup() {
   cp /tmp/starsector-http.log "$OUT/http.log" 2>/dev/null || true
   git diff -- jars/Fixer.java jars/index.list launch.html build/final/wasm-modules/lwjgl.js data/scripts/world/SectorGen.java starsector/starsector/data/scripts/world/SectorGen.java > "$OUT/candidate.patch" || true
   git diff --stat -- starsector/starsector > "$OUT/runtime-assets.stat" || true
-  sha256sum jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
+  sha256sum jars/bridge.jar jars/fixer_patch.jar jars/fs.common_obf.jar jars/starfarer.api.jar jars/starfarer_obf.jar jars/scripts-precompiled.jar jars/txw2-2.3.1.jar > "$OUT/runtime-sha256.txt" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -86,6 +86,9 @@ node ci/verify-lwjgl-quad-batching.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-interleaved.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-pointer-dirty.js build/final/wasm-modules/lwjgl.js
 node ci/verify-lwjgl-immediate-color-attrib-defer.js build/final/wasm-modules/lwjgl.js
+node ci/verify-lwjgl-vertex-batch.js build/final/wasm-modules/lwjgl.js
+python3 ci/verify-vertex-batch-java.py --output "$OUT/vertex-batch-java" \
+  | tee "$OUT/vertex-batch-java.log"
 node ci/verify-lwjgl-frame-timing.js build/final/wasm-modules/lwjgl.js
 python3 ci/verify-lwjgl-no-sync-validation.py
 python3 ci/verify-fatal-console-classification.py
@@ -344,7 +347,8 @@ if ! verify_asm_jar; then
   asm_downloaded=false
   for asm_url in \
     'https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar' \
-    'https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar'; do
+    'https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar' \
+    'https://repository.ow2.org/nexus/content/repositories/releases/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar'; do
     echo "Downloading ASM 9.7.1 from $asm_url"
     if curl -fL --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 300 \
          --connect-timeout 20 --max-time 180 -o "$ASM_JAR.tmp" "$asm_url"; then
@@ -411,6 +415,7 @@ javac -cp .ci-build/asm/asm.jar -d .ci-build/transform \
   ci/PatchTitleContinueRenderGuard.java \
   ci/VerifyTitleContinueRenderGuardPatch.java \
   ci/PatchCampaignCreateDiagnostics.java \
+  ci/VerifyCampaignFleetDiagnostics.java \
   ci/PatchPrecompiledSectorGen.java \
   ci/PatchTitleScreenCampaignCreateGuard.java \
   ci/PatchScriptStorePluginFallback.java \
@@ -459,6 +464,8 @@ mv .ci-build/starfarer-api-slipstream-guard.jar jars/starfarer.api.jar
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignProcGen jars/starfarer_obf.jar .ci-build/starfarer-no-procgen.jar
 mv .ci-build/starfarer-no-procgen.jar jars/starfarer_obf.jar
+java -Xverify:all -cp .ci-build/asm/asm.jar:.ci-build/transform:.ci-build/fixer \
+  VerifyCampaignFleetDiagnostics
 java -cp .ci-build/asm/asm.jar:.ci-build/transform \
   PatchCampaignCreateDiagnostics jars/starfarer_obf.jar .ci-build/starfarer-create-diag.jar
 mv .ci-build/starfarer-create-diag.jar jars/starfarer_obf.jar
@@ -836,6 +843,7 @@ java -Xverify:all -cp ".ci-build/verify-script-plugin:jars/starfarer_obf.jar:$CP
 
 # Every transformed JAR must advertise its post-transform size to the HTTP mount.
 # This avoids stale directory metadata causing CheerpJ range/read mismatches.
+python3 ci/test-refresh-runtime-jar-index.py
 python3 ci/refresh-runtime-jar-index.py
 
 # Verify that the exact post-transform classpath can be reconstructed from one
@@ -902,12 +910,14 @@ node ci/verify-lwjgl-clipping-state.js
 node ci/verify-lwjgl-depth-state.js
 node ci/verify-lwjgl-vertex-array-cache.js
 node ci/verify-lwjgl-extended-attrib-cache.js
+node ci/test-vertex-batch-paired.js
 node ci/test-paired-experiment.js
 node ci/test-renderer-experiment-state.js
 node ci/test-tutorial-window-config.js
 node ci/test-campaign-frame-boundary.js
 node ci/test-incremental-log-writer.js
 node ci/test-compositor-viewport.js
+node ci/test-campaign-ui-layout.js
 node ci/test-campaign-capture-routing.js
 STARSECTOR_VERIFY_OWNERSHIP_INTEGRATION=true node ci/test-player-ability-evidence.js
 node ci/test-fullhd-refit-capture.js
