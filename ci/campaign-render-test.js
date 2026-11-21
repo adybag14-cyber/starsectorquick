@@ -1201,6 +1201,7 @@ ${fallback}`);
       recentDroppedFrameEstimate: Number(perfAfter.recentDroppedFrameEstimate || 0),
       droppedFrameEstimateDelta: Number(perfAfter.droppedFrameEstimate || 0) - Number(perfBefore.droppedFrameEstimate || 0),
       webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
+      packedListVerticesDelta: Number(perfAfter.packedListVertices || 0) - Number(perfBefore.packedListVertices || 0),
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
       quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),

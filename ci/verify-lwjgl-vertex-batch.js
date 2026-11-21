@@ -34,6 +34,8 @@ const end=source.indexOf('// '+marker+'_END');
 ok(begin>=0 && end>begin,'complete production bulk receiver section');
 const code = source.slice(begin,end) + '\n' + [
   'ensureImmediateArrayCapacity','appendImmediateVertex',
+  'pushInList','packDisplayListVertices','replayDisplayListVertices','callList',
+  'Java_org_lwjgl_opengl_GL11_nglEndList',
   'Java_org_lwjgl_opengl_GL11_nglBegin','Java_org_lwjgl_opengl_GL11_nglEnd',
   'Java_org_lwjgl_opengl_GL11_nglColor3f','Java_org_lwjgl_opengl_GL11_nglColor4f',
   'Java_org_lwjgl_opengl_GL11_nglTexCoord2f',
@@ -46,7 +48,7 @@ function make(interleaved, flag, float32Constructor = Float32Array) {
   if(flag!==undefined)window.__LWJGL_VERTEX_BATCH__=flag;
   const c=vm.createContext({
     window, Float32Array: float32Constructor, Number, Math, console,
-    curList:null, immediateBeginActive:false,
+    curList:null, cmdLists:[], immediateBeginActive:false,
     immediateInterleavedEnabled:interleaved, verboseLog:false,
     immediateModeData:{
       mode:0,vertexBuf:new Float32Array(4),vertexPos:0,
@@ -54,7 +56,7 @@ function make(interleaved, flag, float32Constructor = Float32Array) {
       texCoordBuf:new Float32Array(4),texCoordPos:0,currentTexCoord:[0,0],
       interleavedBuf:new Float32Array(4),interleavedPos:0
     },
-    presentationStats:{}, vertexBuffer:'v',colorBuffer:'c',texCoordBuffer:'t',
+    presentationStats:{packedListVertices:0}, vertexBuffer:'v',colorBuffer:'c',texCoordBuffer:'t',
     vertexPosition:0,colorLocation:1,texCoord:2,
     glCtx:{FLOAT:0x1406,vertexAttrib2f:(...args)=>genericColor.push(args)},
     applyCurrentColorAttrib:()=>genericColor.push(Array.from(c.immediateModeData.currentColor)),
@@ -62,11 +64,14 @@ function make(interleaved, flag, float32Constructor = Float32Array) {
     uploadImmediateInterleaved:count=>uploads.push({kind:'interleaved',data:Array.from(c.immediateModeData.interleavedBuf.subarray(0,count*9))}),
     uploadDataImpl:(data,buffer)=>uploads.push({kind:buffer,data:Array.from(data)}),
     compatRecordImmediateDraw(){},
-    drawArraysImpl:(mode,first,count)=>draws.push({mode,first,count}),
-    pushInList:(list,args,fn)=>list.push({fn,args:Array.from(args)})
+    drawArraysImpl:(mode,first,count)=>draws.push({mode,first,count})
   });
   vm.runInContext(code,c);
   return {c,uploads,draws,genericColor};
+}
+function vertexCursor(x) {
+  const data = x.c.immediateModeData;
+  return x.c.immediateInterleavedEnabled ? data.interleavedPos : data.vertexPos;
 }
 function call(x, name, ...args) {
   return x.c['Java_org_lwjgl_opengl_GL11_'+name](null,...args,0);
@@ -200,7 +205,7 @@ for(const compiling of [false,true]) {
   if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
   assert.throws(()=>rawBatch(x,[row(0),row(1),row(2),row(3)]),
     /outside an immediate primitive/);checks++;
-  eq(x.c.immediateModeData.vertexPos,0,'invalid quad state must not mutate geometry');
+  eq(vertexCursor(x),0,'invalid quad state must not mutate geometry');
   eq(x.c.vertexBatchStats.batchCalls,0,'invalid quad state must not increment batch count');
   eq(x.c.vertexBatchStats.quadCalls,0,'invalid quad state must not increment quad count');
 }
@@ -245,7 +250,7 @@ for(const compiling of [false,true]) {
   const x=make(true,true);
   if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
   assert.throws(()=>rawBatch(x,[row(0),row(1)]),/outside an immediate primitive/);checks++;
-  eq(x.c.immediateModeData.vertexPos,0,'invalid pair state must not mutate geometry');
+  eq(vertexCursor(x),0,'invalid pair state must not mutate geometry');
   eq(x.c.vertexBatchCurrentVertices,0,'invalid pair state must not mutate pending vertices');
   eq(x.c.vertexBatchStats.batchCalls,0,'invalid pair state must not increment batch count');
   eq(x.c.vertexBatchStats.pairCalls,0,'invalid pair state must not increment pair count');
@@ -282,7 +287,7 @@ for(const compiling of [false,true]) {
   const x=make(true,true);
   if(compiling){call(x,'nglBegin',7);x.c.curList=[];}
   assert.throws(()=>rawBatch(x,[row(1)]),/outside an immediate primitive/);checks++;
-  eq(x.c.immediateModeData.vertexPos,0,'invalid single state must not mutate geometry');
+  eq(vertexCursor(x),0,'invalid single state must not mutate geometry');
   eq(x.c.vertexBatchCurrentVertices,0,'invalid single state must not mutate pending vertices');
   eq(x.c.vertexBatchStats.batchCalls,0,'invalid single state must not increment batch count');
   eq(x.c.vertexBatchStats.singleCalls,0,'invalid single state must not increment single count');
@@ -329,11 +334,11 @@ for(const interleaved of [false,true]) {
   submit(Math.floor(memory.byteLength/4)*4-5*20,5,2);
   eq(allocations,3,'replacement growth reads the new heap tail');
 
-  const beforeRejected=batch.c.immediateModeData.vertexPos;
+  const beforeRejected=vertexCursor(batch);
   memory=new ArrayBuffer(83);
   assert.throws(()=>batch.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib,64,1,0),
     /exceeds JNI memory/);checks++;
-  eq(batch.c.immediateModeData.vertexPos,beforeRejected,'fresh smaller heap rejects stale cached range');
+  eq(vertexCursor(batch),beforeRejected,'fresh smaller heap rejects stale cached range');
   eq(allocations,3,'invalid range does not allocate a heap view');
   submit(4,1,2);
   eq(allocations,4,'valid smaller heap refreshes the view');
@@ -383,10 +388,46 @@ for(const interleaved of [false,true]) {
   eq(x.draws.length,0,'no compilation draw');
   eq(x.c.vertexBatchStats.enabledBegins,0,'compilation is not an executed Begin');
   x.c.curList=null;
-  for(const command of list)command.fn.apply(null,command.args);
+  for(const command of list)command.f.apply(null,command.a);
   eq(x.draws,[{mode:7,first:0,count:1}],'list replay geometry');
   eq(x.c.vertexBatchStats.batchCalls,0,'list replay uses original scalar path');
   eq(x.c.vertexBatchStats.legacyVertices,1,'list replay scalar accounting');
+}
+// Real list compilation/replay versus the same recorded scalar commands.
+// Include caller-owned color changes, short runs, and a trailing implicit UV.
+for(const interleaved of [false,true]) {
+  const scalar=make(interleaved,true), packed=make(interleaved,true);
+  for(const target of [scalar,packed]) {
+    const list=target.c.cmdLists[1]=[];
+    target.c.curList=list;
+    call(target,'nglBegin',7);
+    for(const count of [8,7,31]) {
+      for(let i=0;i<count;i++) call(target,'nglVertex3fTexCoord',...row(i).map(Math.fround));
+      call(target,'nglColor4f',count/32,.25,.125,1);
+    }
+    call(target,'nglVertex3f',1,2,3); call(target,'nglEnd');
+    if(target===packed) call(target,'nglEndList'); else target.c.curList=null;
+  }
+  ok(packed.c.cmdLists[1].length<scalar.c.cmdLists[1].length,'eligible runs were packed');
+  for(const color of [[1,0,0,1],[1,0,0,1],[0,1,0,.5]]) {
+    for(const target of [scalar,packed]) {
+      call(target,'nglColor4f',...color);
+      target.c.callList(1);
+    }
+    eq(packed.uploads,scalar.uploads,'packed list Float32 payload and inherited color');
+    eq(packed.draws,scalar.draws,'packed list draw order and counts');
+    eq(Array.from(packed.c.immediateModeData.currentTexCoord),Array.from(scalar.c.immediateModeData.currentTexCoord),'list final UV');
+    eq(Array.from(packed.c.immediateModeData.currentColor),Array.from(scalar.c.immediateModeData.currentColor),'list final color');
+  }
+  eq(packed.c.presentationStats.packedListVertices,interleaved?117:0,'packed replay coverage');
+  for(const target of [scalar,packed]) {
+    target.c.curList=target.c.cmdLists[2]=[];
+    target.c.callList(1);
+    call(target,'nglEndList');
+    target.c.cmdLists[1].length=0;
+    target.c.callList(2);
+  }
+  eq(packed.uploads,scalar.uploads,'recording a replay preserves the nested list');
 }
 function rejected(address,count,active=true,list=null) {
   const x=make(true,true);
@@ -395,7 +436,7 @@ function rejected(address,count,active=true,list=null) {
   const memory=new ArrayBuffer(64+1024*20);
   assert.throws(()=>x.c.Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(
     {getJNIDataView:()=>new DataView(memory)},address,count,0));checks++;
-  eq(x.c.immediateModeData.vertexPos,0,'invalid batch must not mutate geometry');
+  eq(vertexCursor(x),0,'invalid batch must not mutate geometry');
   eq(x.c.vertexBatchStats.batchCalls,0,'invalid batch must not be counted');
 }
 for(const address of [0,-4,66,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])rejected(address,1);

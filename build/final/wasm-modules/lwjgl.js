@@ -246,8 +246,8 @@ var fragmentShaderSrc = `
 		return true;                                      // GL_ALWAYS 0x0207
 	}
 	void main() {
-		vec4 texSample = texture2D(uSampler, vTexCoord);
-		vec4 fragment = mix(vColor, texSample * vColor, uTextureMask);
+		vec4 fragment = vColor;
+		if(uTextureMask > 0.5) fragment *= texture2D(uSampler, vTexCoord);
 		if(!alphaTestPass(fragment.a)) discard;
 		gl_FragColor = fragment;
 	}
@@ -350,7 +350,9 @@ function syncAlphaTestUniforms()
 }
 function setTexture2DEnabled(enabled)
 {
-	texture2DEnabled = !!enabled;
+	enabled = !!enabled;
+	if(enabled === texture2DEnabled) return;
+	texture2DEnabled = enabled;
 	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
 }
 function getCompatEnableState(cap)
@@ -777,6 +779,7 @@ var presentationStats = {
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
 	quadIndexBufferUploads: 0,
+	packedListVertices: 0,
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
@@ -1438,6 +1441,68 @@ function pushInList(list, args, callee)
 	// It would be nicer to extract the actual implementation from native interfaces
 	// to avoid bringing around the library object
 	list.push({f: callee, a: Array.from(args)});
+}
+// List positions and UVs are fixed at compilation. Color is inherited at
+// replay, so every intervening state change must still split the vertex run.
+function packDisplayListVertices(list)
+{
+	var write = 0;
+	for(var read = 0; read < list.length;)
+	{
+		var end = read;
+		while(end < list.length && list[end].f === Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord) end++;
+		if(end - read < 8)
+		{
+			do { list[write++] = list[read++]; } while(read < end);
+			continue;
+		}
+		var vertices = new Float32Array((end - read) * 9);
+		for(var pos = 0; read < end; read++, pos += 9)
+		{
+			var args = list[read].a;
+			vertices[pos] = args[1]; vertices[pos + 1] = args[2]; vertices[pos + 2] = args[3];
+			vertices[pos + 7] = args[4]; vertices[pos + 8] = args[5];
+		}
+		list[write++] = { f: replayDisplayListVertices, a: [{ vertices: vertices, color: null }] };
+	}
+	list.length = write;
+}
+function replayDisplayListVertices(run)
+{
+	if(curList) return pushInList(curList, arguments, replayDisplayListVertices);
+	var vertices = run.vertices;
+	var length = vertices.length;
+	if(!immediateInterleavedEnabled)
+	{
+		for(var i = 0; i < length; i += 9)
+			appendImmediateVertex(vertices[i], vertices[i + 1], vertices[i + 2], vertices[i + 7], vertices[i + 8]);
+		return;
+	}
+	var color = immediateModeData.currentColor;
+	var previous = run.color;
+	if(previous === null || !Object.is(color[0], previous[0]) || !Object.is(color[1], previous[1]) ||
+		!Object.is(color[2], previous[2]) || !Object.is(color[3], previous[3]))
+	{
+		for(var i = 3; i < length; i += 9)
+		{
+			vertices[i] = color[0]; vertices[i + 1] = color[1];
+			vertices[i + 2] = color[2]; vertices[i + 3] = color[3];
+		}
+		if(previous === null) run.color = color.slice();
+		else
+		{
+			previous[0] = color[0]; previous[1] = color[1];
+			previous[2] = color[2]; previous[3] = color[3];
+		}
+	}
+	var pos = immediateModeData.interleavedPos;
+	var out = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + length);
+	out.set(vertices, pos);
+	immediateModeData.interleavedBuf = out;
+	immediateModeData.interleavedPos = pos + length;
+	immediateModeData.currentTexCoord[0] = vertices[length - 2];
+	immediateModeData.currentTexCoord[1] = vertices[length - 1];
+	presentationStats.packedListVertices += length / 9;
 }
 function callList(listId)
 {
@@ -2710,6 +2775,7 @@ function Java_org_lwjgl_opengl_GL11_nglNewList(lib, list, mode, funcPtr)
 
 function Java_org_lwjgl_opengl_GL11_nglEndList(lib, funcPtr)
 {
+	if(curList) packDisplayListVertices(curList);
 	curList = null;
 }
 
@@ -3223,8 +3289,35 @@ function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, fu
     }
     var data = vertexBatchMemoryView;
     var end = offset / 4 + count * 5;
-    for(var i=offset / 4; i<end; i+=5)
-        appendImmediateVertex(data[i], data[i+1], data[i+2], data[i+3], data[i+4]);
+    if(immediateInterleavedEnabled)
+    {
+        // A batch carries one current color. Grow and commit the destination
+        // once for the whole message, preserving the scalar Float32 layout.
+        var pos = immediateModeData.interleavedPos;
+        var out = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + count * 9);
+        var color = immediateModeData.currentColor;
+        for(var i = offset / 4; i < end; i += 5)
+        {
+            out[pos++] = data[i];
+            out[pos++] = data[i + 1];
+            out[pos++] = data[i + 2];
+            out[pos++] = color[0];
+            out[pos++] = color[1];
+            out[pos++] = color[2];
+            out[pos++] = color[3];
+            out[pos++] = data[i + 3];
+            out[pos++] = data[i + 4];
+        }
+        immediateModeData.interleavedBuf = out;
+        immediateModeData.interleavedPos = pos;
+        immediateModeData.currentTexCoord[0] = data[end - 2];
+        immediateModeData.currentTexCoord[1] = data[end - 1];
+    }
+    else
+    {
+        for(var j = offset / 4; j < end; j += 5)
+            appendImmediateVertex(data[j], data[j+1], data[j+2], data[j+3], data[j+4]);
+    }
     vertexBatchCurrentVertices += count;
     vertexBatchStats.batchCalls++;
 }
@@ -3277,18 +3370,15 @@ function appendImmediateVertex(x, y, z, texS, texT)
 	if(immediateInterleavedEnabled)
 	{
 		var pos = immediateModeData.interleavedPos;
-		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
 		var out = immediateModeData.interleavedBuf;
+		if(pos + 9 > out.length)
+			immediateModeData.interleavedBuf = out = ensureImmediateArrayCapacity(out, pos + 9);
+		var color = immediateModeData.currentColor;
 		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
-		out[pos + 3] = immediateModeData.currentColor[0];
-		out[pos + 4] = immediateModeData.currentColor[1];
-		out[pos + 5] = immediateModeData.currentColor[2];
-		out[pos + 6] = immediateModeData.currentColor[3];
+		out[pos + 3] = color[0]; out[pos + 4] = color[1];
+		out[pos + 5] = color[2]; out[pos + 6] = color[3];
 		out[pos + 7] = texS; out[pos + 8] = texT;
 		immediateModeData.interleavedPos = pos + 9;
-		immediateModeData.vertexPos += 3;
-		immediateModeData.colorPos += 4;
-		immediateModeData.texCoordPos += 2;
 		immediateModeData.currentTexCoord[0] = texS;
 		immediateModeData.currentTexCoord[1] = texT;
 		return;
@@ -3367,7 +3457,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
-	var vertexCount = immediateModeData.vertexPos / 3;
+	var vertexCount = immediateInterleavedEnabled ? immediateModeData.interleavedPos / 9 : immediateModeData.vertexPos / 3;
 	compatRecordImmediateDraw(immediateModeData.mode, vertexCount);
 	if(immediateInterleavedEnabled)
 	{
