@@ -248,21 +248,33 @@ var fragmentShaderSrc = `
 	void main() {
 		vec4 fragment = vColor;
 		if(uTextureMask > 0.5) fragment *= texture2D(uSampler, vTexCoord);
+#ifndef LWJGL_NO_ALPHA_TEST
 		if(!alphaTestPass(fragment.a)) discard;
+#endif
 		gl_FragColor = fragment;
 	}
 `;
 var vertexShader = glCtx.createShader(glCtx.VERTEX_SHADER);
 glCtx.shaderSource(vertexShader, vertexShaderSrc);
 glCtx.compileShader(vertexShader);
-var fragmentShader = glCtx.createShader(glCtx.FRAGMENT_SHADER);
-glCtx.shaderSource(fragmentShader, fragmentShaderSrc);
-glCtx.compileShader(fragmentShader);
+function createDrawProgram(fragmentSource)
+{
+	var fragment = glCtx.createShader(glCtx.FRAGMENT_SHADER);
+	glCtx.shaderSource(fragment, fragmentSource);
+	glCtx.compileShader(fragment);
+	var linked = glCtx.createProgram();
+	glCtx.attachShader(linked, vertexShader);
+	glCtx.attachShader(linked, fragment);
+	// The same VAO is used across both programs.
+	glCtx.bindAttribLocation(linked, 0, "aVertexPosition");
+	glCtx.bindAttribLocation(linked, 1, "aColor");
+	glCtx.bindAttribLocation(linked, 2, "aTexCoord");
+	glCtx.linkProgram(linked);
+	glCtx.deleteShader(fragment);
+	return linked;
+}
 glCtx.pixelStorei(glCtx.UNPACK_ALIGNMENT, 1);
-var program = glCtx.createProgram();
-glCtx.attachShader(program, vertexShader);
-glCtx.attachShader(program, fragmentShader);
-glCtx.linkProgram(program);
+var program = createDrawProgram(fragmentShaderSrc);
 glCtx.useProgram(program);
 var vertexBuffer = glCtx.createBuffer();
 var colorBuffer = glCtx.createBuffer();
@@ -326,14 +338,32 @@ if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
 }
 // LWJGL_VERTEX_ARRAY_COALESCING_V1_END
 
-var mvLocation = glCtx.getUniformLocation(program, "modelView");
-var projLocation = glCtx.getUniformLocation(program, "projection");
-var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
-var pointSizeLocation = glCtx.getUniformLocation(program, "uPointSize");
+function drawUniforms(linked)
+{
+	return {
+		program: linked,
+		modelView: glCtx.getUniformLocation(linked, "modelView"),
+		projection: glCtx.getUniformLocation(linked, "projection"),
+		textureMatrix: glCtx.getUniformLocation(linked, "textureMatrix"),
+		pointSize: glCtx.getUniformLocation(linked, "uPointSize"),
+		textureMask: glCtx.getUniformLocation(linked, "uTextureMask")
+	};
+}
+var alphaDraw = drawUniforms(program);
+var plainProgram = createDrawProgram("#define LWJGL_NO_ALPHA_TEST\n" + fragmentShaderSrc);
+var plainDraw = alphaDraw;
+if(glCtx.getProgramParameter(plainProgram, glCtx.LINK_STATUS)) plainDraw = drawUniforms(plainProgram);
+else glCtx.deleteProgram(plainProgram);
+if(window.__lwjglGraphicsInfo) window.__lwjglGraphicsInfo.noAlphaTestProgramLinked = plainDraw !== alphaDraw;
+var activeDraw = alphaDraw;
+var drawProgramDirty = true;
+var mvLocation = activeDraw.modelView;
+var projLocation = activeDraw.projection;
+var texMatrixLocation = activeDraw.textureMatrix;
+var pointSizeLocation = activeDraw.pointSize;
 var pointSizeState = 1.0;
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
-var samplerLocation2 = glCtx.getUniformLocation(program, "uSampler2");
-var texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask");
+var texMaskLocation = activeDraw.textureMask;
 var alphaTestEnabledLocation = glCtx.getUniformLocation(program, "uAlphaTestEnabled");
 var alphaFuncLocation = glCtx.getUniformLocation(program, "uAlphaFunc");
 var alphaRefLocation = glCtx.getUniformLocation(program, "uAlphaRef");
@@ -344,9 +374,31 @@ var attribStateStack = [];
 var attribStateWarnings = new Set();
 function syncAlphaTestUniforms()
 {
-	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
-	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
-	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	drawProgramDirty = true;
+}
+function selectDrawProgram()
+{
+	var selected = alphaTestState.enabled && alphaTestState.func !== 0x0207 ? alphaDraw : plainDraw;
+	if(selected !== activeDraw)
+	{
+		glCtx.useProgram(selected.program);
+		activeDraw = selected;
+		mvLocation = selected.modelView;
+		projLocation = selected.projection;
+		texMatrixLocation = selected.textureMatrix;
+		pointSizeLocation = selected.pointSize;
+		texMaskLocation = selected.textureMask;
+		modelViewMatrixUniformDirty = projMatrixUniformDirty = textureMatrixUniformDirty = true;
+		glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
+		glCtx.uniform1f(pointSizeLocation, pointSizeState);
+	}
+	if(selected === alphaDraw)
+	{
+		glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
+		glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+		glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	}
+	drawProgramDirty = false;
 }
 function setTexture2DEnabled(enabled)
 {
@@ -1545,6 +1597,7 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
+	if(drawProgramDirty) selectDrawProgram();
 	// LWJGL_TEXTURE_MATRIX_COMPAT_V1: fixed-function OpenGL transforms texture
 	// coordinates independently from model/view and projection coordinates.
 	if(modelViewMatrixUniformDirty)

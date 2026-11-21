@@ -163,14 +163,17 @@ jobs:
 
 
   resolution_fullhd:
-    name: Full HD 1920x1080 campaign ${{ matrix.scenario }}
+    name: Full HD 1920x1080 campaign ${{ matrix.label }}
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        scenario: [smoke, gameplay]
+        include:
+          - { label: smoke, scenario: smoke, renderer: swiftshader-driver, artifact: campaign-runtime-resolution-fullhd }
+          - { label: gameplay, scenario: gameplay, renderer: swiftshader-driver, artifact: campaign-runtime-resolution-fullhd-gameplay }
+          - { label: gameplay (Mesa), scenario: gameplay, renderer: mesa-llvmpipe, artifact: campaign-runtime-resolution-fullhd-mesa }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -197,13 +200,22 @@ jobs:
           STARSECTOR_SAVE_LOAD_SMOKE: 'false'
           STARSECTOR_SCREENSHOT_TIMEOUT_MS: '30000'
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
-          STARSECTOR_BROWSER_RENDERER: 'swiftshader-driver'
+          STARSECTOR_BROWSER_RENDERER: ${{ matrix.renderer }}
+          # Measure first, then profile the software backend in the same campaign.
+          STARSECTOR_RUNNER_DIAGNOSTICS: ${{ matrix.renderer == 'mesa-llvmpipe' && 'true' || 'false' }}
+          STARSECTOR_DIAGNOSTIC_WINDOWS: '1'
+          STARSECTOR_COLOR_CACHE_AB: 'false'
+          STARSECTOR_DEPTH_PAIRED: 'true'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
           # Qualification uses public renderer defaults; override only resolution.
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
         run: |
+          display=()
+          if [[ "$STARSECTOR_BROWSER_RENDERER" == mesa-llvmpipe ]]; then
+            display=(xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=true GALLIUM_DRIVER=llvmpipe)
+          fi
           set +e
-          bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
+          "${display[@]}" bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
           rc=$?
           set -e
           if [[ "$STARSECTOR_DEEP_GAMEPLAY" == true ]]; then exit "$rc"; fi
@@ -211,9 +223,13 @@ jobs:
           test -s test_output/resolution-fullhd/result.json
           test -s test_output/resolution-fullhd/browser.log
       - name: Verify Full HD framebuffer and input
+        env:
+          EXPECTED_SCENARIO: ${{ matrix.scenario }}
+          EXPECTED_RENDERER: ${{ matrix.renderer }}
         run: |
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
           p = Path('test_output/resolution-fullhd/result.json')
           data = json.loads(p.read_text(encoding='utf-8'))
@@ -249,12 +265,15 @@ jobs:
           assert int(canvas.get('width', 0)) == 1920, canvas
           assert int(canvas.get('height', 0)) == 1080, canvas
           print('Full HD runtime verified:', canvas)
-          if data.get('deepGameplay'):
+          gameplay = os.environ['EXPECTED_SCENARIO'] == 'gameplay'
+          assert data.get('deepGameplay') is gameplay
+          if gameplay:
+              profile = json.loads((p.parent / 'browser-renderer-profile.json').read_text())
+              assert profile['requested'] == os.environ['EXPECTED_RENDERER'], profile
               perf = data['gameplayPerformance']
               assert perf['frameSampleCount'] > 0 and perf['frameP95Ms'] > 0 and perf['frameP99Ms'] > 0, perf
-              import os
               with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-                  print(f"1920×1080 campaign: **{perf['recentFps']:.2f} FPS** "
+                  print(f"1920×1080 campaign ({profile['requested']}): **{perf['recentFps']:.2f} FPS** "
                         f"({perf['frameSampleCount']} frame intervals, "
                         f"p95 {perf['frameP95Ms']:.1f} ms, p99 {perf['frameP99Ms']:.1f} ms).", file=summary)
           PY
@@ -262,6 +281,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: campaign-runtime-resolution-fullhd${{ matrix.scenario == 'gameplay' && '-gameplay' || '' }}
+          name: ${{ matrix.artifact }}
           path: test_output/resolution-fullhd
           if-no-files-found: warn

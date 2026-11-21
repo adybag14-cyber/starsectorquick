@@ -14,6 +14,7 @@ on:
       - ci/test-refresh-runtime-jar-index.py
       - ci/*graphics*
       - ci/*attrib-cache*
+      - ci/verify-lwjgl-shader-switch.js
       - ci/cheerpj-runner-diagnostics.js
       - .github/workflows/cheerpj-diagnostics.yml
   workflow_dispatch:
@@ -51,6 +52,7 @@ jobs:
           node ci/verify-lwjgl-color-attrib-cache.js
           node ci/verify-lwjgl-clipping-state.js
           node ci/verify-lwjgl-depth-state.js
+          node ci/verify-lwjgl-shader-switch.js
           node ci/verify-lwjgl-vertex-array-cache.js
           node ci/verify-lwjgl-extended-attrib-cache.js
           node ci/verify-lwjgl-vertex-batch.js

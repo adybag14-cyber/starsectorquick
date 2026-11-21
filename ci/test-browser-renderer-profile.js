@@ -29,6 +29,11 @@ const {browserRendererProfile,readBrowserGpuIdentity}=require('./browser-rendere
   finally{assert.equal(detached,true,'identity validation must detach its CDP session');}
  }
  const identity=await readFixture(hardwareGpu);
+ for(const [profileName,driver] of [['mesa-llvmpipe','llvmpipe'],['swiftshader-driver','SwiftShader']]){
+  const profile=browserRendererProfile(profileName);
+  assert.equal((await readFixture({...hardwareGpu,auxAttributes:{glRenderer:driver}},profile)).requested,profileName);
+  await assert.rejects(readFixture(hardwareGpu,profile),/renderer is not active/);
+ }
  assert.equal(identity.requested,'d3d11-hardware');
  assert.deepEqual(identity.args,hardware.args,'metadata records exact launch arguments');
  assert.equal(identity.gl.glRenderer,hardwareGpu.auxAttributes.glRenderer);
