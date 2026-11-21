@@ -24,7 +24,7 @@ async function readBrowserGpuIdentity(browser, profile) {
       featureStatus: gpu.featureStatus,
       devices: gpu.devices.map(device=>Object.fromEntries(fields.filter(k=>device[k]!==undefined).map(k=>[k,device[k]]))),
       gl: Object.fromEntries(['glVendor','glRenderer','glVersion','displayType'].filter(k=>gpu.auxAttributes?.[k]!==undefined).map(k=>[k,gpu.auxAttributes[k]])) };
-    if (profile.name === 'mesa-llvmpipe' && !/llvmpipe/i.test(identity.gl.glRenderer || '')) {
+    if (profile.name === 'mesa-llvmpipe' && !/llvmpipe.*512 bits/i.test(identity.gl.glRenderer || '')) {
       throw new Error('Requested Mesa llvmpipe renderer is not active: '+JSON.stringify(identity));
     }
     if (profile.name === 'd3d11-hardware') {

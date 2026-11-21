@@ -200,11 +200,14 @@ jobs:
           STARSECTOR_PRE_SCREENSHOT_FRAMES: '120'
           LIBGL_ALWAYS_SOFTWARE: 'true'
           GALLIUM_DRIVER: llvmpipe
+          LP_NATIVE_VECTOR_WIDTH: '512'
           STARSECTOR_BROWSER_RENDERER: 'mesa-llvmpipe'
           STARSECTOR_PRE_SCREENSHOT_TIMEOUT_MS: '90000'
           # Qualification uses public renderer defaults; override only resolution.
           EXPERIMENT_CONFIG: '{"__STARSECTOR_RENDER_WIDTH__":1920,"__STARSECTOR_RENDER_HEIGHT__":1080}'
         run: |
+          lscpu
+          grep -qw avx512f /proc/cpuinfo
           set +e
           xvfb-run -a bash ci/run-campaign-experiment.sh 'resolution-fullhd' 'sync' 'false' 'campaign' "$EXPERIMENT_CONFIG"
           rc=$?
