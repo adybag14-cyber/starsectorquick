@@ -10,23 +10,27 @@ const { runPacingScreen } = require('./cheerpj-pacing-screen');
 const { runRafPairedExperiment } = require('./cheerpj-raf-paired');
 const { runDepthPairedExperiment } = require('./cheerpj-depth-paired');
 const { runVertexArrayPairedExperiment } = require('./cheerpj-vertex-array-paired');
+const { runVertexBatchPairedExperiment } = require('./cheerpj-vertex-batch-paired');
 
 (async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'starsector-experiment-state-'));
   let checks = 0;
   try {
-    for (const initial of [{}, { __LWJGL_COLOR_ATTRIB_CACHE__: false, __LWJGL_EXTENDED_ATTRIB_CACHE__: true, __LWJGL_CAMPAIGN_PACING__: 'flush' }]) {
+    for (const initial of [{}, { __LWJGL_COLOR_ATTRIB_CACHE__: false, __LWJGL_EXTENDED_ATTRIB_CACHE__: true, __LWJGL_CAMPAIGN_PACING__: 'flush', __LWJGL_VERTEX_BATCH__: true }]) {
       let invalidations = 0;
       const window = { ...initial, __lwjglInvalidateExtendedAttribState: () => invalidations++,
         __lwjglExtendedAttribStats: {}, __lwjglDepthStateStats: {}, __lwjglVertexArrayStats: {}, __lwjglInvalidateVertexArrayState:()=>{}, __lwjglSnapshotPresentationIntervals: () => ({}),
-        __lwjglPresentationStats: { swapCount: 0 }, __lwjglCampaignBoundaryStats: {} };
+        __lwjglPresentationStats: { swapCount: 0 }, __lwjglCampaignBoundaryStats: {},
+        __STARSECTOR_RUNTIME_STATE__: { state: 'campaign' },
+        __lwjglVertexBatchStats: { enabledBegins: 0, disabledBegins: 0, batchCalls: 0, batchVertices: 0, legacyVertices: 0, drawVertices: 0, draws: 0 },
+        __lwjglResetPresentationTimingWindow: () => {}, __lwjglRefreshPresentationStats: () => {} };
       const page = { evaluate: async (fn, arg) => vm.runInNewContext('('+fn.toString()+')(input)', {window, input:arg}),
         waitForFunction: async () => { throw new Error('injected warmup failure'); } };
       const before = JSON.parse(JSON.stringify(await captureExperimentFlags(page)));
-      window.__LWJGL_COLOR_ATTRIB_CACHE__ = true;window.__LWJGL_EXTENDED_ATTRIB_CACHE__ = false;window.__LWJGL_CAMPAIGN_PACING__ = 'raf';
+      window.__LWJGL_COLOR_ATTRIB_CACHE__ = true;window.__LWJGL_EXTENDED_ATTRIB_CACHE__ = false;window.__LWJGL_CAMPAIGN_PACING__ = 'raf';window.__LWJGL_VERTEX_BATCH__ = false;
       await restoreExperimentFlags(page, before);
       assert.deepEqual(JSON.parse(JSON.stringify(await captureExperimentFlags(page))), before);checks++;
-      for (const [name, experiment] of [['extended-attrib-ab.json', runPairedExperiment], ['campaign-pacing-screen.json', runPacingScreen], ['campaign-raf-paired.json', runRafPairedExperiment], ['depth-state-paired.json', runDepthPairedExperiment], ['vertex-array-paired.json', runVertexArrayPairedExperiment]]) {
+      for (const [name, experiment] of [['extended-attrib-ab.json', runPairedExperiment], ['campaign-pacing-screen.json', runPacingScreen], ['campaign-raf-paired.json', runRafPairedExperiment], ['depth-state-paired.json', runDepthPairedExperiment], ['vertex-array-paired.json', runVertexArrayPairedExperiment], ['vertex-batch-paired.json', runVertexBatchPairedExperiment]]) {
         await assert.rejects(experiment(page, directory), /injected warmup failure/);checks++;
         assert.deepEqual(JSON.parse(JSON.stringify(await captureExperimentFlags(page))), before);checks++;
         assert.equal(JSON.parse(fs.readFileSync(path.join(directory,name),'utf8')).ok, false);checks++;

@@ -9,6 +9,7 @@ const {
 } = require('./campaign-visual-gate');
 const { cropGameCanvasFromViewportScreenshot } = require('./canvas-screenshot-fallback');
 const { captureCompositorViewport } = require('./capture-compositor-viewport');
+const { campaignTestViewport, campaignControlPosition } = require('./campaign-ui-layout');
 
 const baseUrl = process.env.STARSECTOR_TEST_URL || 'http://127.0.0.1:8000/launch.html';
 const timeoutMs = Number(process.env.STARSECTOR_TEST_TIMEOUT_MS || 360000);
@@ -358,7 +359,13 @@ async function waitForPresentationFrames(page, minFrames = 3, options = {}) {
   const { browserRendererProfile, readBrowserGpuIdentity } = require('./browser-renderer-profile');
   const rendererProfile = browserRendererProfile();
   browser = await chromium.launch({ headless: true, args: rendererProfile.args });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1180 }, serviceWorkers: 'allow' });
+  const context = await browser.newContext({
+    viewport: campaignTestViewport(
+      configOverrides.__STARSECTOR_RENDER_WIDTH__,
+      configOverrides.__STARSECTOR_RENDER_HEIGHT__,
+    ),
+    serviceWorkers: 'allow',
+  });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
   page.setDefaultNavigationTimeout(60000);
@@ -642,8 +649,8 @@ ${fallback}`);
   // production crash where the first Character click reached ScriptStore with an
   // empty LevelupPlugin repository and terminated the whole game.
   // CampaignState's bottom bar is seven 125px buttons separated by 6px,
-  // inset 6px from the left and 10px from the bottom of the 1024x768 logical
-  // viewport. Slot 1 is Character (the exact reproduced crash); sweeping every
+  // inset 6px from the left and 10px from the bottom at every render resolution.
+  // Slot 1 is Character (the exact reproduced crash); sweeping every
   // slot avoids silently missing controls whose live labels differ by game state.
   const campaignControlTabs = [
     ['Character', 'CHARACTER'],
@@ -654,25 +661,23 @@ ${fallback}`);
     ['Intel', 'INTEL'],
     ['Command', 'OUTPOSTS'],
   ];
-  const campaignUiControls = campaignControlTabs.map(([label, tab], slot) => [
-    label, tab,
-    (68.5 + 131 * slot) / 1024,
-    748 / 768,
-  ]);
+  const campaignUiControls = campaignControlTabs.map(([label, tab], slot) => [label, tab, slot]);
   const uiControlResults = [];
   if (expectedState === 'campaign' && !fatalSeenAt) {
     try {
       const box = await gameCanvas.boundingBox();
       if (!box) throw new Error('campaign canvas has no bounding box');
-      for (const [name, expectedTab, nx, ny] of campaignUiControls) {
+      const renderSize = await gameCanvas.evaluate(canvas => ({ width: canvas.width, height: canvas.height }));
+      for (const [name, expectedTab, slot] of campaignUiControls) {
         if (fatalSeenAt || errors.length > 0) break;
-        const x = box.x + box.width * nx;
-        const y = box.y + box.height * ny;
+        const point = campaignControlPosition(slot, renderSize.width, renderSize.height);
+        const x = box.x + box.width * point.nx;
+        const y = box.y + box.height * point.ny;
         const beforePanel = deepGameplay ? await captureProbeFrame() : null;
         const probeStart = logs.length;
         const gameplayStart = gameplayEvents.length;
         const panelStartedAt = Date.now();
-        logs.push(`[ui-probe] click ${name} expectedTab=${expectedTab} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(nx * 1024)},${Math.round(ny * 768)})`);
+        logs.push(`[ui-probe] click ${name} expectedTab=${expectedTab} css=(${x.toFixed(1)},${y.toFixed(1)}) logical=(${Math.round(point.x)},${Math.round(point.y)})`);
         await page.mouse.move(x, y);
         await page.mouse.click(x, y, { button: 'left', delay: 80 });
         let tabReady = null;
@@ -1196,6 +1201,7 @@ ${fallback}`);
       recentDroppedFrameEstimate: Number(perfAfter.recentDroppedFrameEstimate || 0),
       droppedFrameEstimateDelta: Number(perfAfter.droppedFrameEstimate || 0) - Number(perfBefore.droppedFrameEstimate || 0),
       webglDrawDelta: Number(perfAfter.webglDrawCalls || 0) - Number(perfBefore.webglDrawCalls || 0),
+      packedListVerticesDelta: Number(perfAfter.packedListVertices || 0) - Number(perfBefore.packedListVertices || 0),
       quadBatchDelta: Number(perfAfter.quadBatches || 0) - Number(perfBefore.quadBatches || 0),
       quadCountDelta: Number(perfAfter.quadQuads || 0) - Number(perfBefore.quadQuads || 0),
       quadDrawCallsSavedDelta: Number(perfAfter.quadDrawCallsSaved || 0) - Number(perfBefore.quadDrawCallsSaved || 0),

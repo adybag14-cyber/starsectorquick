@@ -17,19 +17,30 @@ async function runDepthPairedExperiment(page,out){
     window.__lwjglInvalidateExtendedAttribState();return window.__lwjglPresentationStats.swapCount;
    },enabled);
    await page.waitForFunction(start=>window.__lwjglPresentationStats.swapCount>=start+24,warm,{timeout:60000,polling:250});
-   const before=await page.evaluate(()=>{window.__lwjglResetPresentationTimingWindow();return {at:performance.now(),swap:window.__lwjglPresentationStats.swapCount,counters:{...window.__lwjglDepthStateStats},canvas:[document.getElementById('lwjglCanvas').width,document.getElementById('lwjglCanvas').height]};});
+   const before=await page.evaluate(()=>{window.__lwjglResetPresentationTimingWindow();return {at:performance.now(),swap:window.__lwjglPresentationStats.swapCount,counters:{...window.__lwjglDepthStateStats},geometry:window.__lwjglVertexBatchStats?{draws:window.__lwjglVertexBatchStats.draws,vertices:window.__lwjglVertexBatchStats.drawVertices}:null,vertexBatch:window.__LWJGL_VERTEX_BATCH__,canvas:[document.getElementById('lwjglCanvas').width,document.getElementById('lwjglCanvas').height]};});
    await page.waitForFunction(start=>window.__lwjglPresentationStats.swapCount>=start+241,before.swap,{timeout:120000,polling:250});
    const after=await page.evaluate(()=>{
     window.__lwjglRefreshPresentationStats();return {at:performance.now(),state:window.__STARSECTOR_RUNTIME_STATE__?.state,
      depth:window.__LWJGL_DEPTH_STATE_CACHE__,extended:window.__LWJGL_EXTENDED_ATTRIB_CACHE__,pacing:window.__LWJGL_CAMPAIGN_PACING__,
-     counters:{...window.__lwjglDepthStateStats},raw:window.__lwjglSnapshotPresentationIntervals(),reported:{...window.__lwjglPresentationStats},canvas:[document.getElementById('lwjglCanvas').width,document.getElementById('lwjglCanvas').height]};
+     counters:{...window.__lwjglDepthStateStats},geometry:window.__lwjglVertexBatchStats?{draws:window.__lwjglVertexBatchStats.draws,vertices:window.__lwjglVertexBatchStats.drawVertices}:null,vertexBatch:window.__LWJGL_VERTEX_BATCH__,raw:window.__lwjglSnapshotPresentationIntervals(),reported:{...window.__lwjglPresentationStats},canvas:[document.getElementById('lwjglCanvas').width,document.getElementById('lwjglCanvas').height]};
    });
    assert.equal(after.state,'campaign');assert.equal(after.depth,enabled);assert.equal(after.extended,false);assert.equal(after.pacing,'none');assert.equal(after.raw.count,240);assert.deepEqual(after.canvas,before.canvas);
    const counters=Object.fromEntries(Object.keys(before.counters).map(k=>[k,after.counters[k]-before.counters[k]]));
    if(enabled){assert.ok(counters.hits>0);assert.equal(counters.driverReads,0,'hot depth snapshots unexpectedly synchronize');}
    else{assert.ok(counters.driverReads>0);assert.equal(counters.hits,0);}
+   assert.equal(after.vertexBatch,before.vertexBatch,'vertex transport changed inside depth window');
+   let geometry=null;
+   if(before.geometry||after.geometry){
+    assert.ok(before.geometry&&after.geometry,'geometry counters disappeared');
+    geometry={};
+    for(const key of ['draws','vertices']){
+     assert.ok(Number.isSafeInteger(before.geometry[key])&&Number.isSafeInteger(after.geometry[key])&&after.geometry[key]>=before.geometry[key],'invalid geometry counter '+key);
+     geometry[key]=after.geometry[key]-before.geometry[key];
+    }
+    assert.ok(geometry.draws>0&&geometry.vertices>0,'no geometry during depth window');
+   }
    const statistics=intervalStats(after.raw.intervalsMs);assert.ok(Math.abs(statistics.meanMs-after.reported.recentFrameMs)<1e-6);
-   const row={index,enabled,statistics,counters,canvas:after.canvas,wallMs:after.at-before.at,swapDelta:after.raw.swapCount-before.swap,intervalsMs:after.raw.intervalsMs};
+   const row={index,enabled,statistics,counters,geometry,vertexBatch:after.vertexBatch,canvas:after.canvas,wallMs:after.at-before.at,swapDelta:after.raw.swapCount-before.swap,intervalsMs:after.raw.intervalsMs};
    report.blocks.push(row);fs.writeFileSync(file,JSON.stringify(report,null,2));console.log('[depth-state-paired]',JSON.stringify({...row,intervalsMs:undefined}));
   }
   report.summary=summarizeBlocks(report.blocks);report.ok=true;

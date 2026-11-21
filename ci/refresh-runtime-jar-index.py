@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 index = ROOT / 'jars' / 'index.list'
 tracked = {
+    'bridge.jar',
     'fixer_patch.jar',
     'fs.common_obf.jar',
     'starfarer.api.jar',
