@@ -246,23 +246,35 @@ var fragmentShaderSrc = `
 		return true;                                      // GL_ALWAYS 0x0207
 	}
 	void main() {
-		vec4 texSample = texture2D(uSampler, vTexCoord);
-		vec4 fragment = mix(vColor, texSample * vColor, uTextureMask);
+		vec4 fragment = vColor;
+		if(uTextureMask > 0.5) fragment *= texture2D(uSampler, vTexCoord);
+#ifndef LWJGL_NO_ALPHA_TEST
 		if(!alphaTestPass(fragment.a)) discard;
+#endif
 		gl_FragColor = fragment;
 	}
 `;
 var vertexShader = glCtx.createShader(glCtx.VERTEX_SHADER);
 glCtx.shaderSource(vertexShader, vertexShaderSrc);
 glCtx.compileShader(vertexShader);
-var fragmentShader = glCtx.createShader(glCtx.FRAGMENT_SHADER);
-glCtx.shaderSource(fragmentShader, fragmentShaderSrc);
-glCtx.compileShader(fragmentShader);
+function createDrawProgram(fragmentSource)
+{
+	var fragment = glCtx.createShader(glCtx.FRAGMENT_SHADER);
+	glCtx.shaderSource(fragment, fragmentSource);
+	glCtx.compileShader(fragment);
+	var linked = glCtx.createProgram();
+	glCtx.attachShader(linked, vertexShader);
+	glCtx.attachShader(linked, fragment);
+	// The same VAO is used across both programs.
+	glCtx.bindAttribLocation(linked, 0, "aVertexPosition");
+	glCtx.bindAttribLocation(linked, 1, "aColor");
+	glCtx.bindAttribLocation(linked, 2, "aTexCoord");
+	glCtx.linkProgram(linked);
+	glCtx.deleteShader(fragment);
+	return linked;
+}
 glCtx.pixelStorei(glCtx.UNPACK_ALIGNMENT, 1);
-var program = glCtx.createProgram();
-glCtx.attachShader(program, vertexShader);
-glCtx.attachShader(program, fragmentShader);
-glCtx.linkProgram(program);
+var program = createDrawProgram(fragmentShaderSrc);
 glCtx.useProgram(program);
 var vertexBuffer = glCtx.createBuffer();
 var colorBuffer = glCtx.createBuffer();
@@ -326,14 +338,32 @@ if(glCtx.canvas && typeof glCtx.canvas.addEventListener === "function")
 }
 // LWJGL_VERTEX_ARRAY_COALESCING_V1_END
 
-var mvLocation = glCtx.getUniformLocation(program, "modelView");
-var projLocation = glCtx.getUniformLocation(program, "projection");
-var texMatrixLocation = glCtx.getUniformLocation(program, "textureMatrix");
-var pointSizeLocation = glCtx.getUniformLocation(program, "uPointSize");
+function drawUniforms(linked)
+{
+	return {
+		program: linked,
+		modelView: glCtx.getUniformLocation(linked, "modelView"),
+		projection: glCtx.getUniformLocation(linked, "projection"),
+		textureMatrix: glCtx.getUniformLocation(linked, "textureMatrix"),
+		pointSize: glCtx.getUniformLocation(linked, "uPointSize"),
+		textureMask: glCtx.getUniformLocation(linked, "uTextureMask")
+	};
+}
+var alphaDraw = drawUniforms(program);
+var plainProgram = createDrawProgram("#define LWJGL_NO_ALPHA_TEST\n" + fragmentShaderSrc);
+var plainDraw = alphaDraw;
+if(glCtx.getProgramParameter(plainProgram, glCtx.LINK_STATUS)) plainDraw = drawUniforms(plainProgram);
+else glCtx.deleteProgram(plainProgram);
+if(window.__lwjglGraphicsInfo) window.__lwjglGraphicsInfo.noAlphaTestProgramLinked = plainDraw !== alphaDraw;
+var activeDraw = alphaDraw;
+var drawProgramDirty = true;
+var mvLocation = activeDraw.modelView;
+var projLocation = activeDraw.projection;
+var texMatrixLocation = activeDraw.textureMatrix;
+var pointSizeLocation = activeDraw.pointSize;
 var pointSizeState = 1.0;
 var samplerLocation = glCtx.getUniformLocation(program, "uSampler");
-var samplerLocation2 = glCtx.getUniformLocation(program, "uSampler2");
-var texMaskLocation = glCtx.getUniformLocation(program, "uTextureMask");
+var texMaskLocation = activeDraw.textureMask;
 var alphaTestEnabledLocation = glCtx.getUniformLocation(program, "uAlphaTestEnabled");
 var alphaFuncLocation = glCtx.getUniformLocation(program, "uAlphaFunc");
 var alphaRefLocation = glCtx.getUniformLocation(program, "uAlphaRef");
@@ -344,13 +374,37 @@ var attribStateStack = [];
 var attribStateWarnings = new Set();
 function syncAlphaTestUniforms()
 {
-	glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
-	glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
-	glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	drawProgramDirty = true;
+}
+function selectDrawProgram()
+{
+	var selected = alphaTestState.enabled && alphaTestState.func !== 0x0207 ? alphaDraw : plainDraw;
+	if(selected !== activeDraw)
+	{
+		glCtx.useProgram(selected.program);
+		activeDraw = selected;
+		mvLocation = selected.modelView;
+		projLocation = selected.projection;
+		texMatrixLocation = selected.textureMatrix;
+		pointSizeLocation = selected.pointSize;
+		texMaskLocation = selected.textureMask;
+		modelViewMatrixUniformDirty = projMatrixUniformDirty = textureMatrixUniformDirty = true;
+		glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
+		glCtx.uniform1f(pointSizeLocation, pointSizeState);
+	}
+	if(selected === alphaDraw)
+	{
+		glCtx.uniform1f(alphaTestEnabledLocation, alphaTestState.enabled ? 1 : 0);
+		glCtx.uniform1f(alphaFuncLocation, alphaTestState.func);
+		glCtx.uniform1f(alphaRefLocation, alphaTestState.ref);
+	}
+	drawProgramDirty = false;
 }
 function setTexture2DEnabled(enabled)
 {
-	texture2DEnabled = !!enabled;
+	enabled = !!enabled;
+	if(enabled === texture2DEnabled) return;
+	texture2DEnabled = enabled;
 	glCtx.uniform1f(texMaskLocation, texture2DEnabled ? 1 : 0);
 }
 function getCompatEnableState(cap)
@@ -777,6 +831,7 @@ var presentationStats = {
 	quadQuads: 0,
 	quadDrawCallsSaved: 0,
 	quadIndexBufferUploads: 0,
+	packedListVertices: 0,
 	immediateInterleavedDraws: 0,
 	immediateInterleavedUploads: 0,
 	immediateInterleavedUploadsSaved: 0,
@@ -1439,6 +1494,68 @@ function pushInList(list, args, callee)
 	// to avoid bringing around the library object
 	list.push({f: callee, a: Array.from(args)});
 }
+// List positions and UVs are fixed at compilation. Color is inherited at
+// replay, so every intervening state change must still split the vertex run.
+function packDisplayListVertices(list)
+{
+	var write = 0;
+	for(var read = 0; read < list.length;)
+	{
+		var end = read;
+		while(end < list.length && list[end].f === Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord) end++;
+		if(end - read < 8)
+		{
+			do { list[write++] = list[read++]; } while(read < end);
+			continue;
+		}
+		var vertices = new Float32Array((end - read) * 9);
+		for(var pos = 0; read < end; read++, pos += 9)
+		{
+			var args = list[read].a;
+			vertices[pos] = args[1]; vertices[pos + 1] = args[2]; vertices[pos + 2] = args[3];
+			vertices[pos + 7] = args[4]; vertices[pos + 8] = args[5];
+		}
+		list[write++] = { f: replayDisplayListVertices, a: [{ vertices: vertices, color: null }] };
+	}
+	list.length = write;
+}
+function replayDisplayListVertices(run)
+{
+	if(curList) return pushInList(curList, arguments, replayDisplayListVertices);
+	var vertices = run.vertices;
+	var length = vertices.length;
+	if(!immediateInterleavedEnabled)
+	{
+		for(var i = 0; i < length; i += 9)
+			appendImmediateVertex(vertices[i], vertices[i + 1], vertices[i + 2], vertices[i + 7], vertices[i + 8]);
+		return;
+	}
+	var color = immediateModeData.currentColor;
+	var previous = run.color;
+	if(previous === null || !Object.is(color[0], previous[0]) || !Object.is(color[1], previous[1]) ||
+		!Object.is(color[2], previous[2]) || !Object.is(color[3], previous[3]))
+	{
+		for(var i = 3; i < length; i += 9)
+		{
+			vertices[i] = color[0]; vertices[i + 1] = color[1];
+			vertices[i + 2] = color[2]; vertices[i + 3] = color[3];
+		}
+		if(previous === null) run.color = color.slice();
+		else
+		{
+			previous[0] = color[0]; previous[1] = color[1];
+			previous[2] = color[2]; previous[3] = color[3];
+		}
+	}
+	var pos = immediateModeData.interleavedPos;
+	var out = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + length);
+	out.set(vertices, pos);
+	immediateModeData.interleavedBuf = out;
+	immediateModeData.interleavedPos = pos + length;
+	immediateModeData.currentTexCoord[0] = vertices[length - 2];
+	immediateModeData.currentTexCoord[1] = vertices[length - 1];
+	presentationStats.packedListVertices += length / 9;
+}
 function callList(listId)
 {
 	var l = cmdLists[listId];
@@ -1480,6 +1597,7 @@ function ensureQuadIndexCapacity(vertexCount)
 }
 function drawArraysImpl(mode, first, count)
 {
+	if(drawProgramDirty) selectDrawProgram();
 	// LWJGL_TEXTURE_MATRIX_COMPAT_V1: fixed-function OpenGL transforms texture
 	// coordinates independently from model/view and projection coordinates.
 	if(modelViewMatrixUniformDirty)
@@ -2710,6 +2828,7 @@ function Java_org_lwjgl_opengl_GL11_nglNewList(lib, list, mode, funcPtr)
 
 function Java_org_lwjgl_opengl_GL11_nglEndList(lib, funcPtr)
 {
+	if(curList) packDisplayListVertices(curList);
 	curList = null;
 }
 
@@ -3147,7 +3266,10 @@ function Java_org_lwjgl_opengl_GL11_nglPolygonOffset(lib, factor, units, funcPtr
 function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 {
 	if(curList)
-		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
+	{
+		pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglBegin);
+		return false;
+	}
 	immediateModeData.mode = mode;
 	immediateModeData.vertexPos = 0;
 	immediateModeData.colorPos = 0;
@@ -3158,6 +3280,14 @@ function Java_org_lwjgl_opengl_GL11_nglBegin(lib, mode, funcPtr)
 	// without an explicit texcoord in a new begin/end block starts at (0, 0).
 	immediateModeData.currentTexCoord[0] = 0;
 	immediateModeData.currentTexCoord[1] = 0;
+	var batchRequested = typeof window !== "undefined" && window.__LWJGL_VERTEX_BATCH__ === true;
+	if(typeof vertexBatchStats !== "undefined")
+	{
+		vertexBatchCurrentVertices = 0;
+		if(batchRequested) vertexBatchStats.enabledBegins++;
+		else vertexBatchStats.disabledBegins++;
+	}
+	return batchRequested;
 }
 
 function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
@@ -3175,24 +3305,133 @@ function Java_org_lwjgl_opengl_GL11_nglTexCoord2f(lib, x, y, funcPtr)
 	immediateModeData.texCoordPos = curPos + 2;
 }
 
+// LWJGL_VERTEX_BATCH_V1_BEGIN
+// One bounded direct-memory geometry message replaces many JNI vertex calls.
+// State/color changes are still sent in order by GL11.java. The counters for
+// submitted geometry are published together at glEnd, outside the vertex loop.
+var vertexBatchStats = {
+    enabledBegins: 0, disabledBegins: 0, batchCalls: 0, singleCalls: 0, pairCalls: 0, quadCalls: 0, batchVertices: 0,
+    legacyVertices: 0, drawVertices: 0, draws: 0, memoryViewCreations: 0
+};
+var vertexBatchCurrentVertices = 0;
+// Cache the whole JNI heap view, not the per-message range. The Java buffer
+// address is reused, but CheerpJ may replace or resize its underlying memory.
+var vertexBatchMemoryView = null;
+var vertexBatchMemoryByteLength = -1;
+if(typeof window !== "undefined") window.__lwjglVertexBatchStats = vertexBatchStats;
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch(lib, address, count, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    var offset = Number(address);
+    if(!Number.isSafeInteger(offset) || offset <= 0 || (offset % 4) !== 0 ||
+        !Number.isInteger(count) || count < 1 || count > 1024)
+        throw new Error("LWJGL invalid vertex batch range");
+    var view = lib.getJNIDataView();
+    var memory = view.buffer;
+    var byteLength = memory.byteLength;
+    var bytes = count * 5 * 4;
+    if(offset > byteLength - bytes)
+        throw new Error("LWJGL vertex batch exceeds JNI memory");
+    if(!vertexBatchMemoryView || vertexBatchMemoryView.buffer !== memory ||
+        vertexBatchMemoryByteLength !== byteLength)
+    {
+        vertexBatchMemoryView = new Float32Array(memory, 0, Math.floor(byteLength / 4));
+        vertexBatchMemoryByteLength = byteLength;
+        vertexBatchStats.memoryViewCreations++;
+    }
+    var data = vertexBatchMemoryView;
+    var end = offset / 4 + count * 5;
+    if(immediateInterleavedEnabled)
+    {
+        // A batch carries one current color. Grow and commit the destination
+        // once for the whole message, preserving the scalar Float32 layout.
+        var pos = immediateModeData.interleavedPos;
+        var out = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + count * 9);
+        var color = immediateModeData.currentColor;
+        for(var i = offset / 4; i < end; i += 5)
+        {
+            out[pos++] = data[i];
+            out[pos++] = data[i + 1];
+            out[pos++] = data[i + 2];
+            out[pos++] = color[0];
+            out[pos++] = color[1];
+            out[pos++] = color[2];
+            out[pos++] = color[3];
+            out[pos++] = data[i + 3];
+            out[pos++] = data[i + 4];
+        }
+        immediateModeData.interleavedBuf = out;
+        immediateModeData.interleavedPos = pos;
+        immediateModeData.currentTexCoord[0] = data[end - 2];
+        immediateModeData.currentTexCoord[1] = data[end - 1];
+    }
+    else
+    {
+        for(var j = offset / 4; j < end; j += 5)
+            appendImmediateVertex(data[j], data[j+1], data[j+2], data[j+3], data[j+4]);
+    }
+    vertexBatchCurrentVertices += count;
+    vertexBatchStats.batchCalls++;
+}
+// LWJGL_VERTEX_SINGLE_TRANSPORT_V1: one explicit float vertex with the same
+// state guard and completed-batch accounting as the other fixed-size messages.
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle(lib,
+    x0, y0, z0, s0, t0, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    appendImmediateVertex(x0, y0, z0, s0, t0);
+    vertexBatchCurrentVertices++;
+    vertexBatchStats.batchCalls++;
+    vertexBatchStats.singleCalls++;
+}
+// LWJGL_VERTEX_PAIR_TRANSPORT_V1: two explicit float vertices, preserving
+// the original primitive and renderer color without a JNI-memory copy/read.
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexPair(lib,
+    x0, y0, z0, s0, t0, x1, y1, z1, s1, t1, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    appendImmediateVertex(x0, y0, z0, s0, t0);
+    appendImmediateVertex(x1, y1, z1, s1, t1);
+    vertexBatchCurrentVertices += 2;
+    vertexBatchStats.batchCalls++;
+    vertexBatchStats.pairCalls++;
+}
+// LWJGL_VERTEX_QUAD_TRANSPORT_V1: four explicit float vertices, same append
+// semantics and current color as the generic receiver, with no heap view/copy.
+function Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad(lib,
+    x0, y0, z0, s0, t0, x1, y1, z1, s1, t1,
+    x2, y2, z2, s2, t2, x3, y3, z3, s3, t3, funcPtr)
+{
+    if(curList || !immediateBeginActive)
+        throw new Error("LWJGL vertex batch outside an immediate primitive");
+    appendImmediateVertex(x0, y0, z0, s0, t0);
+    appendImmediateVertex(x1, y1, z1, s1, t1);
+    appendImmediateVertex(x2, y2, z2, s2, t2);
+    appendImmediateVertex(x3, y3, z3, s3, t3);
+    vertexBatchCurrentVertices += 4;
+    vertexBatchStats.batchCalls++;
+    vertexBatchStats.quadCalls++;
+}
+// LWJGL_VERTEX_BATCH_V1_END
+
 // LWJGL_IMMEDIATE_VERTEX_BATCH_V1
 function appendImmediateVertex(x, y, z, texS, texT)
 {
 	if(immediateInterleavedEnabled)
 	{
 		var pos = immediateModeData.interleavedPos;
-		immediateModeData.interleavedBuf = ensureImmediateArrayCapacity(immediateModeData.interleavedBuf, pos + 9);
 		var out = immediateModeData.interleavedBuf;
+		if(pos + 9 > out.length)
+			immediateModeData.interleavedBuf = out = ensureImmediateArrayCapacity(out, pos + 9);
+		var color = immediateModeData.currentColor;
 		out[pos] = x; out[pos + 1] = y; out[pos + 2] = z;
-		out[pos + 3] = immediateModeData.currentColor[0];
-		out[pos + 4] = immediateModeData.currentColor[1];
-		out[pos + 5] = immediateModeData.currentColor[2];
-		out[pos + 6] = immediateModeData.currentColor[3];
+		out[pos + 3] = color[0]; out[pos + 4] = color[1];
+		out[pos + 5] = color[2]; out[pos + 6] = color[3];
 		out[pos + 7] = texS; out[pos + 8] = texT;
 		immediateModeData.interleavedPos = pos + 9;
-		immediateModeData.vertexPos += 3;
-		immediateModeData.colorPos += 4;
-		immediateModeData.texCoordPos += 2;
 		immediateModeData.currentTexCoord[0] = texS;
 		immediateModeData.currentTexCoord[1] = texT;
 		return;
@@ -3271,7 +3510,7 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	if(curList)
 		return pushInList(curList, arguments, Java_org_lwjgl_opengl_GL11_nglEnd);
 	immediateBeginActive = false;
-	var vertexCount = immediateModeData.vertexPos / 3;
+	var vertexCount = immediateInterleavedEnabled ? immediateModeData.interleavedPos / 9 : immediateModeData.vertexPos / 3;
 	compatRecordImmediateDraw(immediateModeData.mode, vertexCount);
 	if(immediateInterleavedEnabled)
 	{
@@ -3292,6 +3531,14 @@ function Java_org_lwjgl_opengl_GL11_nglEnd(lib, funcPtr)
 	}
 	// NOTE: We count vertices
 	drawArraysImpl(immediateModeData.mode, 0, vertexCount);
+	if(typeof vertexBatchStats !== "undefined")
+	{
+		vertexBatchStats.batchVertices += vertexBatchCurrentVertices;
+		vertexBatchStats.legacyVertices += vertexCount - vertexBatchCurrentVertices;
+		vertexBatchStats.drawVertices += vertexCount;
+		vertexBatchStats.draws++;
+		vertexBatchCurrentVertices = 0;
+	}
 }
 
 // These stubs make sure audio creation fails sooner rather than later
@@ -3553,6 +3800,10 @@ export default {
 	Java_org_lwjgl_opengl_GL11_nglStencilFunc,
 	Java_org_lwjgl_opengl_GL11_nglStencilOp,
 	Java_org_lwjgl_opengl_GL11_nglVertex3fTexCoord,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexBatch,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexSingle,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexPair,
+	Java_org_lwjgl_opengl_GL11_nglAppendVertexQuad,
 	Java_org_lwjgl_opengl_GL11_nglPointSize,
 	Java_org_lwjgl_opengl_GL11_nglLineWidth,
 	Java_org_lwjgl_opengl_GL11_nglPolygonOffset,

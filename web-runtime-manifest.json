@@ -1,9 +1,9 @@
 {
   "profile": {
     "profile": "full-stock-campaign",
-    "sourceSha": "536fe46aabd53a8f1a3f483952d4601c1c4f926b",
-    "workflowRunId": "36403455326",
-    "generatedAt": "2026-09-28T09:28:39.309736+00:00",
+    "sourceSha": "310584cb20dbd476ce6c9b14e0762af72d3950a7",
+    "workflowRunId": "44953772279",
+    "generatedAt": "2026-11-21T21:54:58.102328+00:00",
     "overlayFiles": 3774,
     "dataPack": {
       "version": 1,
@@ -31,8 +31,8 @@
     },
     {
       "path": "build/final/wasm-modules/lwjgl.js",
-      "bytes": 134780,
-      "sha256": "1125268ce811233ea965fb225ec4d7679e2807323119517ad729411b47cbf58b"
+      "bytes": 144713,
+      "sha256": "acb1ee7c3fe73b3583b225e4c5ffadc19765d170a3b242ee1ad1c42b85761c3e"
     },
     {
       "path": "data/campaign/econ/algebbar.json",
@@ -611,13 +611,13 @@
     },
     {
       "path": "jars/bridge.jar",
-      "bytes": 93475,
-      "sha256": "f951fec9f472df6d4107a07fb6bbf5896bf4cd23b01fa5dedc6255df7ed07653"
+      "bytes": 94498,
+      "sha256": "db524bea474e1b3385f1d0ec982238efdf53e68e3cb7c446545982d4e6eeb391"
     },
     {
       "path": "jars/fixer_patch.jar",
-      "bytes": 255009,
-      "sha256": "a6ccba0989b6f32aec03b58df8eae0d4ecbb4d5786f21774c15bf0d6d27a1525"
+      "bytes": 255631,
+      "sha256": "06c1b111dcf9ff030a609413c6ab4a5a9caa141ab284e21c8c98c36fa8b2506a"
     },
     {
       "path": "jars/fs.common_obf.jar",
@@ -627,7 +627,7 @@
     {
       "path": "jars/index.list",
       "bytes": 466,
-      "sha256": "583ddbafd2c55c440f85ebf40043c8b4d340dc22cbf91b385c0d4e4e2a0e4a9d"
+      "sha256": "9a3a254880c74b80a54a6744916f4deb2ba932168edb4f25d9a89d1788f001c2"
     },
     {
       "path": "jars/scripts-precompiled.jar",
@@ -641,8 +641,8 @@
     },
     {
       "path": "jars/starfarer_obf.jar",
-      "bytes": 6029585,
-      "sha256": "19c3e7b311a940528e38d49de8ccce1857af64bc30d93b0f272f3af3300cfe9e"
+      "bytes": 6029539,
+      "sha256": "3b2cdc48c98e21d4159ea0acfa18acb405434ece48ffaafbefe96116e7bb85c7"
     },
     {
       "path": "jars/txw2-2.3.1.jar",
@@ -651,8 +651,8 @@
     },
     {
       "path": "launch.html",
-      "bytes": 116285,
-      "sha256": "4597cd4ea70acf900f67e453d268a1c21aca7d2170dd78cb1e65a0107ec45391"
+      "bytes": 116491,
+      "sha256": "9b93e9906f81518dade6c57b8113c7cdd6e0cf9b20891a1854a0803402c5f628"
     },
     {
       "path": "resources/settings.json",
@@ -18886,8 +18886,8 @@
     },
     {
       "path": "starsectorquick-sw.js",
-      "bytes": 25984,
-      "sha256": "7e9db70126c6609ea8ee65e31dace735176c519048050f0223ef40c3c4b8c07d"
+      "bytes": 25979,
+      "sha256": "75458d03654e428af8ae22510d914aa8a0cf462a8c1687204d55432dc0807e4b"
     }
   ]
 }

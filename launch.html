@@ -474,7 +474,7 @@
             n.Java_org_lwjgl_opengl_GL11_nglGenLists = () => 1;
             n.Java_org_lwjgl_opengl_GL11_nglNewList = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglEndList = () => {};
-            n.Java_org_lwjgl_opengl_GL11_nglBegin = () => {};
+            n.Java_org_lwjgl_opengl_GL11_nglBegin = () => false;
             n.Java_org_lwjgl_opengl_GL11_nglEnd = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglTexCoord2f = () => {};
             n.Java_org_lwjgl_opengl_GL11_nglVertex2f = () => {};
@@ -828,7 +828,7 @@
                 const ensureRemotePathAliasWorker = async () => {
                     if (isLocal || !('serviceWorker' in navigator)) return;
 
-                    const aliasWorkerVersion = '20260927-cheerpj-graphics-v10';
+                    const aliasWorkerVersion = '20261118-short-vertex-v2';
                     window.__STARSECTOR_ALIAS_WORKER_VERSION__ = aliasWorkerVersion;
                     const workerUrl = `${siteRootUrl}starsectorquick-sw.js?v=${aliasWorkerVersion}`;
                     const scopePath = new URL(siteRootUrl).pathname;
@@ -1023,6 +1023,8 @@
                     lastName: null,
                     lastAt: 0
                 };
+                // Batch immediate vertices by default; explicit false retains the original transport.
+                if (typeof window.__LWJGL_VERTEX_BATCH__ !== "boolean") window.__LWJGL_VERTEX_BATCH__ = true;
                 const collectNativeStats = window.__LWJGL_COLLECT_NATIVE_STATS__ === true;
                 nativeStats.enabled = collectNativeStats;
                 window.__lwjglNativeStats = nativeStats;
@@ -1811,7 +1813,7 @@
                     try {
                         const firstJarUrl = `${siteRootUrl}jars/${jarFiles[0]}`;
                         const firstResp = await primeJarRange(firstJarUrl, 'reload');
-                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20260927-cheerpj-graphics-v10';
+                        const workerVersion = window.__STARSECTOR_ALIAS_WORKER_VERSION__ || '20261118-short-vertex-v2';
                         const manifestResp = await fetch(`${siteRootUrl}starsector-jar-pack-v1.json?sw=${encodeURIComponent(workerVersion)}`, {
                             cache: 'force-cache'
                         });
